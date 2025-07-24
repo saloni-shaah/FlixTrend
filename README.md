@@ -1,36 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# FlixTrend
 
-## Getting Started
+**FlixTrend** is a Gen-Z-focused, futuristic social media web app MVP. It features a real-time feed, ephemeral stories (Flashes), AI-powered chat (Almighty AI), and a modern, vibrant UI inspired by platforms like GitHub and Hulu.
 
-First, run the development server:
+## 🚀 Features
+- **Modern Landing Page**: Animated, bold, and engaging hero section with feature highlights and testimonials.
+- **Authentication**: Email/password signup and login with instant redirect to home.
+- **Home Feed (VibeSpace)**: Real-time posts, flashes, and interactive FABs (for logged-in users only).
+- **Almighty AI Suite**: ChatGPT-like AI assistant powered by Gemini, with study mode, summarization, and more.
+- **Explore, Profile, Signal (Chat)**: Discover trends, manage your profile, and chat with mutuals.
+- **Mobile-First, Responsive Design**: Beautiful on all devices.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 🛠️ Tech Stack
+- **Next.js 15** (App Router)
+- **TypeScript**
+- **Tailwind CSS**
+- **Firebase Auth & Firestore**
+- **Gemini API** (for AI features)
+- **Vercel** (deployment)
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🧑‍💻 Getting Started
+1. **Clone the repo:**
+   ```bash
+   git clone https://github.com/saloni-shaah/FlixTrend.git
+   cd FlixTrend
+   ```
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+3. **Set up environment variables:**
+   - Create a `.env.local` file with your Firebase and Gemini API keys:
+     ```env
+     NEXT_PUBLIC_GEMINI_API_KEY=your-gemini-api-key
+     NEXT_PUBLIC_FIREBASE_API_KEY=your-firebase-api-key
+     # ...other Firebase keys
+     ```
+4. **Run locally:**
+   ```bash
+   npm run dev
+   ```
+5. **Deploy:**
+   - Push to GitHub and connect to Vercel for instant deployment.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📦 MVP Notes
+- TypeScript and ESLint errors are ignored for quick MVP deployment. For production, fix all types and lint issues.
+- FABs and navigation are only visible to logged-in users.
+- Almighty AI uses Gemini for real AI chat, study mode, and summarization.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📄 License
+MIT
