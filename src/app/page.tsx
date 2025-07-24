@@ -172,13 +172,13 @@ export default function Home() {
                     } else if (input.toLowerCase().startsWith("summarize")) {
                       aiResponse = await getGeminiText(input);
                     } else if (input.toLowerCase().startsWith("generate an image of") || input.toLowerCase().startsWith("image")) {
-                      // Gemini image API call (pseudo, replace with real call if available)
                       aiResponse = '[Image generation coming soon!]';
                     } else if (input.toLowerCase().includes("explain") || input.toLowerCase().includes("study")) {
                       aiResponse = await getGeminiText(input + "\nExplain as if I am a student.");
                     } else {
                       aiResponse = await getGeminiText(input);
                     }
+                    console.log('Gemini AI response:', aiResponse); // Debug log
                     setLoading(false);
                     setChat(c => [...c, { sender: "ai", text: aiResponse }]);
                     localStorage.setItem('aiHistory', JSON.stringify([...chat, { sender: "user", text: input }, { sender: "ai", text: aiResponse }]));
