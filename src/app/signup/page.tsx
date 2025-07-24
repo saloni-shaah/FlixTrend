@@ -4,6 +4,7 @@ import Link from "next/link";
 import { auth } from "@/utils/firebaseClient";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { getFirestore, doc, setDoc } from "firebase/firestore";
+import { useRouter } from "next/navigation";
 
 const db = getFirestore();
 
@@ -24,6 +25,7 @@ export default function SignupPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -60,7 +62,8 @@ export default function SignupPage() {
         avatar_url: form.avatar,
         created_at: new Date().toISOString(),
       });
-      setSuccess("Signup successful! You can now log in.");
+      setSuccess("Signup successful! Redirecting to home...");
+      router.push("/home");
     } catch (err: any) {
       setError(err.message);
     }

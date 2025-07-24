@@ -202,70 +202,61 @@ export default function Home() {
     );
   }
 
+  // --- LANDING PAGE (LOGGED-OUT USERS) ---
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary via-secondary to-accent-cyan font-body">
+      {/* Top Navbar */}
+      <nav className="w-full flex justify-between items-center px-8 py-4 bg-black/70 border-b border-accent-cyan/20 fixed top-0 left-0 z-50 backdrop-blur-md">
+        <div className="flex items-center gap-3">
+          <AlmightyLogoCSS size={40} />
+          <span className="font-headline text-2xl text-accent-cyan font-bold tracking-wide">FlixTrend</span>
+        </div>
+        <div className="flex gap-6 items-center">
+          <Link href="/signup" className="px-5 py-2 rounded-full bg-accent-pink text-white font-bold shadow-fab-glow hover:scale-105 transition-all">Sign Up</Link>
+          <Link href="/login" className="px-5 py-2 rounded-full border-2 border-accent-cyan text-accent-cyan font-bold bg-black/30 hover:bg-accent-cyan hover:text-primary transition-all">Log In</Link>
+        </div>
+      </nav>
       {/* Hero Section */}
-      <section className="relative flex flex-col items-center justify-center h-[90vh] text-center overflow-hidden">
-        {/* Neon/Animated Background */}
-        <div className="absolute inset-0 z-0 animate-pulse bg-gradient-to-tr from-accent-pink/30 via-primary/80 to-accent-cyan/30 blur-2xl opacity-80" />
-        {/* Floating shapes (parallax effect placeholder) */}
-        <div className="absolute left-1/4 top-1/3 w-40 h-40 bg-accent-pink rounded-full opacity-30 blur-2xl animate-bounce-slow" />
-        <div className="absolute right-1/4 bottom-1/4 w-32 h-32 bg-accent-cyan rounded-full opacity-30 blur-2xl animate-bounce-slow2" />
-        <div className="relative z-10 flex flex-col items-center gap-6 pt-24">
-          <h1 className="text-5xl md:text-7xl font-headline font-bold drop-shadow-[0_0_20px_#e600ff] animate-fade-in">
-            FlixTrend
-          </h1>
-          <p className="text-xl md:text-2xl font-semibold text-accent-cyan drop-shadow-[0_0_10px_#00fff7] animate-fade-in delay-200">
-            Where Trends Find You First
-          </p>
-          <p className="max-w-xl text-lg md:text-xl mt-2 animate-fade-in delay-300">
-            A Gen-Z social media app for vibes, flash moments & real-time hype.
-          </p>
-          <div className="flex gap-4 mt-6 animate-fade-in delay-500">
-            <a
-              href="/signup"
-              className="px-8 py-3 rounded-full bg-accent-pink text-white font-bold text-lg shadow-fab-glow hover:scale-105 hover:shadow-lg transition-all duration-200"
-            >
-              Join Now
-            </a>
-            <button className="px-8 py-3 rounded-full border-2 border-accent-cyan text-accent-cyan font-bold text-lg bg-black/30 hover:bg-accent-cyan hover:text-primary transition-all duration-200">
-              Watch Demo
-            </button>
+      <section className="relative flex flex-col items-center justify-center h-[90vh] text-center overflow-hidden pt-32">
+        {/* Animated Gradient Background */}
+        <div className="absolute inset-0 z-0 animate-gradient-flow bg-gradient-to-tr from-accent-pink/40 via-primary/80 to-accent-cyan/40 blur-2xl opacity-80" />
+        {/* Floating shapes */}
+        <div className="absolute left-1/4 top-1/3 w-40 h-40 bg-accent-pink rounded-full opacity-30 blur-2xl animate-float" />
+        <div className="absolute right-1/4 bottom-1/4 w-32 h-32 bg-accent-cyan rounded-full opacity-30 blur-2xl animate-float" />
+        <div className="relative z-10 flex flex-col items-center gap-8">
+          <h1 className="text-6xl md:text-7xl font-headline font-bold drop-shadow-[0_0_20px_#e600ff] animate-fade-in">Where Trends Find You First</h1>
+          <p className="max-w-2xl text-2xl md:text-3xl font-semibold text-accent-cyan drop-shadow-[0_0_10px_#00fff7] animate-fade-in delay-200">A Gen-Z social media app for vibes, flash moments & real-time hype.</p>
+          <div className="flex gap-6 mt-4 animate-fade-in delay-500">
+            <Link href="/signup" className="px-10 py-4 rounded-full bg-accent-pink text-white font-bold text-xl shadow-fab-glow hover:scale-105 hover:shadow-lg transition-all duration-200">Get Started</Link>
+            <Link href="/scope" className="px-10 py-4 rounded-full border-2 border-accent-cyan text-accent-cyan font-bold text-xl bg-black/30 hover:bg-accent-cyan hover:text-primary transition-all duration-200">Explore</Link>
           </div>
         </div>
       </section>
-
-      {/* About / Mission Section */}
-      <section className="max-w-3xl mx-auto py-16 px-4 text-center">
-        <h2 className="text-3xl md:text-4xl font-headline font-bold mb-4 text-accent-pink drop-shadow">Our Mission</h2>
-        <p className="text-lg md:text-xl mb-4">
-          To empower the next generation to create, vibe, and express in a space built for real-time authenticity, creativity, and digital freedom.
-        </p>
-        <p className="text-base text-accent-cyan mb-2">
-          Gen-Z, students, content creators, trend-setters — this is your space.
-        </p>
-        <p className="text-base">
-          Built for a new generation bored of the old feed system. No more FOMO, just real-time fun.
-        </p>
+      {/* Feature Highlights */}
+      <section className="max-w-6xl mx-auto py-20 px-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+        <FeatureCard icon="✨" title="VibeSpace" desc="A real-time feed where posts are ordered by vibe — no confusing algorithms, just pure energy." />
+        <FeatureCard icon="⚡" title="Flashes" desc="Ephemeral stories that last 24 hours. Snap a moment, share the hype, and watch it disappear." />
+        <FeatureCard icon="🎓" title="Almighty AI" desc="An integrated chatbot built to help you study, create projects, or vibe. Like ChatGPT, but cooler." />
+        <FeatureCard icon="🛰️" title="Radar Page" desc="Discover trending content based on moods, interests, and viral tags. It's like having a social GPS." />
+        <FeatureCard icon="🎨" title="Custom Themes" desc="Personalize the app with themes, dark mode, and Gen-Z neon vibes. It's your space, your way." />
+        <FeatureCard icon="🔒" title="Privacy First" desc="Your data, your rules. End-to-end encrypted chats and full control over your content." />
       </section>
-
-      {/* Features Section */}
-      <section className="max-w-5xl mx-auto py-16 px-4">
-        <h2 className="text-3xl md:text-4xl font-headline font-bold mb-8 text-accent-cyan text-center drop-shadow">What Makes FlixTrend Different?</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {/* Feature Cards */}
-          <FeatureCard icon="🔍" title="Fast Checking" desc="AI-powered fact checker that verifies trending posts before they go viral. Say goodbye to fake news." />
-          <FeatureCard icon="✨" title="VibeSpace" desc="A real-time feed where posts are ordered by vibe — no confusing algorithms, just pure energy." />
-          <FeatureCard icon="⚡" title="Flashes" desc="Ephemeral stories that last 24 hours. Snap a moment, share the hype, and watch it disappear." />
-          <FeatureCard icon="💬" title="Pings (Chats)" desc="Encrypted, private messaging system with emoji-based alphanumeric security layers." />
-          <FeatureCard icon="🎓" title="Almighty AI" desc="An integrated chatbot built to help you study, create projects, or vibe. Like ChatGPT, but cooler." />
-          <FeatureCard icon="🛰️" title="Radar Page" desc="Discover trending content based on moods, interests, and viral tags. It's like having a social GPS." />
-          <FeatureCard icon="🎨" title="Custom Themes" desc="Personalize the app with themes, dark mode, and Gen-Z neon vibes. It's your space, your way." />
+      {/* Social Proof / Testimonials */}
+      <section className="max-w-4xl mx-auto py-16 px-4 text-center">
+        <h2 className="text-3xl md:text-4xl font-headline font-bold mb-8 text-accent-cyan drop-shadow">What Our Users Say</h2>
+        <div className="flex flex-col md:flex-row gap-8 justify-center items-center">
+          <blockquote className="bg-card/80 rounded-2xl p-6 shadow-fab-glow border border-accent-pink/20 max-w-md mx-auto">
+            <p className="text-lg italic mb-2">“FlixTrend is the only app where I feel my posts actually matter. The vibes are real!”</p>
+            <span className="font-bold text-accent-pink">@genz_trender</span>
+          </blockquote>
+          <blockquote className="bg-card/80 rounded-2xl p-6 shadow-fab-glow border border-accent-cyan/20 max-w-md mx-auto">
+            <p className="text-lg italic mb-2">“The Almighty AI is a game changer for my study sessions and creative projects.”</p>
+            <span className="font-bold text-accent-cyan">@studyqueen</span>
+          </blockquote>
         </div>
       </section>
-
       {/* Footer */}
-      <footer className="w-full py-8 bg-black/60 text-center flex flex-col gap-2 items-center">
+      <footer className="w-full py-8 bg-black/60 text-center flex flex-col gap-2 items-center mt-8">
         <div className="flex gap-4 justify-center mb-2">
           <a href="#about" className="hover:text-accent-cyan">About</a>
           <a href="#contact" className="hover:text-accent-cyan">Contact</a>
