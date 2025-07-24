@@ -2,7 +2,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { getFirestore, collection, query, where, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp, getDocs } from "firebase/firestore";
 import { auth } from "@/utils/firebaseClient";
-import { useMediaQuery } from "@uidotdev/usehooks";
 
 const db = getFirestore();
 
@@ -10,20 +9,14 @@ function getChatId(uid1: string, uid2: string) {
   return [uid1, uid2].sort().join("_");
 }
 
-export default function SignalPage() {
-  const [firebaseUser, setFirebaseUser] = useState<any>(null);
+function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
   const [mutuals, setMutuals] = useState<any[]>([]); // Users you can chat with
   const [selectedChat, setSelectedChat] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { useMediaQuery } = require("@uidotdev/usehooks"); // Dynamically require
   const isMobile = useMediaQuery("(max-width: 767px)");
-
-  // Get current user
-  useEffect(() => {
-    const unsub = auth.onAuthStateChanged((user) => setFirebaseUser(user));
-    return () => unsub();
-  }, []);
 
   // Fetch mutuals (users you follow or who follow you)
   useEffect(() => {
@@ -177,4 +170,18 @@ export default function SignalPage() {
       </div>
     </div>
   );
+}
+
+// Main export: only use useMediaQuery in the client
+export default function SignalPage() {
+  const [firebaseUser, setFirebaseUser] = useState<any>(null);
+  useEffect(() => {
+    const unsub = auth.onAuthStateChanged((user) => setFirebaseUser(user));
+    return () => unsub();
+  }, []);
+  if (!firebaseUser) {
+    return <div className="flex min-h-screen items-center justify-center text-accent-cyan">Loading...</div>;
+  }
+  // Only render the client-only chat UI after user is loaded
+  return <ClientOnlySignalPage firebaseUser={firebaseUser} />;
 } 
