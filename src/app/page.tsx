@@ -25,6 +25,39 @@ function getAlmightyResponse(message: string): string {
   return "I'm Almighty AI 🤖 – your hype assistant! Ask me anything, or just vibe ✨.";
 }
 
+// CSS Swirl Logo component
+function AlmightyLogoCSS({ size = 56 }: { size?: number }) {
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        background: 'radial-gradient(circle at 60% 40%, #E0F7FA 60%, #B388FF 100%)',
+        boxShadow: '0 0 24px #00F0FF, 0 0 8px #BF00FF',
+        position: 'relative',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+      className="almighty-swirl-logo"
+    >
+      <svg width={size * 0.9} height={size * 0.9} viewBox="0 0 100 100" style={{ position: 'absolute', left: '5%', top: '5%' }}>
+        <path d="M50 20 Q65 25 60 40 Q55 55 70 60 Q85 65 80 80 Q75 95 60 90 Q45 85 40 70 Q35 55 20 60 Q5 65 10 80 Q15 95 30 90 Q45 85 50 70 Q55 55 40 60 Q25 65 20 80 Q15 95 30 90 Q45 85 50 70" stroke="#00F0FF" strokeWidth="4" fill="none" />
+        <circle cx="50" cy="50" r="18" fill="url(#center)" stroke="#BF00FF" strokeWidth="2" />
+        <path d="M50 38 Q56 40 54 50 Q52 60 60 62" stroke="#FF3CAC" strokeWidth="2" fill="none" />
+        <path d="M50 62 Q44 60 46 50 Q48 40 40 38" stroke="#39FF14" strokeWidth="2" fill="none" />
+        <defs>
+          <radialGradient id="center" cx="0" cy="0" r="1" gradientTransform="translate(50 50) rotate(90) scale(18)">
+            <stop stopColor="#FF3CAC" />
+            <stop offset="1" stopColor="#00F0FF" />
+          </radialGradient>
+        </defs>
+      </svg>
+    </div>
+  );
+}
+
 export default function Home() {
   const [firebaseUser, setFirebaseUser] = useState<any | null>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -33,6 +66,7 @@ export default function Home() {
     { sender: "ai", text: "Hey! I'm Almighty AI. Ask me anything about FlixTrend, or just say hi!" }
   ]);
   const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     // Firebase may take a moment to populate currentUser
@@ -89,7 +123,7 @@ export default function Home() {
           aria-label="Almighty AI"
           onClick={() => setShowAlmighty(true)}
         >
-          <Image src="/almighty-logo.svg" alt="Almighty AI Logo" width={48} height={48} className="rounded-full" />
+          <AlmightyLogoCSS size={48} />
         </button>
         {/* Almighty AI Chat Modal - ChatGPT-like UI */}
         {showAlmighty && (
@@ -97,13 +131,14 @@ export default function Home() {
             <div className="w-full max-w-4xl h-[80vh] bg-gradient-to-br from-secondary via-primary to-accent-cyan/30 rounded-3xl shadow-fab-glow border-2 border-accent-cyan/40 flex animate-slide-in">
               {/* Sidebar */}
               <aside className="w-60 bg-black/60 border-r border-accent-cyan/20 rounded-l-3xl flex flex-col items-center py-6 gap-6">
-                <Image src="/almighty-logo.svg" alt="Almighty AI Logo" width={56} height={56} className="rounded-full mb-2 shadow-fab-glow" />
+                <AlmightyLogoCSS size={56} />
                 <button className="w-44 py-2 rounded-xl bg-accent-cyan/80 text-primary font-bold mb-2 hover:bg-accent-pink/80 transition-all" onClick={() => { setChat([]); localStorage.removeItem('aiHistory'); }}>+ New Chat</button>
                 <div className="w-44 flex flex-col gap-2">
                   <button className="rounded-lg py-2 px-3 bg-card/80 text-accent-cyan text-left hover:bg-accent-pink/30 transition-all" onClick={() => setChat(JSON.parse(localStorage.getItem('aiHistory')||'[]'))}>History</button>
                   <button className="rounded-lg py-2 px-3 bg-card/80 text-accent-cyan text-left hover:bg-accent-pink/30 transition-all" onClick={() => setInput('Explain this as if I am a student: ')}>Study Mode</button>
                   <button className="rounded-lg py-2 px-3 bg-card/80 text-accent-cyan text-left hover:bg-accent-pink/30 transition-all" onClick={() => setInput('Summarize: ')}>Summarize</button>
                   <button className="rounded-lg py-2 px-3 bg-card/80 text-accent-cyan text-left hover:bg-accent-pink/30 transition-all" onClick={() => setInput('Generate an image of: ')}>Image Gen</button>
+                  <button className="rounded-lg py-2 px-3 bg-card/80 text-accent-cyan text-left hover:bg-accent-pink/30 transition-all" onClick={() => setInput('Summarize this code: ')}>Code Summarizer</button>
                   <button className="rounded-lg py-2 px-3 bg-card/80 text-accent-cyan text-left hover:bg-accent-pink/30 transition-all">Projects</button>
                   <button className="rounded-lg py-2 px-3 bg-card/80 text-accent-cyan text-left hover:bg-accent-pink/30 transition-all">Settings</button>
                 </div>
@@ -120,6 +155,9 @@ export default function Home() {
                       <div className={`px-4 py-3 rounded-2xl text-base max-w-[70%] shadow-fab-glow ${msg.sender === "ai" ? "bg-accent-cyan/20 text-accent-cyan" : "bg-accent-pink/80 text-white"}`}>{msg.text}</div>
                     </div>
                   ))}
+                  {loading && (
+                    <div className="flex justify-start"><div className="px-4 py-3 rounded-2xl text-base max-w-[70%] shadow-fab-glow bg-accent-cyan/20 text-accent-cyan animate-pulse">Almighty is thinking...</div></div>
+                  )}
                 </div>
                 <form
                   className="flex items-center gap-3 mt-6"
@@ -127,16 +165,21 @@ export default function Home() {
                     e.preventDefault();
                     if (!input.trim()) return;
                     setChat([...chat, { sender: "user", text: input }]);
+                    setLoading(true);
                     let aiResponse = "";
-                    if (input.toLowerCase().startsWith("summarize")) {
+                    if (input.toLowerCase().startsWith("summarize this code")) {
+                      aiResponse = await getGeminiText(input + "\nExplain the code in simple terms.");
+                    } else if (input.toLowerCase().startsWith("summarize")) {
                       aiResponse = await getGeminiText(input);
                     } else if (input.toLowerCase().startsWith("generate an image of") || input.toLowerCase().startsWith("image")) {
-                      aiResponse = "[Image generation coming soon!]";
+                      // Gemini image API call (pseudo, replace with real call if available)
+                      aiResponse = '[Image generation coming soon!]';
                     } else if (input.toLowerCase().includes("explain") || input.toLowerCase().includes("study")) {
-                      aiResponse = await getGeminiText(input);
+                      aiResponse = await getGeminiText(input + "\nExplain as if I am a student.");
                     } else {
                       aiResponse = await getGeminiText(input);
                     }
+                    setLoading(false);
                     setChat(c => [...c, { sender: "ai", text: aiResponse }]);
                     localStorage.setItem('aiHistory', JSON.stringify([...chat, { sender: "user", text: input }, { sender: "ai", text: aiResponse }]));
                     setInput("");
@@ -144,7 +187,7 @@ export default function Home() {
                 >
                   <input
                     className="flex-1 rounded-full px-5 py-3 bg-black/60 text-white placeholder-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-cyan/60 shadow-fab-glow text-lg"
-                    placeholder="Type your message, or try 'summarize', 'generate image', 'study mode'..."
+                    placeholder="Type your message, or try 'summarize', 'generate image', 'study mode', 'summarize this code'..."
                     value={input}
                     onChange={e => setInput(e.target.value)}
                     autoFocus
