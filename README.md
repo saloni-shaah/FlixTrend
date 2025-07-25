@@ -18,29 +18,7 @@
 - **Gemini API** (for AI features)
 - **Vercel** (deployment)
 
-## 🧑‍💻 Getting Started
-1. **Clone the repo:**
-   ```bash
-   git clone https://github.com/saloni-shaah/FlixTrend.git
-   cd FlixTrend
-   ```
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-3. **Set up environment variables:**
-   - Create a `.env.local` file with your Firebase and Gemini API keys:
-     ```env
-     NEXT_PUBLIC_GEMINI_API_KEY=your-gemini-api-key
-     NEXT_PUBLIC_FIREBASE_API_KEY=your-firebase-api-key
-     # ...other Firebase keys
-     ```
-4. **Run locally:**
-   ```bash
-   npm run dev
-   ```
-5. **Deploy:**
-   - Push to GitHub and connect to Vercel for instant deployment.
+
 
 ## 📦 MVP Notes
 - TypeScript and ESLint errors are ignored for quick MVP deployment. For production, fix all types and lint issues.
