@@ -36,8 +36,8 @@
      # ...other Firebase keys
      ```
 4. **Run locally:**
-   ```bash
-   npm run dev
+```bash
+npm run dev
    ```
 5. **Deploy:**
    - Push to GitHub and connect to Vercel for instant deployment.

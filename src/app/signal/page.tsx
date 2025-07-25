@@ -176,12 +176,32 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
 export default function SignalPage() {
   const [firebaseUser, setFirebaseUser] = useState<any>(null);
   useEffect(() => {
-    const unsub = auth.onAuthStateChanged((user) => setFirebaseUser(user));
+    const unsub = auth.onAuthStateChanged(async (user) => {
+      setFirebaseUser(user);
+      if (user) {
+        // Auto-create user doc in Firestore if missing
+        const db = getFirestore();
+        const userDocRef = doc(db, "users", user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (!userDocSnap.exists()) {
+          await setDoc(userDocRef, {
+            uid: user.uid,
+            name: user.displayName || "",
+            username: user.displayName ? user.displayName.replace(/\s+/g, "").toLowerCase() : "",
+            email: user.email || "",
+            avatar_url: user.photoURL || "",
+            bio: "",
+            interests: "",
+            createdAt: new Date(),
+          });
+        }
+      }
+    });
     return () => unsub();
   }, []);
   if (!firebaseUser) {
     return <div className="flex min-h-screen items-center justify-center text-accent-cyan">Loading...</div>;
   }
   // Only render the client-only chat UI after user is loaded
-  return <ClientOnlySignalPage firebaseUser={firebaseUser} />;
+  return <div className="min-h-screen bg-gradient-to-br from-pink-500 via-yellow-400 via-blue-400 via-green-400 via-purple-500 via-orange-400 via-cyan-400 via-red-400 to-pink-400 transition-colors"><ClientOnlySignalPage firebaseUser={firebaseUser} /></div>;
 } 

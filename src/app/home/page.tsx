@@ -1,9 +1,28 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import CreatePostModal from "./CreatePostModal";
-import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, deleteDoc, updateDoc, doc as fsDoc } from "firebase/firestore";
+import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, deleteDoc, updateDoc, doc as fsDoc, setDoc } from "firebase/firestore";
 import { FaSearch } from "react-icons/fa";
-import { FaRegHeart, FaRegComment } from "react-icons/fa";
+import { FaRegComment } from "react-icons/fa";
+// Star Like Logo SVG
+function StarLogo({ filled = false, size = 24 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="16,3 20,12 30,12 22,18 25,28 16,22 7,28 10,18 2,12 12,12" fill={filled ? '#FFDF00' : 'none'} stroke="#FFDF00" strokeWidth="2" />
+    </svg>
+  );
+}
+// Custom Like Logo SVG
+function LikeLogo({ filled = false, size = 24 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="4" y="12" width="24" height="12" rx="6" fill={filled ? '#00F0FF' : 'none'} stroke="#00F0FF" strokeWidth="2" />
+      <circle cx="16" cy="12" r="6" fill={filled ? '#FF3CAC' : 'none'} stroke="#FF3CAC" strokeWidth="2" />
+      <circle cx="10" cy="10" r="2" fill="#00F0FF" />
+      <circle cx="22" cy="10" r="2" fill="#00F0FF" />
+    </svg>
+  );
+}
 import { auth } from "@/utils/firebaseClient";
 import Link from "next/link";
 
@@ -48,10 +67,10 @@ export default function HomePage() {
     : posts;
 
   return (
-    <div className="flex flex-col min-h-screen pt-6 pb-24 px-2 md:px-8 bg-gradient-to-br from-[#f8fafc] via-[#e0e7ef] to-[#f1f5f9] dark:from-primary dark:via-secondary dark:to-accent-cyan transition-colors">
+    <div className="flex flex-col min-h-screen pt-6 pb-24 px-2 md:px-8 bg-white transition-colors">
       {/* Centered, prominent search bar */}
       <div className="flex justify-center items-center mb-6 w-full">
-        <div className="relative w-full max-w-2xl">
+        <div className="relative w-full max-w-2xl bg-pink-100 rounded-2xl shadow-lg py-2">
           <input
             type="text"
             className="w-full pl-12 pr-4 py-3 rounded-full border border-accent-cyan/30 focus:outline-none focus:ring-2 focus:ring-accent-cyan bg-white/90 dark:bg-card/90 text-gray-900 dark:text-white text-lg shadow font-body"
@@ -75,8 +94,8 @@ export default function HomePage() {
         </div>
       </div>
       {/* Flashes/Stories Section */}
-      <section className="mb-6">
-        <h2 className="text-lg font-headline text-accent-cyan mb-2">Flashes</h2>
+      <section className="mb-6 bg-yellow-100 rounded-2xl shadow-lg p-4">
+        <h2 className="text-lg font-headline bg-gradient-to-r from-pink-500 via-yellow-400 to-blue-400 bg-clip-text text-transparent mb-2">Flashes</h2>
         <div className="flex gap-3 overflow-x-auto pb-2">
           {flashes.length === 0 && (
             <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-3xl text-white opacity-60 border-4 border-accent-cyan/40 animate-bounce-slow">
@@ -104,7 +123,7 @@ export default function HomePage() {
         </div>
       </section>
       {/* Feed Section */}
-      <section className="flex-1 flex flex-col items-center">
+      <section className="flex-1 flex flex-col items-center bg-blue-100 rounded-2xl shadow-lg p-4 mt-4">
         {filteredPosts.length === 0 ? (
           <div className="text-gray-400 text-center mt-16 animate-fade-in">
             <div className="text-4xl mb-2">🪐</div>
@@ -121,20 +140,22 @@ export default function HomePage() {
       </section>
       {/* Single Create Post FAB (top right) */}
       <button
-        className="fixed top-4 right-4 z-50 rounded-full bg-gradient-to-tr from-accentPink to-accentCyan p-5 shadow-fab-glow hover:scale-105 transition-all duration-200 focus:outline-none"
+        className="fixed top-4 right-4 z-50 rounded-full bg-green-400 p-5 shadow-fab-glow hover:scale-105 transition-all duration-200 focus:outline-none"
         title="Create Post"
         onClick={() => setShowModal(true)}
         aria-label="Create Post"
       >
         <span className="text-2xl">➕</span>
       </button>
-      <CreatePostModal open={showModal} onClose={() => setShowModal(false)} />
-      {selectedFlash && (
-        <FlashModal flash={selectedFlash} onClose={() => setSelectedFlash(null)} />
-      )}
+      <div className="fixed inset-0 z-50" style={{ pointerEvents: showModal || selectedFlash ? 'auto' : 'none' }}>
+        {showModal && <div className="absolute inset-0 bg-orange-200/80" />}
+        <CreatePostModal open={showModal} onClose={() => setShowModal(false)} />
+        {selectedFlash && <div className="absolute inset-0 bg-orange-200/80" />}
+        {selectedFlash && <FlashModal flash={selectedFlash} onClose={() => setSelectedFlash(null)} />}
+      </div>
       {/* Almighty AI FAB (bottom right) */}
       <button
-        className="fixed bottom-8 right-8 z-50 bg-gradient-to-tr from-accent-pink to-accent-cyan text-white p-5 rounded-full shadow-fab-glow hover:scale-110 transition-all duration-200 animate-bounce-slow"
+        className="fixed bottom-8 right-8 z-50 bg-purple-400 text-white p-5 rounded-full shadow-fab-glow hover:scale-110 transition-all duration-200 animate-bounce-slow"
         aria-label="Almighty AI"
         onClick={() => setShowAlmighty(true)}
       >
@@ -197,11 +218,58 @@ export function PostCard({ post }: { post: any }) {
   const [showEdit, setShowEdit] = useState(false);
   const [editContent, setEditContent] = useState(post.content || "");
   const currentUser = auth.currentUser;
+  const [pollVotes, setPollVotes] = useState<{ [optionIdx: number]: number }>({});
+  const [userPollVote, setUserPollVote] = useState<number | null>(null);
 
-  const handleLike = () => {
-    setLiked((prev: boolean) => !prev);
-    setLikeCount((prev: number) => (liked ? prev - 1 : prev + 1));
-    // TODO: Add backend logic for like
+  useEffect(() => {
+    if (!currentUser) return;
+    // Listen for like status and count
+    const likeDocRef = fsDoc(db, "posts", post.id, "likes", currentUser.uid);
+    const unsubLike = onSnapshot(likeDocRef, (docSnap) => {
+      setLiked(docSnap.exists());
+    });
+    const likesColRef = collection(db, "posts", post.id, "likes");
+    const unsubCount = onSnapshot(likesColRef, (snap) => {
+      setLikeCount(snap.size);
+    });
+    // Listen for comment count
+    const commentsColRef = collection(db, "posts", post.id, "comments");
+    const unsubCommentCount = onSnapshot(commentsColRef, (snap) => {
+      setCommentCount(snap.size);
+    });
+    // Poll votes listener
+    if (post.type === "poll" && post.pollOptions) {
+      const pollVotesCol = collection(db, "posts", post.id, "pollVotes");
+      const unsubPollVotes = onSnapshot(pollVotesCol, (snap) => {
+        const votes: { [optionIdx: number]: number } = {};
+        let userVote: number | null = null;
+        snap.docs.forEach(doc => {
+          const { optionIdx, userId } = doc.data();
+          votes[optionIdx] = (votes[optionIdx] || 0) + 1;
+          if (userId === currentUser.uid) userVote = optionIdx;
+        });
+        setPollVotes(votes);
+        setUserPollVote(userVote);
+      });
+      return () => {
+        unsubPollVotes();
+      };
+    }
+    return () => {
+      unsubLike();
+      unsubCount();
+      unsubCommentCount();
+    };
+  }, [post.id, currentUser, post.type, post.pollOptions]);
+
+  const handleLike = async () => {
+    if (!currentUser) return;
+    const likeDocRef = fsDoc(db, "posts", post.id, "likes", currentUser.uid);
+    if (liked) {
+      await deleteDoc(likeDocRef);
+    } else {
+      await setDoc(likeDocRef, { userId: currentUser.uid, createdAt: serverTimestamp() });
+    }
   };
 
   const handleComment = () => {
@@ -219,6 +287,12 @@ export function PostCard({ post }: { post: any }) {
     setShowEdit(false);
   };
 
+  const handlePollVote = async (optionIdx: number) => {
+    if (!currentUser || userPollVote !== null) return;
+    const voteDocRef = fsDoc(db, "posts", post.id, "pollVotes", currentUser.uid);
+    await setDoc(voteDocRef, { userId: currentUser.uid, optionIdx, createdAt: serverTimestamp() });
+  };
+
   // Use displayName or username for avatar initials
   const initials = post.displayName
     ? post.displayName.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()
@@ -227,10 +301,10 @@ export function PostCard({ post }: { post: any }) {
     : "U";
 
   return (
-    <div className="bg-white dark:bg-card rounded-2xl p-5 shadow-lg border border-gray-100 dark:border-accent-cyan/20 flex flex-col gap-3 animate-pop transition-all relative">
+    <div className="bg-cyan-100 dark:bg-card rounded-2xl p-5 shadow-lg border border-gray-100 dark:border-accent-cyan/20 flex flex-col gap-3 animate-pop transition-all relative">
       {/* Author avatar and username */}
       <div className="flex items-center gap-3 mb-2">
-        <Link href={`/squad/${post.userId}`} className="flex items-center gap-2 group">
+        <Link href={`/squad/${post.userId}`} className="flex items-center gap-2 group cursor-pointer">
           <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accentPink to-accentCyan flex items-center justify-center text-white font-bold text-lg overflow-hidden border-2 border-accent-cyan group-hover:scale-105 transition-transform">
             {post.avatar_url ? (
               <img src={post.avatar_url} alt="avatar" className="w-full h-full object-cover rounded-full" />
@@ -285,27 +359,45 @@ export function PostCard({ post }: { post: any }) {
         </div>
       )}
       {post.type === "poll" && post.pollOptions && (
-        <div className="flex flex-col gap-2 animate-fade-in">
-          <div className="font-bold text-accent-cyan mb-1">{post.content}</div>
-          {post.pollOptions.map((opt: string, idx: number) => (
-            <button key={idx} className="w-full px-4 py-2 rounded-full bg-accent-cyan/10 text-accent-cyan font-bold hover:bg-accent-cyan/30 transition-all">
-              {opt}
-            </button>
-          ))}
+        <div className="flex flex-col gap-2 animate-fade-in bg-black/70 rounded-xl p-4">
+          <div className="font-bold text-accent-cyan mb-3">{post.content}</div>
+          {post.pollOptions.map((opt: string, idx: number) => {
+            const votes = pollVotes[idx] || 0;
+            const totalVotes = Object.values(pollVotes).reduce((a, b) => a + b, 0);
+            const percent = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
+            const isUserVote = userPollVote === idx;
+            return (
+              <button
+                key={idx}
+                className={`w-full px-4 py-2 rounded-full font-bold transition-all flex items-center justify-between mb-1
+                  ${isUserVote ? 'bg-accent-cyan/80 text-primary' : 'bg-accent-cyan/20 text-accent-cyan hover:bg-accent-cyan/40'}
+                `}
+                onClick={() => handlePollVote(idx)}
+                disabled={userPollVote !== null}
+              >
+                <span>{opt}</span>
+                <span className="ml-2 text-xs font-normal">{votes} vote{votes !== 1 ? 's' : ''} {totalVotes > 0 && `(${percent}%)`}</span>
+                {isUserVote && <span className="ml-2 text-lg">★</span>}
+              </button>
+            );
+          })}
+          {Object.values(pollVotes).reduce((a, b) => a + b, 0) > 0 && (
+            <div className="text-xs text-gray-300 mt-2">Total votes: {Object.values(pollVotes).reduce((a, b) => a + b, 0)}</div>
+          )}
         </div>
       )}
       {/* Like & Comment Actions */}
       <div className="flex items-center gap-6 mt-2">
         <button
-          className={`flex items-center gap-1 text-lg font-bold transition-all ${liked ? "text-accent-pink" : "text-gray-400 hover:text-accent-pink"}`}
+          className={`flex items-center gap-1 text-lg font-bold transition-all ${liked ? "text-red-400" : "text-gray-400 hover:text-red-400"}`}
           onClick={handleLike}
           aria-label="Like"
         >
-          <FaRegHeart />
+          <StarLogo filled={liked} size={24} />
           <span>{likeCount}</span>
         </button>
         <button
-          className="flex items-center gap-1 text-lg font-bold text-gray-400 hover:text-accent-cyan transition-all"
+          className="flex items-center gap-1 text-lg font-bold text-gray-400 hover:text-red-400 transition-all"
           onClick={handleComment}
           aria-label="Comment"
         >
@@ -342,6 +434,7 @@ function CommentModal({ postId, onClose }: { postId: string; onClose: () => void
         createdAt: serverTimestamp(),
       });
       setNewComment("");
+      // No need to manually update commentCount, listener will update
     } catch {}
     setLoading(false);
   };

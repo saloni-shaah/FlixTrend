@@ -12,6 +12,17 @@
   --hot-coral: #FF5F6D;
   --soft-gray: #C0C0C0;
   --glass-white: rgba(255,255,255,0.07);
+  --color-pink: #ff3cac;
+  --color-yellow: #fffd87;
+  --color-blue: #00f0ff;
+  --color-green: #39ff14;
+  --color-purple: #bf00ff;
+  --color-orange: #ff5f6d;
+  --color-cyan: #00fff7;
+  --color-red: #ff1744;
+  --color-neon: #39ff14;
+  --color-glass: rgba(255,255,255,0.07);
+  --aurora-gradient: linear-gradient(120deg, #ff3cac, #784ba0, #2b86c5, #39ff14, #fffd87, #ff5f6d, #00f0ff, #bf00ff, #ff1744);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -22,7 +33,9 @@
 }
 
 body {
-  background: var(--background);
+  background: var(--aurora-gradient);
+  background-size: 200% 200%;
+  animation: auroraMove 16s ease-in-out infinite;
   color: var(--foreground);
   font-family: 'Inter', 'Space Grotesk', Arial, Helvetica, sans-serif;
   animation: fadeIn 1s ease-in;
@@ -33,9 +46,83 @@ body {
   to   { opacity: 1; }
 }
 
+@keyframes auroraMove {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
 .glass {
   background: var(--glass-white);
   backdrop-filter: blur(10px);
   border-radius: 16px;
   border: 1px solid rgba(255,255,255,0.2);
 }
+
+/* Neon Glow */
+.neon-glow, .neon-glow * {
+  text-shadow: 0 0 8px var(--color-pink), 0 0 16px var(--color-blue), 0 0 24px var(--color-green);
+}
+
+/* Glassmorphism Card */
+.glass-card {
+  background: var(--color-glass);
+  backdrop-filter: blur(16px) saturate(180%);
+  border-radius: 1.5rem;
+  border: 1.5px solid var(--color-cyan);
+  box-shadow: 0 4px 32px 0 var(--color-purple);
+}
+
+/* Vibrant Accent Ring */
+.accent-ring {
+  border: 3px solid;
+  border-image: var(--aurora-gradient) 1;
+  animation: ringPulse 2s infinite alternate;
+}
+@keyframes ringPulse {
+  0% { box-shadow: 0 0 0 0 var(--color-pink); }
+  100% { box-shadow: 0 0 16px 8px var(--color-blue); }
+}
+
+/* Pulse Glow on Hover */
+.pulse-glow:hover {
+  box-shadow: 0 0 16px 8px var(--color-green), 0 0 32px 16px var(--color-pink);
+  filter: blur(0.5px);
+  transition: box-shadow 0.3s, filter 0.3s;
+}
+
+/* Rainbow Trail Cursor (scaffold) */
+.rainbow-cursor {
+  cursor: url('/rainbow-cursor.png'), auto;
+}
+
+/* Confetti Pop (scaffold) */
+.confetti-pop {
+  /* Use with JS or Lottie for confetti effect */
+}
+
+/* Multi-color Typing Animation (scaffold) */
+.rainbow-type {
+  background: var(--aurora-gradient);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: rainbowType 2s linear infinite alternate;
+}
+@keyframes rainbowType {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
+}
+
+/* Glassmorphism for modals/overlays */
+.glass-overlay {
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(24px) saturate(180%);
+}
+
+/* Aurora Gradient Borders */
+.aurora-border {
+  border-image: var(--aurora-gradient) 1;
+}
+
+/* Add more utility classes as needed for future features */

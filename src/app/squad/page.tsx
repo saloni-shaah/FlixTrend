@@ -54,6 +54,27 @@ export default function SquadPage() {
   const [allUsers, setAllUsers] = useState<any[]>([]);
 
   useEffect(() => {
+    // Robust user doc auto-create logic
+    async function ensureUserDoc() {
+      const user = auth.currentUser;
+      if (user) {
+        const userDocRef = doc(db, "users", user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (!userDocSnap.exists()) {
+          await setDoc(userDocRef, {
+            uid: user.uid,
+            name: user.displayName || "",
+            username: user.displayName ? user.displayName.replace(/\s+/g, "").toLowerCase() : "",
+            email: user.email || "",
+            avatar_url: user.photoURL || "",
+            bio: "",
+            interests: "",
+            createdAt: new Date(),
+          });
+        }
+      }
+    }
+    ensureUserDoc();
     async function fetchProfile() {
       setLoading(true);
       const user = auth.currentUser;
@@ -109,6 +130,7 @@ export default function SquadPage() {
     async function fetchAllUsers() {
       const usersSnap = await getDocs(collection(db, "users"));
       setAllUsers(usersSnap.docs.map(doc => ({ uid: doc.id, ...doc.data() })));
+      console.log('Fetched users:', usersSnap.docs.map(doc => ({ uid: doc.id, ...doc.data() })));
     }
     fetchAllUsers();
   }, [showEdit, viewingUid]);
@@ -152,11 +174,11 @@ export default function SquadPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen pt-6 pb-24 px-2 md:px-8">
+    <div className="flex flex-col min-h-screen pt-6 pb-24 px-2 md:px-8 bg-white transition-colors">
       {/* Settings FAB (only for own profile) */}
       {(!viewingUid || viewingUid === firebaseUser?.uid) && (
         <button
-          className="fixed top-6 right-6 z-50 bg-accent-cyan text-primary p-4 rounded-full shadow-fab-glow hover:scale-110 transition-all duration-200"
+          className="fixed top-6 right-6 z-50 bg-green-400 text-primary p-4 rounded-full shadow-fab-glow hover:scale-110 transition-all duration-200"
           onClick={() => setShowSettings(true)}
           aria-label="Settings"
         >
@@ -164,7 +186,7 @@ export default function SquadPage() {
         </button>
       )}
       {/* Banner */}
-      <div className="relative h-40 w-full rounded-2xl overflow-hidden mb-8">
+      <div className="relative h-40 w-full rounded-2xl overflow-hidden mb-8 bg-yellow-100">
         {displayProfile.banner_url ? (
           <img
             src={displayProfile.banner_url}
@@ -176,7 +198,7 @@ export default function SquadPage() {
         )}
       </div>
       {/* Profile Card */}
-      <div className="mx-auto w-full max-w-2xl bg-white/80 dark:bg-black/60 rounded-2xl shadow-lg p-6 -mt-24 flex flex-col items-center border border-accent-cyan/20">
+      <div className="mx-auto w-full max-w-2xl bg-blue-100 dark:bg-black/60 rounded-2xl shadow-lg p-6 -mt-24 flex flex-col items-center border border-accent-cyan/20">
         <div className="w-32 h-32 rounded-full bg-accent-cyan border-4 border-accent-pink shadow-fab-glow mb-2 overflow-hidden -mt-20">
           {displayProfile.avatar_url ? (
             <img src={displayProfile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
@@ -189,21 +211,21 @@ export default function SquadPage() {
         <p className="text-gray-500 dark:text-gray-300 text-center mb-2">{displayProfile.bio || "This is your bio. Edit it to tell the world about your vibes!"}</p>
         <div className="flex justify-center gap-8 my-4 w-full">
           <div className="flex flex-col items-center">
-            <span className="font-bold text-lg text-accent-cyan">{postCount}</span>
+            <span className="font-bold text-lg text-orange-500">{postCount}</span>
             <span className="text-xs text-gray-500">Posts</span>
           </div>
           <div className="flex flex-col items-center">
-            <span className="font-bold text-lg text-accent-cyan">{followers}</span>
+            <span className="font-bold text-lg text-cyan-500">{followers}</span>
             <span className="text-xs text-gray-500">Followers</span>
           </div>
           <div className="flex flex-col items-center">
-            <span className="font-bold text-lg text-accent-cyan">{following}</span>
+            <span className="font-bold text-lg text-red-500">{following}</span>
             <span className="text-xs text-gray-500">Following</span>
           </div>
         </div>
         <div className="flex gap-2 flex-wrap justify-center mb-2">
-          {displayProfile.interests && displayProfile.interests.split(",").map((interest: string) => (
-            <span key={interest} className="px-3 py-1 rounded-full bg-accent-cyan/20 text-accent-cyan text-xs font-bold">{interest.trim()}</span>
+          {displayProfile.interests && displayProfile.interests.split(",").map((interest: string, i: number) => (
+            <span key={interest} className={`px-3 py-1 rounded-full bg-gradient-to-r from-pink-500 via-yellow-400 to-blue-400 text-white text-xs font-bold`}>{interest.trim()}</span>
           ))}
         </div>
         {/* Follow/Unfollow button for other users */}
@@ -219,9 +241,9 @@ export default function SquadPage() {
       </div>
       {/* Tabs */}
       <div className="flex justify-center gap-4 my-8">
-        <button className={`px-4 py-2 rounded-full font-bold ${activeTab === "posts" ? "bg-accent-cyan/20 text-accent-cyan" : "bg-accent-cyan/10 text-accent-cyan"}`} onClick={() => setActiveTab("posts")}>Posts</button>
-        <button className={`px-4 py-2 rounded-full font-bold ${activeTab === "trends" ? "bg-accent-cyan/20 text-accent-cyan" : "bg-accent-cyan/10 text-accent-cyan"}`} onClick={() => setActiveTab("trends")}>Trends</button>
-        <button className={`px-4 py-2 rounded-full font-bold ${activeTab === "drops" ? "bg-accent-cyan/20 text-accent-cyan" : "bg-accent-cyan/10 text-accent-cyan"}`} onClick={() => setActiveTab("drops")}>Drops</button>
+        <button className={`px-4 py-2 rounded-full font-bold ${activeTab === "posts" ? "bg-purple-400 text-white" : "bg-purple-100 text-purple-700"}`} onClick={() => setActiveTab("posts")}>Posts</button>
+        <button className={`px-4 py-2 rounded-full font-bold ${activeTab === "trends" ? "bg-purple-400 text-white" : "bg-purple-100 text-purple-700"}`} onClick={() => setActiveTab("trends")}>Trends</button>
+        <button className={`px-4 py-2 rounded-full font-bold ${activeTab === "drops" ? "bg-purple-400 text-white" : "bg-purple-100 text-purple-700"}`} onClick={() => setActiveTab("drops")}>Drops</button>
       </div>
       {/* Tab Content */}
       <div className="flex-1 flex flex-col items-center justify-center w-full">
@@ -257,29 +279,42 @@ export default function SquadPage() {
       </div>
       {/* Discover Other Users */}
       <div className="mt-16 w-full max-w-2xl mx-auto">
-        <h3 className="text-xl font-headline font-bold mb-4 text-accent-cyan">Discover Users</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {allUsers.filter(u => u.uid !== (viewingUid || firebaseUser?.uid)).map(user => (
-            <Link key={user.uid} href={`/squad/${user.uid}`} className="block">
-              <div className="flex items-center gap-4 bg-white/80 dark:bg-card/80 rounded-xl p-4 shadow border border-accent-cyan/10 hover:bg-accent-cyan/10 transition-all cursor-pointer">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accentPink to-accentCyan flex items-center justify-center text-white font-bold text-lg">
-                  {user.name ? user.name[0] : user.username?.[0] || "U"}
-                </div>
-                <div className="flex-1">
-                  <div className="font-headline text-accent-cyan">{user.name}</div>
-                  <div className="text-xs text-gray-500">@{user.username}</div>
-                  <div className="text-xs text-gray-400">{user.bio}</div>
-                  <div className="flex gap-4 mt-1 text-xs text-accent-cyan">
-                    <span>Posts: {user.postCount || 0}</span>
-                    <span>Followers: {user.followersCount || 0}</span>
-                    <span>Following: {user.followingCount || 0}</span>
+        <h3 className="text-xl font-headline bg-gradient-to-r from-pink-500 via-yellow-400 to-blue-400 bg-clip-text text-transparent">Discover Users</h3>
+        {allUsers.filter(u => u.uid !== (viewingUid || firebaseUser?.uid)).length === 0 ? (
+          <div className="text-gray-400 text-center py-8">No users found. Invite your friends to join!</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {allUsers.filter(u => u.uid !== (viewingUid || firebaseUser?.uid)).map((user, i) => (
+              <Link key={user.uid} href={`/squad/${user.uid}`} className="block">
+                <div className={`flex items-center gap-4 rounded-xl p-4 shadow border border-accent-cyan/10 hover:bg-accent-cyan/10 transition-all cursor-pointer ${i % 3 === 0 ? 'bg-pink-100' : i % 3 === 1 ? 'bg-yellow-100' : 'bg-blue-100'}`}>
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accentPink to-accentCyan flex items-center justify-center text-white font-bold text-lg overflow-hidden">
+                    {user.avatar_url ? (
+                      <img src={user.avatar_url} alt="avatar" className="w-full h-full object-cover rounded-full" />
+                    ) : (
+                      <span>{user.name ? user.name[0] : user.username?.[0] || "U"}</span>
+                    )}
                   </div>
+                  <div className="flex-1">
+                    <div className="font-headline text-accent-cyan">{user.name}</div>
+                    <div className="text-xs text-gray-500">@{user.username}</div>
+                    <div className="text-xs text-gray-400">{user.bio}</div>
+                    <div className="flex gap-4 mt-1 text-xs text-accent-cyan">
+                      <span>Posts: {user.postCount || 0}</span>
+                      <span>Followers: {user.followersCount || 0}</span>
+                      <span>Following: {user.followingCount || 0}</span>
+                    </div>
+                    <div className="flex gap-1 flex-wrap mt-1">
+                      {user.interests && user.interests.split(",").map((interest: string) => (
+                        <span key={interest} className="px-2 py-0.5 rounded-full bg-accent-cyan/20 text-accent-cyan text-xs font-bold">{interest.trim()}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <FollowButton user={user} currentUser={firebaseUser} />
                 </div>
-                <FollowButton user={user} currentUser={firebaseUser} />
-              </div>
-            </Link>
-          ))}
-        </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
       {showEdit && (
         <EditProfileModal profile={displayProfile} onClose={() => setShowEdit(false)} />
