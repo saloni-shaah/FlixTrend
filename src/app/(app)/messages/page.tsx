@@ -1,14 +1,16 @@
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { messageThreads } from "@/lib/data";
+import { getMessageThreads, type MessageThread } from "@/lib/data";
 import { Badge } from "@/components/ui/badge";
 import AppLayout from "../layout";
 
-export default function MessagesPage() {
+export default async function MessagesPage() {
+  const messageThreads = await getMessageThreads();
+
   return (
     <AppLayout>
       <div className="divide-y divide-border/20">
-        {messageThreads.map((thread) => (
+        {messageThreads.map((thread: MessageThread) => (
           <Link href={`/messages/${thread.id}`} key={thread.id} className="flex items-center gap-4 p-4 hover:bg-card/50 transition-colors">
             <Avatar className="h-14 w-14">
               <AvatarImage src={thread.user.avatar} />

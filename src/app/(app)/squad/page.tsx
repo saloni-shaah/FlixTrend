@@ -1,13 +1,25 @@
 import Image from "next/image";
-import { users, posts } from "@/lib/data";
+import { getUser, getPostsByUser, type User, type Post } from "@/lib/data";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PostCard } from "@/components/flixtrend/post-card";
 import AppLayout from "../layout";
 
-export default function SquadPage() {
-  const user = users[0]; // Mock current user
+// Mock current user ID. In a real app, this would come from the auth state.
+const CURRENT_USER_ID = 'user-1';
+
+export default async function SquadPage() {
+  const user = await getUser(CURRENT_USER_ID);
+  const userPosts = await getPostsByUser(CURRENT_USER_ID);
+
+  if (!user) {
+    return (
+      <AppLayout>
+        <div className="text-center py-10">User not found.</div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
@@ -57,10 +69,10 @@ export default function SquadPage() {
               <TabsTrigger value="drops">Drops</TabsTrigger>
             </TabsList>
             <TabsContent value="posts" className="mt-4 space-y-4">
-              {posts.filter(p => p.user.id === user.id).map(post => (
+              {userPosts.map((post: Post) => (
                   <PostCard key={post.id} post={post} />
               ))}
-                {posts.filter(p => p.user.id === user.id).length === 0 && <p className="text-center text-muted-foreground py-8">No posts yet.</p>}
+              {userPosts.length === 0 && <p className="text-center text-muted-foreground py-8">No posts yet.</p>}
             </TabsContent>
             <TabsContent value="boosts" className="mt-4">
               <p className="text-center text-muted-foreground py-8">Boosted content will appear here.</p>

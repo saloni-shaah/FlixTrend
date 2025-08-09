@@ -1,3 +1,6 @@
+import { db } from './firebase';
+import { collection, getDocs, doc, getDoc, query, where } from 'firebase/firestore';
+
 export type User = {
   id: string;
   name: string;
@@ -13,6 +16,7 @@ export type Flash = {
 
 export type Post = {
   id: string;
+  userId: string;
   user: User;
   content: string;
   image?: string;
@@ -27,70 +31,145 @@ export type Post = {
   isModerated: boolean;
 };
 
-// This will be replaced with Firebase data
-export const users: User[] = [
-    { id: 'user-1', name: 'AI Enthusiast', avatar: 'https://placehold.co/100x100.png', handle: 'ai_explorer' },
-    { id: 'user-2', name: 'Synthwave Queen', avatar: 'https://placehold.co/100x100.png', handle: 'synthwave_q' },
-];
-export const flashes: Flash[] = users.map((u, i) => ({ id: `flash-${i+1}`, user: u, image: `https://placehold.co/300x500.png`}));
-export const posts: Post[] = [
-    {
-        id: 'post-1',
-        user: users[0],
-        content: 'Just generated this amazing piece of art with the Almighty AI. The future is now! 🚀 #AIart #Flixtrend',
-        image: 'https://placehold.co/600x400.png',
-        stats: { boosts: 120, drops: 5, relays: 30, comments: 15 },
-        timestamp: '2h ago',
-        isModerated: true,
-    },
-    {
-        id: 'post-2',
-        user: users[1],
-        content: 'Chasing neon sunsets and listening to my favorite synthwave tracks. What a vibe. 🎶',
-        image: 'https://placehold.co/600x400.png',
-        stats: { boosts: 250, drops: 2, relays: 80, comments: 42 },
-        timestamp: '5h ago',
-        isModerated: true,
-    }
-];
-
-
 export type MessageThread = {
     id: string;
+    userId: string;
     user: User;
     lastMessage: string;
     timestamp: string;
     unreadCount: number;
 }
 
-// This will be replaced with Firebase data
-export const messageThreads: MessageThread[] = [
-    {
-        id: 'thread-1',
-        user: users[0],
-        lastMessage: 'Hey, did you see the latest AI update?',
-        timestamp: '15m ago',
-        unreadCount: 2,
-    },
-    {
-        id: 'thread-2',
-        user: users[1],
-        lastMessage: 'Let\'s collab on a new track!',
-        timestamp: '1h ago',
-        unreadCount: 0,
+export type TrendingTopic = {
+    id: string;
+    title: string;
+    posts: string;
+}
+
+export type Short = {
+    id: string;
+    image: string;
+    user: User;
+    views: string;
+}
+
+// Fetch a single user by ID
+export async function getUser(userId: string): Promise<User | null> {
+    try {
+        const userRef = doc(db, 'users', userId);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+            return { id: userSnap.id, ...userSnap.data() } as User;
+        }
+        return null;
+    } catch (error) {
+        console.error("Error fetching user:", error);
+        return null;
     }
-]
+}
 
-export const trendingTopics: {id: string, title: string, posts: string}[] = [
-    { id: 'topic-1', title: '#AIrevolution', posts: '1.2k' },
-    { id: 'topic-2', title: '#FutureFunk', posts: '980' },
-    { id: 'topic-3', title: '#VFXMagic', posts: '750' },
-    { id: 'topic-4', title: '#GenZDevs', posts: '500' },
-];
+// Fetch all posts and enrich with user data
+export async function getPosts(): Promise<Post[]> {
+  try {
+    const postsCol = collection(db, 'posts');
+    const postSnapshot = await getDocs(postsCol);
+    const postsList = postSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Post));
+    
+    // Enrich posts with user data
+    const enrichedPosts = await Promise.all(postsList.map(async (post) => {
+        const user = await getUser(post.userId);
+        return { ...post, user: user! };
+    }));
 
-export const shorts: {id: string, image: string, user: User, views: string}[] = users.map((u,i) => ({
-    id: `short-${i+1}`,
-    image: 'https://placehold.co/400x600.png',
-    user: u,
-    views: `${(Math.random() * 10).toFixed(1)}k`
-}))
+    return enrichedPosts;
+  } catch (error) {
+      console.error("Error fetching posts:", error);
+      return [];
+  }
+}
+
+// Fetch posts by a specific user
+export async function getPostsByUser(userId: string): Promise<Post[]> {
+    try {
+        const q = query(collection(db, "posts"), where("userId", "==", userId));
+        const querySnapshot = await getDocs(q);
+        const postsList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Post));
+        
+        const user = await getUser(userId);
+        const enrichedPosts = postsList.map(post => ({ ...post, user: user! }));
+
+        return enrichedPosts;
+    } catch (error) {
+        console.error("Error fetching user posts:", error);
+        return [];
+    }
+}
+
+// Fetch all flashes
+export async function getFlashes(): Promise<Flash[]> {
+    try {
+        const flashesCol = collection(db, 'flashes');
+        const flashSnapshot = await getDocs(flashesCol);
+        const flashList = flashSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Flash));
+
+        const enrichedFlashes = await Promise.all(flashList.map(async (flash) => {
+            const user = await getUser(flash.userId);
+            return { ...flash, user: user! };
+        }));
+
+        return enrichedFlashes;
+    } catch (error) {
+        console.error("Error fetching flashes:", error);
+        return [];
+    }
+}
+
+// Fetch all message threads
+export async function getMessageThreads(): Promise<MessageThread[]> {
+    try {
+        const threadsCol = collection(db, 'messageThreads');
+        const threadSnapshot = await getDocs(threadsCol);
+        const threadList = threadSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MessageThread));
+
+        const enrichedThreads = await Promise.all(threadList.map(async (thread) => {
+            const user = await getUser(thread.userId);
+            return { ...thread, user: user! };
+        }));
+        
+        return enrichedThreads;
+    } catch (error) {
+        console.error("Error fetching message threads:", error);
+        return [];
+    }
+}
+
+// Fetch trending topics
+export async function getTrendingTopics(): Promise<TrendingTopic[]> {
+    try {
+        const topicsCol = collection(db, 'trendingTopics');
+        const topicSnapshot = await getDocs(topicsCol);
+        return topicSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TrendingTopic));
+    } catch (error) {
+        console.error("Error fetching trending topics:", error);
+        return [];
+    }
+}
+
+// Fetch shorts
+export async function getShorts(): Promise<Short[]> {
+    try {
+        const shortsCol = collection(db, 'shorts');
+        const shortSnapshot = await getDocs(shortsCol);
+        const shortList = shortSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Short));
+
+        const enrichedShorts = await Promise.all(shortList.map(async (short) => {
+            const user = await getUser(short.userId);
+            return { ...short, user: user! };
+        }));
+        
+        return enrichedShorts;
+    } catch (error) {
+        console.error("Error fetching shorts:", error);
+        return [];
+    }
+}

@@ -9,12 +9,15 @@ import {
 } from "@/components/ui/carousel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { trendingTopics, shorts } from "@/lib/data";
+import { getTrendingTopics, getShorts, type Short } from "@/lib/data";
 import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import AppLayout from "../layout";
 
-export default function ScopePage() {
+export default async function ScopePage() {
+  const trendingTopics = await getTrendingTopics();
+  const shorts = await getShorts();
+
   return (
     <AppLayout>
       <div className="container mx-auto py-4 px-4 space-y-8">
@@ -53,7 +56,7 @@ export default function ScopePage() {
             </TabsList>
             <TabsContent value="all" className="mt-4">
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {shorts.map((short) => (
+                {shorts.map((short: Short) => (
                   <Card key={short.id} className="glassmorphism overflow-hidden group">
                     <div className="relative aspect-[9/16]">
                       <Image src={short.image} alt="Short" fill className="object-cover transition-transform group-hover:scale-105" data-ai-hint="portrait video" />

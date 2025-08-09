@@ -1,8 +1,8 @@
-import { flashes } from "@/lib/data";
+import { type Flash } from "@/lib/data";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
-export function Flashes() {
+export function Flashes({ flashes }: { flashes: Flash[] }) {
   return (
     <div className="py-4 px-2">
       <ScrollArea className="w-full whitespace-nowrap">

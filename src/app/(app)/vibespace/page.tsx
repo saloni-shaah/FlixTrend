@@ -1,13 +1,15 @@
 import { Flashes } from "@/components/flixtrend/flashes";
 import { PostCard } from "@/components/flixtrend/post-card";
-import { posts } from "@/lib/data";
+import { getPosts, getFlashes, type Post } from "@/lib/data";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { PenSquare } from "lucide-react";
 import Link from "next/link";
-import AppLayout from "../layout";
 
-export default function VibeSpacePage() {
+export default async function VibeSpacePage() {
+  const posts = await getPosts();
+  const flashes = await getFlashes();
+
   return (
     <div className="container max-w-2xl mx-auto relative">
        <Button asChild className="fixed top-20 right-8 z-10 animated-glow">
@@ -16,10 +18,10 @@ export default function VibeSpacePage() {
             Create
           </Link>
         </Button>
-      <Flashes />
+      <Flashes flashes={flashes}/>
       <Separator className="bg-border/20"/>
       <div className="py-4 space-y-4">
-        {posts.map((post) => (
+        {posts.map((post: Post) => (
           <PostCard key={post.id} post={post} />
         ))}
       </div>
