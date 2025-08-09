@@ -2,7 +2,7 @@ import { AlmightyAiPanel } from "@/components/flixtrend/almighty-ai-panel";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { MainHeader } from "@/components/layout/main-header";
 
-export default function MainLayout({
+export default function AppLayout({
   children,
 }: {
   children: React.ReactNode;

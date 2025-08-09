@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/flixtrend/logo";
 
@@ -14,6 +14,7 @@ export function MainHeader() {
     if (pathname.startsWith("/scope")) return "Scope";
     if (pathname.startsWith("/squad")) return "Squad";
     if (pathname.startsWith("/messages")) return "Signal";
+    if (pathname.startsWith("/create-post")) return "Create Post";
     return "Flixtrend";
   };
 
@@ -28,6 +29,10 @@ export function MainHeader() {
         </Button>
       )}
       <h1 className="flex-1 text-xl font-bold font-headline">{getTitle()}</h1>
+      <Button variant="ghost" size="icon">
+        <Bell className="h-5 w-5" />
+        <span className="sr-only">Notifications</span>
+      </Button>
     </header>
   );
 }

@@ -4,48 +4,48 @@
 
 @layer base {
   :root {
-    --background: 0 0% 99%; /* Off White */
-    --foreground: 225 38% 7%; /* Midnight Black */
-    --card: 0 0% 100%;
-    --card-foreground: 225 38% 7%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 225 38% 7%;
-    --primary: 266 100% 67%; /* Electric Purple */
-    --primary-foreground: 0 0% 99%;
-    --secondary: 198 93% 90%; /* Baby Blue */
-    --secondary-foreground: 225 38% 7%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 198 93% 90%; /* Baby Blue */
-    --accent-foreground: 225 38% 7%;
-    --destructive: 0 84.2% 60.2%;
+    --background: 240 10% 3.9%; /* Charcoal */
+    --foreground: 0 0% 98%; /* White Smoke */
+    --card: 240 5.9% 10%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 217 91% 60%; /* Electric Blue */
+    --primary-foreground: 0 0% 98%;
+    --secondary: 262 84% 58%; /* Cyber Purple */
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 336 84% 58%; /* Pink */
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 266 100% 67%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 217 91% 60%;
     --radius: 0.8rem;
   }
 
   .dark {
-    --background: 225 38% 7%; /* Midnight Black */
-    --foreground: 0 0% 99%; /* Off White */
-    --card: 240 16% 15%; /* Deep Grey */
-    --card-foreground: 0 0% 99%;
-    --popover: 225 38% 7%;
-    --popover-foreground: 0 0% 99%;
-    --primary: 182 100% 50%; /* Neon Blue */
-    --primary-foreground: 225 38% 7%;
-    --secondary: 266 100% 67%; /* Electric Purple */
-    --secondary-foreground: 0 0% 99%;
-    --muted: 240 16% 15%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 266 100% 67%; /* Electric Purple */
-    --accent-foreground: 0 0% 99%;
-    --destructive: 0 62.8% 30.6%;
+    --background: 244 10% 7%; /* Charcoal */
+    --foreground: 0 0% 98%; /* White Smoke */
+    --card: 240 5.9% 10%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 217 91% 60%; /* Electric Blue #3B82F6 */
+    --primary-foreground: 0 0% 98%;
+    --secondary: 336 84% 58%; /* Pink / Coral #FF6B6B -> using #EC4899 as per dark mode spec */
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 262 84% 58%; /* Cyber Purple / Plum #8B5CF6 */
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 16% 25%;
-    --input: 240 16% 25%;
-    --ring: 182 100% 50%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 217 91% 60%;
   }
 }
 
@@ -82,10 +82,10 @@
   .animated-gradient {
     background-size: 400% 400%;
     background-image: linear-gradient(-45deg,
-      hsl(var(--background)),
       hsl(var(--primary) / 0.1),
+      hsl(var(--secondary) / 0.1),
       hsl(var(--accent) / 0.1),
-      hsl(var(--background))
+      hsl(var(--background) / 0.8)
     );
     animation: background-pan 20s ease infinite;
   }
@@ -107,7 +107,7 @@
       box-shadow: 0 0 10px hsl(var(--primary)), 0 0 15px hsl(var(--accent) / 0.6);
     }
   }
-
+  
   .animated-glow-sm {
     animation: glow-sm 2s ease-in-out infinite alternate;
   }
