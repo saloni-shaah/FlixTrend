@@ -1,0 +1,76 @@
+# **App Name**: Flixtrend
+
+## Core Features:
+
+- Unified Super App: Integrate all functionalities into a single, secure app, encompassing social networking, encrypted messaging, content creation and discovery, AI-powered tools, a comprehensive privacy dashboard, and additional features like music streaming and more. Prioritize user data protection and aim to be the world's safest and most versatile application.
+- VibeSpace: Home Feed: Top Flashes (story-like), Chronological feed, Boost / Drop / Relay interaction system, AI moderation badge. Navigation: Bottom navigation bar for VibeSpace (Home Feed), Scope (Explore/Search), Squad (Profile), and Signal (Messages).  Floating Action Button (FAB):  Almighty AI Panel (bottom center). Back Navigation: Consistent back buttons (top left) across all pages. Clear visual hierarchy and intuitive design elements.
+- Scope (Explore/Search): Top Search bar, Trending carousel, Category filter tabs, Shorts Grid, Auto suggestions.
+- Squad (Profile): Profile Banner + Avatar, Tabs (Posts | Boosts | Drops), Followers & Following counts, Edit Profile Modal, Interest tags (auto-suggested by AI).
+- Signal (Messages): Chat UI, Voice notes, GIFs, Photos, Polls, AI tone analyzer, Smart reply suggestions.
+- Settings (Inside Profile): Account settings, Dark/Light mode toggle, AI preferences, Block/report options, Theme personalization.
+- ALMIGHTY AI PANEL: Floating button opens a multi-tool AI hub: Study Mode, Project Builder, Image Creator, Content Generator, FastCheck tool, History + Notes.
+- Interactive Feed: Interactive Feed: Display photos, short videos, and long-form content.
+- Privacy Controls: Granular Privacy Controls: Enable users to set privacy levels for each post and content type.
+- Encrypted Messaging: Provide secure, end-to-end encrypted direct and group messaging.
+- Privacy Dashboard: Offer a comprehensive dashboard for users to manage their data and privacy settings.
+- Content Channels: Curated Content Channels: Allow video uploads and subscriptions to channels, with integrated player.
+- Trend Detection: AI-powered tool identifies trending content based on user interactions and channel subscriptions.
+
+## Style Guidelines:
+
+- Neon Blue `#00f7ff`, Midnight Black `#0c0f1a`, Electric Purple `#a259ff`, Cyber Teal `#1df2e1`, Glow Orange `#ff8c42`, Deep Grey `#1f1f2e`
+- Baby Blue `#d0f0fd`, Off White `#fcfcfc`, Soft Violet `#e0c9ff`, Warm Yellow `#ffe69a`, Aqua Mint `#a3f7bf`, Peach Glow `#ffc5a1`, Neutral Grey `#dddddd`
+- Body and headline font: 'Inter', sans-serif, for a modern and neutral appearance suitable for body and headline text.
+- Use minimalist icons representing privacy, security, and various content types.
+- Design a clean, intuitive layout emphasizing privacy controls and data management.
+- Incorporate subtle animations to enhance user interaction, especially in the feed and privacy dashboard.
+- Buttons, tabs, and tags glow in neon pink, blue, green — dark mode vibes.
+- Moving gradients like the Northern Lights. Very aesthetic and Gen-Z.
+- Background or section colors smoothly change as you scroll down.
+- Transparent cards with blurry glass effect.
+- Buttons & profile pics with animated gradient rings.
+- Text that types itself in a rainbow gradient.
+- UI color changes with user's emotion detected from post tone.
+- Any element you hover over pulses with color and blur.
+- Custom cursor leaves a neon trail behind.
+- Every time a post is dropped or boost hits 100+ likes.
+- When you visit a page, the content zooms and slides in smoothly.
+- Clicking on elements shows ripple or wave spreading out.
+- When navigating, page peels like a sticker to reveal the next.
+- Cards morph and fade as they transform from preview to full view.
+- Quick light flash when opening “Flashes” story-type posts.
+- When deleting or reporting, card breaks into fragments.
+- Profile pages load with elements unfolding like a card deck.
+- Scope carousels zoom horizontally at lightning speed with friction.
+- While loading, show ink drops swirling into a Flix logo.
+- First app launch shows an animated starburst + sound.
+- Tabs jump or wobble with sound on switch.
+- Cards flip 3D style when switching views.
+- Live floating emojis on posts with reactions.
+- Text posts animate in like chat bubbles or billboards.
+- Boost button catches fire when user double taps.
+- Drop action creates animated water ripple effect.
+- Flash ring glows and rotates while a story is live.
+- When following someone, button blooms like a flower.
+- Relay reactions (like RTs) fly and stack.
+- Color waves move around AI-analyzed posts.
+- Almighty bot pulses in sync with its speech bubbles.
+- Sound waves animate as background to music vibes.
+- Comments float from bottom like stream chat.
+- Spotlight beam shines on pinned content in profile.
+- Polls or likes rise with bar-fill animations.
+- Hover makes cards tilt with depth (3D parallax).
+- 1K drops or 1K boosts = automatic firework celebration.
+- Stickers thrown onto posts animate like a slap.
+- Flashes swipe left-right with card flick speed.
+- Verified or trending content glows and sparkles.
+- When user boosts/drops content.
+- Every AI result shows with a trail of digital sparks.
+- Buttons slightly move toward your finger or cursor.
+- Holding on a post to share glows it slowly.
+- Long press opens emoji dropper that rains emojis.
+- Reveal user stats or post info by swiping right or long hold.
+- Rearrange posts in profile with drag-drop animation.
+- Buttons like follow, like, drop — all with sound (clap, zap, fire).
+- Page background auto-blurs to match the top vibe color.
+- Confetti, heart particles, sparkle trails fly during interaction.
