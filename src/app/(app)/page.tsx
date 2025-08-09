@@ -1,28 +1,38 @@
-import { Flashes } from "@/components/flixtrend/flashes";
-import { PostCard } from "@/components/flixtrend/post-card";
-import { posts } from "@/lib/data";
-import { Separator } from "@/components/ui/separator";
-import { Button } from "@/components/ui/button";
-import { PenSquare } from "lucide-react";
-import Link from "next/link";
-import AppLayout from "./layout";
+"use client";
 
-export default function VibeSpacePage() {
+import { usePathname, useRouter } from "next/navigation";
+import { ArrowLeft, Bell } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/flixtrend/logo";
+
+export function MainHeader() {
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const getTitle = () => {
+    if (pathname === "/vibespace") return <Logo />;
+    if (pathname.startsWith("/scope")) return "Scope";
+    if (pathname.startsWith("/squad")) return "Squad";
+    if (pathname.startsWith("/messages")) return "Signal";
+    if (pathname.startsWith("/create-post")) return "Create Post";
+    return "Flixtrend";
+  };
+
+  const showBackButton = pathname !== "/vibespace";
+
   return (
-    <div className="container max-w-2xl mx-auto relative">
-       <Button asChild className="fixed top-20 right-8 z-10 animated-glow">
-          <Link href="/create-post">
-            <PenSquare className="h-5 w-5 mr-2" />
-            Create
-          </Link>
+    <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6">
+      {showBackButton && (
+        <Button variant="ghost" size="icon" onClick={() => router.back()}>
+          <ArrowLeft className="h-5 w-5" />
+          <span className="sr-only">Back</span>
         </Button>
-      <Flashes />
-      <Separator className="bg-border/20"/>
-      <div className="py-4 space-y-4">
-        {posts.map((post) => (
-          <PostCard key={post.id} post={post} />
-        ))}
-      </div>
-    </div>
+      )}
+      <h1 className="flex-1 text-xl font-bold font-headline">{getTitle()}</h1>
+      <Button variant="ghost" size="icon">
+        <Bell className="h-5 w-5" />
+        <span className="sr-only">Notifications</span>
+      </Button>
+    </header>
   );
 }

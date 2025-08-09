@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/", icon: Home, label: "VibeSpace" },
+  { href: "/vibespace", icon: Home, label: "VibeSpace" },
   { href: "/scope", icon: Search, label: "Scope" },
   { href: "/squad", icon: User, label: "Squad" },
   { href: "/messages", icon: MessageSquare, label: "Signal" },

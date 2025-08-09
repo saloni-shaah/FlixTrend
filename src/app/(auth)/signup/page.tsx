@@ -26,7 +26,7 @@ export default function SignupPage() {
     const nextStep = () => {
       if (step === steps.length) {
         // TODO: Implement actual signup logic
-        router.push("/");
+        router.push("/vibespace");
       } else {
         setStep(s => Math.min(s + 1, steps.length));
       }

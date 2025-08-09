@@ -10,7 +10,7 @@ export function MainHeader() {
   const router = useRouter();
 
   const getTitle = () => {
-    if (pathname === "/") return <Logo />;
+    if (pathname === "/vibespace") return <Logo />;
     if (pathname.startsWith("/scope")) return "Scope";
     if (pathname.startsWith("/squad")) return "Squad";
     if (pathname.startsWith("/messages")) return "Signal";
@@ -18,7 +18,7 @@ export function MainHeader() {
     return "Flixtrend";
   };
 
-  const showBackButton = pathname !== "/";
+  const showBackButton = pathname !== "/vibespace";
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6">

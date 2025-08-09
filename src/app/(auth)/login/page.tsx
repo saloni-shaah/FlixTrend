@@ -14,7 +14,7 @@ export default function LoginPage() {
 
   const handleSignIn = () => {
     // TODO: Implement actual login logic
-    router.push("/");
+    router.push("/vibespace");
   }
 
   return (
