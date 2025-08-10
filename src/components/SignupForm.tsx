@@ -101,12 +101,12 @@ export default function SignupForm({ onSignup, loading }: { onSignup: (data: any
         {steps.map((s, index) => (
           <React.Fragment key={s.id}>
             <div className="flex flex-col items-center">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${step > s.id ? "bg-neon-green border-neon-green text-background" : step === s.id ? "bg-accent-cyan border-accent-cyan text-background" : "bg-card border-gray-600 text-gray-400"}`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${step > s.id ? "bg-accent border-accent text-accent-foreground" : step === s.id ? "bg-primary border-primary text-primary-foreground" : "bg-card border-border text-muted-foreground"}`}>
                 {step > s.id ? <Check /> : s.icon}
               </div>
-              <p className={`text-xs mt-2 transition-all duration-300 ${step >= s.id ? "text-accent-cyan" : "text-gray-500"}`}>{s.title}</p>
+              <p className={`text-xs mt-2 transition-all duration-300 ${step >= s.id ? "text-primary" : "text-muted-foreground"}`}>{s.title}</p>
             </div>
-            {index < steps.length - 1 && <div className={`flex-1 h-1 mx-2 transition-all duration-300 ${step > s.id ? "bg-neon-green" : "bg-gray-600"}`}></div>}
+            {index < steps.length - 1 && <div className={`flex-1 h-1 mx-2 transition-all duration-300 ${step > s.id ? "bg-accent" : "bg-border"}`}></div>}
           </React.Fragment>
         ))}
       </div>
@@ -131,24 +131,24 @@ export default function SignupForm({ onSignup, loading }: { onSignup: (data: any
         )}
         {step === 3 && (
             <div className="flex flex-col gap-4 animate-fade-in">
-                <textarea name="bio" placeholder="Your Bio (Optional)" value={formData.bio} onChange={handleChange} className="input-style min-h-[80px]"/>
+                <textarea name="bio" placeholder="Your Bio (Optional)" value={formData.bio} onChange={handleChange} className="input-style min-h-[80px] rounded-2xl"/>
                 <input type="text" name="interests" placeholder="Interests (e.g., Gaming, Music, Tech)" value={formData.interests} onChange={handleChange} className="input-style" />
             </div>
         )}
         {step === 4 && (
             <div className="animate-fade-in space-y-6">
                 <div>
-                    <h3 className="text-lg font-semibold mb-2 text-center text-accent-cyan">Upload Profile Picture</h3>
+                    <h3 className="text-lg font-semibold mb-2 text-center text-primary">Upload Profile Picture</h3>
                     <input id="avatar-upload" type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'avatar')} accept="image/*" />
-                    <label htmlFor="avatar-upload" className="w-32 h-32 mx-auto rounded-full flex items-center justify-center border-2 border-dashed border-accent-pink cursor-pointer bg-card/50 hover:bg-card">
-                        {uploading === 'avatar' ? <div className="loader"></div> : formData.avatar_url ? <img src={formData.avatar_url} alt="avatar preview" className="w-full h-full object-cover rounded-full" /> : <ImageUp className="text-accent-pink" />}
+                    <label htmlFor="avatar-upload" className="w-32 h-32 mx-auto rounded-full flex items-center justify-center border-2 border-dashed border-primary cursor-pointer bg-card/50 hover:bg-card/80">
+                        {uploading === 'avatar' ? <div className="loader"></div> : formData.avatar_url ? <img src={formData.avatar_url} alt="avatar preview" className="w-full h-full object-cover rounded-full" /> : <ImageUp className="text-primary" />}
                     </label>
                 </div>
                  <div>
-                    <h3 className="text-lg font-semibold mb-2 text-center text-accent-cyan">Upload Banner (Optional)</h3>
+                    <h3 className="text-lg font-semibold mb-2 text-center text-secondary">Upload Banner (Optional)</h3>
                     <input id="banner-upload" type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'banner')} accept="image/*" />
-                     <label htmlFor="banner-upload" className="w-full h-32 mx-auto rounded-lg flex items-center justify-center border-2 border-dashed border-accent-cyan cursor-pointer bg-card/50 hover:bg-card">
-                        {uploading === 'banner' ? <div className="loader"></div> : formData.banner_url ? <img src={formData.banner_url} alt="banner preview" className="w-full h-full object-cover rounded-lg" /> : <ImageUp className="text-accent-cyan" />}
+                     <label htmlFor="banner-upload" className="w-full h-32 mx-auto rounded-lg flex items-center justify-center border-2 border-dashed border-secondary cursor-pointer bg-card/50 hover:bg-card/80">
+                        {uploading === 'banner' ? <div className="loader"></div> : formData.banner_url ? <img src={formData.banner_url} alt="banner preview" className="w-full h-full object-cover rounded-lg" /> : <ImageUp className="text-secondary" />}
                     </label>
                 </div>
             </div>
@@ -169,24 +169,24 @@ const styles = `
     .input-style {
         width: 100%;
         padding: 0.75rem 1rem;
-        border-radius: 9999px;
-        background-color: hsla(var(--card) / 0.5);
+        background-color: hsl(var(--input));
         color: hsl(var(--foreground));
-        border: 2px solid hsl(var(--accent-cyan), 0.3);
+        border: 2px solid hsl(var(--border));
         transition: all 0.3s;
+        border-radius: 9999px;
     }
     .input-style:focus {
         outline: none;
-        border-color: hsl(var(--accent-pink));
-        box-shadow: 0 0 0 2px hsl(var(--accent-pink), 0.5);
+        border-color: hsl(var(--primary));
+        box-shadow: 0 0 0 2px hsl(var(--ring));
     }
     .btn-primary {
         display: inline-flex;
         align-items: center;
         padding: 0.75rem 1.5rem;
         border-radius: 9999px;
-        background-color: var(--accent-pink);
-        color: white;
+        background-color: hsl(var(--primary));
+        color: hsl(var(--primary-foreground));
         font-weight: bold;
         transition: all 0.3s;
     }
@@ -200,14 +200,14 @@ const styles = `
         padding: 0.75rem 1.5rem;
         border-radius: 9999px;
         background-color: transparent;
-        border: 2px solid var(--accent-cyan);
-        color: var(--accent-cyan);
+        border: 2px solid hsl(var(--secondary));
+        color: hsl(var(--secondary));
         font-weight: bold;
         transition: all 0.3s;
     }
     .btn-secondary:hover {
-        background-color: var(--accent-cyan);
-        color: hsl(var(--background));
+        background-color: hsl(var(--secondary));
+        color: hsl(var(--secondary-foreground));
     }
 `;
 

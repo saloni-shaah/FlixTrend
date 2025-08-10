@@ -53,10 +53,10 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background text-foreground font-body p-4">
-      <div className="bg-card/80 rounded-2xl shadow-lg border border-accent-cyan/20 p-8 w-full max-w-md flex flex-col gap-6 animate-fade-in">
+    <div className="min-h-screen flex items-center justify-center font-body p-4">
+      <div className="glass-card rounded-2xl p-8 w-full max-w-md flex flex-col gap-6 animate-fade-in">
         <div className="text-center">
-            <h2 className="text-3xl font-headline font-bold text-accent-cyan mb-2 drop-shadow">Create Your Account</h2>
+            <h2 className="text-3xl font-headline font-bold text-primary mb-2 drop-shadow-[0_0_10px_hsl(var(--primary)/0.5)]">Create Your Account</h2>
             <p className="text-foreground/80">Join the next wave of social media.</p>
         </div>
         
@@ -66,7 +66,7 @@ export default function SignupPage() {
         
         <div className="text-center mt-4">
           <span className="text-foreground/70">Already have an account? </span>
-          <Link href="/login" className="text-accent-cyan hover:underline">Login</Link>
+          <Link href="/login" className="text-primary hover:underline">Login</Link>
         </div>
       </div>
     </div>

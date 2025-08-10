@@ -105,13 +105,13 @@ export default function SquadPage() {
 
 
   if (loading || !profile) {
-    return <div className="flex flex-col min-h-screen items-center justify-center text-accent-cyan">Loading your squad...</div>;
+    return <div className="flex flex-col min-h-screen items-center justify-center text-primary">Loading your squad...</div>;
   }
 
   return (
-    <div className="flex flex-col min-h-screen pt-6 pb-24 px-2 md:px-8 bg-background">
+    <div className="flex flex-col min-h-screen pt-6 pb-24 px-2 md:px-8">
       <button
-        className="fixed top-6 right-6 z-50 bg-card/80 text-foreground p-3 rounded-full shadow-lg hover:scale-110 transition-all duration-200"
+        className="fixed top-6 right-6 z-50 glass-card text-foreground p-3 rounded-full shadow-lg hover:scale-110 hover:text-primary transition-all duration-200"
         onClick={() => setShowSettings(true)}
         aria-label="Settings"
       >
@@ -122,12 +122,12 @@ export default function SquadPage() {
         {profile.banner_url ? (
           <img src={profile.banner_url} alt="banner" className="absolute inset-0 w-full h-full object-cover" />
         ) : (
-          <div className="absolute inset-0 w-full h-full bg-gradient-to-tr from-accent-pink/40 to-accent-cyan/40" />
+          <div className="absolute inset-0 w-full h-full bg-gradient-to-tr from-primary/40 to-secondary/40" />
         )}
       </div>
 
-      <div className="mx-auto w-full max-w-2xl bg-card rounded-2xl shadow-lg p-6 -mt-24 flex flex-col items-center border border-accent-cyan/20">
-        <div className="w-32 h-32 rounded-full bg-accent-cyan border-4 border-accent-pink shadow-fab-glow mb-2 overflow-hidden -mt-20">
+      <div className="mx-auto w-full max-w-2xl glass-card rounded-2xl p-6 -mt-24 flex flex-col items-center">
+        <div className="w-32 h-32 rounded-full bg-secondary border-4 border-primary shadow-lg mb-2 overflow-hidden -mt-20">
           {profile.avatar_url ? (
             <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
           ) : (
@@ -135,7 +135,7 @@ export default function SquadPage() {
           )}
         </div>
         <h2 className="text-2xl font-headline font-bold mb-1 text-center">{profile.name}</h2>
-        <p className="text-accent-cyan mb-2 text-center">@{profile.username}</p>
+        <p className="text-primary mb-2 text-center">@{profile.username}</p>
         <p className="text-muted-foreground text-center mb-4">{profile.bio || "This is your bio. Edit it to tell the world about your vibes!"}</p>
         <div className="flex justify-center gap-8 my-4 w-full">
           <div className="flex flex-col items-center">
@@ -156,13 +156,13 @@ export default function SquadPage() {
             <span key={interest} className="px-3 py-1 rounded-full bg-secondary text-secondary-foreground text-xs font-bold">{interest.trim()}</span>
           ))}
         </div>
-        <button className="px-6 py-2 rounded-full bg-accent-pink text-white font-bold hover:scale-105 hover:shadow-lg transition-all duration-200 mt-4" onClick={() => setShowEdit(true)}>Edit Profile</button>
+        <button className="px-6 py-2 rounded-full bg-primary text-primary-foreground font-bold btn-glow mt-4" onClick={() => setShowEdit(true)}>Edit Profile</button>
       </div>
 
       <div className="flex justify-center gap-4 my-8">
-        <button className={`px-4 py-2 rounded-full font-bold ${activeTab === "posts" ? "bg-accent-cyan text-background" : "bg-card text-foreground"}`} onClick={() => setActiveTab("posts")}>Posts</button>
-        <button className={`px-4 py-2 rounded-full font-bold ${activeTab === "trends" ? "bg-accent-cyan text-background" : "bg-card text-foreground"}`} onClick={() => setActiveTab("trends")}>Trends</button>
-        <button className={`px-4 py-2 rounded-full font-bold ${activeTab === "drops" ? "bg-accent-cyan text-background" : "bg-card text-foreground"}`} onClick={() => setActiveTab("drops")}>Drops</button>
+        <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "posts" ? "bg-primary text-primary-foreground" : "bg-card text-foreground"}`} onClick={() => setActiveTab("posts")}>Posts</button>
+        <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "trends" ? "bg-primary text-primary-foreground" : "bg-card text-foreground"}`} onClick={() => setActiveTab("trends")}>Trends</button>
+        <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "drops" ? "bg-primary text-primary-foreground" : "bg-card text-foreground"}`} onClick={() => setActiveTab("drops")}>Drops</button>
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center w-full">
@@ -190,12 +190,12 @@ export default function SquadPage() {
       </div>
       
       <div className="mt-16 w-full max-w-2xl mx-auto">
-        <h3 className="text-xl font-headline text-accent-cyan">Discover Users</h3>
+        <h3 className="text-xl font-headline text-primary">Discover Users</h3>
          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             {allUsers.map((user) => (
               <Link key={user.uid} href={`/squad/${user.uid}`} className="block">
-                <div className="flex items-center gap-4 rounded-xl p-4 shadow border border-border hover:bg-card/80 transition-all cursor-pointer">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-lg overflow-hidden">
+                <div className="glass-card flex items-center gap-4 rounded-xl p-4 hover:border-primary/50 transition-all cursor-pointer">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-white font-bold text-lg overflow-hidden">
                     {user.avatar_url ? (
                       <img src={user.avatar_url} alt="avatar" className="w-full h-full object-cover rounded-full" />
                     ) : (
@@ -267,30 +267,30 @@ function EditProfileModal({ profile, onClose }: { profile: any; onClose: () => v
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="bg-card rounded-2xl p-6 w-full max-w-md relative animate-pop shadow-xl border border-border">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="glass-card rounded-2xl p-6 w-full max-w-md relative animate-pop">
         <button onClick={onClose} className="absolute top-2 right-2 text-muted-foreground text-2xl">&times;</button>
-        <h2 className="text-xl font-headline font-bold mb-4 text-accent-cyan">Edit Profile</h2>
+        <h2 className="text-xl font-headline font-bold mb-4 text-primary">Edit Profile</h2>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 max-h-[80vh] overflow-y-auto pr-2">
           <input type="text" name="name" placeholder="Full Name" className="input-style" value={form.name} onChange={handleChange} required />
           <input type="text" name="username" placeholder="Username" className="input-style" value={form.username} onChange={handleChange} required />
-          <textarea name="bio" placeholder="Bio" className="input-style" value={form.bio} onChange={handleChange} />
+          <textarea name="bio" placeholder="Bio" className="input-style rounded-2xl" value={form.bio} onChange={handleChange} />
           <input type="number" name="age" placeholder="Age" className="input-style" value={form.age} onChange={handleChange} />
           <input type="tel" name="phone" placeholder="Phone Number" className="input-style" value={form.phone} onChange={handleChange} />
           <input type="text" name="interests" placeholder="Interests (comma separated)" className="input-style" value={form.interests} onChange={handleChange} />
           
           <div>
               <label className="text-sm font-medium text-muted-foreground">Profile Picture</label>
-              <input type="file" accept="image/*" onChange={e => handleFileChange(e, 'avatar')} className="input-style" />
+              <input type="file" accept="image/*" onChange={e => handleFileChange(e, 'avatar')} className="input-style file:text-primary file:font-bold" />
               {form.avatar_url && <img src={form.avatar_url} alt="avatar" className="w-24 h-24 object-cover rounded-full mt-2" />}
           </div>
           <div>
               <label className="text-sm font-medium text-muted-foreground">Banner Image</label>
-              <input type="file" accept="image/*" onChange={e => handleFileChange(e, 'banner')} className="input-style" />
+              <input type="file" accept="image/*" onChange={e => handleFileChange(e, 'banner')} className="input-style file:text-primary file:font-bold" />
               {form.banner_url && <img src={form.banner_url} alt="banner" className="w-full h-24 object-cover rounded-lg mt-2" />}
           </div>
 
-          {uploading && <div className="w-full bg-secondary rounded-full h-2.5"><div className="bg-accent-cyan h-2.5 rounded-full" style={{width: `${uploadProgress || 0}%`}}></div></div>}
+          {uploading && <div className="w-full bg-secondary rounded-full h-2.5"><div className="bg-primary h-2.5 rounded-full" style={{width: `${uploadProgress || 0}%`}}></div></div>}
           {error && <div className="text-red-400 text-center mt-2">{error}</div>}
           
           <button type="submit" className="btn-primary mt-4" disabled={loading || uploading}>
@@ -310,13 +310,13 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="bg-card rounded-2xl p-6 w-full max-w-lg relative animate-pop shadow-xl border border-border">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="glass-card rounded-2xl p-6 w-full max-w-lg relative animate-pop">
         <button onClick={onClose} className="absolute top-2 right-2 text-muted-foreground text-2xl">&times;</button>
-        <h2 className="text-2xl font-headline font-bold mb-6 text-accent-cyan flex items-center gap-2"><FaCog /> Settings</h2>
+        <h2 className="text-2xl font-headline font-bold mb-6 text-primary flex items-center gap-2"><FaCog /> Settings</h2>
         <div className="flex flex-col gap-4">
-            <button className="w-full py-2 rounded-full bg-red-800/50 text-red-300 font-bold hover:bg-red-800/70 transition-all">Delete Account</button>
-            <button className="w-full py-2 rounded-full bg-accent-pink text-white font-bold hover:brightness-110 transition-all flex items-center justify-center gap-2 mt-2" onClick={handleLogout}><FaSignOutAlt /> Log Out</button>
+            <button className="w-full py-2 rounded-full bg-destructive/80 text-destructive-foreground font-bold hover:bg-destructive transition-all">Delete Account</button>
+            <button className="w-full py-2 rounded-full bg-primary text-primary-foreground font-bold hover:brightness-110 transition-all flex items-center justify-center gap-2 mt-2" onClick={handleLogout}><FaSignOutAlt /> Log Out</button>
         </div>
       </div>
     </div>
@@ -328,16 +328,16 @@ const styles = `
     .input-style {
         width: 100%;
         padding: 0.75rem 1rem;
-        border-radius: 9999px;
-        background-color: hsla(var(--card) / 0.5);
+        background-color: hsl(var(--input));
         color: hsl(var(--foreground));
-        border: 2px solid hsl(var(--accent-cyan), 0.3);
+        border: 2px solid hsl(var(--border));
         transition: all 0.3s;
+        border-radius: 9999px;
     }
     .input-style:focus {
         outline: none;
-        border-color: hsl(var(--accent-pink));
-        box-shadow: 0 0 0 2px hsl(var(--accent-pink), 0.5);
+        border-color: hsl(var(--primary));
+        box-shadow: 0 0 0 2px hsl(var(--ring));
     }
     .btn-primary {
         display: inline-flex;
@@ -345,8 +345,8 @@ const styles = `
         justify-content: center;
         padding: 0.75rem 1.5rem;
         border-radius: 9999px;
-        background-color: var(--accent-pink);
-        color: white;
+        background-color: hsl(var(--primary));
+        color: hsl(var(--primary-foreground));
         font-weight: bold;
         transition: all 0.3s;
     }
