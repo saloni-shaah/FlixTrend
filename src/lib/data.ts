@@ -10,6 +10,7 @@ export type User = {
 
 export type Flash = {
   id: string;
+  userId: string;
   user: User;
   image: string;
 };
@@ -49,12 +50,17 @@ export type TrendingTopic = {
 export type Short = {
     id: string;
     image: string;
+    userId: string;
     user: User;
     views: string;
 }
 
 // Fetch a single user by ID
 export async function getUser(userId: string): Promise<User | null> {
+    if (!userId) {
+        console.warn("getUser called with no userId");
+        return null;
+    }
     try {
         const userRef = doc(db, 'users', userId);
         const userSnap = await getDoc(userRef);
@@ -77,6 +83,7 @@ export async function getPosts(): Promise<Post[]> {
     
     // Enrich posts with user data
     const enrichedPosts = await Promise.all(postsList.map(async (post) => {
+        if (!post.userId) return post;
         const user = await getUser(post.userId);
         return { ...post, user: user! };
     }));
@@ -90,6 +97,7 @@ export async function getPosts(): Promise<Post[]> {
 
 // Fetch posts by a specific user
 export async function getPostsByUser(userId: string): Promise<Post[]> {
+    if (!userId) return [];
     try {
         const q = query(collection(db, "posts"), where("userId", "==", userId));
         const querySnapshot = await getDocs(q);
@@ -110,14 +118,15 @@ export async function getFlashes(): Promise<Flash[]> {
     try {
         const flashesCol = collection(db, 'flashes');
         const flashSnapshot = await getDocs(flashesCol);
-        const flashList = flashSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Flash));
+        const flashList = flashSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Flash & { userId?: string }));
 
         const enrichedFlashes = await Promise.all(flashList.map(async (flash) => {
+            if (!flash.userId) return flash;
             const user = await getUser(flash.userId);
             return { ...flash, user: user! };
         }));
 
-        return enrichedFlashes;
+        return enrichedFlashes as Flash[];
     } catch (error) {
         console.error("Error fetching flashes:", error);
         return [];
@@ -132,6 +141,7 @@ export async function getMessageThreads(): Promise<MessageThread[]> {
         const threadList = threadSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MessageThread));
 
         const enrichedThreads = await Promise.all(threadList.map(async (thread) => {
+            if (!thread.userId) return thread;
             const user = await getUser(thread.userId);
             return { ...thread, user: user! };
         }));
@@ -160,14 +170,15 @@ export async function getShorts(): Promise<Short[]> {
     try {
         const shortsCol = collection(db, 'shorts');
         const shortSnapshot = await getDocs(shortsCol);
-        const shortList = shortSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Short));
+        const shortList = shortSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Short & { userId?: string }));
 
         const enrichedShorts = await Promise.all(shortList.map(async (short) => {
+            if (!short.userId) return short;
             const user = await getUser(short.userId);
             return { ...short, user: user! };
         }));
         
-        return enrichedShorts;
+        return enrichedShorts as Short[];
     } catch (error) {
         console.error("Error fetching shorts:", error);
         return [];
