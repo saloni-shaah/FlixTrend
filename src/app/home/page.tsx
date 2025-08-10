@@ -1,8 +1,8 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import CreatePostModal from "./CreatePostModal";
-import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, deleteDoc, updateDoc, doc as fsDoc, setDoc } from "firebase/firestore";
-import { FaSearch } from "react-icons/fa";
+import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, deleteDoc, updateDoc, doc as fsDoc, setDoc, getDoc } from "firebase/firestore";
+import { FaSearch, FaPlay } from "react-icons/fa";
 import { FaRegComment } from "react-icons/fa";
 // Star Like Logo SVG
 function StarLogo({ filled = false, size = 24 }) {
@@ -61,8 +61,9 @@ export default function HomePage() {
   const filteredPosts = searchTerm.trim()
     ? posts.filter(
         (post) =>
-          (post.caption && post.caption.toLowerCase().includes(searchTerm.toLowerCase())) ||
-          (post.username && post.username.toLowerCase().includes(searchTerm.toLowerCase()))
+          (post.content && post.content.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (post.username && post.username.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (post.hashtags && post.hashtags.some((h: string) => h.toLowerCase().includes(searchTerm.toLowerCase())))
       )
     : posts;
 
@@ -139,13 +140,13 @@ export default function HomePage() {
         )}
       </section>
       {/* Single Create Post FAB (top right) */}
-      <button
-        className="fixed top-4 right-4 z-50 rounded-full bg-green-400 p-5 shadow-fab-glow hover:scale-105 transition-all duration-200 focus:outline-none"
+       <button
+        className="fixed top-4 right-4 z-50 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan p-5 shadow-fab-glow hover:scale-105 transition-all duration-200 focus:outline-none glass"
         title="Create Post"
         onClick={() => setShowModal(true)}
         aria-label="Create Post"
       >
-        <span className="text-2xl">➕</span>
+        <span className="text-2xl text-white">➕</span>
       </button>
       <div className="fixed inset-0 z-50" style={{ pointerEvents: showModal || selectedFlash ? 'auto' : 'none' }}>
         {showModal && <div className="absolute inset-0 bg-orange-200/80" />}
@@ -220,24 +221,19 @@ export function PostCard({ post }: { post: any }) {
   const currentUser = auth.currentUser;
   const [pollVotes, setPollVotes] = useState<{ [optionIdx: number]: number }>({});
   const [userPollVote, setUserPollVote] = useState<number | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const videoRef = React.useRef<HTMLVideoElement>(null);
+
 
   useEffect(() => {
     if (!currentUser) return;
-    // Listen for like status and count
     const likeDocRef = fsDoc(db, "posts", post.id, "likes", currentUser.uid);
-    const unsubLike = onSnapshot(likeDocRef, (docSnap) => {
-      setLiked(docSnap.exists());
-    });
+    const unsubLike = onSnapshot(likeDocRef, (docSnap) => setLiked(docSnap.exists()));
     const likesColRef = collection(db, "posts", post.id, "likes");
-    const unsubCount = onSnapshot(likesColRef, (snap) => {
-      setLikeCount(snap.size);
-    });
-    // Listen for comment count
+    const unsubCount = onSnapshot(likesColRef, (snap) => setLikeCount(snap.size));
     const commentsColRef = collection(db, "posts", post.id, "comments");
-    const unsubCommentCount = onSnapshot(commentsColRef, (snap) => {
-      setCommentCount(snap.size);
-    });
-    // Poll votes listener
+    const unsubCommentCount = onSnapshot(commentsColRef, (snap) => setCommentCount(snap.size));
+
     if (post.type === "poll" && post.pollOptions) {
       const pollVotesCol = collection(db, "posts", post.id, "pollVotes");
       const unsubPollVotes = onSnapshot(pollVotesCol, (snap) => {
@@ -251,9 +247,7 @@ export function PostCard({ post }: { post: any }) {
         setPollVotes(votes);
         setUserPollVote(userVote);
       });
-      return () => {
-        unsubPollVotes();
-      };
+      return () => unsubPollVotes();
     }
     return () => {
       unsubLike();
@@ -265,20 +259,12 @@ export function PostCard({ post }: { post: any }) {
   const handleLike = async () => {
     if (!currentUser) return;
     const likeDocRef = fsDoc(db, "posts", post.id, "likes", currentUser.uid);
-    if (liked) {
-      await deleteDoc(likeDocRef);
-    } else {
-      await setDoc(likeDocRef, { userId: currentUser.uid, createdAt: serverTimestamp() });
-    }
-  };
-
-  const handleComment = () => {
-    setShowComments(true);
+    if (liked) await deleteDoc(likeDocRef);
+    else await setDoc(likeDocRef, { userId: currentUser.uid, createdAt: serverTimestamp() });
   };
 
   const handleDelete = async () => {
-    if (!window.confirm("Are you sure you want to delete this post?")) return;
-    await deleteDoc(fsDoc(db, "posts", post.id));
+    if (window.confirm("Delete this post?")) await deleteDoc(fsDoc(db, "posts", post.id));
   };
 
   const handleEdit = async (e: React.FormEvent) => {
@@ -289,75 +275,86 @@ export function PostCard({ post }: { post: any }) {
 
   const handlePollVote = async (optionIdx: number) => {
     if (!currentUser || userPollVote !== null) return;
-    const voteDocRef = fsDoc(db, "posts", post.id, "pollVotes", currentUser.uid);
-    await setDoc(voteDocRef, { userId: currentUser.uid, optionIdx, createdAt: serverTimestamp() });
+    await setDoc(fsDoc(db, "posts", post.id, "pollVotes", currentUser.uid), { userId: currentUser.uid, optionIdx, createdAt: serverTimestamp() });
+  };
+  
+  const handlePlayVideo = () => {
+      if (videoRef.current) {
+          setIsPlaying(true);
+          videoRef.current.play();
+      }
   };
 
-  // Use displayName or username for avatar initials
-  const initials = post.displayName
-    ? post.displayName.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()
-    : post.username
-    ? post.username.slice(0, 2).toUpperCase()
-    : "U";
+
+  const initials = post.displayName?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || post.username?.slice(0, 2).toUpperCase() || "U";
 
   return (
     <div className="bg-cyan-100 dark:bg-card rounded-2xl p-5 shadow-lg border border-gray-100 dark:border-accent-cyan/20 flex flex-col gap-3 animate-pop transition-all relative">
-      {/* Author avatar and username */}
       <div className="flex items-center gap-3 mb-2">
         <Link href={`/squad/${post.userId}`} className="flex items-center gap-2 group cursor-pointer">
           <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accentPink to-accentCyan flex items-center justify-center text-white font-bold text-lg overflow-hidden border-2 border-accent-cyan group-hover:scale-105 transition-transform">
-            {post.avatar_url ? (
-              <img src={post.avatar_url} alt="avatar" className="w-full h-full object-cover rounded-full" />
-            ) : (
-              initials
-            )}
+            {post.avatar_url ? <img src={post.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : initials}
           </div>
-          <span className="font-headline text-accent-cyan text-sm group-hover:underline">@{post.username || (post.displayName ? post.displayName.replace(/\s+/g, "").toLowerCase() : "user")}</span>
+          <span className="font-headline text-accent-cyan text-sm group-hover:underline">@{post.username || "user"}</span>
         </Link>
         <span className="ml-auto text-xs text-gray-400">{post.createdAt?.toDate?.().toLocaleString?.() || "Just now"}</span>
       </div>
-      {/* Edit/Delete menu for post owner */}
+
       {currentUser?.uid === post.userId && (
         <div className="absolute top-3 right-3 flex gap-2 z-10">
           <button className="text-xs px-2 py-1 rounded bg-accent-cyan/20 text-accent-cyan font-bold hover:bg-accent-cyan/40" onClick={() => setShowEdit(true)}>Edit</button>
           <button className="text-xs px-2 py-1 rounded bg-accent-pink/20 text-accent-pink font-bold hover:bg-accent-pink/40" onClick={handleDelete}>Delete</button>
         </div>
       )}
-      {/* Edit Modal */}
+      
       {showEdit && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-          <form onSubmit={handleEdit} className="bg-white dark:bg-card rounded-2xl p-6 w-full max-w-md relative animate-pop shadow-xl border border-accent-cyan/20 flex flex-col gap-4">
+          <form onSubmit={handleEdit} className="bg-white dark:bg-card rounded-2xl p-6 w-full max-w-md relative">
             <h3 className="text-xl font-headline font-bold mb-2 text-accent-cyan">Edit Post</h3>
             <textarea
-              className="w-full rounded-xl p-3 bg-black/60 text-[#E0E0E0] border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink font-semibold"
-              style={{ textShadow: '1px 1px 4px rgba(0,0,0,0.7)', fontFamily: 'Inter, Poppins, Roboto, sans-serif' }}
-              value={editContent}
-              onChange={e => setEditContent(e.target.value)}
-              rows={4}
-              required
+              className="w-full rounded-xl p-3 bg-black/60 text-[#E0E0E0] border-2 border-accent-cyan"
+              value={editContent} onChange={e => setEditContent(e.target.value)} rows={4} required
             />
-            <div className="flex gap-2 justify-end">
+            <div className="flex gap-2 justify-end mt-4">
               <button type="button" className="px-4 py-2 rounded bg-gray-200 dark:bg-black/40 text-gray-700 dark:text-white font-bold" onClick={() => setShowEdit(false)}>Cancel</button>
-              <button type="submit" className="px-4 py-2 rounded bg-accent-cyan text-primary font-bold hover:bg-accent-pink hover:text-white transition-all">Save</button>
+              <button type="submit" className="px-4 py-2 rounded bg-accent-cyan text-primary font-bold">Save</button>
             </div>
           </form>
         </div>
       )}
-      {/* Always show text content if present, with high contrast and better background */}
-      {post.content && (
-        <div className="post-text-bg text-[1.15rem] font-body animate-fade-in whitespace-pre-line mb-2 px-4 py-3 leading-relaxed tracking-wide font-semibold" style={{ color: '#E0E0E0', textShadow: '1px 1px 4px rgba(0,0,0,0.7)', background: 'rgba(0,0,0,0.5)', borderRadius: '12px', fontFamily: 'Inter, Poppins, Roboto, sans-serif' }}>
+
+      {post.content && (post.type !== 'poll' || (post.type === 'poll' && !post.pollOptions)) && (
+        <div className="post-text-bg text-[1.15rem] font-body whitespace-pre-line mb-2 px-4 py-3 rounded-xl" style={{ backgroundColor: post.backgroundColor || 'transparent', color: post.backgroundColor && post.backgroundColor !== '#ffffff' ? '#000000' : 'inherit' }}>
           {post.content}
         </div>
       )}
+
+      {post.hashtags && post.hashtags.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+              {post.hashtags.map((tag:string) => <Link href={`/tags/${tag}`} key={tag} className="text-accent-cyan font-bold text-sm hover:underline">#{tag}</Link>)}
+          </div>
+      )}
+      
       {post.type === "media" && post.mediaUrl && (
-        <div className="w-full rounded-xl overflow-hidden animate-fade-in">
+        <div className="w-full rounded-xl overflow-hidden relative">
           {post.mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? (
-            <video src={post.mediaUrl} controls className="w-full rounded-xl" />
+            <>
+              <video ref={videoRef} src={post.mediaUrl} controls={isPlaying} className="w-full rounded-xl" onEnded={() => setIsPlaying(false)} />
+              {!isPlaying && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center cursor-pointer" onClick={handlePlayVideo}>
+                    {post.thumbnailUrl && <img src={post.thumbnailUrl} alt="thumbnail" className="w-full h-full object-cover"/>}
+                    <div className="absolute">
+                        <FaPlay className="text-white text-6xl opacity-80"/>
+                    </div>
+                </div>
+              )}
+            </>
           ) : (
             <img src={post.mediaUrl} alt="media" className="w-full rounded-xl" />
           )}
         </div>
       )}
+      
       {post.type === "poll" && post.pollOptions && (
         <div className="flex flex-col gap-2 animate-fade-in bg-black/70 rounded-xl p-4">
           <div className="font-bold text-accent-cyan mb-3">{post.content}</div>
@@ -365,44 +362,26 @@ export function PostCard({ post }: { post: any }) {
             const votes = pollVotes[idx] || 0;
             const totalVotes = Object.values(pollVotes).reduce((a, b) => a + b, 0);
             const percent = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
-            const isUserVote = userPollVote === idx;
             return (
-              <button
-                key={idx}
-                className={`w-full px-4 py-2 rounded-full font-bold transition-all flex items-center justify-between mb-1
-                  ${isUserVote ? 'bg-accent-cyan/80 text-primary' : 'bg-accent-cyan/20 text-accent-cyan hover:bg-accent-cyan/40'}
-                `}
-                onClick={() => handlePollVote(idx)}
-                disabled={userPollVote !== null}
-              >
-                <span>{opt}</span>
-                <span className="ml-2 text-xs font-normal">{votes} vote{votes !== 1 ? 's' : ''} {totalVotes > 0 && `(${percent}%)`}</span>
-                {isUserVote && <span className="ml-2 text-lg">★</span>}
+              <button key={idx} className={`w-full px-4 py-2 rounded-full font-bold transition-all relative overflow-hidden ${userPollVote !== null ? 'cursor-default' : 'hover:bg-accent-cyan/40'}`}
+                onClick={() => handlePollVote(idx)} disabled={userPollVote !== null}>
+                {userPollVote !== null && <div className="absolute left-0 top-0 h-full bg-accent-cyan/50" style={{width: `${percent}%`}}/>}
+                <div className="relative flex justify-between z-10">
+                  <span>{opt}</span>
+                  {userPollVote !== null && <span>{percent}% ({votes})</span>}
+                </div>
               </button>
             );
           })}
-          {Object.values(pollVotes).reduce((a, b) => a + b, 0) > 0 && (
-            <div className="text-xs text-gray-300 mt-2">Total votes: {Object.values(pollVotes).reduce((a, b) => a + b, 0)}</div>
-          )}
         </div>
       )}
-      {/* Like & Comment Actions */}
+
       <div className="flex items-center gap-6 mt-2">
-        <button
-          className={`flex items-center gap-1 text-lg font-bold transition-all ${liked ? "text-red-400" : "text-gray-400 hover:text-red-400"}`}
-          onClick={handleLike}
-          aria-label="Like"
-        >
-          <StarLogo filled={liked} size={24} />
-          <span>{likeCount}</span>
+        <button className={`flex items-center gap-1 text-lg font-bold transition-all ${liked ? "text-red-400" : "text-gray-400 hover:text-red-400"}`} onClick={handleLike}>
+          <StarLogo filled={liked} size={24} /> <span>{likeCount}</span>
         </button>
-        <button
-          className="flex items-center gap-1 text-lg font-bold text-gray-400 hover:text-red-400 transition-all"
-          onClick={handleComment}
-          aria-label="Comment"
-        >
-          <FaRegComment />
-          <span>{commentCount}</span>
+        <button className="flex items-center gap-1 text-lg font-bold text-gray-400 hover:text-red-400 transition-all" onClick={() => setShowComments(true)}>
+          <FaRegComment /> <span>{commentCount}</span>
         </button>
       </div>
       {showComments && <CommentModal postId={post.id} onClose={() => setShowComments(false)} />}
@@ -415,7 +394,6 @@ function CommentModal({ postId, onClose }: { postId: string; onClose: () => void
   const [newComment, setNewComment] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Fetch comments in real-time
   React.useEffect(() => {
     const q = query(collection(db, "posts", postId, "comments"), orderBy("createdAt", "asc"));
     const unsub = onSnapshot(q, (snapshot) => {
@@ -428,14 +406,26 @@ function CommentModal({ postId, onClose }: { postId: string; onClose: () => void
     e.preventDefault();
     if (!newComment.trim()) return;
     setLoading(true);
-    try {
-      await addDoc(collection(db, "posts", postId, "comments"), {
-        text: newComment,
-        createdAt: serverTimestamp(),
-      });
-      setNewComment("");
-      // No need to manually update commentCount, listener will update
-    } catch {}
+    const user = auth.currentUser;
+    if (!user) { setLoading(false); return; }
+    
+    let displayName = user.displayName || "";
+    let username = "";
+    const profileSnap = await getDoc(doc(db, "users", user.uid));
+    if (profileSnap.exists()) {
+        const profileData = profileSnap.data();
+        displayName = profileData.name || displayName;
+        username = profileData.username || "";
+    }
+
+    await addDoc(collection(db, "posts", postId, "comments"), {
+      text: newComment,
+      userId: user.uid,
+      displayName,
+      username,
+      createdAt: serverTimestamp(),
+    });
+    setNewComment("");
     setLoading(false);
   };
 
@@ -449,9 +439,12 @@ function CommentModal({ postId, onClose }: { postId: string; onClose: () => void
             <div className="text-gray-400 text-center">No comments yet. Be the first!</div>
           ) : (
             comments.map((c) => (
-              <div key={c.id} className="bg-black/60 rounded-xl px-3 py-2 text-[#E0E0E0] font-body" style={{ textShadow: '1px 1px 4px rgba(0,0,0,0.7)' }}>
+              <div key={c.id} className="bg-black/60 rounded-xl px-3 py-2 text-[#E0E0E0] font-body">
+                <div className="flex items-center gap-2">
+                    <span className="font-bold text-accent-cyan text-sm">@{c.username || 'user'}</span>
+                    <span className="text-xs text-gray-400">{c.createdAt?.toDate?.().toLocaleString?.() || ""}</span>
+                </div>
                 {c.text}
-                <div className="text-xs text-gray-400 mt-1">{c.createdAt?.toDate?.().toLocaleString?.() || "Just now"}</div>
               </div>
             ))
           )}
@@ -459,7 +452,7 @@ function CommentModal({ postId, onClose }: { postId: string; onClose: () => void
         <form onSubmit={handleAddComment} className="flex gap-2">
           <input
             type="text"
-            className="flex-1 rounded-full px-4 py-2 border border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-cyan bg-white dark:bg-card text-black dark:text-white"
+            className="flex-1 rounded-full px-4 py-2 border border-accent-cyan bg-white dark:bg-card text-black dark:text-white"
             placeholder="Add a comment..."
             value={newComment}
             onChange={e => setNewComment(e.target.value)}
@@ -467,7 +460,7 @@ function CommentModal({ postId, onClose }: { postId: string; onClose: () => void
           />
           <button
             type="submit"
-            className="px-4 py-2 rounded-full bg-accent-cyan text-primary font-bold hover:bg-accent-pink hover:text-white transition-all disabled:opacity-60"
+            className="px-4 py-2 rounded-full bg-accent-cyan text-primary font-bold disabled:opacity-60"
             disabled={loading || !newComment.trim()}
           >
             Post
@@ -485,13 +478,12 @@ function FlashModal({ flash, onClose }: { flash: any; onClose: () => void }) {
         <button onClick={onClose} className="absolute top-2 right-2 text-accent-pink text-2xl">&times;</button>
         {flash.mediaUrl ? (
           flash.mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? (
-            <video src={flash.mediaUrl} controls className="w-full rounded-xl mb-4" />
+            <video src={flash.mediaUrl} controls autoPlay className="w-full rounded-xl mb-4" />
           ) : (
             <img src={flash.mediaUrl} alt="flash" className="w-full rounded-xl mb-4" />
           )
         ) : null}
-        {/* Always show caption/text for flash, with high contrast */}
-        {flash.caption && <div className="text-[#E0E0E0] font-semibold mb-2 whitespace-pre-line px-4 py-2 rounded-xl" style={{ background: 'rgba(0,0,0,0.5)', textShadow: '1px 1px 4px rgba(0,0,0,0.7)', fontFamily: 'Inter, Poppins, Roboto, sans-serif' }}>{flash.caption}</div>}
+        {flash.caption && <div className="text-[#E0E0E0] font-semibold mb-2 whitespace-pre-line px-4 py-2 rounded-xl" style={{ background: 'rgba(0,0,0,0.5)' }}>{flash.caption}</div>}
         <div className="text-xs text-gray-400">Expires: {flash.expiresAt?.toDate?.().toLocaleString?.() || "in 24h"}</div>
       </div>
     </div>
@@ -516,4 +508,4 @@ function getAlmightyResponse(message: string): string {
     return jokes[Math.floor(Math.random() * jokes.length)];
   }
   return "I'm Almighty AI 🤖 – your hype assistant! Ask me anything, or just vibe ✨.";
-} 
+}
