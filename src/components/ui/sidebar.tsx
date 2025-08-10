@@ -532,9 +532,9 @@ const SidebarMenuButton = React.forwardRef<
     
     const content = state === 'collapsed' ? 
       (React.Children.toArray(children)[0]) : 
-      (<>
+      (<div className="flex items-center gap-2">
         {children}
-      </>);
+      </div>);
 
     const button = (
       <Comp
