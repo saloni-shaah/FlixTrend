@@ -1,118 +1,128 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@import "@fontsource/space-grotesk/700.css";
+@import "@fontsource/inter/400.css";
 
-@layer base {
+:root {
+  --background: #fff;
+  --foreground: #0F0F0F;
+  --brand: #BF00FF;
+  --accent-pink: #FF3CAC;
+  --accent-cyan: #00F0FF;
+  --neon-green: #39FF14;
+  --hot-coral: #FF5F6D;
+  --soft-gray: #C0C0C0;
+  --glass-white: rgba(255,255,255,0.07);
+  --color-pink: #ff3cac;
+  --color-yellow: #fffd87;
+  --color-blue: #00f0ff;
+  --color-green: #39ff14;
+  --color-purple: #bf00ff;
+  --color-orange: #ff5f6d;
+  --color-cyan: #00fff7;
+  --color-red: #ff1744;
+  --color-neon: #39ff14;
+  --color-glass: rgba(255,255,255,0.07);
+  --aurora-gradient: linear-gradient(120deg, #ff3cac, #784ba0, #2b86c5, #39ff14, #fffd87, #ff5f6d, #00f0ff, #bf00ff, #ff1744);
+}
+
+@media (prefers-color-scheme: dark) {
   :root {
-    --background: 240 10% 3.9%; /* Charcoal */
-    --foreground: 0 0% 98%; /* White Smoke */
-    --card: 240 5.9% 10%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 217 91% 60%; /* Electric Blue */
-    --primary-foreground: 0 0% 98%;
-    --secondary: 262 84% 58%; /* Cyber Purple */
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 336 84% 58%; /* Pink */
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 217 91% 60%;
-    --radius: 0.8rem;
-  }
-
-  .dark {
-    --background: 244 10% 7%; /* Charcoal */
-    --foreground: 0 0% 98%; /* White Smoke */
-    --card: 240 5.9% 10%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 217 91% 60%; /* Electric Blue #3B82F6 */
-    --primary-foreground: 0 0% 98%;
-    --secondary: 336 84% 58%; /* Pink / Coral #FF6B6B -> using #EC4899 as per dark mode spec */
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 262 84% 58%; /* Cyber Purple / Plum #8B5CF6 */
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 217 91% 60%;
+    --background: #0F0F0F;
+    --foreground: #ededed;
   }
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
+body {
+  background: var(--aurora-gradient);
+  background-size: 200% 200%;
+  animation: auroraMove 16s ease-in-out infinite;
+  color: var(--foreground);
+  font-family: 'Inter', 'Space Grotesk', Arial, Helvetica, sans-serif;
+  animation: fadeIn 1s ease-in;
 }
 
-@layer utilities {
-  .glassmorphism {
-    background: hsl(var(--card) / 0.5);
-    -webkit-backdrop-filter: blur(16px);
-    backdrop-filter: blur(16px);
-    border-width: 1px;
-    border-color: hsl(var(--border) / 0.2);
-  }
-
-  @keyframes background-pan {
-    0% {
-      background-position: 0% 50%;
-    }
-    50% {
-      background-position: 100% 50%;
-    }
-    100% {
-      background-position: 0% 50%;
-    }
-  }
-
-  .animated-gradient {
-    background-size: 400% 400%;
-    background-image: linear-gradient(-45deg,
-      hsl(var(--primary) / 0.1),
-      hsl(var(--secondary) / 0.1),
-      hsl(var(--accent) / 0.1),
-      hsl(var(--background) / 0.8)
-    );
-    animation: background-pan 20s ease infinite;
-  }
-
-  @keyframes glow-sm {
-    from {
-      box-shadow: 0 0 2px hsl(var(--primary)), 0 0 4px hsl(var(--primary) / 0.8);
-    }
-    to {
-      box-shadow: 0 0 4px hsl(var(--primary)), 0 0 6px hsl(var(--accent) / 0.8);
-    }
-  }
-
-  @keyframes glow {
-    from {
-      box-shadow: 0 0 5px hsl(var(--primary)), 0 0 10px hsl(var(--primary) / 0.6);
-    }
-    to {
-      box-shadow: 0 0 10px hsl(var(--primary)), 0 0 15px hsl(var(--accent) / 0.6);
-    }
-  }
-  
-  .animated-glow-sm {
-    animation: glow-sm 2s ease-in-out infinite alternate;
-  }
-
-  .animated-glow {
-    animation: glow 2s ease-in-out infinite alternate;
-  }
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
+
+@keyframes auroraMove {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.glass {
+  background: var(--glass-white);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+/* Neon Glow */
+.neon-glow, .neon-glow * {
+  text-shadow: 0 0 8px var(--color-pink), 0 0 16px var(--color-blue), 0 0 24px var(--color-green);
+}
+
+/* Glassmorphism Card */
+.glass-card {
+  background: var(--color-glass);
+  backdrop-filter: blur(16px) saturate(180%);
+  border-radius: 1.5rem;
+  border: 1.5px solid var(--color-cyan);
+  box-shadow: 0 4px 32px 0 var(--color-purple);
+}
+
+/* Vibrant Accent Ring */
+.accent-ring {
+  border: 3px solid;
+  border-image: var(--aurora-gradient) 1;
+  animation: ringPulse 2s infinite alternate;
+}
+@keyframes ringPulse {
+  0% { box-shadow: 0 0 0 0 var(--color-pink); }
+  100% { box-shadow: 0 0 16px 8px var(--color-blue); }
+}
+
+/* Pulse Glow on Hover */
+.pulse-glow:hover {
+  box-shadow: 0 0 16px 8px var(--color-green), 0 0 32px 16px var(--color-pink);
+  filter: blur(0.5px);
+  transition: box-shadow 0.3s, filter 0.3s;
+}
+
+/* Rainbow Trail Cursor (scaffold) */
+.rainbow-cursor {
+  cursor: url('/rainbow-cursor.png'), auto;
+}
+
+/* Confetti Pop (scaffold) */
+.confetti-pop {
+  /* Use with JS or Lottie for confetti effect */
+}
+
+/* Multi-color Typing Animation (scaffold) */
+.rainbow-type {
+  background: var(--aurora-gradient);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: rainbowType 2s linear infinite alternate;
+}
+@keyframes rainbowType {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
+}
+
+/* Glassmorphism for modals/overlays */
+.glass-overlay {
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(24px) saturate(180%);
+}
+
+/* Aurora Gradient Borders */
+.aurora-border {
+  border-image: var(--aurora-gradient) 1;
+}
+
+/* Add more utility classes as needed for future features */
