@@ -10,6 +10,10 @@ type PostCardProps = {
 };
 
 export function PostCard({ post }: PostCardProps) {
+  if (!post.user) {
+    return null; // Or a loading/error state
+  }
+
   return (
     <Card className="glassmorphism overflow-hidden">
       <CardHeader className="flex flex-row items-center gap-4 p-4">
