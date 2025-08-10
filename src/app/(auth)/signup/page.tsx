@@ -56,8 +56,8 @@ export default function SignupPage() {
     <div className="min-h-screen flex items-center justify-center font-body p-4">
       <div className="glass-card rounded-2xl p-8 w-full max-w-md flex flex-col gap-6 animate-fade-in">
         <div className="text-center">
-            <h2 className="text-3xl font-headline font-bold text-primary mb-2 drop-shadow-[0_0_10px_hsl(var(--primary)/0.5)]">Create Your Account</h2>
-            <p className="text-foreground/80">Join the next wave of social media.</p>
+            <h2 className="text-3xl font-headline font-bold text-[var(--accent-cyan)] mb-2 drop-shadow-[0_0_10px_var(--accent-cyan)]">Create Your Account</h2>
+            <p className="text-gray-300">Join the next wave of social media.</p>
         </div>
         
         <SignupForm onSignup={handleSignup} loading={loading} />
@@ -65,8 +65,8 @@ export default function SignupPage() {
         {error && <div className="text-red-400 text-center animate-bounce mt-2">{error}</div>}
         
         <div className="text-center mt-4">
-          <span className="text-foreground/70">Already have an account? </span>
-          <Link href="/login" className="text-primary hover:underline">Login</Link>
+          <span className="text-gray-400">Already have an account? </span>
+          <Link href="/login" className="text-[var(--accent-cyan)] hover:underline">Login</Link>
         </div>
       </div>
     </div>

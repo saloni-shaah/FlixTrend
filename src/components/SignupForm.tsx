@@ -101,12 +101,12 @@ export default function SignupForm({ onSignup, loading }: { onSignup: (data: any
         {steps.map((s, index) => (
           <React.Fragment key={s.id}>
             <div className="flex flex-col items-center">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${step > s.id ? "bg-accent border-accent text-accent-foreground" : step === s.id ? "bg-primary border-primary text-primary-foreground" : "bg-card border-border text-muted-foreground"}`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${step > s.id ? "bg-[var(--accent-green)] border-[var(--accent-green)] text-black" : step === s.id ? "bg-[var(--accent-pink)] border-[var(--accent-pink)] text-white" : "bg-black/20 border-gray-500 text-gray-400"}`}>
                 {step > s.id ? <Check /> : s.icon}
               </div>
-              <p className={`text-xs mt-2 transition-all duration-300 ${step >= s.id ? "text-primary" : "text-muted-foreground"}`}>{s.title}</p>
+              <p className={`text-xs mt-2 transition-all duration-300 ${step >= s.id ? "text-white" : "text-gray-500"}`}>{s.title}</p>
             </div>
-            {index < steps.length - 1 && <div className={`flex-1 h-1 mx-2 transition-all duration-300 ${step > s.id ? "bg-accent" : "bg-border"}`}></div>}
+            {index < steps.length - 1 && <div className={`flex-1 h-1 mx-2 transition-all duration-300 ${step > s.id ? "bg-[var(--accent-green)]" : "bg-gray-700"}`}></div>}
           </React.Fragment>
         ))}
       </div>
@@ -138,17 +138,17 @@ export default function SignupForm({ onSignup, loading }: { onSignup: (data: any
         {step === 4 && (
             <div className="animate-fade-in space-y-6">
                 <div>
-                    <h3 className="text-lg font-semibold mb-2 text-center text-primary">Upload Profile Picture</h3>
+                    <h3 className="text-lg font-semibold mb-2 text-center text-white">Upload Profile Picture</h3>
                     <input id="avatar-upload" type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'avatar')} accept="image/*" />
-                    <label htmlFor="avatar-upload" className="w-32 h-32 mx-auto rounded-full flex items-center justify-center border-2 border-dashed border-primary cursor-pointer bg-card/50 hover:bg-card/80">
-                        {uploading === 'avatar' ? <div className="loader"></div> : formData.avatar_url ? <img src={formData.avatar_url} alt="avatar preview" className="w-full h-full object-cover rounded-full" /> : <ImageUp className="text-primary" />}
+                    <label htmlFor="avatar-upload" className="w-32 h-32 mx-auto rounded-full flex items-center justify-center border-2 border-dashed border-[var(--accent-pink)] cursor-pointer bg-black/20 hover:bg-black/40">
+                        {uploading === 'avatar' ? <div className="loader"></div> : formData.avatar_url ? <img src={formData.avatar_url} alt="avatar preview" className="w-full h-full object-cover rounded-full" /> : <ImageUp className="text-[var(--accent-pink)]" />}
                     </label>
                 </div>
                  <div>
-                    <h3 className="text-lg font-semibold mb-2 text-center text-secondary">Upload Banner (Optional)</h3>
+                    <h3 className="text-lg font-semibold mb-2 text-center text-white">Upload Banner (Optional)</h3>
                     <input id="banner-upload" type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'banner')} accept="image/*" />
-                     <label htmlFor="banner-upload" className="w-full h-32 mx-auto rounded-lg flex items-center justify-center border-2 border-dashed border-secondary cursor-pointer bg-card/50 hover:bg-card/80">
-                        {uploading === 'banner' ? <div className="loader"></div> : formData.banner_url ? <img src={formData.banner_url} alt="banner preview" className="w-full h-full object-cover rounded-lg" /> : <ImageUp className="text-secondary" />}
+                     <label htmlFor="banner-upload" className="w-full h-32 mx-auto rounded-lg flex items-center justify-center border-2 border-dashed border-[var(--accent-cyan)] cursor-pointer bg-black/20 hover:bg-black/40">
+                        {uploading === 'banner' ? <div className="loader"></div> : formData.banner_url ? <img src={formData.banner_url} alt="banner preview" className="w-full h-full object-cover rounded-lg" /> : <ImageUp className="text-[var(--accent-cyan)]" />}
                     </label>
                 </div>
             </div>
@@ -160,61 +160,51 @@ export default function SignupForm({ onSignup, loading }: { onSignup: (data: any
             {step === 4 && <button type="submit" disabled={loading || uploading !== null} className="btn-primary ml-auto">{loading ? "Signing up..." : "Finish Signup"}</button>}
         </div>
       </form>
+      <style jsx>{`
+        .input-style {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background-color: rgba(0,0,0,0.4);
+            color: white;
+            border: 2px solid var(--accent-cyan);
+            transition: all 0.3s;
+            border-radius: 9999px;
+        }
+        .input-style:focus {
+            outline: none;
+            border-color: var(--accent-pink);
+            box-shadow: 0 0 0 2px var(--accent-pink);
+        }
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            background-color: var(--accent-pink);
+            color: white;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .btn-primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 10px var(--accent-pink);
+        }
+        .btn-secondary {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            background-color: transparent;
+            border: 2px solid var(--accent-cyan);
+            color: var(--accent-cyan);
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .btn-secondary:hover {
+            background-color: var(--accent-cyan);
+            color: black;
+        }
+      `}</style>
     </div>
   );
-}
-
-// Add some shared styles to avoid repetition
-const styles = `
-    .input-style {
-        width: 100%;
-        padding: 0.75rem 1rem;
-        background-color: hsl(var(--input));
-        color: hsl(var(--foreground));
-        border: 2px solid hsl(var(--border));
-        transition: all 0.3s;
-        border-radius: 9999px;
-    }
-    .input-style:focus {
-        outline: none;
-        border-color: hsl(var(--primary));
-        box-shadow: 0 0 0 2px hsl(var(--ring));
-    }
-    .btn-primary {
-        display: inline-flex;
-        align-items: center;
-        padding: 0.75rem 1.5rem;
-        border-radius: 9999px;
-        background-color: hsl(var(--primary));
-        color: hsl(var(--primary-foreground));
-        font-weight: bold;
-        transition: all 0.3s;
-    }
-    .btn-primary:hover {
-        transform: scale(1.05);
-        filter: brightness(1.1);
-    }
-    .btn-secondary {
-        display: inline-flex;
-        align-items: center;
-        padding: 0.75rem 1.5rem;
-        border-radius: 9999px;
-        background-color: transparent;
-        border: 2px solid hsl(var(--secondary));
-        color: hsl(var(--secondary));
-        font-weight: bold;
-        transition: all 0.3s;
-    }
-    .btn-secondary:hover {
-        background-color: hsl(var(--secondary));
-        color: hsl(var(--secondary-foreground));
-    }
-`;
-
-// Inject styles into the document head
-if (typeof window !== 'undefined') {
-    const styleSheet = document.createElement("style");
-    styleSheet.type = "text/css";
-    styleSheet.innerText = styles;
-    document.head.appendChild(styleSheet);
 }
