@@ -14,6 +14,8 @@ export function PostCard({ post }: PostCardProps) {
     return null; // Or a loading/error state
   }
 
+  const stats = post.stats || { boosts: 0, drops: 0, relays: 0, comments: 0 };
+
   return (
     <Card className="glassmorphism overflow-hidden">
       <CardHeader className="flex flex-row items-center gap-4 p-4">
@@ -49,19 +51,19 @@ export function PostCard({ post }: PostCardProps) {
         <div className="flex justify-between w-full text-muted-foreground">
           <Button variant="ghost" className="flex items-center gap-2 hover:text-green-400">
             <ArrowUpCircle />
-            <span>{post.stats.boosts}</span>
+            <span>{stats.boosts}</span>
           </Button>
           <Button variant="ghost" className="flex items-center gap-2 hover:text-red-400">
             <ArrowDownCircle />
-            <span>{post.stats.drops}</span>
+            <span>{stats.drops}</span>
           </Button>
            <Button variant="ghost" className="flex items-center gap-2 hover:text-primary">
             <Repeat2 />
-            <span>{post.stats.relays}</span>
+            <span>{stats.relays}</span>
           </Button>
           <Button variant="ghost" className="flex items-center gap-2 hover:text-white">
             <MessageCircle />
-            <span>{post.stats.comments}</span>
+            <span>{stats.comments}</span>
           </Button>
         </div>
       </CardFooter>
