@@ -42,8 +42,13 @@ export function PostCard({ post }: PostCardProps) {
           </div>
         )}
         {post.video && (
-          <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-black flex items-center justify-center">
-            <p className="text-white">Video Placeholder</p>
+          <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-black">
+            <video
+              src={post.video}
+              controls
+              className="h-full w-full object-contain"
+              playsInline
+            />
           </div>
         )}
       </CardContent>
