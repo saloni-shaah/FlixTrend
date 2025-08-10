@@ -204,4 +204,4 @@ export default function SignalPage() {
   }
   // Only render the client-only chat UI after user is loaded
   return <div className="min-h-screen bg-gradient-to-br from-pink-500 via-yellow-400 via-blue-400 via-green-400 via-purple-500 via-orange-400 via-cyan-400 via-red-400 to-pink-400 transition-colors"><ClientOnlySignalPage firebaseUser={firebaseUser} /></div>;
-}
+} 

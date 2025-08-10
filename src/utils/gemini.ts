@@ -9,4 +9,4 @@ export async function getGeminiText(prompt: string): Promise<string> {
   });
   const data = await res.json();
   return data?.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't think of a reply!";
-}
+} 

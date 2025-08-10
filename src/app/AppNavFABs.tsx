@@ -43,4 +43,4 @@ function NavButton({ href, icon, label }: { href: string; icon: string; label: s
       {label}
     </Link>
   );
-}
+} 

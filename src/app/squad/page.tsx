@@ -710,4 +710,4 @@ function FollowButton({ user, currentUser }: { user: any; currentUser: any }) {
       {isFollowing ? "Unfollow" : "Follow"}
     </button>
   );
-}
+} 

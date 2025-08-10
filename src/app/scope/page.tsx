@@ -242,8 +242,8 @@ export default function ScopePage() {
       </div>
       {/* Bottom Nav */}
       <nav className="fixed bottom-0 left-0 w-full z-40 bg-black/80 border-t border-accent-cyan/20 flex justify-around items-center py-2">
-        <NavButton href="/home" icon="🏠" label={<span className="text-accent-cyan font-bold">VibeSpace</span>} />
-        <NavButton href="/scope" icon="🌐" label="Scope" />
+        <NavButton href="/home" icon="🏠" label="VibeSpace" />
+        <NavButton href="/scope" icon="🌐" label={<span className="text-accent-cyan font-bold">Scope</span>} />
         <NavButton href="/squad" icon="👥" label="Squad" />
         <NavButton href="/signal" icon="📩" label="Signal" />
       </nav>
@@ -258,4 +258,4 @@ function NavButton({ href, icon, label }: { href: string; icon: React.ReactNode;
       {label}
     </a>
   );
-}
+} 

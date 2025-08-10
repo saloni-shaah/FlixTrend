@@ -516,4 +516,4 @@ function getAlmightyResponse(message: string): string {
     return jokes[Math.floor(Math.random() * jokes.length)];
   }
   return "I'm Almighty AI 🤖 – your hype assistant! Ask me anything, or just vibe ✨.";
-}
+} 

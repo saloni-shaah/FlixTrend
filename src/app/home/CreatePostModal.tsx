@@ -509,4 +509,4 @@ export default function CreatePostModal({ open, onClose }: { open: boolean; onCl
       </div>
     </div>
   );
-}
+} 

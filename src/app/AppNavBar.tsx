@@ -23,4 +23,4 @@ export default function AppNavBar() {
       <NavButton href="/signal" icon="📩" label="Signal" />
     </nav>
   );
-}
+} 
