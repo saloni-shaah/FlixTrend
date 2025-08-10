@@ -1,134 +1,185 @@
-
-"use client"
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Logo } from "@/components/flixtrend/logo";
+"use client";
+import React, { useState } from "react";
 import Link from "next/link";
-import { Progress } from "@/components/ui/progress";
-import { Camera } from "lucide-react";
+import { auth } from "@/utils/firebaseClient";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { getFirestore, doc, setDoc } from "firebase/firestore";
+import { useRouter } from "next/navigation";
 
-const steps = [
-  { id: 1, title: "Create your account" },
-  { id: 2, title: "Personalize your profile" },
-  { id: 3, title: "Secure your account" },
-  { id: 4, title: "Final details" },
-];
+const db = getFirestore();
 
 export default function SignupPage() {
-    const [step, setStep] = useState(1);
-    const router = useRouter();
-    const progress = (step / steps.length) * 100;
+  const [form, setForm] = useState({
+    email: "",
+    password: "",
+    confirmPassword: "",
+    showPassword: false,
+    name: "",
+    username: "",
+    phone: "",
+    age: "",
+    bio: "",
+    interests: "",
+    avatar: "",
+  });
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
-    const nextStep = () => {
-      if (step === steps.length) {
-        // TODO: Implement actual signup logic
-        router.push("/vibespace");
-      } else {
-        setStep(s => Math.min(s + 1, steps.length));
-      }
-    };
-    const prevStep = () => setStep(s => Math.max(s - 1, 1));
-    
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleTogglePassword = () => {
+    setForm((prev) => ({ ...prev, showPassword: !prev.showPassword }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    if (form.password !== form.confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+    setLoading(true);
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, form.email, form.password);
+      await updateProfile(userCredential.user, {
+        displayName: form.name,
+        photoURL: form.avatar || undefined,
+      });
+      // Store user profile in Firestore
+      await setDoc(doc(db, "users", userCredential.user.uid), {
+        email: form.email,
+        name: form.name,
+        username: form.username,
+        phone: form.phone,
+        age: form.age,
+        bio: form.bio,
+        interests: form.interests,
+        avatar_url: form.avatar,
+        created_at: new Date().toISOString(),
+      });
+      setSuccess("Signup successful! Redirecting to home...");
+      router.push("/home");
+    } catch (err: any) {
+      setError(err.message);
+    }
+    setLoading(false);
+  };
+
   return (
-    <div className="relative flex flex-col items-center justify-center min-h-screen py-12">
-      <div className="animated-gradient fixed inset-0 -z-10" />
-       <div className="absolute top-8 left-8">
-        <Logo />
-      </div>
-      <Card className="w-full max-w-md glassmorphism">
-        <CardHeader className="text-center">
-            <div className="w-full mb-4">
-                <Progress value={progress} className="h-2" />
-                <p className="text-xs text-muted-foreground mt-2 text-left">{`Step ${step} of ${steps.length}: ${steps[step - 1].title}`}</p>
-            </div>
-          <CardTitle className="text-2xl font-bold font-headline">Join FlixTrend</CardTitle>
-          <CardDescription>Start your journey into a better social experience.</CardDescription>
-        </CardHeader>
-        <CardContent>
-            {step === 1 && (
-                <div className="space-y-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="name">Full Name</Label>
-                        <Input id="name" placeholder="John Doe" />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="username">Username</Label>
-                        <Input id="username" placeholder="johndoe" />
-                    </div>
-                </div>
-            )}
-            {step === 2 && (
-                <div className="space-y-4">
-                    <div className="space-y-2">
-                        <Label>Profile Picture</Label>
-                        <div className="flex items-center gap-4">
-                            <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center">
-                                <Camera className="h-8 w-8 text-muted-foreground" />
-                            </div>
-                            <Button variant="outline">Upload</Button>
-                        </div>
-                    </div>
-                     <div className="space-y-2">
-                        <Label>Banner Image</Label>
-                        <div className="flex items-center gap-4">
-                            <div className="h-20 w-full rounded-md bg-muted flex items-center justify-center">
-                                <Camera className="h-8 w-8 text-muted-foreground" />
-                            </div>
-                            <Button variant="outline">Upload</Button>
-                        </div>
-                    </div>
-                </div>
-            )}
-             {step === 3 && (
-                <div className="space-y-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input id="email" type="email" placeholder="you@example.com" />
-                    </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="password">Password</Label>
-                        <Input id="password" type="password" />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="phone">Phone Number</Label>
-                        <Input id="phone" type="tel" placeholder="+1 (555) 123-4567" />
-                    </div>
-                </div>
-            )}
-            {step === 4 && (
-                 <div className="space-y-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="age">Age</Label>
-                        <Input id="age" type="number" placeholder="18" />
-                    </div>
-                    <div className="text-center p-4 bg-primary/10 rounded-lg">
-                        <h4 className="font-bold text-lg text-primary">🎉 Almost there! 🎉</h4>
-                        <p className="text-sm text-primary/80">Complete your registration to unlock your first badge!</p>
-                    </div>
-                </div>
-            )}
-
-            <div className="flex gap-4 mt-6">
-                {step > 1 && (
-                    <Button variant="outline" className="w-full" onClick={prevStep}>Back</Button>
-                )}
-                <Button className="w-full animated-glow" onClick={nextStep}>
-                    {step === steps.length ? "Finish Sign Up" : "Continue"}
-                </Button>
-            </div>
-
-          <div className="mt-4 text-center text-sm">
-            Already have an account?{" "}
-            <Link href="/login" className="underline text-primary">
-              Sign in
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary via-secondary to-accent-cyan text-white font-body transition-colors duration-500">
+      <form
+        onSubmit={handleSubmit}
+        className="bg-card/80 rounded-2xl shadow-fab-glow p-8 w-full max-w-md flex flex-col gap-6 animate-fade-in"
+      >
+        <h2 className="text-3xl font-headline font-bold text-accent-cyan mb-2 text-center drop-shadow">Create Account</h2>
+        <input
+          type="text"
+          name="name"
+          placeholder="Full Name"
+          className="px-4 py-3 rounded-full bg-black/40 text-white border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink"
+          value={form.name}
+          onChange={handleChange}
+          required
+        />
+        <input
+          type="text"
+          name="username"
+          placeholder="Username"
+          className="px-4 py-3 rounded-full bg-black/40 text-white border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink"
+          value={form.username}
+          onChange={handleChange}
+          required
+        />
+        <input
+          type="email"
+          name="email"
+          placeholder="Email"
+          className="px-4 py-3 rounded-full bg-black/40 text-white border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink"
+          value={form.email}
+          onChange={handleChange}
+          required
+        />
+        <div className="flex gap-2">
+          <input
+            type={form.showPassword ? "text" : "password"}
+            name="password"
+            placeholder="Password"
+            className="flex-1 px-4 py-3 rounded-full bg-black/40 text-white border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink"
+            value={form.password}
+            onChange={handleChange}
+            required
+          />
+          <input
+            type={form.showPassword ? "text" : "password"}
+            name="confirmPassword"
+            placeholder="Confirm Password"
+            className="flex-1 px-4 py-3 rounded-full bg-black/40 text-white border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink"
+            value={form.confirmPassword}
+            onChange={handleChange}
+            required
+          />
+        </div>
+        <button type="button" onClick={handleTogglePassword} className="text-xs text-accent-cyan self-end mb-2">
+          {form.showPassword ? "Hide Passwords" : "Show Passwords"}
+        </button>
+        <input
+          type="tel"
+          name="phone"
+          placeholder="Phone Number"
+          className="px-4 py-3 rounded-full bg-black/40 text-white border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink"
+          value={form.phone}
+          onChange={handleChange}
+        />
+        <input
+          type="number"
+          name="age"
+          placeholder="Age"
+          className="px-4 py-3 rounded-full bg-black/40 text-white border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink"
+          value={form.age}
+          onChange={handleChange}
+        />
+        <textarea
+          name="bio"
+          placeholder="Bio"
+          className="px-4 py-3 rounded-2xl bg-black/40 text-white border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink resize-none"
+          value={form.bio}
+          onChange={handleChange}
+        />
+        <input
+          type="text"
+          name="interests"
+          placeholder="Your Interests (comma separated)"
+          className="px-4 py-3 rounded-full bg-black/40 text-white border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink"
+          value={form.interests}
+          onChange={handleChange}
+        />
+        <input
+          type="text"
+          name="avatar"
+          placeholder="Avatar URL (optional)"
+          className="px-4 py-3 rounded-full bg-black/40 text-white border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink"
+          value={form.avatar}
+          onChange={handleChange}
+        />
+        {error && <div className="text-red-400 text-center animate-bounce mt-2">{error}</div>}
+        {success && <div className="text-accent-cyan text-center animate-glow mt-2">{success}</div>}
+        <button
+          type="submit"
+          className="mt-4 px-8 py-3 rounded-full bg-accent-pink text-white font-bold text-lg shadow-fab-glow hover:scale-105 hover:shadow-lg transition-all duration-200 disabled:opacity-60"
+          disabled={loading}
+        >
+          {loading ? "Signing up..." : "Sign Up"}
+        </button>
+        <div className="text-center mt-2">
+          <span className="text-gray-400">Already have an account? </span>
+          <Link href="/login" className="text-accent-cyan hover:underline">Login</Link>
+        </div>
+      </form>
     </div>
   );
 }
