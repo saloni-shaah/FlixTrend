@@ -12,7 +12,7 @@ export default async function VibeSpacePage() {
 
   return (
     <div className="container max-w-2xl mx-auto relative">
-       <Button asChild className="fixed top-20 right-8 z-10 animated-glow">
+      <Button asChild className="fixed bottom-24 right-8 md:top-20 md:right-8 z-10 animated-glow">
           <Link href="/create-post">
             <PenSquare className="h-5 w-5 mr-2" />
             Create

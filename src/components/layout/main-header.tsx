@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { ArrowLeft, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/flixtrend/logo";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 
 export function MainHeader() {
   const pathname = usePathname();
@@ -22,8 +23,11 @@ export function MainHeader() {
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6">
+      <div className="md:hidden">
+        <SidebarTrigger />
+      </div>
       {showBackButton && (
-        <Button variant="ghost" size="icon" onClick={() => router.back()}>
+        <Button variant="ghost" size="icon" onClick={() => router.back()} className="hidden md:inline-flex">
           <ArrowLeft className="h-5 w-5" />
           <span className="sr-only">Back</span>
         </Button>
