@@ -2,7 +2,7 @@ import type { Post } from "@/lib/data";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { ArrowDownCircle, ArrowUpCircle, BadgeCheck, MessageCircle, MoreHorizontal, Repeat2 } from "lucide-react";
+import { Star, BadgeCheck, MessageCircle, MoreHorizontal, Repeat2 } from "lucide-react";
 import Image from 'next/image';
 
 type PostCardProps = {
@@ -54,13 +54,9 @@ export function PostCard({ post }: PostCardProps) {
       </CardContent>
       <CardFooter className="px-4 pb-4">
         <div className="flex justify-between w-full text-muted-foreground">
-          <Button variant="ghost" className="flex items-center gap-2 hover:text-green-400">
-            <ArrowUpCircle />
+          <Button variant="ghost" className="flex items-center gap-2 hover:text-yellow-400">
+            <Star />
             <span>{stats.boosts}</span>
-          </Button>
-          <Button variant="ghost" className="flex items-center gap-2 hover:text-red-400">
-            <ArrowDownCircle />
-            <span>{stats.drops}</span>
           </Button>
            <Button variant="ghost" className="flex items-center gap-2 hover:text-primary">
             <Repeat2 />
