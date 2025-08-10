@@ -20,7 +20,7 @@ export function BottomNav() {
     <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 border-t glassmorphism z-40">
       <div className="flex justify-around items-center h-full">
         {navItems.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive = pathname.startsWith(item.href);
           return (
             <Link
               key={item.href}
