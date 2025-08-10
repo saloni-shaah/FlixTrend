@@ -3,126 +3,83 @@
 @import "@fontsource/inter/400.css";
 
 :root {
-  --background: #fff;
-  --foreground: #0F0F0F;
-  --brand: #BF00FF;
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 98%;
+  --card: 240 10% 3.9%;
+  --card-foreground: 0 0% 98%;
+  --popover: 240 10% 3.9%;
+  --popover-foreground: 0 0% 98%;
+  --primary: 262.1 83.3% 57.8%;
+  --primary-foreground: 0 0% 98%;
+  --secondary: 240 3.7% 15.9%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 240 3.7% 15.9%;
+  --muted-foreground: 240 5% 64.9%;
+  --accent: 300 85% 55%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 240 3.7% 15.9%;
+  --input: 240 3.7% 15.9%;
+  --ring: 262.1 83.3% 57.8%;
+
   --accent-pink: #FF3CAC;
   --accent-cyan: #00F0FF;
   --neon-green: #39FF14;
-  --hot-coral: #FF5F6D;
-  --soft-gray: #C0C0C0;
-  --glass-white: rgba(255,255,255,0.07);
-  --color-pink: #ff3cac;
-  --color-yellow: #fffd87;
-  --color-blue: #00f0ff;
-  --color-green: #39ff14;
-  --color-purple: #bf00ff;
-  --color-orange: #ff5f6d;
-  --color-cyan: #00fff7;
-  --color-red: #ff1744;
-  --color-neon: #39ff14;
-  --color-glass: rgba(255,255,255,0.07);
+
+  --radius: 0.5rem;
+
   --aurora-gradient: linear-gradient(120deg, #ff3cac, #784ba0, #2b86c5, #39ff14, #fffd87, #ff5f6d, #00f0ff, #bf00ff, #ff1744);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0F0F0F;
-    --foreground: #ededed;
-  }
+.dark {
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 98%;
+  --card: 240 10% 3.9%;
+  --card-foreground: 0 0% 98%;
+  --popover: 240 10% 3.9%;
+  --popover-foreground: 0 0% 98%;
+  --primary: 262.1 83.3% 57.8%;
+  --primary-foreground: 0 0% 98%;
+  --secondary: 240 3.7% 15.9%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 240 3.7% 15.9%;
+  --muted-foreground: 240 5% 64.9%;
+  --accent: 300 85% 55%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 240 3.7% 15.9%;
+  --input: 240 3.7% 15.9%;
+  --ring: 262.1 83.3% 57.8%;
 }
 
 body {
-  background: var(--aurora-gradient);
-  background-size: 200% 200%;
-  animation: auroraMove 16s ease-in-out infinite;
-  color: var(--foreground);
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
   font-family: 'Inter', 'Space Grotesk', Arial, Helvetica, sans-serif;
-  animation: fadeIn 1s ease-in;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
-@keyframes auroraMove {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-.glass {
-  background: var(--glass-white);
+.glassmorphism {
+  background: rgba(16, 16, 16, 0.6);
   backdrop-filter: blur(10px);
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.2);
+  border: 1px solid hsla(var(--border), 0.5);
 }
 
-/* Neon Glow */
-.neon-glow, .neon-glow * {
-  text-shadow: 0 0 8px var(--color-pink), 0 0 16px var(--color-blue), 0 0 24px var(--color-green);
+.animated-glow {
+  animation: glow 2s ease-in-out infinite;
+  box-shadow: 0 0 10px hsl(var(--primary)), 0 0 20px hsl(var(--accent));
+}
+.animated-glow-sm {
+  animation: glow 2s ease-in-out infinite;
+  box-shadow: 0 0 5px hsl(var(--primary)), 0 0 10px hsl(var(--accent));
 }
 
-/* Glassmorphism Card */
-.glass-card {
-  background: var(--color-glass);
-  backdrop-filter: blur(16px) saturate(180%);
-  border-radius: 1.5rem;
-  border: 1.5px solid var(--color-cyan);
-  box-shadow: 0 4px 32px 0 var(--color-purple);
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 10px hsl(var(--primary)), 0 0 20px hsl(var(--accent));
+  }
+  50% {
+    box-shadow: 0 0 20px hsl(var(--primary)), 0 0 40px hsl(var(--accent));
+  }
 }
-
-/* Vibrant Accent Ring */
-.accent-ring {
-  border: 3px solid;
-  border-image: var(--aurora-gradient) 1;
-  animation: ringPulse 2s infinite alternate;
-}
-@keyframes ringPulse {
-  0% { box-shadow: 0 0 0 0 var(--color-pink); }
-  100% { box-shadow: 0 0 16px 8px var(--color-blue); }
-}
-
-/* Pulse Glow on Hover */
-.pulse-glow:hover {
-  box-shadow: 0 0 16px 8px var(--color-green), 0 0 32px 16px var(--color-pink);
-  filter: blur(0.5px);
-  transition: box-shadow 0.3s, filter 0.3s;
-}
-
-/* Rainbow Trail Cursor (scaffold) */
-.rainbow-cursor {
-  cursor: url('/rainbow-cursor.png'), auto;
-}
-
-/* Confetti Pop (scaffold) */
-.confetti-pop {
-  /* Use with JS or Lottie for confetti effect */
-}
-
-/* Multi-color Typing Animation (scaffold) */
-.rainbow-type {
-  background: var(--aurora-gradient);
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  animation: rainbowType 2s linear infinite alternate;
-}
-@keyframes rainbowType {
-  0% { background-position: 0% 50%; }
-  100% { background-position: 100% 50%; }
-}
-
-/* Glassmorphism for modals/overlays */
-.glass-overlay {
-  background: rgba(255,255,255,0.15);
-  backdrop-filter: blur(24px) saturate(180%);
-}
-
-/* Aurora Gradient Borders */
-.aurora-border {
-  border-image: var(--aurora-gradient) 1;
-}
-
-/* Add more utility classes as needed for future features */
