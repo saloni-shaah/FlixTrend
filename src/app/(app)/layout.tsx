@@ -18,9 +18,9 @@ export default function AppLayout({
           <div className="animated-gradient fixed inset-0 -z-10" />
           <MainHeader />
           <main className="flex-1 pb-20 md:pb-0">{children}</main>
-          <AlmightyAiPanel />
-          <BottomNav />
         </div>
+        <AlmightyAiPanel />
+        <BottomNav />
       </div>
     </SidebarProvider>
   );
