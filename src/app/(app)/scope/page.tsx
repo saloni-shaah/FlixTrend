@@ -12,14 +12,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getTrendingTopics, getShorts, type Short } from "@/lib/data";
 import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import AppLayout from "../layout";
 
 export default async function ScopePage() {
   const trendingTopics = await getTrendingTopics();
   const shorts = await getShorts();
 
   return (
-    <AppLayout>
       <div className="container mx-auto py-4 px-4 space-y-8">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -76,6 +74,5 @@ export default async function ScopePage() {
           </Tabs>
         </div>
       </div>
-    </AppLayout>
   );
 }

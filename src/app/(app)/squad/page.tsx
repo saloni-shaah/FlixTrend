@@ -4,7 +4,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PostCard } from "@/components/flixtrend/post-card";
-import AppLayout from "../layout";
 
 // Mock current user ID. In a real app, this would come from the auth state.
 const CURRENT_USER_ID = 'user-1';
@@ -15,14 +14,11 @@ export default async function SquadPage() {
 
   if (!user) {
     return (
-      <AppLayout>
         <div className="text-center py-10">User not found.</div>
-      </AppLayout>
     );
   }
 
   return (
-    <AppLayout>
       <div className="flex flex-col">
         <div className="relative h-48 w-full">
           <Image
@@ -83,6 +79,5 @@ export default async function SquadPage() {
           </Tabs>
         </div>
       </div>
-    </AppLayout>
   );
 }
