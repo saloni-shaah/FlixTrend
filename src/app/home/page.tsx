@@ -1,8 +1,8 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import CreatePostModal from "./CreatePostModal";
-import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, deleteDoc, updateDoc, doc as fsDoc, setDoc, getDoc } from "firebase/firestore";
-import { FaSearch, FaPlay } from "react-icons/fa";
+import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, deleteDoc, updateDoc, doc as fsDoc, setDoc, getDoc, doc } from "firebase/firestore";
+import { FaSearch, FaPlay, FaBell } from "react-icons/fa";
 import { FaRegComment } from "react-icons/fa";
 // Star Like Logo SVG
 function StarLogo({ filled = false, size = 24 }) {
@@ -33,13 +33,13 @@ export default function HomePage() {
   const [posts, setPosts] = useState<any[]>([]);
   const [flashes, setFlashes] = useState<any[]>([]);
   const [selectedFlash, setSelectedFlash] = useState<any | null>(null);
-  const [showSearch, setShowSearch] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [showAlmighty, setShowAlmighty] = useState(false);
   const [chat, setChat] = useState<{ sender: "user" | "ai"; text: string }[]>([
     { sender: "ai", text: "Hey! I'm Almighty AI. Ask me anything about FlixTrend, or just say hi!" }
   ]);
   const [input, setInput] = useState("");
+  const [showNotifications, setShowNotifications] = useState(false);
 
   useEffect(() => {
     const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
@@ -139,21 +139,38 @@ export default function HomePage() {
           </div>
         )}
       </section>
-      {/* Single Create Post FAB (top right) */}
-       <button
-        className="fixed top-4 right-4 z-50 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan p-5 shadow-fab-glow hover:scale-105 transition-all duration-200 focus:outline-none glass"
-        title="Create Post"
-        onClick={() => setShowModal(true)}
-        aria-label="Create Post"
-      >
-        <span className="text-2xl text-white">➕</span>
-      </button>
-      <div className="fixed inset-0 z-50" style={{ pointerEvents: showModal || selectedFlash ? 'auto' : 'none' }}>
+      
+      {/* Top Right FABs */}
+      <div className="fixed top-4 right-4 z-50 flex gap-3">
+        <button
+          className="rounded-full bg-gradient-to-tr from-yellow-400 to-orange-500 p-5 shadow-fab-glow hover:scale-105 transition-all duration-200 focus:outline-none glass"
+          title="Notifications"
+          onClick={() => setShowNotifications(true)}
+          aria-label="Notifications"
+        >
+          <FaBell className="text-2xl text-white" />
+        </button>
+        <button
+          className="rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan p-5 shadow-fab-glow hover:scale-105 transition-all duration-200 focus:outline-none glass"
+          title="Create Post"
+          onClick={() => setShowModal(true)}
+          aria-label="Create Post"
+        >
+          <span className="text-2xl text-white">➕</span>
+        </button>
+      </div>
+
+      <div className="fixed inset-0 z-50" style={{ pointerEvents: showModal || selectedFlash || showNotifications ? 'auto' : 'none' }}>
         {showModal && <div className="absolute inset-0 bg-orange-200/80" />}
         <CreatePostModal open={showModal} onClose={() => setShowModal(false)} />
+        
         {selectedFlash && <div className="absolute inset-0 bg-orange-200/80" />}
         {selectedFlash && <FlashModal flash={selectedFlash} onClose={() => setSelectedFlash(null)} />}
+        
+        {showNotifications && <div className="absolute inset-0 bg-black/30" />}
+        {showNotifications && <NotificationPanel onClose={() => setShowNotifications(false)} />}
       </div>
+      
       {/* Almighty AI FAB (bottom right) */}
       <button
         className="fixed bottom-8 right-8 z-50 bg-purple-400 text-white p-5 rounded-full shadow-fab-glow hover:scale-110 transition-all duration-200 animate-bounce-slow"
@@ -162,6 +179,7 @@ export default function HomePage() {
       >
         <span className="text-3xl">🤖</span>
       </button>
+
       {/* Almighty AI Chat Modal */}
       {showAlmighty && (
         <div className="fixed inset-0 z-50 flex items-end justify-end p-4 bg-black/30 backdrop-blur-sm">
@@ -259,8 +277,24 @@ export function PostCard({ post }: { post: any }) {
   const handleLike = async () => {
     if (!currentUser) return;
     const likeDocRef = fsDoc(db, "posts", post.id, "likes", currentUser.uid);
-    if (liked) await deleteDoc(likeDocRef);
-    else await setDoc(likeDocRef, { userId: currentUser.uid, createdAt: serverTimestamp() });
+    if (liked) {
+      await deleteDoc(likeDocRef);
+    } else {
+      await setDoc(likeDocRef, { userId: currentUser.uid, createdAt: serverTimestamp() });
+      if (post.userId !== currentUser.uid) {
+        const notifRef = collection(db, "notifications", post.userId, "user_notifications");
+        await addDoc(notifRef, {
+          type: 'like',
+          fromUserId: currentUser.uid,
+          fromUsername: currentUser.displayName,
+          fromAvatarUrl: currentUser.photoURL,
+          postId: post.id,
+          postContent: post.content.substring(0, 50),
+          createdAt: serverTimestamp(),
+          read: false,
+        });
+      }
+    }
   };
 
   const handleDelete = async () => {
@@ -384,23 +418,92 @@ export function PostCard({ post }: { post: any }) {
           <FaRegComment /> <span>{commentCount}</span>
         </button>
       </div>
-      {showComments && <CommentModal postId={post.id} onClose={() => setShowComments(false)} />}
+      {showComments && <CommentModal postId={post.id} postAuthorId={post.userId} onClose={() => setShowComments(false)} />}
     </div>
   );
 }
 
-function CommentModal({ postId, onClose }: { postId: string; onClose: () => void }) {
+function CommentModal({ postId, postAuthorId, onClose }: { postId: string; postAuthorId: string; onClose: () => void }) {
   const [comments, setComments] = useState<any[]>([]);
-  const [newComment, setNewComment] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [replyTo, setReplyTo] = useState<string | null>(null); // State to track which comment is being replied to
 
-  React.useEffect(() => {
+  useEffect(() => {
     const q = query(collection(db, "posts", postId, "comments"), orderBy("createdAt", "asc"));
     const unsub = onSnapshot(q, (snapshot) => {
-      setComments(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+      const allComments = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      const threadedComments = allComments.filter(c => !c.parentId);
+      threadedComments.forEach(p => {
+        p.replies = allComments.filter(r => r.parentId === p.id);
+      });
+      setComments(threadedComments);
     });
     return () => unsub();
   }, [postId]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+      <div className="bg-white dark:bg-card rounded-2xl p-6 w-full max-w-md relative animate-pop shadow-xl border border-accent-cyan/20">
+        <button onClick={onClose} className="absolute top-2 right-2 text-accent-pink text-2xl">&times;</button>
+        <h3 className="text-xl font-headline font-bold mb-4 text-accent-cyan">Comments</h3>
+        <div className="flex flex-col gap-3 max-h-60 overflow-y-auto mb-4 p-2">
+          {comments.length === 0 ? (
+            <div className="text-gray-400 text-center">No comments yet. Be the first!</div>
+          ) : (
+            comments.map((comment) => (
+              <CommentThread key={comment.id} comment={comment} postId={postId} postAuthorId={postAuthorId} replyTo={replyTo} setReplyTo={setReplyTo} />
+            ))
+          )}
+        </div>
+        <CommentForm postId={postId} postAuthorId={postAuthorId} parentId={null} onCommentPosted={() => setReplyTo(null)} />
+      </div>
+    </div>
+  );
+}
+
+function CommentThread({ comment, postId, postAuthorId, replyTo, setReplyTo }: { comment: any; postId: string; postAuthorId: string; replyTo: string | null; setReplyTo: (id: string | null) => void }) {
+  return (
+    <div className="flex flex-col gap-3">
+      <Comment comment={comment} onReply={() => setReplyTo(comment.id)} />
+      {replyTo === comment.id && (
+        <div className="ml-8">
+          <CommentForm postId={postId} postAuthorId={postAuthorId} parentId={comment.id} onCommentPosted={() => setReplyTo(null)} isReply />
+        </div>
+      )}
+      {comment.replies && comment.replies.length > 0 && (
+        <div className="ml-8 border-l-2 border-accent-cyan/20 pl-4 flex flex-col gap-3">
+          {comment.replies.map((reply: any) => (
+            <CommentThread key={reply.id} comment={reply} postId={postId} postAuthorId={postAuthorId} replyTo={replyTo} setReplyTo={setReplyTo} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Comment({ comment, onReply }: { comment: any; onReply: () => void }) {
+  const initials = comment.displayName?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || comment.username?.slice(0, 2).toUpperCase() || "U";
+  return (
+    <div className="flex gap-3">
+      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-accentPink to-accentCyan flex items-center justify-center text-white font-bold text-sm overflow-hidden shrink-0">
+          {comment.avatar_url ? <img src={comment.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : initials}
+      </div>
+      <div className="flex-1">
+        <div className="bg-black/60 rounded-xl px-3 py-2 text-[#E0E0E0] font-body">
+          <div className="flex items-center gap-2">
+            <Link href={`/squad/${comment.userId}`} className="font-bold text-accent-cyan text-sm hover:underline">@{comment.username || 'user'}</Link>
+            <span className="text-xs text-gray-400">{comment.createdAt?.toDate?.().toLocaleString?.() || ""}</span>
+          </div>
+          <p className="text-base">{comment.text}</p>
+        </div>
+        <button onClick={onReply} className="text-xs text-accent-cyan font-bold mt-1 hover:underline">Reply</button>
+      </div>
+    </div>
+  );
+}
+
+function CommentForm({ postId, postAuthorId, parentId, onCommentPosted, isReply = false }: { postId: string; postAuthorId: string; parentId: string | null; onCommentPosted: () => void; isReply?: boolean }) {
+  const [newComment, setNewComment] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -411,65 +514,67 @@ function CommentModal({ postId, onClose }: { postId: string; onClose: () => void
     
     let displayName = user.displayName || "";
     let username = "";
+    let avatar_url = user.photoURL || "";
     const profileSnap = await getDoc(doc(db, "users", user.uid));
     if (profileSnap.exists()) {
         const profileData = profileSnap.data();
         displayName = profileData.name || displayName;
         username = profileData.username || "";
+        avatar_url = profileData.avatar_url || avatar_url;
     }
 
-    await addDoc(collection(db, "posts", postId, "comments"), {
+    const commentData: any = {
       text: newComment,
       userId: user.uid,
       displayName,
       username,
+      avatar_url,
       createdAt: serverTimestamp(),
-    });
+      parentId: parentId,
+    };
+
+    await addDoc(collection(db, "posts", postId, "comments"), commentData);
+
+    if (postAuthorId !== user.uid) {
+      const notifRef = collection(db, "notifications", postAuthorId, "user_notifications");
+      await addDoc(notifRef, {
+        type: 'comment',
+        fromUserId: user.uid,
+        fromUsername: user.displayName,
+        fromAvatarUrl: user.photoURL,
+        postId: postId,
+        postContent: newComment.substring(0, 50),
+        createdAt: serverTimestamp(),
+        read: false,
+      });
+    }
+
     setNewComment("");
     setLoading(false);
+    onCommentPosted();
   };
-
+  
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="bg-white dark:bg-card rounded-2xl p-6 w-full max-w-md relative animate-pop shadow-xl border border-accent-cyan/20">
-        <button onClick={onClose} className="absolute top-2 right-2 text-accent-pink text-2xl">&times;</button>
-        <h3 className="text-xl font-headline font-bold mb-4 text-accent-cyan">Comments</h3>
-        <div className="flex flex-col gap-3 max-h-60 overflow-y-auto mb-4">
-          {comments.length === 0 ? (
-            <div className="text-gray-400 text-center">No comments yet. Be the first!</div>
-          ) : (
-            comments.map((c) => (
-              <div key={c.id} className="bg-black/60 rounded-xl px-3 py-2 text-[#E0E0E0] font-body">
-                <div className="flex items-center gap-2">
-                    <span className="font-bold text-accent-cyan text-sm">@{c.username || 'user'}</span>
-                    <span className="text-xs text-gray-400">{c.createdAt?.toDate?.().toLocaleString?.() || ""}</span>
-                </div>
-                {c.text}
-              </div>
-            ))
-          )}
-        </div>
-        <form onSubmit={handleAddComment} className="flex gap-2">
-          <input
-            type="text"
-            className="flex-1 rounded-full px-4 py-2 border border-accent-cyan bg-white dark:bg-card text-black dark:text-white"
-            placeholder="Add a comment..."
-            value={newComment}
-            onChange={e => setNewComment(e.target.value)}
-            disabled={loading}
-          />
-          <button
-            type="submit"
-            className="px-4 py-2 rounded-full bg-accent-cyan text-primary font-bold disabled:opacity-60"
-            disabled={loading || !newComment.trim()}
-          >
-            Post
-          </button>
-        </form>
-      </div>
-    </div>
-  );
+    <form onSubmit={handleAddComment} className="flex gap-2">
+      <input
+        type="text"
+        className="flex-1 rounded-full px-4 py-2 border border-accent-cyan bg-white dark:bg-card text-black dark:text-white"
+        placeholder={isReply ? "Add a reply..." : "Add a comment..."}
+        value={newComment}
+        onChange={e => setNewComment(e.target.value)}
+        disabled={loading}
+      />
+      <button
+        type="submit"
+        className="px-4 py-2 rounded-full bg-accent-cyan text-primary font-bold disabled:opacity-60"
+        disabled={loading || !newComment.trim()}
+      >
+        Post
+      </button>
+    </form>
+  )
 }
+
 
 function FlashModal({ flash, onClose }: { flash: any; onClose: () => void }) {
   return (
@@ -489,6 +594,63 @@ function FlashModal({ flash, onClose }: { flash: any; onClose: () => void }) {
     </div>
   );
 }
+
+function NotificationPanel({ onClose }: { onClose: () => void }) {
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const currentUser = auth.currentUser;
+
+  useEffect(() => {
+    if (!currentUser) return;
+    const q = query(
+      collection(db, "notifications", currentUser.uid, "user_notifications"),
+      orderBy("createdAt", "desc")
+    );
+    const unsub = onSnapshot(q, (snapshot) => {
+      setNotifications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    return () => unsub();
+  }, [currentUser]);
+
+  const getNotificationMessage = (notif: any) => {
+    switch (notif.type) {
+      case 'like':
+        return <><span className="font-bold">{notif.fromUsername}</span> liked your post: "{notif.postContent}"</>;
+      case 'comment':
+        return <><span className="font-bold">{notif.fromUsername}</span> commented on your post: "{notif.postContent}"</>;
+      case 'follow':
+        return <><span className="font-bold">{notif.fromUsername}</span> started following you.</>;
+      default:
+        return 'New notification';
+    }
+  };
+
+  return (
+    <div className="fixed inset-y-0 right-0 z-50 w-full max-w-sm bg-white dark:bg-card shadow-lg animate-slide-in-right border-l border-accent-cyan/20">
+      <div className="flex items-center justify-between p-4 border-b border-accent-cyan/20">
+        <h3 className="text-xl font-headline font-bold text-accent-cyan">Notifications</h3>
+        <button onClick={onClose} className="text-accent-pink text-2xl">&times;</button>
+      </div>
+      <div className="flex flex-col gap-2 p-4 overflow-y-auto h-full pb-20">
+        {notifications.length === 0 ? (
+          <div className="text-gray-400 text-center mt-16">No new notifications.</div>
+        ) : (
+          notifications.map(notif => (
+            <div key={notif.id} className="flex items-center gap-3 p-3 rounded-xl bg-black/60 hover:bg-accent-cyan/10 transition-all cursor-pointer">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan overflow-hidden">
+                {notif.fromAvatarUrl && <img src={notif.fromAvatarUrl} alt="avatar" className="w-full h-full object-cover"/>}
+              </div>
+              <div className="flex-1 text-sm text-[#E0E0E0]">
+                {getNotificationMessage(notif)}
+                <div className="text-xs text-gray-400 mt-1">{notif.createdAt?.toDate().toLocaleString()}</div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  )
+}
+
 
 function getAlmightyResponse(message: string): string {
   const msg = message.toLowerCase();
