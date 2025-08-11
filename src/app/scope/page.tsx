@@ -228,12 +228,13 @@ export default function ScopePage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {suggestedCreators.map((creator: any, i: number) => (
             <motion.div key={creator.uid} className="flex items-center gap-4 bg-black/80 rounded-xl p-4 shadow-fab-glow border border-accent-cyan/10 hover:bg-accent-cyan/10 transition-all cursor-pointer" whileHover={{ scale: 1.05 }} onClick={() => router.push(`/squad/${creator.uid}`)}>
-              <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accentPink to-accentCyan flex items-center justify-center text-white font-bold text-lg">
-                {creator.avatarUrl ? <img src={creator.avatarUrl} alt="avatar" className="w-full h-full object-cover rounded-full" /> : creator.displayName ? creator.displayName[0] : "U"}
+              <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accentPink to-accentCyan flex items-center justify-center text-white font-bold text-lg overflow-hidden">
+                {creator.avatar_url ? <img src={creator.avatar_url} alt="avatar" className="w-full h-full object-cover rounded-full" /> : creator.name ? creator.name[0] : "U"}
               </div>
               <div className="flex-1">
-                <div className="font-headline text-accent-cyan">{creator.displayName} {creator.verified && <FaCheckCircle className="inline text-neon-green ml-1 animate-bounce" />}</div>
-                <div className="text-xs text-gray-500">{creator.followers || 0} followers</div>
+                <div className="font-headline text-accent-cyan">{creator.name}</div>
+                <div className="text-xs text-gray-500">@{creator.username}</div>
+                <p className="text-xs text-gray-400 line-clamp-1 mt-1">{creator.bio}</p>
               </div>
               <button className="px-4 py-2 rounded-full bg-accent-cyan text-primary font-bold text-xs">Follow</button>
             </motion.div>
