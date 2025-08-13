@@ -6,6 +6,8 @@ import { FaSearch, FaPlay, FaBell, FaRegComment, FaEye, FaRegBookmark, FaBookmar
 import { Repeat2, Bookmark, Plus } from "lucide-react";
 import { auth } from "@/utils/firebaseClient";
 import Link from "next/link";
+import { almightyChat, AlmighyChatRequest, ChatMessage } from "@/ai/flows/almighty-chat-flow";
+import { useAppState } from "@/utils/AppStateContext";
 
 const db = getFirestore();
 
@@ -16,11 +18,15 @@ export default function HomePage() {
   const [selectedFlashUser, setSelectedFlashUser] = useState<any | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showAlmighty, setShowAlmighty] = useState(false);
-  const [chat, setChat] = useState<{ sender: "user" | "ai"; text: string }[]>([
-    { sender: "ai", text: "Hey! I'm Almighty AI. Ask me anything about FlixTrend, or just say hi!" }
+  const [chat, setChat] = useState<ChatMessage[]>([
+    { role: "model", parts: [{ text: "Hey! I'm Almighty AI. Ask me anything about FlixTrend, or just say hi!" }] }
   ]);
   const [input, setInput] = useState("");
   const [showNotifications, setShowNotifications] = useState(false);
+  const [isAlmightyLoading, setIsAlmightyLoading] = useState(false);
+  const { setCallTarget, setIsCalling } = useAppState();
+  const currentUser = auth.currentUser;
+
 
   useEffect(() => {
     const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
@@ -63,6 +69,45 @@ export default function HomePage() {
           (post.hashtags && post.hashtags.some((h: string) => h.toLowerCase().includes(searchTerm.toLowerCase())))
       )
     : posts;
+
+  const handleAlmightySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isAlmightyLoading) return;
+
+    const userMessage: ChatMessage = { role: "user", parts: [{ text: input }] };
+    const newChatHistory = [...chat, userMessage];
+    setChat(newChatHistory);
+    setInput("");
+    setIsAlmightyLoading(true);
+
+    try {
+      const request: AlmighyChatRequest = {
+        history: newChatHistory,
+        userId: currentUser?.uid || 'anonymous',
+        displayName: currentUser?.displayName || 'Guest',
+      };
+      const response = await almightyChat(request);
+
+      // Handle tool responses
+      if (response.toolResponse) {
+        if (response.toolResponse.name === 'initiateCall' && response.toolResponse.output) {
+            const callTargetUser = response.toolResponse.output;
+            setCallTarget(callTargetUser);
+            setIsCalling(true);
+            setChat(prev => [...prev, { role: 'model', parts: [{ text: `Sure, I'm calling ${callTargetUser.name} for you now!` }] }]);
+        } else {
+            setChat(prev => [...prev, { role: 'model', parts: [{ text: response.textResponse || "Done!" }] }]);
+        }
+      } else if (response.textResponse) {
+        setChat(prev => [...prev, { role: 'model', parts: [{ text: response.textResponse }] }]);
+      }
+    } catch (error) {
+      console.error("Almighty AI Error:", error);
+      setChat(prev => [...prev, { role: 'model', parts: [{ text: "Sorry, I ran into a problem. Please try again." }] }]);
+    } finally {
+      setIsAlmightyLoading(false);
+    }
+  };
 
   return (
     <div className="flex flex-col min-h-screen pt-6 pb-24 px-2 md:px-8 bg-white transition-colors">
@@ -183,21 +228,18 @@ export default function HomePage() {
             </div>
             <div className="flex-1 overflow-y-auto max-h-60 mb-2 space-y-2 scrollbar-hide">
               {chat.map((msg, i) => (
-                <div key={i} className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}>
-                  <div className={`rounded-xl px-3 py-2 max-w-[80%] ${msg.sender === "ai" ? "bg-accent-cyan/10 text-accent-cyan" : "bg-accent-pink/20 text-accent-pink"}`}>{msg.text}</div>
+                <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                  <div className={`rounded-xl px-3 py-2 max-w-[80%] ${msg.role === "model" ? "bg-accent-cyan/10 text-accent-cyan" : "bg-accent-pink/20 text-accent-pink"}`}>{msg.parts[0].text}</div>
                 </div>
               ))}
+              {isAlmightyLoading && (
+                  <div className="flex justify-start">
+                      <div className="rounded-xl px-3 py-2 bg-accent-cyan/10 text-accent-cyan animate-pulse">...</div>
+                  </div>
+              )}
             </div>
             <form
-              onSubmit={e => {
-                e.preventDefault();
-                if (!input.trim()) return;
-                setChat([...chat, { sender: "user", text: input }]);
-                setInput("");
-                setTimeout(() => {
-                  setChat(c => [...c, { sender: "ai", text: getAlmightyResponse(input) }]);
-                }, 500);
-              }}
+              onSubmit={handleAlmightySubmit}
               className="flex gap-2 mt-2"
             >
               <input
@@ -209,8 +251,8 @@ export default function HomePage() {
               />
               <button
                 type="submit"
-                className="px-4 py-2 rounded-full bg-accent-cyan text-primary font-bold hover:bg-accent-pink hover:text-white transition-all"
-                disabled={!input.trim()}
+                className="px-4 py-2 rounded-full bg-accent-cyan text-primary font-bold hover:bg-accent-pink hover:text-white transition-all disabled:opacity-50"
+                disabled={!input.trim() || isAlmightyLoading}
               >
                 Send
               </button>
@@ -815,25 +857,4 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
       </div>
     </div>
   )
-}
-
-
-function getAlmightyResponse(message: string): string {
-  const msg = message.toLowerCase();
-  if (["hi", "hello", "hey", "yo"].some((greet) => msg.includes(greet))) {
-    return "Heyyy 👋! Welcome to FlixTrend, where the vibes are always trending!";
-  }
-  if (msg.includes("explain") && msg.includes("app")) {
-    return "FlixTrend is a Gen-Z social app for sharing flashes (stories), vibing with posts, exploring trends, and chatting with Almighty AI. Create, connect, and vibe in style!";
-  }
-  if (msg.includes("joke") || msg.includes("laugh")) {
-    const jokes = [
-      "Why did the influencer go broke? Because they lost their followers! 😆",
-      "Why don't secrets last on FlixTrend? Because the vibes are always trending!",
-      "Why did the phone go to therapy? Too many toxic notifications!",
-      "Why did the Gen-Z bring a ladder to the app? To reach the next level of hype!"
-    ];
-    return jokes[Math.floor(Math.random() * jokes.length)];
-  }
-  return "I'm Almighty AI 🤖 – your hype assistant! Ask me anything, or just vibe ✨.";
 }
