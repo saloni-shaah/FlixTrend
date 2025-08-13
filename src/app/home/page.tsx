@@ -123,12 +123,12 @@ export default function HomePage() {
             onChange={(e) => setSearchTerm(e.target.value)}
             autoFocus={false}
           />
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-accent-cyan pointer-events-none">
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-brand-gold pointer-events-none">
             <Search />
           </span>
           {searchTerm && (
             <button
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-accent-cyan text-xl"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-brand-gold text-xl"
               onClick={() => setSearchTerm("")}
               aria-label="Clear search"
             >
@@ -139,17 +139,17 @@ export default function HomePage() {
       </div>
       {/* Flashes/Stories Section */}
       <section className="mb-6 glass-card p-4">
-        <h2 className="text-lg font-headline bg-gradient-to-r from-accent-pink to-accent-cyan bg-clip-text text-transparent mb-2">Flashes</h2>
+        <h2 className="text-lg font-headline bg-gradient-to-r from-accent-pink to-accent-green bg-clip-text text-transparent mb-2">Flashes</h2>
         <div className="flex gap-3 overflow-x-auto pb-2">
           {flashUsers.length === 0 && (
-            <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-3xl text-white opacity-60 border-4 border-accent-cyan/40 animate-pulse">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green flex items-center justify-center text-3xl text-white opacity-60 border-4 border-accent-green/40 animate-pulse">
               +
             </div>
           )}
           {flashUsers.map((userFlashes: any) => (
             <button
               key={userFlashes.userId}
-              className="w-20 h-20 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan border-4 border-accent-cyan/40 flex items-center justify-center overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background focus:ring-accent-cyan transition-transform hover:scale-105"
+              className="w-20 h-20 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green border-4 border-accent-green/40 flex items-center justify-center overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background focus:ring-accent-green transition-transform hover:scale-105"
               onClick={() => setSelectedFlashUser(userFlashes)}
               title={userFlashes.username || "Flash"}
             >
@@ -187,7 +187,7 @@ export default function HomePage() {
           onClick={() => setShowNotifications(true)}
           aria-label="Notifications"
         >
-          <Bell className="text-xl text-white" />
+          <Bell className="text-xl" />
         </button>
         <button
           className="btn-glass-icon"
@@ -195,7 +195,7 @@ export default function HomePage() {
           onClick={() => setShowModal(true)}
           aria-label="Create Post"
         >
-          <Plus className="text-xl text-white" />
+          <Plus className="text-xl" />
         </button>
       </div>
 
@@ -212,7 +212,7 @@ export default function HomePage() {
       
       {/* Almighty AI FAB (bottom right) */}
       <motion.button
-        className="fixed bottom-24 right-4 z-50 btn-glass-icon w-16 h-16 bg-gradient-to-tr from-accent-pink to-accent-cyan"
+        className="fixed bottom-24 right-4 z-50 btn-glass-icon w-16 h-16 bg-gradient-to-tr from-accent-pink to-accent-purple"
         aria-label="Almighty AI"
         onClick={() => setShowAlmighty(true)}
         whileHover={{ scale: 1.1, rotate: 15 }}
@@ -232,17 +232,17 @@ export default function HomePage() {
           >
             <div className="flex items-center justify-between mb-2">
               <span className="font-headline text-accent-pink text-lg">Almighty AI</span>
-              <button onClick={() => setShowAlmighty(false)} className="text-accent-cyan hover:text-accent-pink text-xl font-bold">×</button>
+              <button onClick={() => setShowAlmighty(false)} className="text-accent-green hover:text-accent-pink text-xl font-bold">×</button>
             </div>
             <div className="flex-1 overflow-y-auto max-h-60 mb-2 space-y-2 pr-2">
               {chat.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                  <div className={`rounded-xl px-3 py-2 max-w-[80%] ${msg.role === "model" ? "bg-accent-cyan/10 text-accent-cyan" : "bg-accent-pink/20 text-accent-pink"}`}>{msg.parts[0].text}</div>
+                  <div className={`rounded-xl px-3 py-2 max-w-[80%] ${msg.role === "model" ? "bg-accent-green/10 text-accent-green" : "bg-accent-pink/20 text-accent-pink"}`}>{msg.parts[0].text}</div>
                 </div>
               ))}
               {isAlmightyLoading && (
                   <div className="flex justify-start">
-                      <div className="rounded-xl px-3 py-2 bg-accent-cyan/10 text-accent-cyan animate-pulse">...</div>
+                      <div className="rounded-xl px-3 py-2 bg-accent-green/10 text-accent-green animate-pulse">...</div>
                   </div>
               )}
             </div>
@@ -428,17 +428,17 @@ export function PostCard({ post }: { post: any }) {
     >
       <div className="flex items-center gap-3 mb-2">
         <Link href={`/squad/${post.userId}`} className="flex items-center gap-2 group cursor-pointer">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-lg overflow-hidden border-2 border-accent-cyan group-hover:scale-105 transition-transform">
-            {post.avatar_url ? <img src={post.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : initials}
+          <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green flex items-center justify-center font-bold text-lg overflow-hidden border-2 border-accent-green group-hover:scale-105 transition-transform">
+            {post.avatar_url ? <img src={post.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : <span className="text-white">{initials}</span>}
           </div>
-          <span className="font-headline text-accent-cyan text-sm group-hover:underline">@{post.username || "user"}</span>
+          <span className="font-headline text-accent-green text-sm group-hover:underline">@{post.username || "user"}</span>
         </Link>
-        <div className="ml-auto flex items-center gap-3 text-xs text-gray-400">
+        <div className="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1"><FaEye /> {post.viewCount || 0}</span>
             <span>{post.createdAt?.toDate?.().toLocaleString?.() || "Just now"}</span>
         </div>
         <div className="relative">
-          <button onClick={() => setShowMoreMenu(!showMoreMenu)} className="text-gray-400 hover:text-accent-cyan">
+          <button onClick={() => setShowMoreMenu(!showMoreMenu)} className="text-muted-foreground hover:text-foreground">
             <FaEllipsisV />
           </button>
           {showMoreMenu && (
@@ -450,8 +450,8 @@ export function PostCard({ post }: { post: any }) {
               <button className="w-full flex items-center gap-2 px-4 py-2 text-left hover:bg-white/10 rounded-lg" onClick={handleCopyLink}><FaLink /> Copy Link</button>
               <div className="border-t border-glass-border my-1" />
               <button className="w-full flex items-center gap-2 px-4 py-2 text-left text-red-400 hover:bg-red-400/10 rounded-lg" onClick={() => { alert('Reported!'); setShowMoreMenu(false); }}><FaExclamationTriangle /> Report</button>
-              <button className="w-full flex items-center gap-2 px-4 py-2 text-left text-gray-400 hover:bg-white/10 rounded-lg" onClick={() => { alert('Creator muted!'); setShowMoreMenu(false); }}><FaVolumeMute /> Mute Creator</button>
-              <button className="w-full flex items-center gap-2 px-4 py-2 text-left text-gray-400 hover:bg-white/10 rounded-lg" onClick={() => { alert('User blocked!'); setShowMoreMenu(false); }}><FaUserSlash /> Block User</button>
+              <button className="w-full flex items-center gap-2 px-4 py-2 text-left text-muted-foreground hover:bg-white/10 rounded-lg" onClick={() => { alert('Creator muted!'); setShowMoreMenu(false); }}><FaVolumeMute /> Mute Creator</button>
+              <button className="w-full flex items-center gap-2 px-4 py-2 text-left text-muted-foreground hover:bg-white/10 rounded-lg" onClick={() => { alert('User blocked!'); setShowMoreMenu(false); }}><FaUserSlash /> Block User</button>
             </motion.div>
           )}
         </div>
@@ -467,28 +467,28 @@ export function PostCard({ post }: { post: any }) {
       {showEdit && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <form onSubmit={handleEdit} className="glass-card p-6 w-full max-w-md relative">
-            <h3 className="text-xl font-headline font-bold mb-2 text-accent-cyan">Edit Post</h3>
+            <h3 className="text-xl font-headline font-bold mb-2 text-brand-gold">Edit Post</h3>
             <textarea
-              className="w-full rounded-xl p-3 bg-black/60 text-[#E0E0E0] border-2 border-accent-cyan"
+              className="w-full rounded-xl p-3 bg-black/60 text-foreground border-2 border-brand-gold"
               value={editContent} onChange={e => setEditContent(e.target.value)} rows={4} required
             />
             <div className="flex gap-2 justify-end mt-4">
               <button type="button" className="btn-glass" onClick={() => setShowEdit(false)}>Cancel</button>
-              <button type="submit" className="btn-glass bg-accent-cyan text-black">Save</button>
+              <button type="submit" className="btn-glass bg-brand-gold text-background">Save</button>
             </div>
           </form>
         </div>
       )}
 
       {post.content && (post.type !== 'poll' || (post.type === 'poll' && !post.pollOptions)) && (
-        <div className="text-[1.15rem] font-body whitespace-pre-line mb-2 px-4 py-3 rounded-xl" style={{ backgroundColor: post.backgroundColor || 'transparent', color: post.backgroundColor && post.backgroundColor !== '#ffffff' ? '#000000' : 'inherit' }}>
+        <div className="text-[1.15rem] font-body whitespace-pre-line mb-2 px-4 py-3 rounded-xl" style={{ backgroundColor: post.backgroundColor || 'transparent', color: post.backgroundColor && post.backgroundColor !== '#ffffff' ? 'hsl(var(--foreground))' : 'inherit' }}>
           {post.content}
         </div>
       )}
 
       {post.hashtags && post.hashtags.length > 0 && (
           <div className="flex flex-wrap gap-2">
-              {post.hashtags.map((tag:string) => <Link href={`/tags/${tag}`} key={tag} className="text-accent-cyan font-bold text-sm hover:underline">#{tag}</Link>)}
+              {post.hashtags.map((tag:string) => <Link href={`/tags/${tag}`} key={tag} className="text-brand-gold font-bold text-sm hover:underline">#{tag}</Link>)}
           </div>
       )}
       
@@ -516,7 +516,7 @@ export function PostCard({ post }: { post: any }) {
       
       {post.type === "poll" && post.pollOptions && (
         <div className="flex flex-col gap-2 p-4">
-          <div className="font-bold text-accent-cyan mb-3">{post.content}</div>
+          <div className="font-bold text-brand-gold mb-3">{post.content}</div>
           {post.pollOptions.map((opt: string, idx: number) => {
             const voteData = pollVotes[idx] || { count: 0, voters: [] };
             const totalVotes = Object.values(pollVotes).reduce((sum, current) => sum + current.count, 0);
@@ -524,7 +524,7 @@ export function PostCard({ post }: { post: any }) {
             return (
               <button key={idx} className={`w-full p-2 rounded-full font-bold transition-all relative overflow-hidden btn-glass`}
                 onClick={() => handlePollVote(idx)} disabled={userPollVote !== null}>
-                {userPollVote !== null && <div className="absolute left-0 top-0 h-full bg-accent-cyan/50" style={{width: `${percent}%`}}/>}
+                {userPollVote !== null && <div className="absolute left-0 top-0 h-full bg-brand-gold/50" style={{width: `${percent}%`}}/>}
                 <div className="relative flex justify-between z-10 px-2">
                   <span>{opt}</span>
                   {userPollVote !== null && <span>{percent}% ({voteData.count})</span>}
@@ -539,10 +539,10 @@ export function PostCard({ post }: { post: any }) {
         <div className="mt-2 p-3 rounded-xl bg-black/20 flex items-center gap-4 border border-glass-border">
             <img src={post.song.albumArt} alt={post.song.album} className="w-12 h-12 rounded-lg"/>
             <div className="flex-1">
-                <div className="font-bold text-accent-cyan text-base line-clamp-1">{post.song.name}</div>
-                <div className="text-xs text-gray-400 mb-1 line-clamp-1">{post.song.artists.join(", ")}</div>
+                <div className="font-bold text-brand-gold text-base line-clamp-1">{post.song.name}</div>
+                <div className="text-xs text-muted-foreground mb-1 line-clamp-1">{post.song.artists.join(", ")}</div>
             </div>
-            <button onClick={toggleSong} className="p-3 rounded-full bg-accent-cyan text-black shadow-lg hover:scale-110 transition-transform">
+            <button onClick={toggleSong} className="p-3 rounded-full bg-brand-gold text-background shadow-lg hover:scale-110 transition-transform">
                 <FaMusic />
             </button>
         </div>
@@ -550,15 +550,15 @@ export function PostCard({ post }: { post: any }) {
 
       <div className="flex items-center justify-between gap-6 mt-2">
         <div className="flex items-center gap-4">
-          <button className="flex items-center gap-1 text-lg font-bold text-gray-400 hover:text-accent-cyan transition-all" onClick={() => setShowComments(true)}>
+          <button className="flex items-center gap-1 text-lg font-bold text-muted-foreground hover:text-brand-gold transition-all" onClick={() => setShowComments(true)}>
             <FaRegComment /> <span>{commentCount}</span>
           </button>
-          <button className="flex items-center gap-1 text-lg font-bold text-gray-400 hover:text-accent-cyan transition-all" onClick={handleRelay}>
+          <button className="flex items-center gap-1 text-lg font-bold text-muted-foreground hover:text-brand-gold transition-all" onClick={handleRelay}>
             <Repeat2 /> <span>{relayCount}</span>
           </button>
         </div>
         <div className="flex items-center gap-4">
-          <button className={`flex items-center gap-1 text-lg font-bold transition-all ${isStarred ? "text-yellow-400" : "text-gray-400 hover:text-yellow-400"}`} onClick={handleStar}>
+          <button className={`flex items-center gap-1 text-lg font-bold transition-all ${isStarred ? "text-yellow-400" : "text-muted-foreground hover:text-yellow-400"}`} onClick={handleStar}>
             <Bookmark fill={isStarred ? "currentColor" : "none"} /> <span>{starCount}</span>
           </button>
         </div>
@@ -589,10 +589,10 @@ function CommentModal({ postId, postAuthorId, onClose }: { postId: string; postA
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div className="glass-card p-6 w-full max-w-md relative flex flex-col">
         <button onClick={onClose} className="absolute top-2 right-2 text-accent-pink text-2xl">&times;</button>
-        <h3 className="text-xl font-headline font-bold mb-4 text-accent-cyan">Comments</h3>
+        <h3 className="text-xl font-headline font-bold mb-4 text-brand-gold">Comments</h3>
         <div className="flex flex-col gap-3 max-h-60 overflow-y-auto mb-4 p-2">
           {comments.length === 0 ? (
-            <div className="text-gray-400 text-center">No comments yet. Be the first!</div>
+            <div className="text-muted-foreground text-center">No comments yet. Be the first!</div>
           ) : (
             comments.map((comment) => (
               <CommentThread key={comment.id} comment={comment} postId={postId} postAuthorId={postAuthorId} replyTo={replyTo} setReplyTo={setReplyTo} />
@@ -615,7 +615,7 @@ function CommentThread({ comment, postId, postAuthorId, replyTo, setReplyTo }: {
         </div>
       )}
       {comment.replies && comment.replies.length > 0 && (
-        <div className="ml-8 border-l-2 border-accent-cyan/20 pl-4 flex flex-col gap-3">
+        <div className="ml-8 border-l-2 border-brand-gold/20 pl-4 flex flex-col gap-3">
           {comment.replies.map((reply: any) => (
             <CommentThread key={reply.id} comment={reply} postId={postId} postAuthorId={postAuthorId} replyTo={replyTo} setReplyTo={setReplyTo} />
           ))}
@@ -651,18 +651,18 @@ function Comment({ comment, onReply }: { comment: any; onReply: () => void }) {
   
   return (
     <div className="flex gap-3">
-      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-sm overflow-hidden shrink-0">
-          {userData?.avatar_url ? <img src={userData.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : initials}
+      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green flex items-center justify-center font-bold text-sm overflow-hidden shrink-0">
+          {userData?.avatar_url ? <img src={userData.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : <span className="text-white">{initials}</span>}
       </div>
       <div className="flex-1">
-        <div className="bg-black/20 rounded-xl px-3 py-2 text-white font-body">
+        <div className="bg-black/20 rounded-xl px-3 py-2 font-body">
           <div className="flex items-center gap-2">
-            <Link href={`/squad/${comment.userId}`} className="font-bold text-accent-cyan text-sm hover:underline">@{userData?.username || 'user'}</Link>
-            <span className="text-xs text-gray-400">{comment.createdAt?.toDate?.().toLocaleString?.() || ""}</span>
+            <Link href={`/squad/${comment.userId}`} className="font-bold text-brand-gold text-sm hover:underline">@{userData?.username || 'user'}</Link>
+            <span className="text-xs text-muted-foreground">{comment.createdAt?.toDate?.().toLocaleString?.() || ""}</span>
           </div>
           <p className="text-base">{comment.text}</p>
         </div>
-        <button onClick={onReply} className="text-xs text-accent-cyan font-bold mt-1 hover:underline">Reply</button>
+        <button onClick={onReply} className="text-xs text-brand-gold font-bold mt-1 hover:underline">Reply</button>
       </div>
     </div>
   );
@@ -854,21 +854,21 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-y-0 right-0 z-50 w-full max-w-sm glass-card animate-slide-in-right">
       <div className="flex items-center justify-between p-4 border-b border-glass-border">
-        <h3 className="text-xl font-headline font-bold text-accent-cyan">Notifications</h3>
+        <h3 className="text-xl font-headline font-bold text-brand-gold">Notifications</h3>
         <button onClick={onClose} className="text-accent-pink text-2xl">&times;</button>
       </div>
       <div className="flex flex-col gap-2 p-4 overflow-y-auto h-full pb-20">
         {notifications.length === 0 ? (
-          <div className="text-gray-400 text-center mt-16">No new notifications.</div>
+          <div className="text-muted-foreground text-center mt-16">No new notifications.</div>
         ) : (
           notifications.map(notif => (
             <div key={notif.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all cursor-pointer">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan overflow-hidden">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green overflow-hidden">
                 {notif.fromAvatarUrl && <img src={notif.fromAvatarUrl} alt="avatar" className="w-full h-full object-cover"/>}
               </div>
-              <div className="flex-1 text-sm text-white">
+              <div className="flex-1 text-sm">
                 {getNotificationMessage(notif)}
-                <div className="text-xs text-gray-400 mt-1">{notif.createdAt?.toDate().toLocaleString()}</div>
+                <div className="text-xs text-muted-foreground mt-1">{notif.createdAt?.toDate().toLocaleString()}</div>
               </div>
             </div>
           ))

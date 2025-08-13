@@ -10,12 +10,12 @@ function NavButton({ href, icon: Icon, label }: { href: string; icon: React.Elem
   const isActive = pathname === href;
 
   return (
-    <Link href={href} className="flex flex-col items-center gap-1 px-2 py-1 text-gray-400 hover:text-white transition-colors">
-      <Icon className={`${isActive ? 'text-accent-cyan' : ''}`} />
-      <span className={`text-xs font-semibold ${isActive ? 'text-white' : ''}`}>{label}</span>
+    <Link href={href} className="flex flex-col items-center gap-1 px-2 py-1 text-muted-foreground hover:text-foreground transition-colors">
+      <Icon className={`${isActive ? 'text-brand-gold' : ''}`} />
+      <span className={`text-xs font-semibold ${isActive ? 'text-foreground' : ''}`}>{label}</span>
       {isActive && (
         <motion.div 
-          className="h-[2px] w-full bg-accent-cyan rounded-full mt-1"
+          className="h-[2px] w-full bg-brand-gold rounded-full mt-1"
           layoutId="nav-underline"
         />
       )}
@@ -31,7 +31,7 @@ export default function AppNavBar() {
   if (hideNav) return null;
 
   return (
-    <nav className="fixed bottom-0 left-0 w-full z-40 bg-black/50 backdrop-blur-lg border-t border-glass-border flex justify-around items-center py-2">
+    <nav className="fixed bottom-0 left-0 w-full z-40 bg-background/50 backdrop-blur-lg border-t border-glass-border flex justify-around items-center py-2">
       <NavButton href="/home" icon={Home} label="Home" />
       <NavButton href="/scope" icon={Search} label="Scope" />
       <NavButton href="/squad" icon={Users} label="Squad" />
