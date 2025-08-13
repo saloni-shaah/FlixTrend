@@ -32,4 +32,4 @@ export async function GET(req: NextRequest) {
 
   // For now, just return the tokens (in production, store them securely)
   return NextResponse.json(data);
-} 
+}

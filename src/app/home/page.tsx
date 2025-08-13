@@ -295,6 +295,20 @@ export function PostCard({ post }: { post: any }) {
     } else {
         await setDoc(starredDocRef, { ...post, starredAt: serverTimestamp() });
         await setDoc(postStarRef, { userId: currentUser.uid, starredAt: serverTimestamp() });
+        // Create notification for post author
+        if (post.userId !== currentUser.uid) {
+            const notifRef = collection(db, "notifications", post.userId, "user_notifications");
+            await addDoc(notifRef, {
+                type: 'like',
+                fromUserId: currentUser.uid,
+                fromUsername: currentUser.displayName,
+                fromAvatarUrl: currentUser.photoURL,
+                postId: post.id,
+                postContent: (post.content || "").substring(0, 50),
+                createdAt: serverTimestamp(),
+                read: false,
+            });
+        }
     }
   };
 
