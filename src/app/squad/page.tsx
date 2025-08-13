@@ -2,11 +2,12 @@
 import React, { useEffect, useState, useRef } from "react";
 import { auth } from "@/utils/firebaseClient";
 import { getFirestore, doc, getDoc, setDoc, collection, query, where, getCountFromServer, getDocs, deleteDoc, onSnapshot, addDoc, serverTimestamp, orderBy } from "firebase/firestore";
-import { FaCog, FaPalette, FaLock, FaUserShield, FaCommentDots, FaMobileAlt, FaTrash, FaSignOutAlt, FaInfoCircle } from "react-icons/fa";
+import { Cog, Palette, Lock, UserShield, MessageCircle, LogOut, Camera } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useRouter, useParams } from "next/navigation";
 import { PostCard } from "../home/page";
 import Link from "next/link";
+import { motion } from "framer-motion";
 
 const db = getFirestore();
 
@@ -44,18 +45,15 @@ export default function SquadPage() {
   const [firebaseUser, setFirebaseUser] = useState<any>(null);
   const [showEdit, setShowEdit] = useState(false);
   const [postCount, setPostCount] = useState(0);
-  // Placeholder for followers/following
   const [followers, setFollowers] = useState(0);
   const [following, setFollowing] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [activeTab, setActiveTab] = useState("posts");
   const [userPosts, setUserPosts] = useState<any[]>([]);
   const [starredPosts, setStarredPosts] = useState<any[]>([]);
-  const [isFollowing, setIsFollowing] = useState(false);
   const [allUsers, setAllUsers] = useState<any[]>([]);
 
   useEffect(() => {
-    // Robust user doc auto-create logic
     async function ensureUserDoc() {
       const user = auth.currentUser;
       if (user) {
@@ -98,21 +96,12 @@ export default function SquadPage() {
       const docSnap = await getDoc(docRef);
       setProfile(docSnap.exists() ? docSnap.data() : null);
 
-      // Fetch post count
       const postsQuery = query(collection(db, "posts"), where("userId", "==", uid));
       const postsSnapshot = await getCountFromServer(postsQuery);
       setPostCount(postsSnapshot.data().count || 0);
 
-      // Fetch user posts
       const userPostsSnap = await getDocs(postsQuery);
       setUserPosts(userPostsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-
-      // Fetch followers/following status and counts
-      if (firebaseUser && uid !== firebaseUser.uid) {
-        const followDocRef = doc(db, "users", uid, "followers", firebaseUser.uid);
-        const followDocSnap = await getDoc(followDocRef);
-        setIsFollowing(followDocSnap.exists());
-      }
       
       setLoading(false);
     }
@@ -176,18 +165,18 @@ export default function SquadPage() {
   }) : profile;
 
   return (
-    <div className="flex flex-col min-h-screen pt-6 pb-24 px-2 md:px-8 bg-white transition-colors">
+    <div className="flex flex-col min-h-screen pt-6 pb-24 px-2 md:px-8">
       {isOwnProfile && (
         <button
-          className="fixed top-6 right-6 z-50 bg-green-400 text-primary p-4 rounded-full shadow-fab-glow hover:scale-110 transition-all duration-200"
+          className="fixed top-6 right-6 z-50 btn-glass-icon"
           onClick={() => setShowSettings(true)}
           aria-label="Settings"
         >
-          <FaCog size={24} />
+          <Cog />
         </button>
       )}
       {/* Banner */}
-      <div className="relative h-40 w-full rounded-2xl overflow-hidden mb-8 bg-yellow-100">
+      <div className="relative h-40 md:h-60 w-full rounded-2xl overflow-hidden mb-8">
         {displayProfile.banner_url ? (
           <img
             src={displayProfile.banner_url}
@@ -199,7 +188,7 @@ export default function SquadPage() {
         )}
       </div>
       {/* Profile Card */}
-      <div className="mx-auto w-full max-w-2xl bg-blue-100 dark:bg-black/60 rounded-2xl shadow-lg p-6 -mt-24 flex flex-col items-center border border-accent-cyan/20">
+      <div className="mx-auto w-full max-w-2xl glass-card p-6 -mt-24 flex flex-col items-center">
         <div className="w-32 h-32 rounded-full bg-accent-cyan border-4 border-accent-pink shadow-fab-glow mb-2 overflow-hidden -mt-20">
           {displayProfile.avatar_url ? (
             <img src={displayProfile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
@@ -209,39 +198,39 @@ export default function SquadPage() {
         </div>
         <h2 className="text-2xl font-headline font-bold mb-1 text-center">{displayProfile.name}</h2>
         <p className="text-accent-cyan mb-2 text-center">@{displayProfile.username || "username"}</p>
-        <p className="text-gray-500 dark:text-gray-300 text-center mb-2">{displayProfile.bio || "This is your bio. Edit it to tell the world about your vibes!"}</p>
+        <p className="text-gray-300 text-center mb-2">{displayProfile.bio || "This is your bio. Edit it to tell the world about your vibes!"}</p>
         <div className="flex justify-center gap-8 my-4 w-full">
           <div className="flex flex-col items-center">
-            <span className="font-bold text-lg text-orange-500">{postCount}</span>
+            <span className="font-bold text-lg text-accent-cyan">{postCount}</span>
             <span className="text-xs text-gray-500">Posts</span>
           </div>
           <div className="flex flex-col items-center">
-            <span className="font-bold text-lg text-cyan-500">{followers}</span>
+            <span className="font-bold text-lg text-accent-cyan">{followers}</span>
             <span className="text-xs text-gray-500">Followers</span>
           </div>
           <div className="flex flex-col items-center">
-            <span className="font-bold text-lg text-red-500">{following}</span>
+            <span className="font-bold text-lg text-accent-cyan">{following}</span>
             <span className="text-xs text-gray-500">Following</span>
           </div>
         </div>
         <div className="flex gap-2 flex-wrap justify-center mb-2">
-          {displayProfile.interests && displayProfile.interests.split(",").map((interest: string, i: number) => (
-            <span key={interest} className={`px-3 py-1 rounded-full bg-gradient-to-r from-pink-500 via-yellow-400 to-blue-400 text-white text-xs font-bold`}>{interest.trim()}</span>
+          {displayProfile.interests && displayProfile.interests.split(",").map((interest: string) => (
+            <span key={interest} className="px-3 py-1 rounded-full bg-white/10 text-accent-cyan text-xs font-bold">{interest.trim()}</span>
           ))}
         </div>
         {!isOwnProfile && (
-           <FollowButton user={displayProfile} currentUser={firebaseUser} isFollowingInitial={isFollowing} />
+           <FollowButton user={displayProfile} currentUser={firebaseUser} />
         )}
         {isOwnProfile && (
-          <button className="px-6 py-2 rounded-full bg-accent-pink text-white font-bold hover:scale-105 hover:shadow-lg transition-all duration-200 mt-4" onClick={() => setShowEdit(true)}>Edit Profile</button>
+          <button className="btn-glass mt-4" onClick={() => setShowEdit(true)}>Edit Profile</button>
         )}
       </div>
       {/* Tabs */}
       <div className="flex justify-center gap-4 my-8">
-        <button className={`px-4 py-2 rounded-full font-bold ${activeTab === "posts" ? "bg-purple-400 text-white" : "bg-purple-100 text-purple-700"}`} onClick={() => setActiveTab("posts")}>Posts</button>
-        {isOwnProfile && <button className={`px-4 py-2 rounded-full font-bold ${activeTab === "starred" ? "bg-purple-400 text-white" : "bg-purple-100 text-purple-700"}`} onClick={() => setActiveTab("starred")}>Starred</button>}
-        <button className={`px-4 py-2 rounded-full font-bold ${activeTab === "trends" ? "bg-purple-400 text-white" : "bg-purple-100 text-purple-700"}`} onClick={() => setActiveTab("trends")}>Trends</button>
-        <button className={`px-4 py-2 rounded-full font-bold ${activeTab === "drops" ? "bg-purple-400 text-white" : "bg-purple-100 text-purple-700"}`} onClick={() => setActiveTab("drops")}>Drops</button>
+        <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "posts" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("posts")}>Posts</button>
+        {isOwnProfile && <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "starred" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("starred")}>Starred</button>}
+        <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "trends" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("trends")}>Trends</button>
+        <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "drops" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("drops")}>Drops</button>
       </div>
       {/* Tab Content */}
       <div className="flex-1 flex flex-col items-center justify-center w-full">
@@ -291,16 +280,19 @@ export default function SquadPage() {
         )}
       </div>
       {/* Discover Other Users */}
-      <div className="mt-16 w-full max-w-2xl mx-auto">
-        <h3 className="text-xl font-headline bg-gradient-to-r from-pink-500 via-yellow-400 to-blue-400 bg-clip-text text-transparent">Discover Users</h3>
+      <div className="mt-16 w-full max-w-4xl mx-auto">
+        <h3 className="text-xl font-headline bg-gradient-to-r from-accent-pink to-accent-cyan bg-clip-text text-transparent mb-4">Discover Users</h3>
         {allUsers.length === 0 ? (
           <div className="text-gray-400 text-center py-8">No other users found. Invite your friends to join!</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {allUsers.map((user, i) => (
+            {allUsers.map((user) => (
               <Link key={user.uid} href={`/squad/${user.uid}`} className="block">
-                <div className={`flex items-center gap-4 rounded-xl p-4 shadow border border-accent-cyan/10 hover:bg-accent-cyan/10 transition-all cursor-pointer ${i % 3 === 0 ? 'bg-pink-100' : i % 3 === 1 ? 'bg-yellow-100' : 'bg-blue-100'}`}>
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accentPink to-accentCyan flex items-center justify-center text-white font-bold text-lg overflow-hidden">
+                <motion.div 
+                  className="glass-card p-4 flex items-center gap-4 hover:border-accent-cyan transition-all cursor-pointer"
+                  whileHover={{ scale: 1.03 }}
+                >
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-lg overflow-hidden">
                     {user.avatar_url ? (
                       <img src={user.avatar_url} alt="avatar" className="w-full h-full object-cover rounded-full" />
                     ) : (
@@ -311,8 +303,8 @@ export default function SquadPage() {
                     <div className="font-headline text-accent-cyan">{user.name}</div>
                     <div className="text-xs text-gray-500">@{user.username}</div>
                   </div>
-                  <FollowButton user={user} currentUser={firebaseUser} isFollowingInitial={false} />
-                </div>
+                  <FollowButton user={user} currentUser={firebaseUser} />
+                </motion.div>
               </Link>
             ))}
           </div>
@@ -333,8 +325,6 @@ function EditProfileModal({ profile, onClose }: { profile: any; onClose: () => v
     name: profile.name || "",
     username: profile.username || "",
     bio: profile.bio || "",
-    age: profile.age || "",
-    phone: profile.phone || "",
     interests: profile.interests || "",
     avatar_url: profile.avatar_url || "",
     banner_url: profile.banner_url || "",
@@ -342,41 +332,26 @@ function EditProfileModal({ profile, onClose }: { profile: any; onClose: () => v
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [uploading, setUploading] = useState(false);
+  const [uploading, setUploading] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'avatar_url' | 'banner_url') => {
     if (e.target.files && e.target.files[0]) {
-      setUploading(true);
-      setUploadProgress(null);
+      setUploading(field);
+      setUploadProgress(0);
       try {
         const url = await uploadToCloudinary(e.target.files[0], setUploadProgress);
-        setForm((prev) => ({ ...prev, banner_url: url || "" }));
+        setForm((prev) => ({ ...prev, [field]: url || "" }));
       } catch (err: any) {
         setError(err.message);
       }
-      setUploading(false);
-      setUploadProgress(null);
-    }
-  };
-
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setUploading(true);
-      setUploadProgress(null);
-      try {
-        const url = await uploadToCloudinary(e.target.files[0], setUploadProgress);
-        setForm((prev) => ({ ...prev, avatar_url: url || "" }));
-      } catch (err: any) {
-        setError(err.message);
-      }
-      setUploading(false);
+      setUploading(null);
       setUploadProgress(null);
     }
   };
@@ -400,144 +375,83 @@ function EditProfileModal({ profile, onClose }: { profile: any; onClose: () => v
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="bg-white dark:bg-card rounded-2xl p-6 w-full max-w-md relative animate-pop shadow-xl border border-gray-100 dark:border-accent-cyan/20">
-        <button onClick={onClose} className="absolute top-2 right-2 text-accent-pink text-2xl">&times;</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="glass-card p-6 w-full max-w-md relative max-h-[90vh] flex flex-col"
+      >
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white">&times;</button>
         <h2 className="text-xl font-headline font-bold mb-4 text-accent-cyan">Edit Profile</h2>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4 pb-24">
-          <input
-            type="text"
-            name="name"
-            placeholder="Full Name"
-            className="px-4 py-3 rounded-full bg-gray-100 dark:bg-black/40 text-gray-800 dark:text-white border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink"
-            value={form.name}
-            onChange={handleChange}
-            required
-          />
-          <input
-            type="text"
-            name="username"
-            placeholder="Username"
-            className="px-4 py-3 rounded-full bg-gray-100 dark:bg-black/40 text-gray-800 dark:text-white border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink"
-            value={form.username}
-            onChange={handleChange}
-            required
-          />
-          <textarea
-            name="bio"
-            placeholder="Bio"
-            className="px-4 py-3 rounded-2xl bg-gray-100 dark:bg-black/40 text-gray-800 dark:text-white border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink resize-none"
-            value={form.bio}
-            onChange={handleChange}
-          />
-          <input
-            type="number"
-            name="age"
-            placeholder="Age"
-            className="px-4 py-3 rounded-full bg-gray-100 dark:bg-black/40 text-gray-800 dark:text-white border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink"
-            value={form.age}
-            onChange={handleChange}
-          />
-          <input
-            type="tel"
-            name="phone"
-            placeholder="Phone Number"
-            className="px-4 py-3 rounded-full bg-gray-100 dark:bg-black/40 text-gray-800 dark:text-white border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink"
-            value={form.phone}
-            onChange={handleChange}
-          />
-          <input
-            type="text"
-            name="interests"
-            placeholder="Your Interests (comma separated)"
-            className="px-4 py-3 rounded-full bg-gray-100 dark:bg-black/40 text-gray-800 dark:text-white border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink"
-            value={form.interests}
-            onChange={handleChange}
-          />
-          <div className="flex flex-col gap-2">
-            <label className="text-xs text-gray-500">Profile Picture</label>
-            <input
-              type="file"
-              accept="image/*"
-              ref={avatarInputRef}
-              onChange={handleAvatarUpload}
-              className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent-pink/20 file:text-accent-pink hover:file:bg-accent-pink/40"
-            />
-            {form.avatar_url && (
-              <img src={form.avatar_url} alt="avatar preview" className="w-20 h-20 object-cover rounded-full mt-2 mx-auto" />
-            )}
-          </div>
-          <div className="flex flex-col gap-2">
-            <label className="text-xs text-gray-500">Profile Banner</label>
-            <input
-              type="file"
-              accept="image/*"
-              ref={fileInputRef}
-              onChange={handleBannerUpload}
-              className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent-cyan/20 file:text-accent-cyan hover:file:bg-accent-cyan/40"
-            />
-            {form.banner_url && (
-              <img src={form.banner_url} alt="banner preview" className="w-full h-24 object-cover rounded-xl mt-2" />
-            )}
-            {uploadProgress !== null && (
-              <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                <div className="bg-accent-cyan h-2 rounded-full transition-all" style={{ width: `${uploadProgress}%` }} />
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4 overflow-y-auto pr-2">
+          {/* Avatar and Banner */}
+          <div className="relative h-24 mb-12">
+            <div className="h-full w-full rounded-lg bg-white/10 overflow-hidden">
+              {form.banner_url && <img src={form.banner_url} alt="Banner" className="w-full h-full object-cover"/>}
+            </div>
+            <button type="button" onClick={() => bannerInputRef.current?.click()} className="absolute bottom-1 right-1 btn-glass-icon w-8 h-8"><Camera size={16}/></button>
+            <input type="file" ref={bannerInputRef} onChange={(e) => handleFileUpload(e, 'banner_url')} className="hidden" accept="image/*" />
+
+            <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-24 h-24 rounded-full border-4 border-background bg-background">
+              <div className="w-full h-full rounded-full overflow-hidden">
+                {form.avatar_url && <img src={form.avatar_url} alt="Avatar" className="w-full h-full object-cover"/>}
               </div>
-            )}
+              <button type="button" onClick={() => avatarInputRef.current?.click()} className="absolute bottom-0 right-0 btn-glass-icon w-8 h-8"><Camera size={16}/></button>
+              <input type="file" ref={avatarInputRef} onChange={(e) => handleFileUpload(e, 'avatar_url')} className="hidden" accept="image/*" />
+            </div>
           </div>
-          {error && <div className="text-red-400 text-center animate-bounce mt-2">{error}</div>}
-          {success && <div className="text-accent-cyan text-center animate-glow mt-2">{success}</div>}
-          <div className="fixed left-0 right-0 bottom-0 z-50 flex justify-center items-center bg-gradient-to-t from-white/90 dark:from-black/90 to-transparent p-4 rounded-b-2xl" style={{maxWidth: '100vw'}}>
-            <button
-              type="submit"
-              className="px-8 py-3 rounded-full bg-accent-cyan text-primary font-bold text-lg shadow-fab-glow hover:scale-105 hover:shadow-lg transition-all duration-200 disabled:opacity-60 mb-2 w-full max-w-xs"
-              disabled={loading || uploading}
-            >
-              {loading ? "Saving..." : uploading ? "Uploading..." : "Save Changes"}
-            </button>
-          </div>
+          
+          {(uploading || uploadProgress !== null) && (
+            <div className="w-full bg-gray-700 rounded-full h-2.5">
+              <div className="bg-accent-cyan h-2.5 rounded-full" style={{width: `${uploadProgress || 0}%`}}></div>
+              <p className="text-xs text-center mt-1">Uploading {uploading?.replace('_url','')}...</p>
+            </div>
+          )}
+
+          <input
+            type="text" name="name" placeholder="Full Name" className="input-glass w-full"
+            value={form.name} onChange={handleChange} required />
+          <input
+            type="text" name="username" placeholder="Username" className="input-glass w-full"
+            value={form.username} onChange={handleChange} required />
+          <textarea
+            name="bio" placeholder="Bio" className="input-glass w-full rounded-2xl" rows={3}
+            value={form.bio} onChange={handleChange} />
+          <input
+            type="text" name="interests" placeholder="Interests (e.g., tech, music, art)" className="input-glass w-full"
+            value={form.interests} onChange={handleChange} />
+          
+          {error && <div className="text-red-400 text-center">{error}</div>}
+          {success && <div className="text-green-400 text-center">{success}</div>}
+          
+          <button
+            type="submit" className="btn-glass bg-accent-cyan text-black mt-4"
+            disabled={loading || !!uploading}>
+            {loading ? "Saving..." : !!uploading ? "Uploading..." : "Save Changes"}
+          </button>
         </form>
-      </div>
+      </motion.div>
     </div>
   );
 }
 
 function SettingsModal({ onClose }: { onClose: () => void }) {
   const [darkMode, setDarkMode] = useState(false);
-  const [fontStyle, setFontStyle] = useState("default");
-  const [fontSize, setFontSize] = useState("md");
   const router = useRouter();
 
-  // Load theme/UI preferences from localStorage on mount
   useEffect(() => {
-    const theme = localStorage.getItem("theme");
-    const font = localStorage.getItem("fontStyle");
-    const size = localStorage.getItem("fontSize");
-    setDarkMode(theme === "dark");
-    if (font) setFontStyle(font);
-    if (size) setFontSize(size);
-
-    document.documentElement.classList.toggle("dark", theme === "dark");
-    document.body.setAttribute("data-font-style", font || "default");
-    document.body.setAttribute("data-font-size", size || "md");
-
+    const isDark = document.documentElement.classList.contains('dark');
+    setDarkMode(isDark);
   }, []);
 
-  // Persist theme/UI preferences to localStorage
-  useEffect(() => {
-    localStorage.setItem("theme", darkMode ? "dark" : "light");
-    document.documentElement.classList.toggle("dark", darkMode);
-  }, [darkMode]);
-  
-  useEffect(() => {
-    localStorage.setItem("fontStyle", fontStyle);
-    document.body.setAttribute("data-font-style", fontStyle);
-  }, [fontStyle]);
-
-  useEffect(() => {
-    localStorage.setItem("fontSize", fontSize);
-    document.body.setAttribute("data-font-size", fontSize);
-  }, [fontSize]);
+  const toggleDarkMode = () => {
+    setDarkMode(prev => {
+      const isDark = !prev;
+      document.documentElement.classList.toggle('dark', isDark);
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+      return isDark;
+    });
+  };
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -545,85 +459,49 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="bg-white dark:bg-card rounded-2xl p-6 w-full max-w-lg relative animate-pop shadow-xl border border-gray-100 dark:border-accent-cyan/20 overflow-y-auto max-h-[90vh]">
-        <button onClick={onClose} className="absolute top-2 right-2 text-accent-pink text-2xl">&times;</button>
-        <h2 className="text-2xl font-headline font-bold mb-6 text-accent-cyan flex items-center gap-2"><FaCog /> Settings</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="glass-card p-6 w-full max-w-lg relative"
+      >
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white">&times;</button>
+        <h2 className="text-2xl font-headline font-bold mb-6 text-accent-cyan flex items-center gap-2"><Cog /> Settings</h2>
         <div className="flex flex-col gap-4">
-          {/* Theme & UI Preferences */}
-          <div className="rounded-xl bg-accent-cyan/10 p-4 flex flex-col gap-2 shadow">
-            <div className="flex items-center gap-2 mb-2 font-bold text-accent-cyan"><FaPalette /> Theme & UI Preferences</div>
+          <div className="bg-white/5 rounded-xl p-4">
+            <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan"><Palette /> Theme & UI</h3>
             <div className="flex items-center justify-between py-2">
               <span>Dark Mode</span>
-              <label className="switch">
-                <input type="checkbox" checked={darkMode} onChange={() => setDarkMode(v => !v)} />
-                <span className="slider round"></span>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked={darkMode} onChange={toggleDarkMode} className="sr-only peer" />
+                <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-accent-cyan peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-cyan"></div>
               </label>
             </div>
-            <div className="flex items-center justify-between py-2">
-              <span>Font Style</span>
-              <select value={fontStyle} onChange={e => setFontStyle(e.target.value)} className="rounded-full px-3 py-1 border border-accent-cyan bg-gray-200 dark:bg-gray-700">
-                <option value="default">Default</option>
-                <option value="grotesk">Grotesk</option>
-                <option value="mono">Mono</option>
-              </select>
-            </div>
-            <div className="flex items-center justify-between py-2">
-              <span>Font Size</span>
-              <select value={fontSize} onChange={e => setFontSize(e.target.value)} className="rounded-full px-3 py-1 border border-accent-cyan bg-gray-200 dark:bg-gray-700">
-                <option value="sm">Small</option>
-                <option value="md">Medium</option>
-                <option value="lg">Large</option>
-              </select>
-            </div>
           </div>
-          {/* Privacy & Security */}
-          <div className="rounded-xl bg-accent-cyan/10 p-4 flex flex-col gap-2 shadow">
-            <div className="flex items-center gap-2 mb-2 font-bold text-accent-cyan"><FaLock /> Privacy & Security</div>
+          
+          <div className="bg-white/5 rounded-xl p-4">
+            <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan"><Lock /> Privacy & Security</h3>
             <div className="flex items-center justify-between py-2">
               <span>Who can DM you?</span>
-              <select className="rounded-full px-3 py-1 border border-accent-cyan bg-gray-200 dark:bg-gray-700">
+              <select className="input-glass text-sm">
                 <option>Everyone</option>
                 <option>Followers</option>
                 <option>No one</option>
               </select>
             </div>
           </div>
-          {/* Account Management */}
-          <div className="rounded-xl bg-accent-cyan/10 p-4 flex flex-col gap-2 shadow">
-            <div className="flex items-center gap-2 mb-2 font-bold text-accent-cyan"><FaTrash /> Account Management</div>
-            <button className="w-full py-2 rounded-full bg-accent-cyan text-primary font-bold hover:bg-accent-pink hover:text-white transition-all flex items-center justify-center gap-2 mt-2" onClick={handleLogout}><FaSignOutAlt /> Log Out</button>
-          </div>
+
+          <button className="btn-glass bg-red-500/20 text-red-400 hover:bg-red-500/40 hover:text-white w-full mt-4" onClick={handleLogout}>
+            <LogOut className="inline-block mr-2" /> Log Out
+          </button>
         </div>
-        <style jsx>{`
-        .switch {
-          position: relative; display: inline-block;
-          width: 44px; height: 24px;
-        }
-        .switch input { display: none; }
-        .slider {
-          position: absolute; cursor: pointer;
-          top: 0; left: 0; right: 0; bottom: 0;
-          background: #ccc; transition: .4s;
-          border-radius: 24px;
-        }
-        .slider:before {
-          position: absolute; content: "";
-          height: 18px; width: 18px;
-          left: 3px; bottom: 3px;
-          background: #fff; transition: .4s;
-          border-radius: 50%;
-        }
-        input:checked + .slider { background: #00fff7; }
-        input:checked + .slider:before { transform: translateX(20px); }
-      `}</style>
-      </div>
+      </motion.div>
     </div>
   );
 }
 
-function FollowButton({ user, currentUser, isFollowingInitial }: { user: any; currentUser: any; isFollowingInitial: boolean }) {
-  const [isFollowing, setIsFollowing] = useState(isFollowingInitial);
+function FollowButton({ user, currentUser }: { user: any; currentUser: any; }) {
+  const [isFollowing, setIsFollowing] = useState(false);
 
   useEffect(() => {
     if (!currentUser || !user) return;
@@ -660,7 +538,7 @@ function FollowButton({ user, currentUser, isFollowingInitial }: { user: any; cu
   };
   
   return (
-    <button className={`px-4 py-2 rounded-full font-bold ${isFollowing ? "bg-accent-cyan text-primary" : "bg-accent-pink text-white"}`} onClick={e => { e.preventDefault(); handleFollow(); }}>
+    <button className={`btn-glass text-sm px-4 py-2 ${isFollowing ? "bg-accent-cyan/80 text-black" : "bg-accent-pink/80 text-white"}`} onClick={e => { e.preventDefault(); handleFollow(); }}>
       {isFollowing ? "Unfollow" : "Follow"}
     </button>
   );

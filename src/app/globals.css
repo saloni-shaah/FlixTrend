@@ -3,39 +3,34 @@
 @import "@fontsource/inter/400.css";
 
 :root {
-  --background: #fff;
-  --foreground: #0F0F0F;
-  --brand: #BF00FF;
+  --background: #0A0A0A;
+  --foreground: #EAEAEA;
+  --card-background: rgba(16, 16, 16, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  
+  --primary: #007BFF;
   --accent-pink: #FF3CAC;
   --accent-cyan: #00F0FF;
   --neon-green: #39FF14;
-  --hot-coral: #FF5F6D;
-  --soft-gray: #C0C0C0;
-  --glass-white: rgba(255,255,255,0.07);
-  --color-pink: #ff3cac;
-  --color-yellow: #fffd87;
-  --color-blue: #00f0ff;
-  --color-green: #39ff14;
-  --color-purple: #bf00ff;
-  --color-orange: #ff5f6d;
-  --color-cyan: #00fff7;
-  --color-red: #ff1744;
-  --color-neon: #39ff14;
-  --color-glass: rgba(255,255,255,0.07);
-  --aurora-gradient: linear-gradient(120deg, #ff3cac, #784ba0, #2b86c5, #39ff14, #fffd87, #ff5f6d, #00f0ff, #bf00ff, #ff1744);
+
+  --aurora-gradient: linear-gradient(120deg, var(--accent-pink), var(--primary), var(--accent-cyan));
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0F0F0F;
-    --foreground: #ededed;
+    --background: #0A0A0A;
+    --foreground: #EAEAEA;
+    --card-background: rgba(16, 16, 16, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.1);
   }
 }
 
 body {
-  background: var(--aurora-gradient);
-  background-size: 200% 200%;
-  animation: auroraMove 16s ease-in-out infinite;
+  background-color: var(--background);
+  background-image: 
+    radial-gradient(circle at 15% 50%, var(--accent-cyan), transparent 25%),
+    radial-gradient(circle at 85% 30%, var(--accent-pink), transparent 25%);
+  background-attachment: fixed;
   color: var(--foreground);
   font-family: 'Inter', 'Space Grotesk', Arial, Helvetica, sans-serif;
   animation: fadeIn 1s ease-in;
@@ -46,83 +41,66 @@ body {
   to   { opacity: 1; }
 }
 
-@keyframes auroraMove {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-.glass {
-  background: var(--glass-white);
-  backdrop-filter: blur(10px);
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.2);
-}
-
-/* Neon Glow */
-.neon-glow, .neon-glow * {
-  text-shadow: 0 0 8px var(--color-pink), 0 0 16px var(--color-blue), 0 0 24px var(--color-green);
-}
-
-/* Glassmorphism Card */
+/* Base card style */
 .glass-card {
-  background: var(--color-glass);
+  background: var(--card-background);
   backdrop-filter: blur(16px) saturate(180%);
-  border-radius: 1.5rem;
-  border: 1.5px solid var(--color-cyan);
-  box-shadow: 0 4px 32px 0 var(--color-purple);
+  border-radius: 1.5rem; /* 24px */
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
 }
 
-/* Vibrant Accent Ring */
-.accent-ring {
-  border: 3px solid;
-  border-image: var(--aurora-gradient) 1;
-  animation: ringPulse 2s infinite alternate;
-}
-@keyframes ringPulse {
-  0% { box-shadow: 0 0 0 0 var(--color-pink); }
-  100% { box-shadow: 0 0 16px 8px var(--color-blue); }
-}
-
-/* Pulse Glow on Hover */
-.pulse-glow:hover {
-  box-shadow: 0 0 16px 8px var(--color-green), 0 0 32px 16px var(--color-pink);
-  filter: blur(0.5px);
-  transition: box-shadow 0.3s, filter 0.3s;
+/* Liquid Glass Button Style */
+.btn-glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 9999px; /* rounded-full */
+  padding: 0.75rem 1.5rem; /* px-6 py-3 */
+  font-weight: bold;
+  color: var(--foreground);
+  transition: all 0.3s ease;
+  box-shadow: 0 0 5px transparent, 0 0 10px transparent;
 }
 
-/* Rainbow Trail Cursor (scaffold) */
-.rainbow-cursor {
-  cursor: url('/rainbow-cursor.png'), auto;
+.btn-glass:hover {
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 15px var(--accent-cyan), 0 0 5px var(--accent-pink);
+  transform: scale(1.05);
 }
 
-/* Confetti Pop (scaffold) */
-.confetti-pop {
-  /* Use with JS or Lottie for confetti effect */
+/* Icon Button variant */
+.btn-glass-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 9999px;
+  width: 48px;
+  height: 48px;
+  color: var(--foreground);
+  transition: all 0.3s ease;
 }
 
-/* Multi-color Typing Animation (scaffold) */
-.rainbow-type {
-  background: var(--aurora-gradient);
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  animation: rainbowType 2s linear infinite alternate;
-}
-@keyframes rainbowType {
-  0% { background-position: 0% 50%; }
-  100% { background-position: 100% 50%; }
+.btn-glass-icon:hover {
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 10px var(--accent-cyan);
+  transform: scale(1.1);
 }
 
-/* Glassmorphism for modals/overlays */
-.glass-overlay {
-  background: rgba(255,255,255,0.15);
-  backdrop-filter: blur(24px) saturate(180%);
+/* Input style to match */
+.input-glass {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+  padding: 0.75rem 1.25rem;
+  color: var(--foreground);
+  transition: all 0.2s ease;
 }
-
-/* Aurora Gradient Borders */
-.aurora-border {
-  border-image: var(--aurora-gradient) 1;
+.input-glass:focus {
+  outline: none;
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 10px var(--accent-cyan);
 }
-
-/* Add more utility classes as needed for future features */

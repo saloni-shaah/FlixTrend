@@ -2,12 +2,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import CreatePostModal from "./CreatePostModal";
 import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, deleteDoc, updateDoc, doc as fsDoc, setDoc, getDoc, doc, runTransaction } from "firebase/firestore";
-import { FaSearch, FaPlay, FaBell, FaRegComment, FaEye, FaRegBookmark, FaBookmark, FaShare, FaExclamationTriangle, FaVolumeMute, FaUserSlash, FaLink, FaEllipsisV, FaChevronLeft, FaChevronRight, FaMusic } from "react-icons/fa";
-import { Repeat2, Bookmark, Plus } from "lucide-react";
+import { FaPlay, FaEye, FaRegComment, FaExclamationTriangle, FaVolumeMute, FaUserSlash, FaLink, FaEllipsisV, FaChevronLeft, FaChevronRight, FaMusic } from "react-icons/fa";
+import { Repeat2, Bookmark, Plus, Bell, Search } from "lucide-react";
 import { auth } from "@/utils/firebaseClient";
 import Link from "next/link";
 import { almightyChat, AlmighyChatRequest, ChatMessage } from "@/ai/flows/almighty-chat-flow";
 import { useAppState } from "@/utils/AppStateContext";
+import { motion } from "framer-motion";
 
 const db = getFirestore();
 
@@ -110,20 +111,20 @@ export default function HomePage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen pt-6 pb-24 px-2 md:px-8 bg-white transition-colors">
+    <div className="flex flex-col min-h-screen pt-6 pb-24 px-2 md:px-8 transition-colors">
       {/* Centered, prominent search bar */}
       <div className="flex justify-center items-center mb-6 w-full">
-        <div className="relative w-full max-w-2xl bg-pink-100 rounded-2xl shadow-lg py-2">
+        <div className="relative w-full max-w-2xl">
           <input
             type="text"
-            className="w-full pl-12 pr-4 py-3 rounded-full border border-accent-cyan/30 focus:outline-none focus:ring-2 focus:ring-accent-cyan bg-white/90 dark:bg-card/90 text-gray-900 dark:text-white text-lg shadow font-body"
+            className="input-glass w-full pl-12 pr-4 py-3 text-lg font-body"
             placeholder="Search posts or users..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             autoFocus={false}
           />
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-accent-cyan dark:text-accent-cyan pointer-events-none">
-            <FaSearch />
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-accent-cyan pointer-events-none">
+            <Search />
           </span>
           {searchTerm && (
             <button
@@ -137,18 +138,18 @@ export default function HomePage() {
         </div>
       </div>
       {/* Flashes/Stories Section */}
-      <section className="mb-6 bg-yellow-100 rounded-2xl shadow-lg p-4">
-        <h2 className="text-lg font-headline bg-gradient-to-r from-pink-500 via-yellow-400 to-blue-400 bg-clip-text text-transparent mb-2">Flashes</h2>
+      <section className="mb-6 glass-card p-4">
+        <h2 className="text-lg font-headline bg-gradient-to-r from-accent-pink to-accent-cyan bg-clip-text text-transparent mb-2">Flashes</h2>
         <div className="flex gap-3 overflow-x-auto pb-2">
           {flashUsers.length === 0 && (
-            <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-3xl text-white opacity-60 border-4 border-accent-cyan/40 animate-bounce-slow">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-3xl text-white opacity-60 border-4 border-accent-cyan/40 animate-pulse">
               +
             </div>
           )}
           {flashUsers.map((userFlashes: any) => (
             <button
               key={userFlashes.userId}
-              className="w-20 h-20 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan border-4 border-accent-cyan/40 flex items-center justify-center overflow-hidden focus:outline-none"
+              className="w-20 h-20 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan border-4 border-accent-cyan/40 flex items-center justify-center overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background focus:ring-accent-cyan transition-transform hover:scale-105"
               onClick={() => setSelectedFlashUser(userFlashes)}
               title={userFlashes.username || "Flash"}
             >
@@ -162,7 +163,7 @@ export default function HomePage() {
         </div>
       </section>
       {/* Feed Section */}
-      <section className="flex-1 flex flex-col items-center bg-blue-100 rounded-2xl shadow-lg p-4 mt-4">
+      <section className="flex-1 flex flex-col items-center mt-4">
         {filteredPosts.length === 0 ? (
           <div className="text-gray-400 text-center mt-16 animate-fade-in">
             <div className="text-4xl mb-2">🪐</div>
@@ -181,15 +182,15 @@ export default function HomePage() {
       {/* Top Right FABs */}
       <div className="fixed top-4 right-4 z-50 flex gap-3">
         <button
-          className="rounded-full bg-gradient-to-tr from-yellow-400 to-orange-500 p-4 shadow-fab-glow hover:scale-105 transition-all duration-200 focus:outline-none glass"
+          className="btn-glass-icon"
           title="Notifications"
           onClick={() => setShowNotifications(true)}
           aria-label="Notifications"
         >
-          <FaBell className="text-xl text-white" />
+          <Bell className="text-xl text-white" />
         </button>
         <button
-          className="rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan p-4 shadow-fab-glow hover:scale-105 transition-all duration-200 focus:outline-none glass"
+          className="btn-glass-icon"
           title="Create Post"
           onClick={() => setShowModal(true)}
           aria-label="Create Post"
@@ -199,34 +200,41 @@ export default function HomePage() {
       </div>
 
       <div className="fixed inset-0 z-50" style={{ pointerEvents: showModal || selectedFlashUser || showNotifications ? 'auto' : 'none' }}>
-        {showModal && <div className="absolute inset-0 bg-orange-200/80" />}
+        {showModal && <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />}
         <CreatePostModal open={showModal} onClose={() => setShowModal(false)} />
         
-        {selectedFlashUser && <div className="absolute inset-0 bg-orange-200/80" />}
+        {selectedFlashUser && <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />}
         {selectedFlashUser && <FlashModal userFlashes={selectedFlashUser} onClose={() => setSelectedFlashUser(null)} />}
         
-        {showNotifications && <div className="absolute inset-0 bg-black/30" />}
+        {showNotifications && <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />}
         {showNotifications && <NotificationPanel onClose={() => setShowNotifications(false)} />}
       </div>
       
       {/* Almighty AI FAB (bottom right) */}
-      <button
-        className="fixed bottom-8 right-8 z-50 bg-purple-400 text-white p-5 rounded-full shadow-fab-glow hover:scale-110 transition-all duration-200 animate-bounce-slow"
+      <motion.button
+        className="fixed bottom-24 right-4 z-50 btn-glass-icon w-16 h-16 bg-gradient-to-tr from-accent-pink to-accent-cyan"
         aria-label="Almighty AI"
         onClick={() => setShowAlmighty(true)}
+        whileHover={{ scale: 1.1, rotate: 15 }}
+        transition={{ type: "spring", stiffness: 300 }}
       >
         <span className="text-3xl">🤖</span>
-      </button>
+      </motion.button>
 
       {/* Almighty AI Chat Modal */}
       {showAlmighty && (
-        <div className="fixed inset-0 z-50 flex items-end justify-end p-4 bg-black/30 backdrop-blur-sm">
-          <div className="w-full max-w-xs sm:max-w-sm bg-gradient-to-br from-secondary via-primary to-accent-cyan/30 rounded-2xl shadow-fab-glow border-2 border-accent-cyan/40 p-4 flex flex-col animate-slide-in">
+        <div className="fixed inset-0 z-[100] flex items-end justify-end p-4 bg-black/30 backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="w-full max-w-xs sm:max-w-sm glass-card p-4 flex flex-col"
+          >
             <div className="flex items-center justify-between mb-2">
               <span className="font-headline text-accent-pink text-lg">Almighty AI</span>
               <button onClick={() => setShowAlmighty(false)} className="text-accent-cyan hover:text-accent-pink text-xl font-bold">×</button>
             </div>
-            <div className="flex-1 overflow-y-auto max-h-60 mb-2 space-y-2 scrollbar-hide">
+            <div className="flex-1 overflow-y-auto max-h-60 mb-2 space-y-2 pr-2">
               {chat.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                   <div className={`rounded-xl px-3 py-2 max-w-[80%] ${msg.role === "model" ? "bg-accent-cyan/10 text-accent-cyan" : "bg-accent-pink/20 text-accent-pink"}`}>{msg.parts[0].text}</div>
@@ -243,7 +251,7 @@ export default function HomePage() {
               className="flex gap-2 mt-2"
             >
               <input
-                className="flex-1 rounded-full px-4 py-2 border border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-cyan bg-white dark:bg-card text-black dark:text-white"
+                className="input-glass flex-1"
                 placeholder="Ask Almighty..."
                 value={input}
                 onChange={e => setInput(e.target.value)}
@@ -251,13 +259,13 @@ export default function HomePage() {
               />
               <button
                 type="submit"
-                className="px-4 py-2 rounded-full bg-accent-cyan text-primary font-bold hover:bg-accent-pink hover:text-white transition-all disabled:opacity-50"
+                className="btn-glass px-4 py-2"
                 disabled={!input.trim() || isAlmightyLoading}
               >
                 Send
               </button>
             </form>
-          </div>
+          </motion.div>
         </div>
       )}
     </div>
@@ -412,10 +420,15 @@ export function PostCard({ post }: { post: any }) {
   const initials = post.displayName?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || post.username?.slice(0, 2).toUpperCase() || "U";
 
   return (
-    <div className="bg-cyan-100 dark:bg-card rounded-2xl p-5 shadow-lg border border-gray-100 dark:border-accent-cyan/20 flex flex-col gap-3 animate-pop transition-all relative">
+    <motion.div 
+      className="glass-card p-5 flex flex-col gap-3 relative"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
       <div className="flex items-center gap-3 mb-2">
         <Link href={`/squad/${post.userId}`} className="flex items-center gap-2 group cursor-pointer">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accentPink to-accentCyan flex items-center justify-center text-white font-bold text-lg overflow-hidden border-2 border-accent-cyan group-hover:scale-105 transition-transform">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-lg overflow-hidden border-2 border-accent-cyan group-hover:scale-105 transition-transform">
             {post.avatar_url ? <img src={post.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : initials}
           </div>
           <span className="font-headline text-accent-cyan text-sm group-hover:underline">@{post.username || "user"}</span>
@@ -429,42 +442,46 @@ export function PostCard({ post }: { post: any }) {
             <FaEllipsisV />
           </button>
           {showMoreMenu && (
-            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-card rounded-xl shadow-lg border border-accent-cyan/20 z-50 animate-fade-in">
-              <button className="w-full flex items-center gap-2 px-4 py-2 text-left hover:bg-accent-cyan/10" onClick={handleCopyLink}><FaLink /> Copy Link</button>
-              <div className="border-t border-accent-cyan/10 my-1" />
-              <button className="w-full flex items-center gap-2 px-4 py-2 text-left text-red-400 hover:bg-red-400/10" onClick={() => { alert('Reported!'); setShowMoreMenu(false); }}><FaExclamationTriangle /> Report Post</button>
-              <button className="w-full flex items-center gap-2 px-4 py-2 text-left text-gray-400 hover:bg-accent-cyan/10" onClick={() => { alert('Creator muted!'); setShowMoreMenu(false); }}><FaVolumeMute /> Don't recommend this creator</button>
-              <button className="w-full flex items-center gap-2 px-4 py-2 text-left text-gray-400 hover:bg-accent-cyan/10" onClick={() => { alert('User blocked!'); setShowMoreMenu(false); }}><FaUserSlash /> Block @{post.username}</button>
-            </div>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="absolute right-0 mt-2 w-48 glass-card p-1 z-50"
+            >
+              <button className="w-full flex items-center gap-2 px-4 py-2 text-left hover:bg-white/10 rounded-lg" onClick={handleCopyLink}><FaLink /> Copy Link</button>
+              <div className="border-t border-glass-border my-1" />
+              <button className="w-full flex items-center gap-2 px-4 py-2 text-left text-red-400 hover:bg-red-400/10 rounded-lg" onClick={() => { alert('Reported!'); setShowMoreMenu(false); }}><FaExclamationTriangle /> Report</button>
+              <button className="w-full flex items-center gap-2 px-4 py-2 text-left text-gray-400 hover:bg-white/10 rounded-lg" onClick={() => { alert('Creator muted!'); setShowMoreMenu(false); }}><FaVolumeMute /> Mute Creator</button>
+              <button className="w-full flex items-center gap-2 px-4 py-2 text-left text-gray-400 hover:bg-white/10 rounded-lg" onClick={() => { alert('User blocked!'); setShowMoreMenu(false); }}><FaUserSlash /> Block User</button>
+            </motion.div>
           )}
         </div>
       </div>
 
       {currentUser?.uid === post.userId && (
         <div className="absolute top-3 right-12 flex gap-2 z-10">
-          <button className="text-xs px-2 py-1 rounded bg-accent-cyan/20 text-accent-cyan font-bold hover:bg-accent-cyan/40" onClick={() => setShowEdit(true)}>Edit</button>
-          <button className="text-xs px-2 py-1 rounded bg-accent-pink/20 text-accent-pink font-bold hover:bg-accent-pink/40" onClick={handleDelete}>Delete</button>
+          <button className="text-xs px-2 py-1 rounded bg-white/10 text-white font-bold hover:bg-white/20" onClick={() => setShowEdit(true)}>Edit</button>
+          <button className="text-xs px-2 py-1 rounded bg-red-500/20 text-red-400 font-bold hover:bg-red-500/40" onClick={handleDelete}>Delete</button>
         </div>
       )}
       
       {showEdit && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-          <form onSubmit={handleEdit} className="bg-white dark:bg-card rounded-2xl p-6 w-full max-w-md relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <form onSubmit={handleEdit} className="glass-card p-6 w-full max-w-md relative">
             <h3 className="text-xl font-headline font-bold mb-2 text-accent-cyan">Edit Post</h3>
             <textarea
               className="w-full rounded-xl p-3 bg-black/60 text-[#E0E0E0] border-2 border-accent-cyan"
               value={editContent} onChange={e => setEditContent(e.target.value)} rows={4} required
             />
             <div className="flex gap-2 justify-end mt-4">
-              <button type="button" className="px-4 py-2 rounded bg-gray-200 dark:bg-black/40 text-gray-700 dark:text-white font-bold" onClick={() => setShowEdit(false)}>Cancel</button>
-              <button type="submit" className="px-4 py-2 rounded bg-accent-cyan text-primary font-bold">Save</button>
+              <button type="button" className="btn-glass" onClick={() => setShowEdit(false)}>Cancel</button>
+              <button type="submit" className="btn-glass bg-accent-cyan text-black">Save</button>
             </div>
           </form>
         </div>
       )}
 
       {post.content && (post.type !== 'poll' || (post.type === 'poll' && !post.pollOptions)) && (
-        <div className="post-text-bg text-[1.15rem] font-body whitespace-pre-line mb-2 px-4 py-3 rounded-xl" style={{ backgroundColor: post.backgroundColor || 'transparent', color: post.backgroundColor && post.backgroundColor !== '#ffffff' ? '#000000' : 'inherit' }}>
+        <div className="text-[1.15rem] font-body whitespace-pre-line mb-2 px-4 py-3 rounded-xl" style={{ backgroundColor: post.backgroundColor || 'transparent', color: post.backgroundColor && post.backgroundColor !== '#ffffff' ? '#000000' : 'inherit' }}>
           {post.content}
         </div>
       )}
@@ -498,17 +515,17 @@ export function PostCard({ post }: { post: any }) {
       )}
       
       {post.type === "poll" && post.pollOptions && (
-        <div className="flex flex-col gap-2 animate-fade-in bg-black/70 rounded-xl p-4">
+        <div className="flex flex-col gap-2 p-4">
           <div className="font-bold text-accent-cyan mb-3">{post.content}</div>
           {post.pollOptions.map((opt: string, idx: number) => {
             const voteData = pollVotes[idx] || { count: 0, voters: [] };
             const totalVotes = Object.values(pollVotes).reduce((sum, current) => sum + current.count, 0);
             const percent = totalVotes > 0 ? Math.round((voteData.count / totalVotes) * 100) : 0;
             return (
-              <button key={idx} className={`w-full px-4 py-2 rounded-full font-bold transition-all relative overflow-hidden ${userPollVote !== null ? 'cursor-default' : 'hover:bg-accent-cyan/40'}`}
+              <button key={idx} className={`w-full p-2 rounded-full font-bold transition-all relative overflow-hidden btn-glass`}
                 onClick={() => handlePollVote(idx)} disabled={userPollVote !== null}>
                 {userPollVote !== null && <div className="absolute left-0 top-0 h-full bg-accent-cyan/50" style={{width: `${percent}%`}}/>}
-                <div className="relative flex justify-between z-10">
+                <div className="relative flex justify-between z-10 px-2">
                   <span>{opt}</span>
                   {userPollVote !== null && <span>{percent}% ({voteData.count})</span>}
                 </div>
@@ -519,13 +536,13 @@ export function PostCard({ post }: { post: any }) {
       )}
 
       {post.song && (
-        <div className="mt-2 p-3 rounded-xl bg-black/20 flex items-center gap-4 border border-accent-cyan/20">
+        <div className="mt-2 p-3 rounded-xl bg-black/20 flex items-center gap-4 border border-glass-border">
             <img src={post.song.albumArt} alt={post.song.album} className="w-12 h-12 rounded-lg"/>
             <div className="flex-1">
                 <div className="font-bold text-accent-cyan text-base line-clamp-1">{post.song.name}</div>
                 <div className="text-xs text-gray-400 mb-1 line-clamp-1">{post.song.artists.join(", ")}</div>
             </div>
-            <button onClick={toggleSong} className="p-3 rounded-full bg-accent-cyan text-primary shadow-lg hover:scale-110 transition-transform">
+            <button onClick={toggleSong} className="p-3 rounded-full bg-accent-cyan text-black shadow-lg hover:scale-110 transition-transform">
                 <FaMusic />
             </button>
         </div>
@@ -547,7 +564,7 @@ export function PostCard({ post }: { post: any }) {
         </div>
       </div>
       {showComments && <CommentModal postId={post.id} postAuthorId={post.userId} onClose={() => setShowComments(false)} />}
-    </div>
+    </motion.div>
   );
 }
 
@@ -569,8 +586,8 @@ function CommentModal({ postId, postAuthorId, onClose }: { postId: string; postA
   }, [postId]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="bg-white dark:bg-card rounded-2xl p-6 w-full max-w-md relative animate-pop shadow-xl border border-accent-cyan/20">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="glass-card p-6 w-full max-w-md relative flex flex-col">
         <button onClick={onClose} className="absolute top-2 right-2 text-accent-pink text-2xl">&times;</button>
         <h3 className="text-xl font-headline font-bold mb-4 text-accent-cyan">Comments</h3>
         <div className="flex flex-col gap-3 max-h-60 overflow-y-auto mb-4 p-2">
@@ -634,11 +651,11 @@ function Comment({ comment, onReply }: { comment: any; onReply: () => void }) {
   
   return (
     <div className="flex gap-3">
-      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-accentPink to-accentCyan flex items-center justify-center text-white font-bold text-sm overflow-hidden shrink-0">
+      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-sm overflow-hidden shrink-0">
           {userData?.avatar_url ? <img src={userData.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : initials}
       </div>
       <div className="flex-1">
-        <div className="bg-black/60 rounded-xl px-3 py-2 text-[#E0E0E0] font-body">
+        <div className="bg-black/20 rounded-xl px-3 py-2 text-white font-body">
           <div className="flex items-center gap-2">
             <Link href={`/squad/${comment.userId}`} className="font-bold text-accent-cyan text-sm hover:underline">@{userData?.username || 'user'}</Link>
             <span className="text-xs text-gray-400">{comment.createdAt?.toDate?.().toLocaleString?.() || ""}</span>
@@ -700,7 +717,7 @@ function CommentForm({ postId, postAuthorId, parentId, onCommentPosted, isReply 
     <form onSubmit={handleAddComment} className="flex gap-2">
       <input
         type="text"
-        className="flex-1 rounded-full px-4 py-2 border border-accent-cyan bg-white dark:bg-card text-black dark:text-white"
+        className="input-glass flex-1"
         placeholder={isReply ? "Add a reply..." : "Add a comment..."}
         value={newComment}
         onChange={e => setNewComment(e.target.value)}
@@ -708,7 +725,7 @@ function CommentForm({ postId, postAuthorId, parentId, onCommentPosted, isReply 
       />
       <button
         type="submit"
-        className="px-4 py-2 rounded-full bg-accent-cyan text-primary font-bold disabled:opacity-60"
+        className="btn-glass px-4"
         disabled={loading || !newComment.trim()}
       >
         Post
@@ -827,14 +844,16 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
         return <><span className="font-bold">{notif.fromUsername}</span> commented on your post: "{notif.postContent}"</>;
       case 'follow':
         return <><span className="font-bold">{notif.fromUsername}</span> started following you.</>;
+      case 'missed_call':
+        return <><span className="font-bold">{notif.fromUsername}</span> tried to call you.</>;
       default:
         return 'New notification';
     }
   };
 
   return (
-    <div className="fixed inset-y-0 right-0 z-50 w-full max-w-sm bg-white dark:bg-card shadow-lg animate-slide-in-right border-l border-accent-cyan/20">
-      <div className="flex items-center justify-between p-4 border-b border-accent-cyan/20">
+    <div className="fixed inset-y-0 right-0 z-50 w-full max-w-sm glass-card animate-slide-in-right">
+      <div className="flex items-center justify-between p-4 border-b border-glass-border">
         <h3 className="text-xl font-headline font-bold text-accent-cyan">Notifications</h3>
         <button onClick={onClose} className="text-accent-pink text-2xl">&times;</button>
       </div>
@@ -843,11 +862,11 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
           <div className="text-gray-400 text-center mt-16">No new notifications.</div>
         ) : (
           notifications.map(notif => (
-            <div key={notif.id} className="flex items-center gap-3 p-3 rounded-xl bg-black/60 hover:bg-accent-cyan/10 transition-all cursor-pointer">
+            <div key={notif.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all cursor-pointer">
               <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan overflow-hidden">
                 {notif.fromAvatarUrl && <img src={notif.fromAvatarUrl} alt="avatar" className="w-full h-full object-cover"/>}
               </div>
-              <div className="flex-1 text-sm text-[#E0E0E0]">
+              <div className="flex-1 text-sm text-white">
                 {getNotificationMessage(notif)}
                 <div className="text-xs text-gray-400 mt-1">{notif.createdAt?.toDate().toLocaleString()}</div>
               </div>
