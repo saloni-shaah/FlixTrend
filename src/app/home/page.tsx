@@ -1,28 +1,9 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import CreatePostModal from "./CreatePostModal";
-import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, deleteDoc, updateDoc, doc as fsDoc, setDoc, getDoc, doc } from "firebase/firestore";
-import { FaSearch, FaPlay, FaBell } from "react-icons/fa";
-import { FaRegComment } from "react-icons/fa";
-// Star Like Logo SVG
-function StarLogo({ filled = false, size = 24 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <polygon points="16,3 20,12 30,12 22,18 25,28 16,22 7,28 10,18 2,12 12,12" fill={filled ? '#FFDF00' : 'none'} stroke="#FFDF00" strokeWidth="2" />
-    </svg>
-  );
-}
-// Custom Like Logo SVG
-function LikeLogo({ filled = false, size = 24 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="4" y="12" width="24" height="12" rx="6" fill={filled ? '#00F0FF' : 'none'} stroke="#00F0FF" strokeWidth="2" />
-      <circle cx="16" cy="12" r="6" fill={filled ? '#FF3CAC' : 'none'} stroke="#FF3CAC" strokeWidth="2" />
-      <circle cx="10" cy="10" r="2" fill="#00F0FF" />
-      <circle cx="22" cy="10" r="2" fill="#00F0FF" />
-    </svg>
-  );
-}
+import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, deleteDoc, updateDoc, doc as fsDoc, setDoc, getDoc, doc, runTransaction } from "firebase/firestore";
+import { FaSearch, FaPlay, FaBell, FaRegComment, FaEye, FaRegBookmark, FaBookmark, FaShare, FaExclamationTriangle, FaVolumeMute, FaUserSlash, FaLink, FaEllipsisV, FaChevronLeft, FaChevronRight, FaMusic } from "react-icons/fa";
+import { Repeat2, Bookmark, Plus } from "lucide-react";
 import { auth } from "@/utils/firebaseClient";
 import Link from "next/link";
 
@@ -32,7 +13,7 @@ export default function HomePage() {
   const [showModal, setShowModal] = useState(false);
   const [posts, setPosts] = useState<any[]>([]);
   const [flashes, setFlashes] = useState<any[]>([]);
-  const [selectedFlash, setSelectedFlash] = useState<any | null>(null);
+  const [selectedFlashUser, setSelectedFlashUser] = useState<any | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showAlmighty, setShowAlmighty] = useState(false);
   const [chat, setChat] = useState<{ sender: "user" | "ai"; text: string }[]>([
@@ -56,6 +37,22 @@ export default function HomePage() {
     });
     return () => unsub();
   }, []);
+
+  // Group flashes by user
+  const groupedFlashes = flashes.reduce((acc, flash) => {
+    if (!acc[flash.userId]) {
+      acc[flash.userId] = {
+        userId: flash.userId,
+        username: flash.username,
+        avatar_url: flash.avatar_url,
+        flashes: []
+      };
+    }
+    acc[flash.userId].flashes.push(flash);
+    return acc;
+  }, {});
+
+  const flashUsers = Object.values(groupedFlashes);
 
   // Filtered posts for search
   const filteredPosts = searchTerm.trim()
@@ -98,24 +95,20 @@ export default function HomePage() {
       <section className="mb-6 bg-yellow-100 rounded-2xl shadow-lg p-4">
         <h2 className="text-lg font-headline bg-gradient-to-r from-pink-500 via-yellow-400 to-blue-400 bg-clip-text text-transparent mb-2">Flashes</h2>
         <div className="flex gap-3 overflow-x-auto pb-2">
-          {flashes.length === 0 && (
+          {flashUsers.length === 0 && (
             <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-3xl text-white opacity-60 border-4 border-accent-cyan/40 animate-bounce-slow">
               +
             </div>
           )}
-          {flashes.map((flash) => (
+          {flashUsers.map((userFlashes: any) => (
             <button
-              key={flash.id}
+              key={userFlashes.userId}
               className="w-20 h-20 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan border-4 border-accent-cyan/40 flex items-center justify-center overflow-hidden focus:outline-none"
-              onClick={() => setSelectedFlash(flash)}
-              title={flash.caption || "Flash"}
+              onClick={() => setSelectedFlashUser(userFlashes)}
+              title={userFlashes.username || "Flash"}
             >
-              {flash.mediaUrl ? (
-                flash.mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? (
-                  <video src={flash.mediaUrl} className="w-full h-full object-cover" />
-                ) : (
-                  <img src={flash.mediaUrl} alt="flash" className="w-full h-full object-cover" />
-                )
+              {userFlashes.avatar_url ? (
+                  <img src={userFlashes.avatar_url} alt="flash" className="w-full h-full object-cover" />
               ) : (
                 <span className="text-2xl text-white">⚡</span>
               )}
@@ -143,29 +136,29 @@ export default function HomePage() {
       {/* Top Right FABs */}
       <div className="fixed top-4 right-4 z-50 flex gap-3">
         <button
-          className="rounded-full bg-gradient-to-tr from-yellow-400 to-orange-500 p-5 shadow-fab-glow hover:scale-105 transition-all duration-200 focus:outline-none glass"
+          className="rounded-full bg-gradient-to-tr from-yellow-400 to-orange-500 p-4 shadow-fab-glow hover:scale-105 transition-all duration-200 focus:outline-none glass"
           title="Notifications"
           onClick={() => setShowNotifications(true)}
           aria-label="Notifications"
         >
-          <FaBell className="text-2xl text-white" />
+          <FaBell className="text-xl text-white" />
         </button>
         <button
-          className="rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan p-5 shadow-fab-glow hover:scale-105 transition-all duration-200 focus:outline-none glass"
+          className="rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan p-4 shadow-fab-glow hover:scale-105 transition-all duration-200 focus:outline-none glass"
           title="Create Post"
           onClick={() => setShowModal(true)}
           aria-label="Create Post"
         >
-          <span className="text-2xl text-white">➕</span>
+          <Plus className="text-xl text-white" />
         </button>
       </div>
 
-      <div className="fixed inset-0 z-50" style={{ pointerEvents: showModal || selectedFlash || showNotifications ? 'auto' : 'none' }}>
+      <div className="fixed inset-0 z-50" style={{ pointerEvents: showModal || selectedFlashUser || showNotifications ? 'auto' : 'none' }}>
         {showModal && <div className="absolute inset-0 bg-orange-200/80" />}
         <CreatePostModal open={showModal} onClose={() => setShowModal(false)} />
         
-        {selectedFlash && <div className="absolute inset-0 bg-orange-200/80" />}
-        {selectedFlash && <FlashModal flash={selectedFlash} onClose={() => setSelectedFlash(null)} />}
+        {selectedFlashUser && <div className="absolute inset-0 bg-orange-200/80" />}
+        {selectedFlashUser && <FlashModal userFlashes={selectedFlashUser} onClose={() => setSelectedFlashUser(null)} />}
         
         {showNotifications && <div className="absolute inset-0 bg-black/30" />}
         {showNotifications && <NotificationPanel onClose={() => setShowNotifications(false)} />}
@@ -230,71 +223,84 @@ export default function HomePage() {
 }
 
 export function PostCard({ post }: { post: any }) {
-  const [liked, setLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(post.likeCount || 0);
+  const [isStarred, setIsStarred] = useState(false);
+  const [starCount, setStarCount] = useState(post.starCount || 0);
+  const [relayCount, setRelayCount] = useState(post.relayCount || 0);
   const [commentCount, setCommentCount] = useState(post.commentCount || 0);
   const [showComments, setShowComments] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [editContent, setEditContent] = useState(post.content || "");
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
   const currentUser = auth.currentUser;
-  const [pollVotes, setPollVotes] = useState<{ [optionIdx: number]: number }>({});
+  const [pollVotes, setPollVotes] = useState<{ [optionIdx: number]: { count: number, voters: string[] } }>({});
   const [userPollVote, setUserPollVote] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const videoRef = React.useRef<HTMLVideoElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
 
   useEffect(() => {
     if (!currentUser) return;
-    const likeDocRef = fsDoc(db, "posts", post.id, "likes", currentUser.uid);
-    const unsubLike = onSnapshot(likeDocRef, (docSnap) => setLiked(docSnap.exists()));
-    const likesColRef = collection(db, "posts", post.id, "likes");
-    const unsubCount = onSnapshot(likesColRef, (snap) => setLikeCount(snap.size));
-    const commentsColRef = collection(db, "posts", post.id, "comments");
-    const unsubCommentCount = onSnapshot(commentsColRef, (snap) => setCommentCount(snap.size));
 
+    const unsubscribes: (() => void)[] = [];
+
+    // Starred post check
+    const starredDocRef = fsDoc(db, "users", currentUser.uid, "starredPosts", post.id);
+    const unsubStarred = onSnapshot(starredDocRef, (docSnap) => {
+        setIsStarred(docSnap.exists());
+    });
+    unsubscribes.push(unsubStarred);
+
+    // Counts
+    const unsubStars = onSnapshot(collection(db, "posts", post.id, "stars"), (snap) => setStarCount(snap.size));
+    unsubscribes.push(unsubStars);
+    const unsubRelays = onSnapshot(collection(db, "posts", post.id, "relays"), (snap) => setRelayCount(snap.size));
+    unsubscribes.push(unsubRelays);
+    const unsubComments = onSnapshot(collection(db, "posts", post.id, "comments"), (snap) => setCommentCount(snap.size));
+    unsubscribes.push(unsubComments);
+
+    // Polls
     if (post.type === "poll" && post.pollOptions) {
-      const pollVotesCol = collection(db, "posts", post.id, "pollVotes");
-      const unsubPollVotes = onSnapshot(pollVotesCol, (snap) => {
-        const votes: { [optionIdx: number]: number } = {};
+      const unsubPollVotes = onSnapshot(collection(db, "posts", post.id, "pollVotes"), (snap) => {
+        const votes: { [optionIdx: number]: { count: number, voters: string[] } } = {};
+        post.pollOptions.forEach((_:any, index:number) => {
+            votes[index] = { count: 0, voters: [] };
+        });
+
         let userVote: number | null = null;
-        snap.docs.forEach(doc => {
+        snap.forEach(doc => {
           const { optionIdx, userId } = doc.data();
-          votes[optionIdx] = (votes[optionIdx] || 0) + 1;
+          if (votes[optionIdx]) {
+              votes[optionIdx].count++;
+              votes[optionIdx].voters.push(userId);
+          }
           if (userId === currentUser.uid) userVote = optionIdx;
         });
         setPollVotes(votes);
         setUserPollVote(userVote);
       });
-      return () => unsubPollVotes();
+      unsubscribes.push(unsubPollVotes);
     }
-    return () => {
-      unsubLike();
-      unsubCount();
-      unsubCommentCount();
-    };
+    
+    return () => unsubscribes.forEach(unsub => unsub());
   }, [post.id, currentUser, post.type, post.pollOptions]);
 
-  const handleLike = async () => {
+  const handleStar = async () => {
     if (!currentUser) return;
-    const likeDocRef = fsDoc(db, "posts", post.id, "likes", currentUser.uid);
-    if (liked) {
-      await deleteDoc(likeDocRef);
+    const starredDocRef = fsDoc(db, "users", currentUser.uid, "starredPosts", post.id);
+    const postStarRef = fsDoc(db, "posts", post.id, "stars", currentUser.uid);
+    if (isStarred) {
+        await deleteDoc(starredDocRef);
+        await deleteDoc(postStarRef);
     } else {
-      await setDoc(likeDocRef, { userId: currentUser.uid, createdAt: serverTimestamp() });
-      if (post.userId !== currentUser.uid) {
-        const notifRef = collection(db, "notifications", post.userId, "user_notifications");
-        await addDoc(notifRef, {
-          type: 'like',
-          fromUserId: currentUser.uid,
-          fromUsername: currentUser.displayName,
-          fromAvatarUrl: currentUser.photoURL,
-          postId: post.id,
-          postContent: post.content.substring(0, 50),
-          createdAt: serverTimestamp(),
-          read: false,
-        });
-      }
+        await setDoc(starredDocRef, { ...post, starredAt: serverTimestamp() });
+        await setDoc(postStarRef, { userId: currentUser.uid, starredAt: serverTimestamp() });
     }
+  };
+
+  const handleRelay = async () => {
+      // Relay logic to be implemented
+      alert("Relay functionality coming soon!");
   };
 
   const handleDelete = async () => {
@@ -319,6 +325,33 @@ export function PostCard({ post }: { post: any }) {
       }
   };
 
+  const handleCopyLink = () => {
+    const postUrl = `${window.location.origin}/post/${post.id}`;
+    navigator.clipboard.writeText(postUrl);
+    alert("Link copied to clipboard!");
+    setShowMoreMenu(false);
+  };
+  
+  useEffect(() => {
+    if (post.song && post.song.preview_url) {
+        const audio = new Audio(post.song.preview_url);
+        audioRef.current = audio;
+    }
+    return () => {
+        audioRef.current?.pause();
+    }
+  }, [post.song]);
+  
+  const toggleSong = () => {
+      if (audioRef.current) {
+          if (audioRef.current.paused) {
+              audioRef.current.play();
+          } else {
+              audioRef.current.pause();
+          }
+      }
+  }
+
 
   const initials = post.displayName?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || post.username?.slice(0, 2).toUpperCase() || "U";
 
@@ -331,11 +364,28 @@ export function PostCard({ post }: { post: any }) {
           </div>
           <span className="font-headline text-accent-cyan text-sm group-hover:underline">@{post.username || "user"}</span>
         </Link>
-        <span className="ml-auto text-xs text-gray-400">{post.createdAt?.toDate?.().toLocaleString?.() || "Just now"}</span>
+        <div className="ml-auto flex items-center gap-3 text-xs text-gray-400">
+            <span className="flex items-center gap-1"><FaEye /> {post.viewCount || 0}</span>
+            <span>{post.createdAt?.toDate?.().toLocaleString?.() || "Just now"}</span>
+        </div>
+        <div className="relative">
+          <button onClick={() => setShowMoreMenu(!showMoreMenu)} className="text-gray-400 hover:text-accent-cyan">
+            <FaEllipsisV />
+          </button>
+          {showMoreMenu && (
+            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-card rounded-xl shadow-lg border border-accent-cyan/20 z-50 animate-fade-in">
+              <button className="w-full flex items-center gap-2 px-4 py-2 text-left hover:bg-accent-cyan/10" onClick={handleCopyLink}><FaLink /> Copy Link</button>
+              <div className="border-t border-accent-cyan/10 my-1" />
+              <button className="w-full flex items-center gap-2 px-4 py-2 text-left text-red-400 hover:bg-red-400/10" onClick={() => { alert('Reported!'); setShowMoreMenu(false); }}><FaExclamationTriangle /> Report Post</button>
+              <button className="w-full flex items-center gap-2 px-4 py-2 text-left text-gray-400 hover:bg-accent-cyan/10" onClick={() => { alert('Creator muted!'); setShowMoreMenu(false); }}><FaVolumeMute /> Don't recommend this creator</button>
+              <button className="w-full flex items-center gap-2 px-4 py-2 text-left text-gray-400 hover:bg-accent-cyan/10" onClick={() => { alert('User blocked!'); setShowMoreMenu(false); }}><FaUserSlash /> Block @{post.username}</button>
+            </div>
+          )}
+        </div>
       </div>
 
       {currentUser?.uid === post.userId && (
-        <div className="absolute top-3 right-3 flex gap-2 z-10">
+        <div className="absolute top-3 right-12 flex gap-2 z-10">
           <button className="text-xs px-2 py-1 rounded bg-accent-cyan/20 text-accent-cyan font-bold hover:bg-accent-cyan/40" onClick={() => setShowEdit(true)}>Edit</button>
           <button className="text-xs px-2 py-1 rounded bg-accent-pink/20 text-accent-pink font-bold hover:bg-accent-pink/40" onClick={handleDelete}>Delete</button>
         </div>
@@ -369,7 +419,7 @@ export function PostCard({ post }: { post: any }) {
           </div>
       )}
       
-      {post.type === "media" && post.mediaUrl && (
+      {(post.type === "media" || post.type === "audio") && post.mediaUrl && (
         <div className="w-full rounded-xl overflow-hidden relative">
           {post.mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? (
             <>
@@ -383,6 +433,8 @@ export function PostCard({ post }: { post: any }) {
                 </div>
               )}
             </>
+          ) : post.mediaUrl.match(/\.(mp3|wav|oga|m4a)$/i) || post.type === 'audio' ? (
+            <audio src={post.mediaUrl} controls className="w-full" />
           ) : (
             <img src={post.mediaUrl} alt="media" className="w-full rounded-xl" />
           )}
@@ -393,16 +445,16 @@ export function PostCard({ post }: { post: any }) {
         <div className="flex flex-col gap-2 animate-fade-in bg-black/70 rounded-xl p-4">
           <div className="font-bold text-accent-cyan mb-3">{post.content}</div>
           {post.pollOptions.map((opt: string, idx: number) => {
-            const votes = pollVotes[idx] || 0;
-            const totalVotes = Object.values(pollVotes).reduce((a, b) => a + b, 0);
-            const percent = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
+            const voteData = pollVotes[idx] || { count: 0, voters: [] };
+            const totalVotes = Object.values(pollVotes).reduce((sum, current) => sum + current.count, 0);
+            const percent = totalVotes > 0 ? Math.round((voteData.count / totalVotes) * 100) : 0;
             return (
               <button key={idx} className={`w-full px-4 py-2 rounded-full font-bold transition-all relative overflow-hidden ${userPollVote !== null ? 'cursor-default' : 'hover:bg-accent-cyan/40'}`}
                 onClick={() => handlePollVote(idx)} disabled={userPollVote !== null}>
                 {userPollVote !== null && <div className="absolute left-0 top-0 h-full bg-accent-cyan/50" style={{width: `${percent}%`}}/>}
                 <div className="relative flex justify-between z-10">
                   <span>{opt}</span>
-                  {userPollVote !== null && <span>{percent}% ({votes})</span>}
+                  {userPollVote !== null && <span>{percent}% ({voteData.count})</span>}
                 </div>
               </button>
             );
@@ -410,13 +462,33 @@ export function PostCard({ post }: { post: any }) {
         </div>
       )}
 
-      <div className="flex items-center gap-6 mt-2">
-        <button className={`flex items-center gap-1 text-lg font-bold transition-all ${liked ? "text-red-400" : "text-gray-400 hover:text-red-400"}`} onClick={handleLike}>
-          <StarLogo filled={liked} size={24} /> <span>{likeCount}</span>
-        </button>
-        <button className="flex items-center gap-1 text-lg font-bold text-gray-400 hover:text-red-400 transition-all" onClick={() => setShowComments(true)}>
-          <FaRegComment /> <span>{commentCount}</span>
-        </button>
+      {post.song && (
+        <div className="mt-2 p-3 rounded-xl bg-black/20 flex items-center gap-4 border border-accent-cyan/20">
+            <img src={post.song.albumArt} alt={post.song.album} className="w-12 h-12 rounded-lg"/>
+            <div className="flex-1">
+                <div className="font-bold text-accent-cyan text-base line-clamp-1">{post.song.name}</div>
+                <div className="text-xs text-gray-400 mb-1 line-clamp-1">{post.song.artists.join(", ")}</div>
+            </div>
+            <button onClick={toggleSong} className="p-3 rounded-full bg-accent-cyan text-primary shadow-lg hover:scale-110 transition-transform">
+                <FaMusic />
+            </button>
+        </div>
+      )}
+
+      <div className="flex items-center justify-between gap-6 mt-2">
+        <div className="flex items-center gap-4">
+          <button className="flex items-center gap-1 text-lg font-bold text-gray-400 hover:text-accent-cyan transition-all" onClick={() => setShowComments(true)}>
+            <FaRegComment /> <span>{commentCount}</span>
+          </button>
+          <button className="flex items-center gap-1 text-lg font-bold text-gray-400 hover:text-accent-cyan transition-all" onClick={handleRelay}>
+            <Repeat2 /> <span>{relayCount}</span>
+          </button>
+        </div>
+        <div className="flex items-center gap-4">
+          <button className={`flex items-center gap-1 text-lg font-bold transition-all ${isStarred ? "text-yellow-400" : "text-gray-400 hover:text-yellow-400"}`} onClick={handleStar}>
+            <Bookmark fill={isStarred ? "currentColor" : "none"} /> <span>{starCount}</span>
+          </button>
+        </div>
       </div>
       {showComments && <CommentModal postId={post.id} postAuthorId={post.userId} onClose={() => setShowComments(false)} />}
     </div>
@@ -481,16 +553,38 @@ function CommentThread({ comment, postId, postAuthorId, replyTo, setReplyTo }: {
 }
 
 function Comment({ comment, onReply }: { comment: any; onReply: () => void }) {
-  const initials = comment.displayName?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || comment.username?.slice(0, 2).toUpperCase() || "U";
+  const [userData, setUserData] = useState<any>(null);
+
+  useEffect(() => {
+    async function fetchUserData() {
+      if (comment.username && comment.avatar_url) {
+        setUserData({ username: comment.username, avatar_url: comment.avatar_url, displayName: comment.displayName });
+      } else {
+        const userDoc = await getDoc(doc(db, "users", comment.userId));
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          setUserData({
+            username: data.username,
+            avatar_url: data.avatar_url,
+            displayName: data.name,
+          });
+        }
+      }
+    }
+    fetchUserData();
+  }, [comment.userId, comment.username, comment.avatar_url, comment.displayName]);
+
+  const initials = userData?.displayName?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || userData?.username?.slice(0, 2).toUpperCase() || "U";
+  
   return (
     <div className="flex gap-3">
       <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-accentPink to-accentCyan flex items-center justify-center text-white font-bold text-sm overflow-hidden shrink-0">
-          {comment.avatar_url ? <img src={comment.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : initials}
+          {userData?.avatar_url ? <img src={userData.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : initials}
       </div>
       <div className="flex-1">
         <div className="bg-black/60 rounded-xl px-3 py-2 text-[#E0E0E0] font-body">
           <div className="flex items-center gap-2">
-            <Link href={`/squad/${comment.userId}`} className="font-bold text-accent-cyan text-sm hover:underline">@{comment.username || 'user'}</Link>
+            <Link href={`/squad/${comment.userId}`} className="font-bold text-accent-cyan text-sm hover:underline">@{userData?.username || 'user'}</Link>
             <span className="text-xs text-gray-400">{comment.createdAt?.toDate?.().toLocaleString?.() || ""}</span>
           </div>
           <p className="text-base">{comment.text}</p>
@@ -504,31 +598,23 @@ function Comment({ comment, onReply }: { comment: any; onReply: () => void }) {
 function CommentForm({ postId, postAuthorId, parentId, onCommentPosted, isReply = false }: { postId: string; postAuthorId: string; parentId: string | null; onCommentPosted: () => void; isReply?: boolean }) {
   const [newComment, setNewComment] = useState("");
   const [loading, setLoading] = useState(false);
+  const user = auth.currentUser;
 
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newComment.trim()) return;
+    if (!newComment.trim() || !user) return;
     setLoading(true);
-    const user = auth.currentUser;
-    if (!user) { setLoading(false); return; }
-    
-    let displayName = user.displayName || "";
-    let username = "";
-    let avatar_url = user.photoURL || "";
-    const profileSnap = await getDoc(doc(db, "users", user.uid));
-    if (profileSnap.exists()) {
-        const profileData = profileSnap.data();
-        displayName = profileData.name || displayName;
-        username = profileData.username || "";
-        avatar_url = profileData.avatar_url || avatar_url;
-    }
+
+    // Fetch full user profile to embed in comment
+    const userDoc = await getDoc(doc(db, "users", user.uid));
+    const userData = userDoc.data() || { name: user.displayName, username: user.displayName, avatar_url: user.photoURL };
 
     const commentData: any = {
       text: newComment,
       userId: user.uid,
-      displayName,
-      username,
-      avatar_url,
+      displayName: userData.name || user.displayName,
+      username: userData.username || user.displayName,
+      avatar_url: userData.avatar_url || user.photoURL,
       createdAt: serverTimestamp(),
       parentId: parentId,
     };
@@ -540,8 +626,8 @@ function CommentForm({ postId, postAuthorId, parentId, onCommentPosted, isReply 
       await addDoc(notifRef, {
         type: 'comment',
         fromUserId: user.uid,
-        fromUsername: user.displayName,
-        fromAvatarUrl: user.photoURL,
+        fromUsername: userData.username || user.displayName,
+        fromAvatarUrl: userData.avatar_url || user.photoURL,
         postId: postId,
         postContent: newComment.substring(0, 50),
         createdAt: serverTimestamp(),
@@ -575,21 +661,87 @@ function CommentForm({ postId, postAuthorId, parentId, onCommentPosted, isReply 
   )
 }
 
+function FlashModal({ userFlashes, onClose }: { userFlashes: any; onClose: () => void }) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [progress, setProgress] = useState(0);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-function FlashModal({ flash, onClose }: { flash: any; onClose: () => void }) {
+  const goToNext = () => setCurrentIndex(i => (i + 1) % userFlashes.flashes.length);
+  const goToPrev = () => setCurrentIndex(i => (i - 1 + userFlashes.flashes.length) % userFlashes.flashes.length);
+
+  useEffect(() => {
+    const flash = userFlashes.flashes[currentIndex];
+    const isVideo = flash.mediaUrl && flash.mediaUrl.match(/\.(mp4|webm|ogg)$/i);
+    setProgress(0);
+    
+    if (timerRef.current) clearInterval(timerRef.current);
+    
+    if (!isVideo) {
+      timerRef.current = setInterval(() => {
+        setProgress(p => {
+          if (p >= 100) {
+            goToNext();
+            return 0;
+          }
+          return p + (100 / 50); // 5 seconds duration
+        });
+      }, 100);
+    }
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [currentIndex, userFlashes]);
+
+  const handleVideoTimeUpdate = () => {
+    if (videoRef.current) {
+      setProgress((videoRef.current.currentTime / videoRef.current.duration) * 100);
+    }
+  };
+  const handleVideoEnded = () => {
+      goToNext();
+  };
+
+  const currentFlash = userFlashes.flashes[currentIndex];
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-      <div className="bg-white dark:bg-card rounded-2xl p-6 w-full max-w-md relative animate-pop shadow-xl border border-gray-100 dark:border-accent-cyan/20 flex flex-col items-center">
-        <button onClick={onClose} className="absolute top-2 right-2 text-accent-pink text-2xl">&times;</button>
-        {flash.mediaUrl ? (
-          flash.mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? (
-            <video src={flash.mediaUrl} controls autoPlay className="w-full rounded-xl mb-4" />
-          ) : (
-            <img src={flash.mediaUrl} alt="flash" className="w-full rounded-xl mb-4" />
-          )
-        ) : null}
-        {flash.caption && <div className="text-[#E0E0E0] font-semibold mb-2 whitespace-pre-line px-4 py-2 rounded-xl" style={{ background: 'rgba(0,0,0,0.5)' }}>{flash.caption}</div>}
-        <div className="text-xs text-gray-400">Expires: {flash.expiresAt?.toDate?.().toLocaleString?.() || "in 24h"}</div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90" onClick={onClose}>
+      <div className="relative w-full max-w-lg h-[90vh] flex flex-col items-center justify-center" onClick={e => e.stopPropagation()}>
+        <button onClick={onClose} className="absolute top-2 right-2 text-white text-3xl z-20">&times;</button>
+        {/* Progress Bars */}
+        <div className="absolute top-4 left-2 right-2 flex gap-1 z-20">
+            {userFlashes.flashes.map((_:any, idx:number) => (
+                <div key={idx} className="flex-1 h-1 bg-white/30 rounded-full">
+                    <div className="h-full bg-white rounded-full" style={{ width: `${idx === currentIndex ? progress : (idx < currentIndex ? 100 : 0)}%` }}/>
+                </div>
+            ))}
+        </div>
+        
+        <div className="w-full h-full relative">
+            {currentFlash.mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? (
+                <video
+                    ref={videoRef}
+                    src={currentFlash.mediaUrl}
+                    className="w-full h-full object-contain"
+                    autoPlay
+                    onTimeUpdate={handleVideoTimeUpdate}
+                    onEnded={handleVideoEnded}
+                />
+            ) : (
+                <img src={currentFlash.mediaUrl} alt="flash" className="w-full h-full object-contain" />
+            )}
+            
+            {/* Navigation */}
+            <button onClick={goToPrev} className="absolute left-0 top-1/2 -translate-y-1/2 bg-black/20 text-white p-2 rounded-full"><FaChevronLeft/></button>
+            <button onClick={goToNext} className="absolute right-0 top-1/2 -translate-y-1/2 bg-black/20 text-white p-2 rounded-full"><FaChevronRight/></button>
+        </div>
+
+        {currentFlash.caption && (
+          <div className="absolute bottom-10 left-4 right-4 text-white text-center font-semibold p-2 bg-black/50 rounded-lg">
+            {currentFlash.caption}
+          </div>
+        )}
       </div>
     </div>
   );

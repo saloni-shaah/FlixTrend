@@ -1,6 +1,7 @@
 "use client";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { useAppState } from "@/utils/AppStateContext";
 
 function NavButton({ href, icon, label }: { href: string; icon: string; label: string }) {
   return (
@@ -13,7 +14,8 @@ function NavButton({ href, icon, label }: { href: string; icon: string; label: s
 
 export default function AppNavBar() {
   const pathname = usePathname();
-  const hideNav = pathname === "/login" || pathname === "/signup" || pathname === "/";
+  const { isCalling } = useAppState();
+  const hideNav = pathname === "/login" || pathname === "/signup" || pathname === "/" || pathname === "/signal" || isCalling;
   if (hideNav) return null;
   return (
     <nav className="fixed bottom-0 left-0 w-full z-40 bg-black/80 border-t border-accent-cyan/20 flex justify-around items-center py-2">
@@ -23,4 +25,4 @@ export default function AppNavBar() {
       <NavButton href="/signal" icon="📩" label="Signal" />
     </nav>
   );
-} 
+}

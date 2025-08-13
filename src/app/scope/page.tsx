@@ -1,11 +1,12 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { getFirestore, collection, query, orderBy, onSnapshot, getDocs, where } from "firebase/firestore";
-import { app } from "@/utils/firebaseClient";
+import { app, auth } from "@/utils/firebaseClient";
 import { FaPlus, FaBell, FaCrown, FaCheckCircle, FaFire, FaUser, FaMusic, FaFilm, FaBook, FaLaptop, FaGlobe, FaStar, FaRegHeart, FaRegComment, FaEllipsisV } from "react-icons/fa";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useRef } from "react";
+import { PostCard } from "../home/page";
 
 const db = getFirestore(app);
 
@@ -43,40 +44,72 @@ function LikeCommentMore({ post }: { post: any }) {
   );
 }
 
+function TaggedPostsModal({ tag, posts, onClose }: { tag: string; posts: any[]; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="bg-white dark:bg-card rounded-2xl p-6 w-full max-w-2xl relative animate-pop shadow-xl border border-gray-100 dark:border-accent-cyan/20 flex flex-col">
+        <button onClick={onClose} className="absolute top-2 right-2 text-accent-pink text-2xl z-10">&times;</button>
+        <h2 className="text-2xl font-headline font-bold mb-4 text-accent-cyan">#{tag}</h2>
+        <div className="flex-1 overflow-y-auto max-h-[80vh] pr-2">
+            {posts.length === 0 ? (
+                 <div className="text-gray-400 text-center mt-16">
+                    <div className="text-4xl mb-2">🔭</div>
+                    <div className="text-lg font-semibold">No posts found for this tag</div>
+                 </div>
+            ) : (
+                <div className="w-full flex flex-col gap-6">
+                    {posts.map(post => <PostCard key={post.id} post={post} />)}
+                </div>
+            )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 export default function ScopePage() {
   const router = useRouter();
   const [search, setSearch] = useState("");
+  const [allPosts, setAllPosts] = useState<any[]>([]);
   const [shortVibes, setShortVibes] = useState<any[]>([]);
   const [suggestedCreators, setSuggestedCreators] = useState<any[]>([]);
   const [trendingTags, setTrendingTags] = useState<string[]>([]);
   const [trendRows, setTrendRows] = useState<any[]>([]);
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [taggedPosts, setTaggedPosts] = useState<any[]>([]);
+  const [starredPosts, setStarredPosts] = useState<any[]>([]);
   const [interests] = useState([
     { icon: <FaMusic />, label: "Music", color: "bg-gradient-to-tr from-pink-500 to-yellow-400" },
     { icon: <FaFilm />, label: "Movies", color: "bg-gradient-to-tr from-blue-500 to-purple-500" },
     { icon: <FaLaptop />, label: "Tech", color: "bg-gradient-to-tr from-green-400 to-blue-500" },
     { icon: <FaBook />, label: "Learning", color: "bg-gradient-to-tr from-orange-400 to-pink-500" },
     { icon: <FaGlobe />, label: "World", color: "bg-gradient-to-tr from-cyan-400 to-blue-400" },
-    { icon: <FaStar />, label: "Pop Culture", color: "bg-gradient-to-tr from-yellow-400 to-pink-400" },
+    { icon: <FaStar />, label: "Culture", color: "bg-gradient-to-tr from-yellow-400 to-pink-400" },
     { icon: <FaUser />, label: "Games", color: "bg-gradient-to-tr from-purple-500 to-green-400" },
     { icon: <FaCrown />, label: "Politics", color: "bg-gradient-to-tr from-red-400 to-yellow-400" },
     { icon: <FaFire />, label: "Memes", color: "bg-gradient-to-tr from-pink-400 to-green-400" },
   ]);
   const [activeShortIndex, setActiveShortIndex] = useState(0);
   const videoRefs = useRef<any[]>([]);
+  const currentUser = auth.currentUser;
 
   // Fetch real video posts for Short Vibes Reel
   useEffect(() => {
     const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
     const unsub = onSnapshot(q, (snapshot) => {
       const all = snapshot.docs.map((doc) => ({ id: doc.id, ...(doc.data() as any) }));
+      setAllPosts(all);
       setShortVibes(all.filter((p: any) => p.type === "media" && p.mediaUrl && p.mediaUrl.match(/\.(mp4|webm|ogg)$/i)));
       // Extract hashtags for trending
       const hashtags: Record<string, number> = {};
       all.forEach((post: any) => {
-        const matches = post.content?.match(/#\w+/g) || [];
-        matches.forEach((tag: string) => {
-          hashtags[tag] = (hashtags[tag] || 0) + 1;
-        });
+        if (post.hashtags && Array.isArray(post.hashtags)) {
+          post.hashtags.forEach((tag: string) => {
+            const cleanTag = tag.startsWith('#') ? tag : `#${tag}`;
+            hashtags[cleanTag] = (hashtags[cleanTag] || 0) + 1;
+          });
+        }
       });
       setTrendingTags(Object.entries(hashtags).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([tag]) => tag));
       // Trend rows (example: viral = most liked, fresh = most recent)
@@ -88,19 +121,58 @@ export default function ScopePage() {
     return () => unsub();
   }, []);
 
+  // Fetch starred posts
+  useEffect(() => {
+    if (!currentUser) return;
+    const q = query(collection(db, "users", currentUser.uid, "starredPosts"), orderBy("starredAt", "desc"));
+    const unsub = onSnapshot(q, (snapshot) => {
+      setStarredPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    return () => unsub();
+  }, [currentUser]);
+
   // Fetch real users for Suggested Creators
   useEffect(() => {
     async function fetchCreators() {
-      const usersSnap = await getDocs(collection(db, "users"));
+      const currentUser = auth.currentUser;
+      
+      // 1. Get all user IDs from posts to find active creators
+      const postsSnap = await getDocs(query(collection(db, "posts")));
+      const activeUserIds = [...new Set(postsSnap.docs.map(doc => doc.data().userId))];
+      
+      if (activeUserIds.length === 0) {
+        setSuggestedCreators([]);
+        return;
+      }
+      
+      // 2. Filter out the current user
+      const suggestableUserIds = activeUserIds.filter(uid => uid !== currentUser?.uid);
+      
+      if (suggestableUserIds.length === 0) {
+        setSuggestedCreators([]);
+        return;
+      }
+
+      // 3. Fetch profiles for the active and suggestable users
+      // Note: Firestore 'in' query is limited to 30 items. For more users, this needs pagination or a different approach.
+      const usersQuery = query(collection(db, "users"), where("userId", "in", suggestableUserIds.slice(0, 10)));
+      const usersSnap = await getDocs(usersQuery);
+      
       const users = usersSnap.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
-      setSuggestedCreators(
-        users
-          .sort((a: any, b: any) => (a.username || "").localeCompare(b.username || ""))
-          .slice(0, 12)
-      );
+      setSuggestedCreators(users);
     }
     fetchCreators();
   }, []);
+
+  const handleTagClick = (tag: string) => {
+    const lowerCaseTag = tag.toLowerCase();
+    const filtered = allPosts.filter(post => 
+        post.hashtags && Array.isArray(post.hashtags) && post.hashtags.some((h: string) => h.toLowerCase() === lowerCaseTag)
+    );
+    setTaggedPosts(filtered);
+    setSelectedTag(lowerCaseTag);
+  };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-primary via-secondary to-accent-cyan/10 font-sans relative">
@@ -114,10 +186,28 @@ export default function ScopePage() {
           onChange={e => setSearch(e.target.value)}
         />
       </div>
+      {/* Your Starred Posts Section */}
+      {starredPosts.length > 0 && (
+        <section className="py-8 px-4">
+            <h3 className="text-xl font-headline text-yellow-400 mb-4 flex items-center gap-2"><FaStar /> Your Starred Posts</h3>
+            <motion.div className="flex gap-4 overflow-x-auto scrollbar-hide">
+                {starredPosts.map((post) => (
+                    <motion.div key={post.id} className="min-w-[300px] w-[300px]" whileHover={{ scale: 1.02 }}>
+                        <PostCard post={post} />
+                    </motion.div>
+                ))}
+            </motion.div>
+        </section>
+      )}
       {/* Interest Tiles Grid (moved up, more colorful) */}
       <div className="py-8 px-4 grid grid-cols-2 sm:grid-cols-3 gap-6 max-w-4xl mx-auto">
         {interests.map((interest, i) => (
-          <motion.div key={interest.label} className={`rounded-2xl p-6 text-white font-bold text-xl flex flex-col items-center justify-center shadow-fab-glow cursor-pointer hover:scale-105 transition-all ${interest.color}`} whileTap={{ scale: 0.95 }}>
+          <motion.div 
+            key={interest.label} 
+            className={`rounded-2xl p-6 text-white font-bold text-xl flex flex-col items-center justify-center shadow-fab-glow cursor-pointer hover:scale-105 transition-all ${interest.color}`} 
+            whileTap={{ scale: 0.95 }}
+            onClick={() => handleTagClick(interest.label)}
+            >
             <span className="text-3xl mb-2 animate-pulse">{interest.icon}</span>
             {interest.label}
           </motion.div>
@@ -131,6 +221,7 @@ export default function ScopePage() {
             className="px-4 py-2 rounded-full bg-pink-500/80 text-white font-bold text-base shadow-fab-glow hover:scale-110 transition-all cursor-pointer border-2 border-accent-cyan animate-pulse"
             whileHover={{ scale: 1.15 }}
             style={{ textShadow: "0 0 8px #ff3cac" }}
+            onClick={() => handleTagClick(tag.replace('#', ''))}
           >
             <FaFire className="inline mr-1 animate-bounce" /> {tag}
           </motion.span>
@@ -241,22 +332,8 @@ export default function ScopePage() {
           ))}
         </div>
       </div>
-      {/* Bottom Nav */}
-      <nav className="fixed bottom-0 left-0 w-full z-40 bg-black/80 border-t border-accent-cyan/20 flex justify-around items-center py-2">
-        <NavButton href="/home" icon="🏠" label="VibeSpace" />
-        <NavButton href="/scope" icon="🌐" label={<span className="text-accent-cyan font-bold">Scope</span>} />
-        <NavButton href="/squad" icon="👥" label="Squad" />
-        <NavButton href="/signal" icon="📩" label="Signal" />
-      </nav>
+
+      {selectedTag && <TaggedPostsModal tag={selectedTag} posts={taggedPosts} onClose={() => setSelectedTag(null)} />}
     </div>
   );
 }
-
-function NavButton({ href, icon, label }: { href: string; icon: React.ReactNode; label: React.ReactNode }) {
-  return (
-    <a href={href} className="flex flex-col items-center text-xs text-gray-300 hover:text-accent-cyan transition-all">
-      <span className="text-2xl mb-1">{icon}</span>
-      {label}
-    </a>
-  );
-} 

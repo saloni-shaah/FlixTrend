@@ -1,8 +1,7 @@
 "use client";
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { getFirestore, collection, addDoc, serverTimestamp, getDoc, doc } from "firebase/firestore";
 import { auth } from "@/utils/firebaseClient";
-import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 const db = getFirestore();
@@ -11,7 +10,7 @@ async function uploadToCloudinary(file: File, onProgress?: (percent: number) => 
   const url = `https://api.cloudinary.com/v1_1/drrzvi2jp/upload`;
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("upload_preset", "flixtrend_unsigned"); // Use your new preset name
+  formData.append("upload_preset", "flixtrend_unsigned");
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", url);
@@ -33,40 +32,13 @@ async function uploadToCloudinary(file: File, onProgress?: (percent: number) => 
   });
 }
 
-const spotifyClientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
-const spotifyRedirectUri = process.env.NEXT_PUBLIC_SPOTIFY_REDIRECT_URI;
-const spotifyScopes = [
-  'user-read-private',
-  'user-read-email',
-  'user-read-playback-state',
-  'user-modify-playback-state',
-  'playlist-read-private',
-  'playlist-read-collaborative',
-  'user-library-read',
-  'user-library-modify',
-  'user-read-currently-playing',
-  'user-read-recently-played',
-  'user-top-read',
-  'streaming',
-].join(' ');
-function getSpotifyAuthUrl() {
-  const params = new URLSearchParams({
-    client_id: spotifyClientId || '',
-    response_type: 'code',
-    redirect_uri: spotifyRedirectUri || '',
-    scope: spotifyScopes,
-    show_dialog: 'true',
-  });
-  return `https://accounts.spotify.com/authorize?${params.toString()}`;
-}
-
 const backgroundColors = [
   '#ffffff', '#ffadad', '#ffd6a5', '#fdffb6', '#caffbf', '#9bf6ff',
   '#a0c4ff', '#bdb2ff', '#ffc6ff', '#fffffc', '#f1f1f1', '#e0e0e0'
 ];
 
 export default function CreatePostModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [type, setType] = useState<"text" | "media" | "poll" | "flash">("text");
+  const [type, setType] = useState<"text" | "media" | "audio" | "poll" | "flash">("text");
   const [content, setContent] = useState("");
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
   const [mediaFile, setMediaFile] = useState<File | null>(null);
@@ -80,13 +52,11 @@ export default function CreatePostModal({ open, onClose }: { open: boolean; onCl
   const [backgroundColor, setBackgroundColor] = useState('#ffffff');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+  const [scheduleDate, setScheduleDate] = useState<Date | null>(null);
   const [spotifyToken, setSpotifyToken] = useState<string | null>(null);
   const [songSearch, setSongSearch] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [selectedSong, setSelectedSong] = useState<any>(null);
-  const [pendingSong, setPendingSong] = useState<any>(null);
-  const [trimSong, setTrimSong] = useState(false);
-  const [trimDuration, setTrimDuration] = useState<number>(5); // default 5s
   const [showSongSearch, setShowSongSearch] = useState(false);
 
   useEffect(() => {
@@ -109,17 +79,7 @@ export default function CreatePostModal({ open, onClose }: { open: boolean; onCl
 
   useEffect(() => {
     if (mediaFile && mediaFile.type.startsWith('video')) {
-      const video = document.createElement('video');
-      video.preload = 'metadata';
-      video.onloadedmetadata = () => {
-        let duration = Math.round(video.duration);
-        if (duration > 30) duration = 30;
-        setTrimDuration(duration);
-      };
-      video.src = URL.createObjectURL(mediaFile);
-    } else {
-      setThumbnailFile(null);
-      setThumbnailUrl(null);
+       // logic for video thumbnail can be added here
     }
   }, [mediaFile]);
 
@@ -154,7 +114,7 @@ export default function CreatePostModal({ open, onClose }: { open: boolean; onCl
       if (!user) throw new Error("Not logged in");
       
       let uploadedMediaUrl = null;
-      if ((type === "media" || type === "flash") && mediaFile) {
+      if ((type === "media" || type === "flash" || type === "audio") && mediaFile) {
         uploadedMediaUrl = await uploadToCloudinary(mediaFile, (p) => setUploadProgress(p));
         if (!uploadedMediaUrl) throw new Error("Media upload failed");
       }
@@ -165,17 +125,11 @@ export default function CreatePostModal({ open, onClose }: { open: boolean; onCl
         if (!uploadedThumbnailUrl) throw new Error("Thumbnail upload failed");
       }
 
-      let displayName = user.displayName || "";
-      let username = "";
-      let avatar_url = "";
       const profileSnap = await getDoc(doc(db, "users", user.uid));
-      if (profileSnap.exists()) {
-        const profileData = profileSnap.data();
-        displayName = profileData.name || displayName;
-        username = profileData.username || "";
-        avatar_url = profileData.avatar_url || "";
-      }
+      const profileData = profileSnap.exists() ? profileSnap.data() : {};
 
+      const postHashtags = hashtags.split(',').map(h => h.trim().replace('#','')).filter(h => h);
+      
       const songData = selectedSong ? {
         id: selectedSong.id,
         name: selectedSong.name,
@@ -184,54 +138,49 @@ export default function CreatePostModal({ open, onClose }: { open: boolean; onCl
         albumArt: selectedSong.album.images[0]?.url,
         preview_url: selectedSong.preview_url,
         external_url: selectedSong.external_urls.spotify,
-        trim: trimSong,
-        trimDuration: trimSong ? trimDuration : null,
       } : null;
 
-      const postHashtags = hashtags.split(',').map(h => h.trim()).filter(h => h);
+      const postData: any = {
+        userId: user.uid,
+        displayName: profileData.name || user.displayName,
+        username: profileData.username,
+        avatar_url: profileData.avatar_url,
+        type,
+        content: content,
+        mediaUrl: uploadedMediaUrl,
+        thumbnailUrl: uploadedThumbnailUrl,
+        hashtags: postHashtags,
+        backgroundColor: type === 'text' ? backgroundColor : null,
+        pollOptions: type === "poll" ? pollOptions.filter((opt) => opt.trim()) : null,
+        createdAt: serverTimestamp(),
+        publishAt: scheduleDate || serverTimestamp(),
+        song: songData,
+      };
 
       if (type === "flash") {
         await addDoc(collection(db, "flashes"), {
-          userId: user.uid,
-          displayName,
-          username,
-          avatar_url,
-          mediaUrl: uploadedMediaUrl,
+          ...postData,
           caption: content,
-          createdAt: serverTimestamp(),
           expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-          song: songData,
         });
       } else {
-        const postData: any = {
-          userId: user.uid,
-          displayName,
-          username,
-          avatar_url,
-          type,
-          content: content,
-          mediaUrl: uploadedMediaUrl,
-          thumbnailUrl: uploadedThumbnailUrl,
-          hashtags: postHashtags,
-          backgroundColor: type === 'text' ? backgroundColor : null,
-          pollOptions: type === "poll" ? pollOptions.filter((opt) => opt.trim()) : null,
-          createdAt: serverTimestamp(),
-          song: songData,
-        };
-        await addDoc(collection(db, "posts"), postData);
+        const collectionRef = scheduleDate ? collection(db, "scheduledPosts") : collection(db, "posts");
+        await addDoc(collectionRef, postData);
       }
       
+      // Reset form
       setContent("");
       setMediaUrl(null);
       setMediaFile(null);
       setPollOptions(["", ""]);
       setUploadProgress(null);
-      setSelectedSong(null);
-      setShowSongSearch(false);
       setHashtags("");
       setBackgroundColor("#ffffff");
       setThumbnailFile(null);
       setThumbnailUrl(null);
+      setScheduleDate(null);
+      setSelectedSong(null);
+      setShowSongSearch(false);
       onClose();
     } catch (err: any) {
       setError(err.message);
@@ -246,27 +195,17 @@ export default function CreatePostModal({ open, onClose }: { open: boolean; onCl
       <div className="bg-white dark:bg-card rounded-2xl p-6 w-full max-w-md relative animate-pop shadow-xl border border-gray-100 dark:border-accent-cyan/20">
         <button onClick={onClose} className="absolute top-2 right-2 text-accent-pink text-2xl">&times;</button>
         <h2 className="text-xl font-headline font-bold mb-4 text-accent-cyan">Create Post</h2>
-        <div className="flex gap-2 mb-4">
-          <button onClick={() => setType("text")}
-            className={`px-3 py-1 rounded-full font-bold ${type === "text" ? "bg-accent-cyan text-primary" : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"}`}>Text</button>
-          <button onClick={() => setType("media")}
-            className={`px-3 py-1 rounded-full font-bold ${type === "media" ? "bg-accent-cyan text-primary" : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"}`}>Media</button>
-          <button onClick={() => setType("flash")}
-            className={`px-3 py-1 rounded-full font-bold ${type === "flash" ? "bg-accent-cyan text-primary" : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"}`}>Flash</button>
-          <button onClick={() => setType("poll")}
-            className={`px-3 py-1 rounded-full font-bold ${type === "poll" ? "bg-accent-cyan text-primary" : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"}`}>Poll</button>
+        <div className="flex gap-2 mb-4 flex-wrap">
+          <button onClick={() => setType("text")} className={`px-3 py-1 rounded-full font-bold ${type === "text" ? "bg-accent-cyan text-primary" : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"}`}>Text</button>
+          <button onClick={() => setType("media")} className={`px-3 py-1 rounded-full font-bold ${type === "media" ? "bg-accent-cyan text-primary" : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"}`}>Media</button>
+          <button onClick={() => setType("audio")} className={`px-3 py-1 rounded-full font-bold ${type === "audio" ? "bg-accent-cyan text-primary" : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"}`}>Audio</button>
+          <button onClick={() => setType("flash")} className={`px-3 py-1 rounded-full font-bold ${type === "flash" ? "bg-accent-cyan text-primary" : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"}`}>Flash</button>
+          <button onClick={() => setType("poll")} className={`px-3 py-1 rounded-full font-bold ${type === "poll" ? "bg-accent-cyan text-primary" : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"}`}>Poll</button>
         </div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {type === "text" && (
             <>
-              <textarea
-                className="w-full rounded-xl p-3 bg-gray-100 dark:bg-black/40 text-gray-800 dark:text-white border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink"
-                placeholder="What's on your mind?"
-                value={content}
-                onChange={e => setContent(e.target.value)}
-                required
-                style={{ backgroundColor: backgroundColor, color: backgroundColor === '#ffffff' ? '' : '#000000' }}
-              />
+              <textarea className="w-full rounded-xl p-3 bg-gray-100 dark:bg-black/40 text-gray-800 dark:text-white border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink" placeholder="What's on your mind?" value={content} onChange={e => setContent(e.target.value)} required style={{ backgroundColor: backgroundColor, color: backgroundColor === '#ffffff' ? '' : '#000000' }} />
               <div className="flex flex-wrap gap-2">
                 {backgroundColors.map(color => (
                   <button type="button" key={color} onClick={() => setBackgroundColor(color)} className="w-8 h-8 rounded-full border-2" style={{ backgroundColor: color, borderColor: backgroundColor === color ? 'var(--accent-pink)' : 'transparent' }} />
@@ -276,88 +215,58 @@ export default function CreatePostModal({ open, onClose }: { open: boolean; onCl
           )}
           {(type === "media" || type === "flash") && (
             <>
-              <textarea
-                className="w-full rounded-xl p-3 bg-gray-100 dark:bg-black/40 text-gray-800 dark:text-white border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink"
-                placeholder={type === 'flash' ? "Add a caption..." : "Say something..."}
-                value={content}
-                onChange={e => setContent(e.target.value)}
-              />
-               <input
-                type="file"
-                accept="image/*,video/*"
-                ref={fileInputRef}
-                onChange={handleMediaChange}
-                className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent-cyan/20 file:text-accent-cyan hover:file:bg-accent-cyan/40"
-                required
-              />
+              <textarea className="w-full rounded-xl p-3 bg-gray-100 dark:bg-black/40 text-gray-800 dark:text-white border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink" placeholder={type === 'flash' ? "Add a caption..." : "Say something..."} value={content} onChange={e => setContent(e.target.value)} />
+              <input type="file" accept="image/*,video/*" ref={fileInputRef} onChange={handleMediaChange} className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent-cyan/20 file:text-accent-cyan hover:file:bg-accent-cyan/40" required />
               {mediaUrl && (
                 <div className="mt-2">
-                  {mediaFile?.type.startsWith("video") ? (
-                    <video src={mediaUrl} controls className="w-full rounded-xl" />
-                  ) : (
-                    <img src={mediaUrl} alt="preview" className="w-full rounded-xl" />
-                  )}
+                  {mediaFile?.type.startsWith("video") ? <video src={mediaUrl} controls className="w-full rounded-xl" /> : <img src={mediaUrl} alt="preview" className="w-full rounded-xl" />}
                 </div>
               )}
+            </>
+          )}
+          {type === "audio" && (
+            <>
+              <textarea className="w-full rounded-xl p-3 bg-gray-100 dark:bg-black/40 text-gray-800 dark:text-white border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink" placeholder="Describe your audio..." value={content} onChange={e => setContent(e.target.value)} />
+              <input type="file" accept="audio/*" ref={fileInputRef} onChange={handleMediaChange} className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent-cyan/20 file:text-accent-cyan hover:file:bg-accent-cyan/40" required />
+              {mediaUrl && mediaFile?.type.startsWith("audio") && <div className="mt-2"><audio src={mediaUrl} controls className="w-full" /></div>}
             </>
           )}
           {type === 'media' && mediaFile?.type.startsWith('video') && (
              <div className="flex flex-col gap-2">
                 <label className="text-sm font-bold text-accent-cyan">Upload Thumbnail (Optional)</label>
-                <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleThumbnailChange}
-                    className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent-pink/20 file:text-accent-pink hover:file:bg-accent-pink/40"
-                />
+                <input type="file" accept="image/*" onChange={handleThumbnailChange} className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent-pink/20 file:text-accent-pink hover:file:bg-accent-pink/40" />
                 {thumbnailUrl && <img src={thumbnailUrl} alt="thumbnail preview" className="w-full rounded-xl mt-2" />}
             </div>
           )}
           {type === "poll" && (
             <div className="flex flex-col gap-2">
-              <input
-                className="w-full rounded-xl p-3 bg-gray-100 dark:bg-black/40 text-gray-800 dark:text-white border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink"
-                placeholder="Ask a question..."
-                value={content}
-                onChange={e => setContent(e.target.value)}
-                required
-              />
+              <input className="w-full rounded-xl p-3 bg-gray-100 dark:bg-black/40 text-gray-800 dark:text-white border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink" placeholder="Ask a question..." value={content} onChange={e => setContent(e.target.value)} required />
               {pollOptions.map((opt, idx) => (
                 <div key={idx} className="flex gap-2 items-center">
-                  <input
-                    className="flex-1 rounded-xl p-2 bg-gray-100 dark:bg-black/40 text-gray-800 dark:text-white border-2 border-accent-cyan focus:outline-none"
-                    placeholder={`Option ${idx + 1}`}
-                    value={opt}
-                    onChange={e => handlePollOptionChange(idx, e.target.value)}
-                    required
-                  />
-                  {pollOptions.length > 2 && (
-                    <button type="button" onClick={() => removePollOption(idx)} className="text-accent-pink text-xl">&times;</button>
-                  )}
+                  <input className="flex-1 rounded-xl p-2 bg-gray-100 dark:bg-black/40 text-gray-800 dark:text-white border-2 border-accent-cyan focus:outline-none" placeholder={`Option ${idx + 1}`} value={opt} onChange={e => handlePollOptionChange(idx, e.target.value)} required />
+                  {pollOptions.length > 2 && <button type="button" onClick={() => removePollOption(idx)} className="text-accent-pink text-xl">&times;</button>}
                 </div>
               ))}
               <button type="button" onClick={addPollOption} className="text-xs text-accent-cyan mt-1">+ Add Option</button>
             </div>
           )}
 
-           { type !== 'flash' && <input
-              type="text"
-              className="w-full rounded-xl p-3 bg-gray-100 dark:bg-black/40 text-gray-800 dark:text-white border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink"
-              placeholder="Add hashtags, e.g., #tech, #music"
-              value={hashtags}
-              onChange={e => setHashtags(e.target.value)}
-            />}
+           <input type="text" className="w-full rounded-xl p-3 bg-gray-100 dark:bg-black/40 text-gray-800 dark:text-white border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink" placeholder="Add hashtags, e.g., #tech, #music" value={hashtags} onChange={e => setHashtags(e.target.value)} />
 
-          { type !== 'flash' && <button
+          <div className="flex items-center gap-2">
+            {/* DatePicker removed */}
+          </div>
+
+          <button
             type="button"
             className="w-full px-4 py-2 rounded-full bg-green-500 text-white font-bold mb-2 hover:bg-green-600 transition-all"
             onClick={() => setShowSongSearch(v => !v)}
           >
-            {showSongSearch ? 'Hide Song Search' : 'Add Song'}
-          </button>}
+            {selectedSong ? `Song: ${selectedSong.name}` : (showSongSearch ? 'Cancel' : 'Add Song')}
+          </button>
           
-          {spotifyToken && showSongSearch && (
-            <div className="my-4">
+          {spotifyToken && showSongSearch && !selectedSong && (
+            <div className="my-4 p-2 bg-gray-100 dark:bg-black/40 rounded-lg">
               <form onSubmit={handleSongSearch} className="flex gap-2 mb-2">
                 <input
                   type="text"
@@ -372,7 +281,10 @@ export default function CreatePostModal({ open, onClose }: { open: boolean; onCl
                 <div className="max-h-48 overflow-y-auto bg-black/10 rounded-xl p-2">
                   {searchResults.map(track => (
                     <div key={track.id} className={`flex items-center gap-3 p-2 rounded cursor-pointer hover:bg-accent-cyan/10`}
-                      onClick={() => setSelectedSong(track)}>
+                      onClick={() => {
+                        setSelectedSong(track);
+                        setShowSongSearch(false);
+                      }}>
                       <img src={track.album.images[2]?.url} alt="album" className="w-10 h-10 rounded" />
                       <div>
                         <div className="font-bold text-accent-cyan">{track.name}</div>
@@ -392,16 +304,12 @@ export default function CreatePostModal({ open, onClose }: { open: boolean; onCl
                 <div className="font-bold text-accent-cyan text-base">{selectedSong.name}</div>
                 <div className="text-xs text-gray-400 mb-1">{selectedSong.artists.map((a: any) => a.name).join(", ")}</div>
               </div>
-              <button className="ml-auto px-2 py-1 rounded bg-red-200 text-red-700 text-xs font-bold" onClick={() => setSelectedSong(null)}>Remove</button>
+              <button type="button" className="ml-auto px-2 py-1 rounded bg-red-200 text-red-700 text-xs font-bold" onClick={() => setSelectedSong(null)}>Remove</button>
             </div>
           )}
           
-          <button
-            type="submit"
-            className="px-8 py-3 rounded-full bg-accent-cyan text-primary font-bold text-lg shadow-fab-glow hover:scale-105 hover:shadow-lg transition-all duration-200 disabled:opacity-60 mb-2"
-            disabled={loading || (uploadProgress !== null && uploadProgress < 100)}
-          >
-            {loading ? (uploadProgress !== null ? `Uploading... ${uploadProgress}%` : "Submitting...") : "Submit"}
+          <button type="submit" className="px-8 py-3 rounded-full bg-accent-cyan text-primary font-bold text-lg shadow-fab-glow hover:scale-105 hover:shadow-lg transition-all duration-200 disabled:opacity-60 mb-2" disabled={loading || (uploadProgress !== null && uploadProgress < 100)}>
+            {loading ? (uploadProgress !== null ? `Uploading... ${uploadProgress}%` : "Submitting...") : (scheduleDate ? "Schedule" : "Submit")}
           </button>
           {error && <div className="text-red-400 text-center animate-bounce mt-2">{error}</div>}
         </form>

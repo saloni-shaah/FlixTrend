@@ -1,49 +1,130 @@
 "use client";
 import React, { useEffect, useState, useRef } from "react";
-import { getFirestore, collection, query, where, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp, getDocs } from "firebase/firestore";
+import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp } from "firebase/firestore";
 import { auth } from "@/utils/firebaseClient";
+import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X } from "lucide-react";
+import { useAppState } from "@/utils/AppStateContext";
 
 const db = getFirestore();
+
+async function uploadToCloudinary(file: File, onProgress?: (percent: number) => void): Promise<string | null> {
+  const url = `https://api.cloudinary.com/v1_1/drrzvi2jp/upload`;
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", "flixtrend_unsigned");
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url);
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable && onProgress) {
+        onProgress(Math.round((event.loaded / event.total) * 100));
+      }
+    };
+    xhr.onload = () => {
+      const data = JSON.parse(xhr.responseText);
+      if (xhr.status === 200 && data.secure_url) {
+        resolve(data.secure_url);
+      } else {
+        reject(new Error(data.error?.message || "Upload failed"));
+      }
+    };
+    xhr.onerror = () => reject(new Error("Upload failed"));
+    xhr.send(formData);
+  });
+}
+
 
 function getChatId(uid1: string, uid2: string) {
   return [uid1, uid2].sort().join("_");
 }
 
+function VideoCallModal({ peer, onClose }: { peer: any, onClose: () => void }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [hasCameraPermission, setHasCameraPermission] = useState(false);
+
+  useEffect(() => {
+    const getCameraPermission = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        setHasCameraPermission(true);
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      } catch (error) {
+        console.error('Error accessing camera:', error);
+        setHasCameraPermission(false);
+      }
+    };
+
+    getCameraPermission();
+
+    return () => {
+      if (videoRef.current && videoRef.current.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach(track => track.stop());
+      }
+    }
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-[100] bg-black flex flex-col">
+      <div className="relative flex-1 flex items-center justify-center">
+        <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted />
+        {!hasCameraPermission &&
+          <div className="absolute inset-0 flex items-center justify-center bg-black/70 text-white text-center p-4">
+            <div>
+              <h2 className="text-2xl font-bold mb-2">Camera Access Required</h2>
+              <p>Please allow camera and microphone access in your browser settings to use video calls.</p>
+            </div>
+          </div>
+        }
+        <div className="absolute top-4 left-4 text-white">
+          <h3 className="text-xl font-bold">{peer.name}</h3>
+          <p className="text-sm">Connecting...</p>
+        </div>
+      </div>
+      <div className="bg-black/50 p-4 flex justify-center items-center gap-4">
+        <button className="p-3 bg-gray-600 rounded-full text-white"><Mic size={24} /></button>
+        <button className="p-3 bg-gray-600 rounded-full text-white"><Video size={24} /></button>
+        <button onClick={onClose} className="p-4 bg-red-500 rounded-full text-white"><Phone size={24} /></button>
+      </div>
+    </div>
+  )
+}
+
+
 function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
-  const [mutuals, setMutuals] = useState<any[]>([]); // Users you can chat with
+  const [mutuals, setMutuals] = useState<any[]>([]);
   const [selectedChat, setSelectedChat] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { useMediaQuery } = require("@uidotdev/usehooks"); // Dynamically require
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { useMediaQuery } = require("@uidotdev/usehooks");
   const isMobile = useMediaQuery("(max-width: 767px)");
+  const { isCalling, setIsCalling, callTarget, setCallTarget } = useAppState();
 
-  // Fetch mutuals (users you follow or who follow you)
   useEffect(() => {
     if (!firebaseUser) return;
-    // Real-time listeners for following and followers
     const followingUnsub = onSnapshot(collection(db, "users", firebaseUser.uid, "following"), async (followingSnap) => {
       const following = followingSnap.docs.map((doc) => doc.id);
       const followersUnsub = onSnapshot(collection(db, "users", firebaseUser.uid, "followers"), async (followersSnap) => {
         const followers = followersSnap.docs.map((doc) => doc.id);
         const mutualUids = Array.from(new Set([...following, ...followers])).filter((uid) => uid !== firebaseUser.uid);
-        // Fetch user profiles
         const mutualProfiles = await Promise.all(
           mutualUids.map(async (uid) => {
             const userDoc = await getDoc(doc(db, "users", uid));
             return userDoc.exists() ? { uid, ...userDoc.data() } : null;
           })
         );
-        setMutuals(mutualProfiles.filter(Boolean));
+        setMutuals(mutualProfiles.filter(Boolean) as any[]);
       });
-      // Clean up followers listener
       return () => followersUnsub();
     });
-    // Clean up following listener
     return () => followingUnsub();
   }, [firebaseUser]);
 
-  // Fetch messages for selected chat
   useEffect(() => {
     if (!selectedChat || !firebaseUser) return;
     const chatId = getChatId(firebaseUser.uid, selectedChat.uid);
@@ -54,133 +135,175 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
     return () => unsub();
   }, [selectedChat, firebaseUser]);
 
-  // Auto-scroll to latest message
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Send a message
-  const handleSend = async (e: React.FormEvent) => {
+  const handleSend = async (e: React.FormEvent, mediaUrl: string | null = null, type: 'text' | 'image' | 'video' | 'audio' = 'text') => {
     e.preventDefault();
-    if (!newMessage.trim() || !firebaseUser || !selectedChat) return;
+    if ((!newMessage.trim() && !mediaUrl) || !firebaseUser || !selectedChat) return;
+
     const chatId = getChatId(firebaseUser.uid, selectedChat.uid);
-    await addDoc(collection(db, "chats", chatId, "messages"), {
-      sender: firebaseUser.uid,
-      text: newMessage,
-      createdAt: serverTimestamp(),
-    });
+    const messageData: any = {
+        sender: firebaseUser.uid,
+        createdAt: serverTimestamp(),
+        type: type,
+    };
+
+    if (mediaUrl) {
+        messageData.mediaUrl = mediaUrl;
+        messageData.text = newMessage; // Caption
+    } else {
+        messageData.text = newMessage;
+    }
+
+    await addDoc(collection(db, "chats", chatId, "messages"), messageData);
     setNewMessage("");
   };
 
-  // WhatsApp-like UI
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Determine file type
+    let type: 'image' | 'video' | 'audio' = 'image';
+    if (file.type.startsWith('video/')) type = 'video';
+    if (file.type.startsWith('audio/')) type = 'audio';
+
+    const caption = newMessage; // use current input as caption
+    
+    // Upload and send
+    try {
+        const mediaUrl = await uploadToCloudinary(file);
+        if (mediaUrl) {
+            handleSend(new Event('submit') as any, mediaUrl, type);
+        }
+    } catch (error) {
+        console.error("Upload failed:", error);
+        alert("Sorry, the file upload failed.");
+    }
+
+    // Reset file input
+    if (e.target) e.target.value = '';
+  };
+  
+  const handleCall = async (type: 'video' | 'voice') => {
+    if (!selectedChat || !firebaseUser) return;
+    
+    if (type === 'video') {
+      setCallTarget(selectedChat);
+      setIsCalling(true);
+    } else {
+      alert(`Starting voice call with ${selectedChat.name}... (Feature coming soon!)`);
+    }
+
+    // Create a notification for a missed call
+    const notifRef = collection(db, "notifications", selectedChat.uid, "user_notifications");
+    await addDoc(notifRef, {
+      type: 'missed_call',
+      callType: type,
+      fromUserId: firebaseUser.uid,
+      fromUsername: firebaseUser.displayName,
+      fromAvatarUrl: firebaseUser.photoURL,
+      createdAt: serverTimestamp(),
+      read: false,
+    });
+  };
+  
+  const getInitials = (user: any) => user?.name?.[0] || user?.username?.[0] || "U";
+
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-b from-primary via-secondary to-accent-cyan/10">
-      <h2 className="text-lg font-headline text-accent-cyan mb-4 px-4 pt-6 md:block hidden">Signal (Chats)</h2>
-      <div className="flex flex-1 overflow-hidden rounded-2xl shadow-lg mx-auto max-w-4xl bg-white/80 dark:bg-black/60 border border-accent-cyan/20 md:flex-row flex-col" style={{ minHeight: 500 }}>
-        {/* Chat List */}
-        <div className={`md:w-1/3 w-full min-w-[220px] border-r border-accent-cyan/10 bg-white/90 dark:bg-card/80 flex flex-col ${isMobile && selectedChat ? "hidden" : "block"}`}>
-          <div className="p-4 font-bold text-accent-cyan text-xl border-b border-accent-cyan/10">Chats</div>
-          <div className="flex-1 overflow-y-auto">
-            {mutuals.length === 0 ? (
-              <div className="text-gray-400 text-center mt-8">No contacts yet</div>
-            ) : (
-              mutuals.map((user) => (
-                <button
-                  key={user.uid}
-                  className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-accent-cyan/10 transition-all ${selectedChat?.uid === user.uid ? "bg-accent-cyan/20" : ""}`}
-                  onClick={() => setSelectedChat(user)}
-                >
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accentPink to-accentCyan flex items-center justify-center text-white font-bold text-lg">
-                    {user.name ? user.name[0] : user.username?.[0] || "U"}
-                  </div>
-                  <div className="flex flex-col items-start">
-                    <span className="font-headline text-accent-cyan text-sm">@{user.username || (user.name ? user.name.replace(/\s+/g, "").toLowerCase() : "user")}</span>
-                    <span className="text-xs text-gray-500">{user.bio || "No bio"}</span>
-                  </div>
-                </button>
-              ))
-            )}
-          </div>
-        </div>
-        {/* Chat Window */}
-        <div className={`flex-1 flex flex-col relative bg-gradient-to-b from-white/90 dark:from-black/90 to-accent-cyan/5 rounded-r-2xl ${isMobile && !selectedChat ? "hidden" : "block"}`}>
-          {selectedChat ? (
-            <>
-              <div className="flex items-center gap-3 p-4 border-b border-accent-cyan/10 bg-white/90 dark:bg-card/80 rounded-tr-2xl">
-                {isMobile && (
-                  <button className="mr-2 text-accent-cyan text-2xl" onClick={() => setSelectedChat(null)}>&larr;</button>
-                )}
-                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accentPink to-accentCyan flex items-center justify-center text-white font-bold text-lg">
-                  {selectedChat.name ? selectedChat.name[0] : selectedChat.username?.[0] || "U"}
-                </div>
-                <div className="flex flex-col items-start">
-                  <span className="font-headline text-accent-cyan text-sm">@{selectedChat.username || (selectedChat.name ? selectedChat.name.replace(/\s+/g, "").toLowerCase() : "user")}</span>
-                  <span className="text-xs text-gray-500">{selectedChat.bio || "No bio"}</span>
-                </div>
-              </div>
-              <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2" style={{ minHeight: 0 }}>
-                {messages.length === 0 ? (
-                  <div className="text-gray-400 text-center mt-8">No messages yet</div>
-                ) : (
-                  messages.map((msg) => (
-                    <div
-                      key={msg.id}
-                      className={`max-w-[70%] px-4 py-2 rounded-2xl shadow text-base font-body mb-2 ${msg.sender === firebaseUser.uid ? "bg-black/70 text-[#E0E0E0] self-end" : "bg-white/90 dark:bg-card/90 text-black dark:text-white self-start"}`}
-                      style={msg.sender === firebaseUser.uid ? { textShadow: '1px 1px 4px rgba(0,0,0,0.7)', fontFamily: 'Inter, Poppins, Roboto, sans-serif', fontWeight: 600 } : {}}
-                    >
-                      {msg.text}
-                      <div className="text-xs text-gray-200 dark:text-gray-400 mt-1 text-right">
-                        {msg.createdAt?.toDate?.().toLocaleString?.() || "Just now"}
-                      </div>
-                    </div>
-                  ))
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-              {/* Sticky message input */}
-              <form onSubmit={handleSend} className="flex gap-2 p-4 border-t border-accent-cyan/10 bg-white/95 dark:bg-card/95 rounded-b-2xl sticky bottom-0 left-0 right-0 z-[60] pb-4 md:pb-4" style={{ boxShadow: "0 -2px 16px 0 rgba(0,0,0,0.04)" }}>
-                <input
-                  type="text"
-                  className="flex-1 rounded-full px-4 py-3 border border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-cyan bg-black/60 text-[#E0E0E0] text-base shadow font-semibold"
-                  style={{ textShadow: '1px 1px 4px rgba(0,0,0,0.7)', fontFamily: 'Inter, Poppins, Roboto, sans-serif' }}
-                  placeholder="Type a message..."
-                  value={newMessage}
-                  onChange={e => setNewMessage(e.target.value)}
-                  autoFocus
-                />
-                <button
-                  type="submit"
-                  className="px-6 py-3 rounded-full bg-accent-cyan text-primary font-bold text-lg hover:bg-accent-pink hover:text-white transition-all disabled:opacity-60 shadow"
-                  disabled={!newMessage.trim()}
-                >
-                  Send
-                </button>
-              </form>
-            </>
-          ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
-              <div className="text-4xl mb-2">💬</div>
-              <div className="text-lg font-semibold">Select a chat to start messaging</div>
-              <div className="text-sm">You can only chat with users you follow or who follow you.</div>
+    <>
+    {isCalling && callTarget && <VideoCallModal peer={callTarget} onClose={() => setIsCalling(false)}/>}
+    <div className="flex h-screen bg-transparent font-body text-white">
+        <div className={`w-full md:w-1/3 md:min-w-[350px] border-r border-accent-cyan/10 bg-black/60 flex flex-col ${isMobile && selectedChat ? "hidden" : ""}`}>
+            <div className="p-4 border-b border-accent-cyan/10">
+                <h2 className="text-xl font-headline font-bold text-accent-cyan">Signal</h2>
             </div>
-          )}
+            <div className="flex-1 overflow-y-auto">
+                {mutuals.length === 0 ? (
+                    <div className="text-gray-400 text-center p-8">No contacts yet. Follow some users to start chatting!</div>
+                ) : (
+                    mutuals.map((user) => (
+                        <button key={user.uid} className={`w-full flex items-center gap-4 px-4 py-3 text-left hover:bg-accent-cyan/10 transition-colors duration-200 ${selectedChat?.uid === user.uid ? "bg-accent-cyan/20" : ""}`} onClick={() => setSelectedChat(user)}>
+                            <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-xl overflow-hidden shrink-0">
+                                {user.avatar_url ? <img src={user.avatar_url} alt="avatar" className="w-full h-full object-cover"/> : getInitials(user)}
+                            </div>
+                            <div className="flex-1 overflow-hidden">
+                                <span className="font-bold text-white block truncate">{user.name || user.username}</span>
+                                <span className="text-xs text-gray-400 block truncate">@{user.username}</span>
+                            </div>
+                        </button>
+                    ))
+                )}
+            </div>
         </div>
-      </div>
+
+        <div className={`flex-1 flex flex-col bg-black/40 ${!selectedChat && isMobile ? "hidden" : ""}`}>
+            {selectedChat ? (
+                <>
+                    <div className="flex items-center gap-3 p-3 border-b border-accent-cyan/10 bg-black/60 shadow-md">
+                        {isMobile && <button onClick={() => setSelectedChat(null)} className="p-2 rounded-full hover:bg-accent-cyan/10"><ArrowLeft size={20}/></button>}
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-lg overflow-hidden shrink-0">
+                           {selectedChat.avatar_url ? <img src={selectedChat.avatar_url} alt="avatar" className="w-full h-full object-cover"/> : getInitials(selectedChat)}
+                        </div>
+                        <div className="flex-1">
+                            <h3 className="font-bold text-white">{selectedChat.name}</h3>
+                            <p className="text-xs text-green-400">Online</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => handleCall('video')} className="p-2 rounded-full hover:bg-accent-cyan/10"><Video size={20}/></button>
+                            <button onClick={() => handleCall('voice')} className="p-2 rounded-full hover:bg-accent-cyan/10"><Phone size={20}/></button>
+                        </div>
+                    </div>
+                    
+                    <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
+                        {messages.map(msg => (
+                            <div key={msg.id} className={`flex items-end gap-2 max-w-[80%] ${msg.sender === firebaseUser.uid ? "self-end flex-row-reverse" : "self-start"}`}>
+                                <div className={`px-4 py-2 rounded-2xl ${msg.sender === firebaseUser.uid ? "bg-accent-cyan text-black rounded-br-none" : "bg-gray-700 text-white rounded-bl-none"}`}>
+                                    {msg.type === 'image' && <img src={msg.mediaUrl} alt={msg.text || "image"} className="rounded-lg max-w-xs" />}
+                                    {msg.type === 'video' && <video src={msg.mediaUrl} controls className="rounded-lg max-w-xs" />}
+                                    {msg.type === 'audio' && <audio src={msg.mediaUrl} controls />}
+                                    {msg.text && <p className="mt-1">{msg.text}</p>}
+                                    <div className="text-xs mt-1 text-right opacity-70">
+                                        {msg.createdAt?.toDate?.().toLocaleTimeString() || ""}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                         <div ref={messagesEndRef} />
+                    </div>
+
+                    <form onSubmit={handleSend} className="flex items-center gap-2 p-4 border-t border-accent-cyan/10 bg-black/60">
+                         <div className="relative group">
+                            <button type="button" onClick={() => fileInputRef.current?.click()} className="p-3 rounded-full hover:bg-accent-cyan/20 transition-colors">
+                                <Paperclip size={20}/>
+                            </button>
+                         </div>
+                         <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*,video/*,audio/*" />
+                        <input type="text" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Type a message..." className="flex-1 bg-gray-700 rounded-full px-4 py-2 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-accent-cyan"/>
+                        <button type="submit" className="p-3 rounded-full bg-accent-cyan text-black" disabled={!newMessage.trim()}><Send size={20}/></button>
+                    </form>
+                </>
+            ) : (
+                <div className="flex-1 flex flex-col items-center justify-center text-gray-400 text-center p-4">
+                    <div className="text-5xl mb-4">💬</div>
+                    <h3 className="text-xl font-bold">Select a chat</h3>
+                    <p className="max-w-xs">Start a conversation with your mutuals. Your messages are private and secure.</p>
+                </div>
+            )}
+        </div>
     </div>
+    </>
   );
 }
 
-// Main export: only use useMediaQuery in the client
 export default function SignalPage() {
   const [firebaseUser, setFirebaseUser] = useState<any>(null);
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(async (user) => {
       setFirebaseUser(user);
       if (user) {
-        // Auto-create user doc in Firestore if missing
-        const db = getFirestore();
         const userDocRef = doc(db, "users", user.uid);
         const userDocSnap = await getDoc(userDocRef);
         if (!userDocSnap.exists()) {
@@ -199,9 +322,9 @@ export default function SignalPage() {
     });
     return () => unsub();
   }, []);
+  
   if (!firebaseUser) {
-    return <div className="flex min-h-screen items-center justify-center text-accent-cyan">Loading...</div>;
+    return <div className="flex min-h-screen items-center justify-center text-accent-cyan">Loading Signal...</div>;
   }
-  // Only render the client-only chat UI after user is loaded
-  return <div className="min-h-screen bg-gradient-to-br from-pink-500 via-yellow-400 via-blue-400 via-green-400 via-purple-500 via-orange-400 via-cyan-400 via-red-400 to-pink-400 transition-colors"><ClientOnlySignalPage firebaseUser={firebaseUser} /></div>;
-} 
+  return <ClientOnlySignalPage firebaseUser={firebaseUser} />;
+}
