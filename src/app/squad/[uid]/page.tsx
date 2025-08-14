@@ -3,8 +3,8 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { getFirestore, doc, getDoc, collection, query, where, getDocs, onSnapshot } from "firebase/firestore";
 import { auth } from "@/utils/firebaseClient";
-import { PostCard } from "../../home/page";
-import FollowButton from "../page";
+import { PostCard } from "@/components/PostCard";
+import { FollowButton } from "@/components/FollowButton";
 
 const db = getFirestore();
 
@@ -21,33 +21,45 @@ export default function UserProfilePage() {
   const [activeTab, setActiveTab] = useState("posts");
 
   useEffect(() => {
-    async function fetchProfile() {
-      setLoading(true);
-      const user = auth.currentUser;
+    const unsub = auth.onAuthStateChanged((user) => {
       setFirebaseUser(user);
+    });
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    async function fetchProfile() {
       if (!uid) {
-        setProfile(null);
         setLoading(false);
         return;
       }
+      setLoading(true);
+
       const docRef = doc(db, "users", uid);
       const docSnap = await getDoc(docRef);
       setProfile(docSnap.exists() ? docSnap.data() : null);
+
       // Fetch post count
       const postsQuery = query(collection(db, "posts"), where("userId", "==", uid));
       const userPostsSnap = await getDocs(postsQuery);
       setPostCount(userPostsSnap.size);
       setUserPosts(userPostsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      // Fetch followers count
-      const followersSnap = await getDocs(collection(db, "users", uid, "followers"));
-      setFollowers(followersSnap.size);
-      // Fetch following count
-      const followingSnap = await getDocs(collection(db, "users", uid, "following"));
-      setFollowing(followingSnap.size);
+      
       setLoading(false);
     }
     fetchProfile();
   }, [uid]);
+
+  useEffect(() => {
+    if (!uid) return;
+    const unsubFollowers = onSnapshot(collection(db, "users", uid, "followers"), snap => setFollowers(snap.size));
+    const unsubFollowing = onSnapshot(collection(db, "users", uid, "following"), snap => setFollowing(snap.size));
+    
+    return () => {
+      unsubFollowers();
+      unsubFollowing();
+    }
+  }, [uid])
 
   if (loading) {
     return <div className="flex flex-col min-h-screen items-center justify-center text-accent-cyan">Loading profile...</div>;
@@ -103,7 +115,7 @@ export default function UserProfilePage() {
         </div>
         {/* Follow/Unfollow button for other users */}
         {firebaseUser && firebaseUser.uid !== uid && (
-          <FollowButton user={profile} currentUser={firebaseUser} />
+          <FollowButton profileUser={profile} currentUser={firebaseUser} />
         )}
       </div>
       {/* Tabs */}
@@ -146,4 +158,4 @@ export default function UserProfilePage() {
       </div>
     </div>
   );
-} 
+}

@@ -4,38 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { auth } from "@/utils/firebaseClient";
 import Image from "next/image";
-
-function AlmightyLogoCSS({ size = 56 }: { size?: number }) {
-  return (
-    <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        background: 'radial-gradient(circle at 60% 40%, #E0F7FA 60%, #B388FF 100%)',
-        boxShadow: '0 0 24px #00F0FF, 0 0 8px #BF00FF',
-        position: 'relative',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-      className="almighty-swirl-logo"
-    >
-      <svg width={size * 0.9} height={size * 0.9} viewBox="0 0 100 100" style={{ position: 'absolute', left: '5%', top: '5%' }}>
-        <path d="M50 20 Q65 25 60 40 Q55 55 70 60 Q85 65 80 80 Q75 95 60 90 Q45 85 40 70 Q35 55 20 60 Q5 65 10 80 Q15 95 30 90 Q45 85 50 70 Q55 55 40 60 Q25 65 20 80 Q15 95 30 90 Q45 85 50 70" stroke="#00F0FF" strokeWidth="4" fill="none" />
-        <circle cx="50" cy="50" r="18" fill="url(#center)" stroke="#BF00FF" strokeWidth="2" />
-        <path d="M50 38 Q56 40 54 50 Q52 60 60 62" stroke="#FF3CAC" strokeWidth="2" fill="none" />
-        <path d="M50 62 Q44 60 46 50 Q48 40 40 38" stroke="#39FF14" strokeWidth="2" fill="none" />
-        <defs>
-          <radialGradient id="center" cx="0" cy="0" r="1" gradientTransform="translate(50 50) rotate(90) scale(18)">
-            <stop stopColor="#FF3CAC" />
-            <stop offset="1" stopColor="#00F0FF" />
-          </radialGradient>
-        </defs>
-      </svg>
-    </div>
-  );
-}
+import { AlmightyLogo } from "@/components/AlmightyLogo";
 
 export default function LandingPage() {
   const router = useRouter();
@@ -70,7 +39,7 @@ export default function LandingPage() {
       {/* Top Navbar */}
       <nav className="w-full flex justify-between items-center px-8 py-4 bg-black/70 border-b border-accent-cyan/20 fixed top-0 left-0 z-50 backdrop-blur-md">
         <div className="flex items-center gap-3">
-          <AlmightyLogoCSS size={40} />
+          <AlmightyLogo size={40} />
           <span className="font-headline text-2xl text-accent-cyan font-bold tracking-wide">FlixTrend</span>
         </div>
         <div className="flex gap-6 items-center">

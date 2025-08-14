@@ -2,12 +2,13 @@
 import React, { useEffect, useState, useRef } from "react";
 import { auth } from "@/utils/firebaseClient";
 import { getFirestore, doc, getDoc, setDoc, collection, query, where, getCountFromServer, getDocs, deleteDoc, onSnapshot, addDoc, serverTimestamp, orderBy } from "firebase/firestore";
-import { Cog, Palette, Lock, UserShield, MessageCircle, LogOut, Camera } from "lucide-react";
+import { Cog, Palette, Lock, UserShield, MessageCircle, LogOut, Camera, Star } from "lucide-react";
 import { signOut } from "firebase/auth";
-import { useRouter, useParams } from "next/navigation";
-import { PostCard } from "../home/page";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { PostCard } from "@/components/PostCard";
+import { FollowButton } from "@/components/FollowButton";
 
 const db = getFirestore();
 
@@ -38,8 +39,6 @@ async function uploadToCloudinary(file: File, onProgress?: (percent: number) => 
 }
 
 export default function SquadPage() {
-  const params = useParams();
-  const viewingUid = typeof params?.uid === 'string' ? params.uid : Array.isArray(params?.uid) ? params.uid[0] : null;
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [firebaseUser, setFirebaseUser] = useState<any>(null);
@@ -54,8 +53,7 @@ export default function SquadPage() {
   const [allUsers, setAllUsers] = useState<any[]>([]);
 
   useEffect(() => {
-    async function ensureUserDoc() {
-      const user = auth.currentUser;
+    const unsubAuth = auth.onAuthStateChanged(async (user) => {
       if (user) {
         setFirebaseUser(user);
         const userDocRef = doc(db, "users", user.uid);
@@ -75,98 +73,78 @@ export default function SquadPage() {
       } else {
         setFirebaseUser(null);
       }
-    }
-    const unsubAuth = auth.onAuthStateChanged(ensureUserDoc);
+    });
 
     return () => unsubAuth();
   }, []);
 
   useEffect(() => {
-    async function fetchProfile() {
-      setLoading(true);
-      const uid = viewingUid || firebaseUser?.uid;
-      
-      if (!uid) {
-        setProfile(null);
+    async function fetchProfileData() {
+        if (!firebaseUser) {
+            setLoading(false);
+            return;
+        }
+        setLoading(true);
+        const uid = firebaseUser.uid;
+
+        const docRef = doc(db, "users", uid);
+        const docSnap = await getDoc(docRef);
+        setProfile(docSnap.exists() ? docSnap.data() : null);
+
+        const postsQuery = query(collection(db, "posts"), where("userId", "==", uid));
+        const postsSnapshot = await getCountFromServer(postsQuery);
+        setPostCount(postsSnapshot.data().count || 0);
+
+        const userPostsSnap = await getDocs(postsQuery);
+        setUserPosts(userPostsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        
         setLoading(false);
-        return;
-      }
-
-      const docRef = doc(db, "users", uid);
-      const docSnap = await getDoc(docRef);
-      setProfile(docSnap.exists() ? docSnap.data() : null);
-
-      const postsQuery = query(collection(db, "posts"), where("userId", "==", uid));
-      const postsSnapshot = await getCountFromServer(postsQuery);
-      setPostCount(postsSnapshot.data().count || 0);
-
-      const userPostsSnap = await getDocs(postsQuery);
-      setUserPosts(userPostsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      
-      setLoading(false);
     }
-
-    if (firebaseUser) {
-        fetchProfile();
-    }
-  }, [viewingUid, firebaseUser, showEdit]);
+    fetchProfileData();
+  }, [firebaseUser, showEdit]);
 
   useEffect(() => {
-    let unsubFollowers: any = null;
-    let unsubFollowing: any = null;
-    let unsubStarred: any = null;
-    
-    const uid = viewingUid || firebaseUser?.uid;
+    if (!firebaseUser) return;
+    const uid = firebaseUser.uid;
 
-    if (uid) {
-      unsubFollowers = onSnapshot(collection(db, "users", uid, "followers"), snap => setFollowers(snap.size));
-      unsubFollowing = onSnapshot(collection(db, "users", uid, "following"), snap => setFollowing(snap.size));
-      
-      if (uid === firebaseUser?.uid) {
-        const q = query(collection(db, "users", uid, "starredPosts"), orderBy("starredAt", "desc"));
-        unsubStarred = onSnapshot(q, (snapshot) => {
-            setStarredPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        });
-      }
-    }
+    const unsubFollowers = onSnapshot(collection(db, "users", uid, "followers"), snap => setFollowers(snap.size));
+    const unsubFollowing = onSnapshot(collection(db, "users", uid, "following"), snap => setFollowing(snap.size));
+    
+    const q = query(collection(db, "users", uid, "starredPosts"), orderBy("starredAt", "desc"));
+    const unsubStarred = onSnapshot(q, (snapshot) => {
+        setStarredPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
 
     return () => {
-      if (unsubFollowers) unsubFollowers();
-      if (unsubFollowing) unsubFollowing();
-      if (unsubStarred) unsubStarred();
+      unsubFollowers();
+      unsubFollowing();
+      unsubStarred();
     };
-  }, [viewingUid, firebaseUser]);
+  }, [firebaseUser]);
   
   useEffect(() => {
+    if (!firebaseUser) return;
     async function fetchAllUsers() {
       const usersSnap = await getDocs(collection(db, "users"));
       const usersData = usersSnap.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
-      setAllUsers(usersData.filter(u => u.uid !== (viewingUid || firebaseUser?.uid)));
+      setAllUsers(usersData.filter(u => u.uid !== firebaseUser.uid));
     }
     fetchAllUsers();
-  }, [viewingUid, firebaseUser]);
+  }, [firebaseUser]);
 
 
   if (loading) {
     return <div className="flex flex-col min-h-screen items-center justify-center text-accent-cyan">Loading profile...</div>;
   }
-  if (!firebaseUser && !viewingUid) {
+  if (!firebaseUser) {
     return <div className="flex flex-col min-h-screen items-center justify-center text-red-400">Not logged in.</div>;
   }
   if (!profile) {
-    return <div className="flex flex-col min-h-screen items-center justify-center text-red-400">User not found.</div>;
+    return <div className="flex flex-col min-h-screen items-center justify-center text-red-400">Could not load profile.</div>;
   }
-
-  const isOwnProfile = !viewingUid || viewingUid === firebaseUser?.uid;
-  const displayProfile = isOwnProfile ? (profile || {
-    name: firebaseUser.displayName || "Your Name",
-    email: firebaseUser.email,
-    avatar_url: firebaseUser.photoURL,
-  }) : profile;
 
   return (
     <div className="flex flex-col min-h-screen pt-6 pb-24 px-2 md:px-8">
-      {isOwnProfile && (
         <button
           className="fixed top-6 right-6 z-50 btn-glass-icon"
           onClick={() => setShowSettings(true)}
@@ -174,12 +152,11 @@ export default function SquadPage() {
         >
           <Cog />
         </button>
-      )}
       {/* Banner */}
       <div className="relative h-40 md:h-60 w-full rounded-2xl overflow-hidden mb-8">
-        {displayProfile.banner_url ? (
+        {profile.banner_url ? (
           <img
-            src={displayProfile.banner_url}
+            src={profile.banner_url}
             alt="banner"
             className="absolute inset-0 w-full h-full object-cover"
           />
@@ -190,15 +167,15 @@ export default function SquadPage() {
       {/* Profile Card */}
       <div className="mx-auto w-full max-w-2xl glass-card p-6 -mt-24 flex flex-col items-center">
         <div className="w-32 h-32 rounded-full bg-accent-cyan border-4 border-accent-pink shadow-fab-glow mb-2 overflow-hidden -mt-20">
-          {displayProfile.avatar_url ? (
-            <img src={displayProfile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+          {profile.avatar_url ? (
+            <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
           ) : (
             <span className="text-5xl text-white flex items-center justify-center h-full w-full">👤</span>
           )}
         </div>
-        <h2 className="text-2xl font-headline font-bold mb-1 text-center">{displayProfile.name}</h2>
-        <p className="text-accent-cyan mb-2 text-center">@{displayProfile.username || "username"}</p>
-        <p className="text-gray-300 text-center mb-2">{displayProfile.bio || "This is your bio. Edit it to tell the world about your vibes!"}</p>
+        <h2 className="text-2xl font-headline font-bold mb-1 text-center">{profile.name}</h2>
+        <p className="text-accent-cyan mb-2 text-center">@{profile.username || "username"}</p>
+        <p className="text-gray-300 text-center mb-2">{profile.bio || "This is your bio. Edit it to tell the world about your vibes!"}</p>
         <div className="flex justify-center gap-8 my-4 w-full">
           <div className="flex flex-col items-center">
             <span className="font-bold text-lg text-accent-cyan">{postCount}</span>
@@ -214,21 +191,16 @@ export default function SquadPage() {
           </div>
         </div>
         <div className="flex gap-2 flex-wrap justify-center mb-2">
-          {displayProfile.interests && displayProfile.interests.split(",").map((interest: string) => (
+          {profile.interests && profile.interests.split(",").map((interest: string) => (
             <span key={interest} className="px-3 py-1 rounded-full bg-white/10 text-accent-cyan text-xs font-bold">{interest.trim()}</span>
           ))}
         </div>
-        {!isOwnProfile && (
-           <FollowButton user={displayProfile} currentUser={firebaseUser} />
-        )}
-        {isOwnProfile && (
-          <button className="btn-glass mt-4" onClick={() => setShowEdit(true)}>Edit Profile</button>
-        )}
+        <button className="btn-glass mt-4" onClick={() => setShowEdit(true)}>Edit Profile</button>
       </div>
       {/* Tabs */}
       <div className="flex justify-center gap-4 my-8">
         <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "posts" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("posts")}>Posts</button>
-        {isOwnProfile && <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "starred" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("starred")}>Starred</button>}
+        <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "starred" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("starred")}>Starred</button>
         <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "trends" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("trends")}>Trends</button>
         <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "drops" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("drops")}>Drops</button>
       </div>
@@ -249,7 +221,7 @@ export default function SquadPage() {
             </div>
           )
         )}
-        {activeTab === "starred" && isOwnProfile && (
+        {activeTab === "starred" && (
             starredPosts.length > 0 ? (
                 <div className="w-full max-w-xl flex flex-col gap-6">
                     {starredPosts.map((post) => (
@@ -303,7 +275,7 @@ export default function SquadPage() {
                     <div className="font-headline text-accent-cyan">{user.name}</div>
                     <div className="text-xs text-gray-500">@{user.username}</div>
                   </div>
-                  <FollowButton user={user} currentUser={firebaseUser} />
+                  <FollowButton profileUser={user} currentUser={firebaseUser} />
                 </motion.div>
               </Link>
             ))}
@@ -311,7 +283,7 @@ export default function SquadPage() {
         )}
       </div>
       {showEdit && (
-        <EditProfileModal profile={displayProfile} onClose={() => setShowEdit(false)} />
+        <EditProfileModal profile={profile} onClose={() => setShowEdit(false)} />
       )}
       {showSettings && (
         <SettingsModal onClose={() => setShowSettings(false)} />
@@ -440,8 +412,9 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
   const router = useRouter();
 
   useEffect(() => {
-    const isDark = document.documentElement.classList.contains('dark');
+    const isDark = document.documentElement.classList.contains('dark') || localStorage.getItem('theme') === 'dark';
     setDarkMode(isDark);
+    document.documentElement.classList.toggle('dark', isDark);
   }, []);
 
   const toggleDarkMode = () => {
@@ -497,49 +470,5 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
         </div>
       </motion.div>
     </div>
-  );
-}
-
-function FollowButton({ user, currentUser }: { user: any; currentUser: any; }) {
-  const [isFollowing, setIsFollowing] = useState(false);
-
-  useEffect(() => {
-    if (!currentUser || !user) return;
-    const unsub = onSnapshot(doc(db, "users", user.uid, "followers", currentUser.uid), (doc) => {
-      setIsFollowing(doc.exists());
-    });
-    return () => unsub();
-  }, [user, currentUser]);
-
-  const handleFollow = async () => {
-    if (!currentUser || !user) return;
-    const followersCol = collection(db, "users", user.uid, "followers");
-    const followingCol = collection(db, "users", currentUser.uid, "following");
-    const followDocRef = doc(followersCol, currentUser.uid);
-    const followingDocRef = doc(followingCol, user.uid);
-    
-    if (isFollowing) {
-      await deleteDoc(followDocRef);
-      await deleteDoc(followingDocRef);
-    } else {
-      await setDoc(followDocRef, { followedAt: new Date(), userId: currentUser.uid });
-      await setDoc(followingDocRef, { followedAt: new Date(), userId: user.uid });
-      
-      const notifRef = collection(db, "notifications", user.uid, "user_notifications");
-      await addDoc(notifRef, {
-        type: 'follow',
-        fromUserId: currentUser.uid,
-        fromUsername: currentUser.displayName,
-        fromAvatarUrl: currentUser.photoURL,
-        createdAt: serverTimestamp(),
-        read: false,
-      });
-    }
-  };
-  
-  return (
-    <button className={`btn-glass text-sm px-4 py-2 ${isFollowing ? "bg-accent-cyan/80 text-black" : "bg-accent-pink/80 text-white"}`} onClick={e => { e.preventDefault(); handleFollow(); }}>
-      {isFollowing ? "Unfollow" : "Follow"}
-    </button>
   );
 }
