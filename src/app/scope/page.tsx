@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { getFirestore, collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
+import { getFirestore, collection, query, onSnapshot, orderBy } from "firebase/firestore";
 import { ShortVibesPlayer } from "@/components/ShortVibesPlayer";
 import { app } from "@/utils/firebaseClient";
 
@@ -11,19 +11,24 @@ export default function ScopePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Query for posts that are videos and have a mediaUrl
+    // Query for all posts, ordered by creation date.
+    // Filtering will happen on the client side.
     const q = query(
       collection(db, "posts"),
-      where("mediaUrl", "!=", null),
       orderBy("createdAt", "desc")
     );
 
     const unsub = onSnapshot(q, (snapshot) => {
       const videos = snapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() }))
+        // Filter for documents that have a mediaUrl that ends with a video extension.
         .filter(post => post.mediaUrl && post.mediaUrl.match(/\.(mp4|webm|ogg)$/i));
       
       setShortVibes(videos);
+      setLoading(false);
+    }, (error) => {
+      // It's good practice to handle potential errors from the listener.
+      console.error("Error fetching posts:", error);
       setLoading(false);
     });
 
