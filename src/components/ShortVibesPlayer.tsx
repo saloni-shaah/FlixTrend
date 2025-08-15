@@ -3,9 +3,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Heart, MessageCircle, Share, Play } from 'lucide-react';
+import { Star, MessageCircle, Share, Play } from 'lucide-react';
 import Link from 'next/link';
-import { PostCard } from './PostCard'; // Assuming CommentModal is exported from PostCard
 import { ShareModal } from './ShareModal';
 
 function LikeCommentShare({ post, onCommentClick, onShareClick }: { post: any; onCommentClick: () => void; onShareClick: () => void; }) {
@@ -21,11 +20,11 @@ function LikeCommentShare({ post, onCommentClick, onShareClick }: { post: any; o
   return (
     <div className="flex flex-col items-center gap-6">
       <button 
-        className={`flex flex-col items-center gap-1 text-lg font-bold transition-all ${liked ? "text-red-500" : "text-white hover:text-red-400"}`} 
+        className={`flex flex-col items-center gap-1 text-lg font-bold transition-all ${liked ? "text-yellow-400" : "text-white hover:text-yellow-300"}`} 
         onClick={handleLike} 
         aria-label="Like"
       >
-        <Heart fill={liked ? 'currentColor' : 'none'} size={32} /> 
+        <Star fill={liked ? 'currentColor' : 'none'} size={32} /> 
         <span className="text-sm font-semibold">{likeCount}</span>
       </button>
       <button onClick={onCommentClick} className="flex flex-col items-center gap-1 text-lg font-bold text-white hover:text-accent-cyan transition-all" aria-label="Comment">
@@ -134,7 +133,7 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
                                 <div className="flex flex-col gap-2 max-w-[70%]">
                                     <Link href={`/squad/${short.userId}`} className="flex items-center gap-2 cursor-pointer group">
                                         <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-base overflow-hidden border-2 border-accent-pink group-hover:scale-110 transition-transform">
-                                            {short.avatar_url ? <img src={short.avatar_url} alt="avatar" className="w-full h-full object-cover"/> : short.displayName?.[0] || 'U'}
+                                            {short.avatar_url ? <img src={short.avatar_url} alt="avatar" className="w-full h--full object-cover"/> : short.displayName?.[0] || 'U'}
                                         </div>
                                         <span className="font-headline text-accent-cyan text-sm font-bold group-hover:underline">@{short.username || "user"}</span>
                                     </Link>
