@@ -15,7 +15,6 @@ export default function ScopePage() {
     const q = query(
       collection(db, "posts"),
       where("mediaUrl", "!=", null),
-      orderBy("mediaUrl"),
       orderBy("createdAt", "desc")
     );
 
