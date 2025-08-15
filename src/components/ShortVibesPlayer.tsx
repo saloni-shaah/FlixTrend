@@ -5,7 +5,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Heart, MessageCircle, Share, Play } from 'lucide-react';
 import Link from 'next/link';
-import { PostCard, CommentModal } from './PostCard'; // Assuming CommentModal is exported from PostCard
+import { PostCard } from './PostCard'; // Assuming CommentModal is exported from PostCard
 import { ShareModal } from './ShareModal';
 
 function LikeCommentShare({ post, onCommentClick, onShareClick }: { post: any; onCommentClick: () => void; onShareClick: () => void; }) {
@@ -44,9 +44,8 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
     const [activeShortIndex, setActiveShortIndex] = useState(0);
     const [isPlaying, setIsPlaying] = useState(true);
     const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
-    const [showCommentModal, setShowCommentModal] = useState(false);
     const [showShareModal, setShowShareModal] = useState(false);
-    const [selectedPost, setSelectedPost] = useState<any>(null);
+    const [selectedPostForShare, setSelectedPostForShare] = useState<any>(null);
 
     useEffect(() => {
         // Ensure the active video plays when the index changes
@@ -77,12 +76,11 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
     };
 
     const handleCommentClick = () => {
-        setSelectedPost(shortVibes[activeShortIndex]);
-        setShowCommentModal(true);
+        alert("Commenting feature is coming soon!");
     }
     
     const handleShareClick = () => {
-        setSelectedPost(shortVibes[activeShortIndex]);
+        setSelectedPostForShare(shortVibes[activeShortIndex]);
         setShowShareModal(true);
     }
 
@@ -161,16 +159,9 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
               <button className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 btn-glass-icon w-24 h-10" onClick={scrollDown}>&darr;</button>
             )}
         </div>
-        {showCommentModal && selectedPost && (
-            <CommentModal 
-                postId={selectedPost.id} 
-                postAuthorId={selectedPost.userId} 
-                onClose={() => setShowCommentModal(false)} 
-            />
-        )}
-        {showShareModal && selectedPost && (
+        {showShareModal && selectedPostForShare && (
             <ShareModal 
-                url={`${window.location.origin}/post/${selectedPost.id}`}
+                url={`${window.location.origin}/post/${selectedPostForShare.id}`}
                 onClose={() => setShowShareModal(false)}
             />
         )}
