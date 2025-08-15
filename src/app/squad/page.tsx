@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useEffect, useState, useRef } from "react";
 import { auth } from "@/utils/firebaseClient";
@@ -91,12 +92,15 @@ export default function SquadPage() {
         const docSnap = await getDoc(docRef);
         setProfile(docSnap.exists() ? docSnap.data() : null);
 
-        const postsQuery = query(collection(db, "posts"), where("userId", "==", uid), orderBy("createdAt", "desc"));
+        const postsQuery = query(collection(db, "posts"), where("userId", "==", uid));
         const postsSnapshot = await getCountFromServer(postsQuery);
         setPostCount(postsSnapshot.data().count || 0);
 
         const userPostsSnap = await getDocs(postsQuery);
-        setUserPosts(userPostsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        const postsData = userPostsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // Manually sort client-side
+        postsData.sort((a,b) => b.createdAt.toDate() - a.createdAt.toDate());
+        setUserPosts(postsData);
         
         setLoading(false);
     }

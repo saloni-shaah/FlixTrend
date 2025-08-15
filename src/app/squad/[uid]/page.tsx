@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
@@ -42,10 +43,13 @@ export default function UserProfilePage() {
       setProfile(docSnap.exists() ? docSnap.data() : null);
 
       // Fetch post count and posts
-      const postsQuery = query(collection(db, "posts"), where("userId", "==", uid), orderBy("createdAt", "desc"));
+      const postsQuery = query(collection(db, "posts"), where("userId", "==", uid));
       const userPostsSnap = await getDocs(postsQuery);
       setPostCount(userPostsSnap.size);
-      setUserPosts(userPostsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      // Manually sort by date client-side
+      const postsData = userPostsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      postsData.sort((a, b) => b.createdAt.toDate() - a.createdAt.toDate());
+      setUserPosts(postsData);
       
       setLoading(false);
     }
