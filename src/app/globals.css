@@ -39,6 +39,7 @@
   --accent-green: #4ECDC4;
   --accent-purple: #7D5FFF;
   --brand-gold: #FFB400;
+  --accent-cyan: #00F0FF;
 
   --card-background: rgba(242, 242, 242, 0.6);
   --glass-border: rgba(46, 46, 46, 0.1);
@@ -80,18 +81,20 @@
     --accent-green: #00B8A9; /* Teal Blue for dark mode */
     --accent-purple: #A29BFE;
     --brand-gold: #FFB400;
+    --accent-cyan: #00F0FF;
 
-    --card-background: rgba(40, 40, 44, 0.6);
-    --glass-border: rgba(234, 234, 234, 0.1);
+    --card-background: rgba(40, 40, 44, 0.7); /* Increased translucency */
+    --glass-border: rgba(234, 234, 234, 0.15); /* Slightly more visible border */
   }
 }
 
 body {
   background-color: hsl(var(--background));
   background-image: 
-    radial-gradient(circle at 15% 50%, var(--accent-green), transparent 35%),
-    radial-gradient(circle at 85% 30%, var(--accent-pink), transparent 35%),
-    radial-gradient(circle at 50% 90%, var(--accent-purple), transparent 35%);
+    radial-gradient(at 15% 15%, hsla(160, 100%, 50%, 0.3) 0px, transparent 50%),
+    radial-gradient(at 85% 20%, hsla(330, 100%, 71%, 0.3) 0px, transparent 50%),
+    radial-gradient(at 50% 85%, hsla(250, 100%, 70%, 0.3) 0px, transparent 50%),
+    radial-gradient(at 5% 90%, hsla(42, 100%, 50%, 0.2) 0px, transparent 50%);
   background-attachment: fixed;
   color: hsl(var(--foreground));
   font-family: 'Inter', 'Space Grotesk', Arial, Helvetica, sans-serif;
@@ -106,7 +109,7 @@ body {
 /* Base card style */
 .glass-card {
   background: var(--card-background);
-  backdrop-filter: blur(16px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
   border-radius: 1.5rem; /* 24px */
   border: 1px solid var(--glass-border);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
