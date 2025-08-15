@@ -1,10 +1,11 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { getFirestore, doc, getDoc, collection, query, where, getDocs, onSnapshot } from "firebase/firestore";
+import { getFirestore, doc, getDoc, collection, query, where, getDocs, onSnapshot, orderBy } from "firebase/firestore";
 import { auth } from "@/utils/firebaseClient";
 import { PostCard } from "@/components/PostCard";
 import { FollowButton } from "@/components/FollowButton";
+import { Star } from "lucide-react";
 
 const db = getFirestore();
 
@@ -18,6 +19,7 @@ export default function UserProfilePage() {
   const [followers, setFollowers] = useState(0);
   const [following, setFollowing] = useState(0);
   const [userPosts, setUserPosts] = useState<any[]>([]);
+  const [starredPosts, setStarredPosts] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("posts");
 
   useEffect(() => {
@@ -39,8 +41,8 @@ export default function UserProfilePage() {
       const docSnap = await getDoc(docRef);
       setProfile(docSnap.exists() ? docSnap.data() : null);
 
-      // Fetch post count
-      const postsQuery = query(collection(db, "posts"), where("userId", "==", uid));
+      // Fetch post count and posts
+      const postsQuery = query(collection(db, "posts"), where("userId", "==", uid), orderBy("createdAt", "desc"));
       const userPostsSnap = await getDocs(postsQuery);
       setPostCount(userPostsSnap.size);
       setUserPosts(userPostsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -55,9 +57,16 @@ export default function UserProfilePage() {
     const unsubFollowers = onSnapshot(collection(db, "users", uid, "followers"), snap => setFollowers(snap.size));
     const unsubFollowing = onSnapshot(collection(db, "users", uid, "following"), snap => setFollowing(snap.size));
     
+    // Fetch starred posts
+    const q = query(collection(db, "users", uid, "starredPosts"), orderBy("starredAt", "desc"));
+    const unsubStarred = onSnapshot(q, (snapshot) => {
+        setStarredPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
     return () => {
       unsubFollowers();
       unsubFollowing();
+      unsubStarred();
     }
   }, [uid])
 
@@ -67,11 +76,13 @@ export default function UserProfilePage() {
   if (!profile) {
     return <div className="flex flex-col min-h-screen items-center justify-center text-red-400">User not found.</div>;
   }
+  
+  const initials = profile.name?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || profile.username?.slice(0, 2).toUpperCase() || "U";
 
   return (
     <div className="flex flex-col min-h-screen pt-6 pb-24 px-2 md:px-8">
       {/* Banner */}
-      <div className="relative h-40 w-full rounded-2xl overflow-hidden mb-8">
+      <div className="relative h-40 md:h-60 w-full rounded-2xl overflow-hidden mb-8 glass-card">
         {profile.banner_url ? (
           <img
             src={profile.banner_url}
@@ -83,17 +94,17 @@ export default function UserProfilePage() {
         )}
       </div>
       {/* Profile Card */}
-      <div className="mx-auto w-full max-w-2xl bg-white/80 dark:bg-black/60 rounded-2xl shadow-lg p-6 -mt-24 flex flex-col items-center border border-accent-cyan/20">
+      <div className="mx-auto w-full max-w-2xl glass-card p-6 -mt-24 flex flex-col items-center">
         <div className="w-32 h-32 rounded-full bg-accent-cyan border-4 border-accent-pink shadow-fab-glow mb-2 overflow-hidden -mt-20">
           {profile.avatar_url ? (
             <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
           ) : (
-            <span className="text-5xl text-white flex items-center justify-center h-full w-full">👤</span>
+            <span className="text-5xl text-white flex items-center justify-center h-full w-full">{initials}</span>
           )}
         </div>
         <h2 className="text-2xl font-headline font-bold mb-1 text-center">{profile.name}</h2>
         <p className="text-accent-cyan mb-2 text-center">@{profile.username || "username"}</p>
-        <p className="text-gray-500 dark:text-gray-300 text-center mb-2">{profile.bio || "This is your bio."}</p>
+        <p className="text-gray-300 text-center mb-2">{profile.bio || "This is their bio."}</p>
         <div className="flex justify-center gap-8 my-4 w-full">
           <div className="flex flex-col items-center">
             <span className="font-bold text-lg text-accent-cyan">{postCount}</span>
@@ -110,7 +121,7 @@ export default function UserProfilePage() {
         </div>
         <div className="flex gap-2 flex-wrap justify-center mb-2">
           {profile.interests && profile.interests.split(",").map((interest: string) => (
-            <span key={interest} className="px-3 py-1 rounded-full bg-accent-cyan/20 text-accent-cyan text-xs font-bold">{interest.trim()}</span>
+            <span key={interest} className="px-3 py-1 rounded-full bg-white/10 text-accent-cyan text-xs font-bold">{interest.trim()}</span>
           ))}
         </div>
         {/* Follow/Unfollow button for other users */}
@@ -120,9 +131,8 @@ export default function UserProfilePage() {
       </div>
       {/* Tabs */}
       <div className="flex justify-center gap-4 my-8">
-        <button className={`px-4 py-2 rounded-full font-bold ${activeTab === "posts" ? "bg-accent-cyan/20 text-accent-cyan" : "bg-accent-cyan/10 text-accent-cyan"}`} onClick={() => setActiveTab("posts")}>Posts</button>
-        <button className={`px-4 py-2 rounded-full font-bold ${activeTab === "trends" ? "bg-accent-cyan/20 text-accent-cyan" : "bg-accent-cyan/10 text-accent-cyan"}`} onClick={() => setActiveTab("trends")}>Trends</button>
-        <button className={`px-4 py-2 rounded-full font-bold ${activeTab === "drops" ? "bg-accent-cyan/20 text-accent-cyan" : "bg-accent-cyan/10 text-accent-cyan"}`} onClick={() => setActiveTab("drops")}>Drops</button>
+        <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "posts" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("posts")}>Posts</button>
+        <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "starred" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("starred")}>Starred</button>
       </div>
       {/* Tab Content */}
       <div className="flex-1 flex flex-col items-center justify-center w-full">
@@ -141,19 +151,20 @@ export default function UserProfilePage() {
             </div>
           )
         )}
-        {activeTab === "trends" && (
-          <div className="text-gray-400 text-center mt-16">
-            <div className="text-4xl mb-2">📈</div>
-            <div className="text-lg font-semibold">No trends yet</div>
-            <div className="text-sm">Their trends will appear here!</div>
-          </div>
-        )}
-        {activeTab === "drops" && (
-          <div className="text-gray-400 text-center mt-16">
-            <div className="text-4xl mb-2">💧</div>
-            <div className="text-lg font-semibold">No drops yet</div>
-            <div className="text-sm">Their drops will appear here!</div>
-          </div>
+        {activeTab === "starred" && (
+            starredPosts.length > 0 ? (
+                <div className="w-full max-w-xl flex flex-col gap-6">
+                    {starredPosts.map((post) => (
+                        <PostCard key={post.id} post={post} />
+                    ))}
+                </div>
+            ) : (
+                <div className="text-gray-400 text-center mt-16">
+                    <div className="text-4xl mb-2"><Star/></div>
+                    <div className="text-lg font-semibold">No starred posts</div>
+                    <div className="text-sm">Their starred posts will appear here.</div>
+                </div>
+            )
         )}
       </div>
     </div>

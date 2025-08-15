@@ -1,8 +1,8 @@
 "use client";
 import React, { useEffect, useState, useRef } from "react";
 import { auth } from "@/utils/firebaseClient";
-import { getFirestore, doc, getDoc, setDoc, collection, query, where, getCountFromServer, getDocs, deleteDoc, onSnapshot, addDoc, serverTimestamp, orderBy } from "firebase/firestore";
-import { Cog, Palette, Lock, UserShield, MessageCircle, LogOut, Camera, Star } from "lucide-react";
+import { getFirestore, doc, getDoc, setDoc, collection, query, where, getCountFromServer, getDocs, onSnapshot, orderBy } from "firebase/firestore";
+import { Cog, Palette, Lock, UserShield, MessageCircle, LogOut, Camera, Star, Bell, Trash2, ShieldCheck, AtSign } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -64,7 +64,7 @@ export default function SquadPage() {
             name: user.displayName || "",
             username: user.displayName ? user.displayName.replace(/\s+/g, "").toLowerCase() : "",
             email: user.email || "",
-            avatar_url: user.photoURL || "",
+            avatar_url: `https://api.dicebear.com/8.x/bottts-neutral/svg?seed=${user.uid}`,
             bio: "",
             interests: "",
             createdAt: new Date(),
@@ -91,7 +91,7 @@ export default function SquadPage() {
         const docSnap = await getDoc(docRef);
         setProfile(docSnap.exists() ? docSnap.data() : null);
 
-        const postsQuery = query(collection(db, "posts"), where("userId", "==", uid));
+        const postsQuery = query(collection(db, "posts"), where("userId", "==", uid), orderBy("createdAt", "desc"));
         const postsSnapshot = await getCountFromServer(postsQuery);
         setPostCount(postsSnapshot.data().count || 0);
 
@@ -100,7 +100,7 @@ export default function SquadPage() {
         
         setLoading(false);
     }
-    fetchProfileData();
+    if (firebaseUser) fetchProfileData();
   }, [firebaseUser, showEdit]);
 
   useEffect(() => {
@@ -142,6 +142,8 @@ export default function SquadPage() {
   if (!profile) {
     return <div className="flex flex-col min-h-screen items-center justify-center text-red-400">Could not load profile.</div>;
   }
+  
+  const initials = profile.name?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || profile.username?.slice(0, 2).toUpperCase() || "U";
 
   return (
     <div className="flex flex-col min-h-screen pt-6 pb-24 px-2 md:px-8">
@@ -153,7 +155,7 @@ export default function SquadPage() {
           <Cog />
         </button>
       {/* Banner */}
-      <div className="relative h-40 md:h-60 w-full rounded-2xl overflow-hidden mb-8">
+      <div className="relative h-40 md:h-60 w-full rounded-2xl overflow-hidden mb-8 glass-card">
         {profile.banner_url ? (
           <img
             src={profile.banner_url}
@@ -170,7 +172,7 @@ export default function SquadPage() {
           {profile.avatar_url ? (
             <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
           ) : (
-            <span className="text-5xl text-white flex items-center justify-center h-full w-full">👤</span>
+            <span className="text-5xl text-white flex items-center justify-center h-full w-full">{initials}</span>
           )}
         </div>
         <h2 className="text-2xl font-headline font-bold mb-1 text-center">{profile.name}</h2>
@@ -201,8 +203,6 @@ export default function SquadPage() {
       <div className="flex justify-center gap-4 my-8">
         <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "posts" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("posts")}>Posts</button>
         <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "starred" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("starred")}>Starred</button>
-        <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "trends" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("trends")}>Trends</button>
-        <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "drops" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("drops")}>Drops</button>
       </div>
       {/* Tab Content */}
       <div className="flex-1 flex flex-col items-center justify-center w-full">
@@ -230,25 +230,11 @@ export default function SquadPage() {
                 </div>
             ) : (
                 <div className="text-gray-400 text-center mt-16">
-                    <div className="text-4xl mb-2">⭐</div>
+                    <div className="text-4xl mb-2"><Star /></div>
                     <div className="text-lg font-semibold">No starred posts</div>
                     <div className="text-sm">Your starred posts will appear here!</div>
                 </div>
             )
-        )}
-        {activeTab === "trends" && (
-          <div className="text-gray-400 text-center mt-16">
-            <div className="text-4xl mb-2">📈</div>
-            <div className="text-lg font-semibold">No trends yet</div>
-            <div className="text-sm">Your trends will appear here!</div>
-          </div>
-        )}
-        {activeTab === "drops" && (
-          <div className="text-gray-400 text-center mt-16">
-            <div className="text-4xl mb-2">💧</div>
-            <div className="text-lg font-semibold">No drops yet</div>
-            <div className="text-sm">Your drops will appear here!</div>
-          </div>
         )}
       </div>
       {/* Discover Other Users */}
@@ -408,63 +394,122 @@ function EditProfileModal({ profile, onClose }: { profile: any; onClose: () => v
 }
 
 function SettingsModal({ onClose }: { onClose: () => void }) {
-  const [darkMode, setDarkMode] = useState(false);
+  const [settings, setSettings] = useState({
+    darkMode: false,
+    accentColor: '#00F0FF',
+    dmPrivacy: 'everyone',
+    tagPrivacy: 'everyone',
+    pushNotifications: true,
+    emailNotifications: false
+  });
   const router = useRouter();
 
   useEffect(() => {
     const isDark = document.documentElement.classList.contains('dark') || localStorage.getItem('theme') === 'dark';
-    setDarkMode(isDark);
+    const savedAccent = localStorage.getItem('accentColor') || '#00F0FF';
+    setSettings(prev => ({ ...prev, darkMode: isDark, accentColor: savedAccent }));
     document.documentElement.classList.toggle('dark', isDark);
+    document.documentElement.style.setProperty('--accent-cyan', savedAccent); // This is a simplification
   }, []);
 
-  const toggleDarkMode = () => {
-    setDarkMode(prev => {
-      const isDark = !prev;
-      document.documentElement.classList.toggle('dark', isDark);
-      localStorage.setItem('theme', isDark ? 'dark' : 'light');
-      return isDark;
-    });
-  };
+  const handleSettingChange = (key: keyof typeof settings, value: any) => {
+    setSettings(prev => ({ ...prev, [key]: value }));
 
+    if (key === 'darkMode') {
+      document.documentElement.classList.toggle('dark', value);
+      localStorage.setItem('theme', value ? 'dark' : 'light');
+    }
+    if (key === 'accentColor') {
+      localStorage.setItem('accentColor', value);
+      // In a real app, you would have CSS variables for this
+      document.documentElement.style.setProperty('--accent-cyan', value);
+      alert("Note: Full theme application requires a refresh in this demo.");
+    }
+  };
+  
   const handleLogout = async () => {
     await signOut(auth);
     router.push("/login");
   };
+
+  const handleDeleteAccount = () => {
+    if(window.confirm("Are you sure you want to delete your account? This action is irreversible.")) {
+      alert("Account deletion feature coming soon.");
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <motion.div 
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="glass-card p-6 w-full max-w-lg relative"
+        className="glass-card p-6 w-full max-w-lg relative max-h-[90vh] flex flex-col"
       >
         <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white">&times;</button>
         <h2 className="text-2xl font-headline font-bold mb-6 text-accent-cyan flex items-center gap-2"><Cog /> Settings</h2>
-        <div className="flex flex-col gap-4">
+        
+        <div className="flex-1 overflow-y-auto pr-2 flex flex-col gap-4">
           <div className="bg-white/5 rounded-xl p-4">
             <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan"><Palette /> Theme & UI</h3>
             <div className="flex items-center justify-between py-2">
               <span>Dark Mode</span>
               <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" checked={darkMode} onChange={toggleDarkMode} className="sr-only peer" />
-                <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-accent-cyan peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-cyan"></div>
+                <input type="checkbox" checked={settings.darkMode} onChange={(e) => handleSettingChange('darkMode', e.target.checked)} className="sr-only peer" />
+                <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-accent-cyan peer-checked:after:translate-x-full after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-cyan"></div>
               </label>
+            </div>
+            <div className="flex items-center justify-between py-2">
+                <span>Accent Color</span>
+                <input type="color" value={settings.accentColor} onChange={(e) => handleSettingChange('accentColor', e.target.value)} className="w-10 h-10 bg-transparent border-none rounded-full cursor-pointer"/>
             </div>
           </div>
           
           <div className="bg-white/5 rounded-xl p-4">
             <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan"><Lock /> Privacy & Security</h3>
             <div className="flex items-center justify-between py-2">
-              <span>Who can DM you?</span>
-              <select className="input-glass text-sm">
-                <option>Everyone</option>
-                <option>Followers</option>
-                <option>No one</option>
+              <span><MessageCircle className="inline-block mr-2"/> Who can DM you?</span>
+              <select value={settings.dmPrivacy} onChange={(e) => handleSettingChange('dmPrivacy', e.target.value)} className="input-glass text-sm">
+                <option value="everyone">Everyone</option>
+                <option value="followers">Mutuals</option>
+                <option value="none">No one</option>
+              </select>
+            </div>
+             <div className="flex items-center justify-between py-2">
+              <span><AtSign className="inline-block mr-2"/> Who can tag you?</span>
+              <select value={settings.tagPrivacy} onChange={(e) => handleSettingChange('tagPrivacy', e.target.value)} className="input-glass text-sm">
+                <option value="everyone">Everyone</option>
+                <option value="followers">Following</option>
+                 <option value="none">No one</option>
               </select>
             </div>
           </div>
 
-          <button className="btn-glass bg-red-500/20 text-red-400 hover:bg-red-500/40 hover:text-white w-full mt-4" onClick={handleLogout}>
+          <div className="bg-white/5 rounded-xl p-4">
+            <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan"><Bell /> Notifications</h3>
+            <div className="flex items-center justify-between py-2">
+              <span>Push Notifications</span>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked={settings.pushNotifications} onChange={(e) => handleSettingChange('pushNotifications', e.target.checked)} className="sr-only peer" />
+                <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-accent-cyan peer-checked:after:translate-x-full after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-cyan"></div>
+              </label>
+            </div>
+             <div className="flex items-center justify-between py-2">
+              <span>Email Notifications</span>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked={settings.emailNotifications} onChange={(e) => handleSettingChange('emailNotifications', e.target.checked)} className="sr-only peer" />
+                <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-accent-cyan peer-checked:after:translate-x-full after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-cyan"></div>
+              </label>
+            </div>
+          </div>
+          
+          <div className="bg-white/5 rounded-xl p-4">
+             <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan"><UserShield /> Account</h3>
+             <button className="btn-glass bg-red-500/20 text-red-400 hover:bg-red-500/40 hover:text-white w-full mt-4" onClick={handleDeleteAccount}>
+                <Trash2 className="inline-block mr-2" /> Delete Account
+            </button>
+          </div>
+
+          <button className="btn-glass bg-accent-pink/20 text-accent-pink hover:bg-accent-pink/40 hover:text-white w-full mt-4" onClick={handleLogout}>
             <LogOut className="inline-block mr-2" /> Log Out
           </button>
         </div>
