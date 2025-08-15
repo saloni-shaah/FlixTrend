@@ -7,6 +7,7 @@ import { ShortVibesPlayer } from "@/components/ShortVibesPlayer";
 import { FollowButton } from "@/components/FollowButton";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { Flame } from "lucide-react";
 
 const db = getFirestore(app);
 
@@ -15,15 +16,14 @@ export default function ScopePage() {
   const [loading, setLoading] = useState(true);
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [trendingTags, setTrendingTags] = useState<string[]>([]);
 
   useEffect(() => {
     const unsubAuth = auth.onAuthStateChanged((user) => {
       setCurrentUser(user);
     });
 
-    const q = query(
-      collection(db, "posts")
-    );
+    const q = query(collection(db, "posts"));
 
     const unsubPosts = onSnapshot(q, (snapshot) => {
       const allPosts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -31,8 +31,20 @@ export default function ScopePage() {
       const videos = allPosts.filter(post => 
         post.mediaUrl && /\.(mp4|webm|ogg)$/i.test(post.mediaUrl)
       );
-      
       setShortVibes(videos);
+
+      // Calculate trending tags
+      const tagCounts: { [tag: string]: number } = {};
+      allPosts.forEach(post => {
+          if (post.hashtags && Array.isArray(post.hashtags)) {
+              post.hashtags.forEach((tag: string) => {
+                  tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+              });
+          }
+      });
+      const sortedTags = Object.keys(tagCounts).sort((a, b) => tagCounts[b] - tagCounts[a]);
+      setTrendingTags(sortedTags.slice(0, 10)); // Top 10 tags
+      
       setLoading(false);
     }, (error) => {
       console.error("Error fetching posts:", error);
@@ -61,20 +73,42 @@ export default function ScopePage() {
     return (
       <div className="flex flex-col min-h-screen items-center justify-center text-center p-4 pb-24">
         <div className="text-4xl animate-pulse">🎬</div>
-        <p className="text-lg text-muted-foreground mt-2">Loading Short Vibes...</p>
+        <p className="text-lg text-muted-foreground mt-2">Loading Vibes...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col min-h-screen items-center text-center p-4 pb-24 pt-16">
+    <div className="flex flex-col min-h-screen items-center p-4 pb-24 pt-16">
         <h2 className="text-2xl font-headline text-accent-cyan mb-4 font-bold">Short Vibes</h2>
         <div className="w-full max-w-md h-[70vh] mb-8">
             <ShortVibesPlayer shortVibes={shortVibes} />
         </div>
 
-        {/* Discover Other Users */}
+        {/* TrendBoard */}
         <div className="mt-8 w-full max-w-4xl mx-auto">
+            <h3 className="text-xl font-headline bg-gradient-to-r from-accent-pink to-accent-cyan bg-clip-text text-transparent mb-4">TrendBoard</h3>
+            <motion.div 
+                className="glass-card p-4 flex flex-wrap gap-3 justify-center"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2 }}
+            >
+                {trendingTags.length > 0 ? trendingTags.map(tag => (
+                    <motion.button 
+                        key={tag}
+                        className="btn-glass flex items-center gap-2"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                    >
+                        <Flame className="text-red-400" /> #{tag}
+                    </motion.button>
+                )) : <p className="text-muted-foreground">No trending tags yet.</p>}
+            </motion.div>
+        </div>
+
+        {/* Discover Other Users */}
+        <div className="mt-12 w-full max-w-4xl mx-auto">
           <h3 className="text-xl font-headline bg-gradient-to-r from-accent-pink to-accent-cyan bg-clip-text text-transparent mb-4">Discover Creators</h3>
           {suggestedUsers.length === 0 ? (
             <div className="text-gray-400 text-center py-8">No other users found. Invite your friends to join!</div>

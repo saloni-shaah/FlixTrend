@@ -91,8 +91,6 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
         setActiveShortIndex(i => Math.min(shortVibes.length - 1, i + 1));
     };
 
-    const activeShort = shortVibes[activeShortIndex];
-
     return (
         <>
         <div className="w-full h-full flex flex-col items-center relative glass-card overflow-hidden bg-black">
@@ -114,24 +112,23 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
                             transition: 'opacity 0.3s ease-in-out',
                         }}
                     >
-                        <div className="relative w-full h-full flex items-center justify-center">
+                        <div className="relative w-full h-full flex items-center justify-center cursor-pointer" onClick={() => handleVideoClick(idx)}>
                             <video
                                 ref={el => { videoRefs.current[idx] = el; }}
                                 src={short.mediaUrl}
-                                className="w-full h-full object-contain" // Use object-contain to show full video
+                                className="w-full h-full object-contain pointer-events-none" // Use object-contain and disable pointer events on video
                                 autoPlay={idx === 0}
                                 loop
                                 playsInline
-                                onClick={() => handleVideoClick(idx)}
                             />
                             {!isPlaying && activeShortIndex === idx && (
                                 <div className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none">
                                     <Play size={64} className="text-white/70" />
                                 </div>
                             )}
-                            <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex justify-between items-end">
+                            <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex justify-between items-end pointer-events-none">
                                 <div className="flex flex-col gap-2 max-w-[70%]">
-                                    <Link href={`/squad/${short.userId}`} className="flex items-center gap-2 cursor-pointer group">
+                                    <Link href={`/squad/${short.userId}`} className="flex items-center gap-2 group pointer-events-auto">
                                         <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-base overflow-hidden border-2 border-accent-pink group-hover:scale-110 transition-transform">
                                             {short.avatar_url ? <img src={short.avatar_url} alt="avatar" className="w-full h--full object-cover"/> : short.displayName?.[0] || 'U'}
                                         </div>
@@ -141,7 +138,7 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
                                         {short.content || short.caption}
                                     </p>
                                 </div>
-                                <div className="flex flex-col gap-4">
+                                <div className="flex flex-col gap-4 pointer-events-auto">
                                     <LikeCommentShare post={short} onCommentClick={handleCommentClick} onShareClick={handleShareClick} />
                                 </div>
                             </div>
