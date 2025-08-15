@@ -3,11 +3,12 @@
 
 import React from 'react';
 import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, deleteDoc, updateDoc, doc as fsDoc, setDoc, getDoc, doc, runTransaction } from "firebase/firestore";
-import { FaPlay, FaEye, FaRegComment, FaExclamationTriangle, FaVolumeMute, FaUserSlash, FaLink, FaEllipsisV, FaMusic } from "react-icons/fa";
-import { Repeat2, Star } from "lucide-react";
+import { FaPlay, FaRegComment, FaExclamationTriangle, FaVolumeMute, FaUserSlash, FaLink, FaEllipsisV, FaMusic } from "react-icons/fa";
+import { Repeat2, Star, Share, MessageCircle } from "lucide-react";
 import { auth } from "@/utils/firebaseClient";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { ShareModal } from './ShareModal';
 
 const db = getFirestore();
 
@@ -21,6 +22,7 @@ export function PostCard({ post }: { post: any }) {
   const [showEdit, setShowEdit] = React.useState(false);
   const [editContent, setEditContent] = React.useState(post.content || "");
   const [showMoreMenu, setShowMoreMenu] = React.useState(false);
+  const [showShareModal, setShowShareModal] = React.useState(false);
   const currentUser = auth.currentUser;
   const [pollVotes, setPollVotes] = React.useState<{ [optionIdx: number]: { count: number, voters: string[] } }>({});
   const [userPollVote, setUserPollVote] = React.useState<number | null>(null);
@@ -193,13 +195,6 @@ export function PostCard({ post }: { post: any }) {
           videoRef.current.play();
       }
   };
-
-  const handleCopyLink = () => {
-    const postUrl = `${window.location.origin}/post/${post.id}`;
-    navigator.clipboard.writeText(postUrl);
-    alert("Link copied to clipboard!");
-    setShowMoreMenu(false);
-  };
   
   React.useEffect(() => {
     if (post.song && post.song.preview_url) {
@@ -324,27 +319,8 @@ export function PostCard({ post }: { post: any }) {
       )}
 
       <div className="relative">
-        <div className="absolute top-0 right-0 z-10">
-          <button onClick={() => setShowMoreMenu(!showMoreMenu)} className="text-muted-foreground hover:text-foreground p-2">
-            <FaEllipsisV />
-          </button>
-          {showMoreMenu && (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="absolute right-0 mt-2 w-48 glass-card p-1 z-50"
-            >
-              <button className="w-full flex items-center gap-2 px-4 py-2 text-left hover:bg-white/10 rounded-lg" onClick={handleCopyLink}><FaLink /> Copy Link</button>
-              <div className="border-t border-glass-border my-1" />
-              <button className="w-full flex items-center gap-2 px-4 py-2 text-left text-red-400 hover:bg-red-400/10 rounded-lg" onClick={() => { alert('Reported!'); setShowMoreMenu(false); }}><FaExclamationTriangle /> Report</button>
-              <button className="w-full flex items-center gap-2 px-4 py-2 text-left text-muted-foreground hover:bg-white/10 rounded-lg" onClick={() => { alert('Creator muted!'); setShowMoreMenu(false); }}><FaVolumeMute /> Mute Creator</button>
-              <button className="w-full flex items-center gap-2 px-4 py-2 text-left text-muted-foreground hover:bg-white/10 rounded-lg" onClick={() => { alert('User blocked!'); setShowMoreMenu(false); }}><FaUserSlash /> Block User</button>
-            </motion.div>
-          )}
-        </div>
-        
         {currentUser?.uid === post.userId && post.type !== 'relay' && (
-            <div className="absolute top-1 right-12 flex gap-2 z-10">
+            <div className="absolute top-0 right-0 flex gap-2 z-10">
                 <button className="text-xs px-2 py-1 rounded bg-white/10 text-white font-bold hover:bg-white/20" onClick={() => setShowEdit(true)}>Edit</button>
                 <button className="text-xs px-2 py-1 rounded bg-red-500/20 text-red-400 font-bold hover:bg-red-500/40" onClick={handleDelete}>Delete</button>
             </div>
@@ -370,22 +346,29 @@ export function PostCard({ post }: { post: any }) {
       {renderPostContent(post)}
 
 
-      <div className="flex items-center justify-between gap-6 mt-2">
-        <div className="flex items-center gap-4">
-          <button className="flex items-center gap-1 text-lg font-bold text-muted-foreground hover:text-brand-gold transition-all" onClick={() => setShowComments(true)}>
-            <FaRegComment /> <span>{commentCount}</span>
-          </button>
-          <button className={`flex items-center gap-1 text-lg font-bold transition-all ${isRelayed ? "text-green-400" : "text-muted-foreground hover:text-green-400"}`} onClick={handleRelay} >
-            <Repeat2 /> <span>{relayCount}</span>
-          </button>
-        </div>
-        <div className="flex items-center gap-4">
-          <button className={`flex items-center gap-1 text-lg font-bold transition-all ${isStarred ? "text-yellow-400" : "text-muted-foreground hover:text-yellow-400"}`} onClick={handleStar}>
-            <Star fill={isStarred ? "currentColor" : "none"} /> <span>{starCount}</span>
-          </button>
-        </div>
+      <div className="flex items-center justify-start gap-6 mt-2 pt-2 border-t border-glass-border">
+        <button className="flex items-center gap-1.5 text-lg font-bold text-muted-foreground hover:text-brand-gold transition-all" onClick={() => setShowComments(true)}>
+          <MessageCircle size={20} /> <span className="text-sm">{commentCount}</span>
+        </button>
+        <button className={`flex items-center gap-1.5 text-lg font-bold transition-all ${isRelayed ? "text-green-400" : "text-muted-foreground hover:text-green-400"}`} onClick={handleRelay} >
+          <Repeat2 size={20} /> <span className="text-sm">{relayCount}</span>
+        </button>
+        <button className={`flex items-center gap-1.5 text-lg font-bold transition-all ${isStarred ? "text-yellow-400" : "text-muted-foreground hover:text-yellow-400"}`} onClick={handleStar}>
+          <Star size={20} fill={isStarred ? "currentColor" : "none"} /> <span className="text-sm">{starCount}</span>
+        </button>
+        <button className="flex items-center gap-1.5 text-lg font-bold text-muted-foreground hover:text-accent-cyan transition-all" onClick={() => setShowShareModal(true)}>
+          <Share size={20} />
+        </button>
       </div>
+      
       {showComments && <CommentModal postId={post.id} postAuthorId={post.userId} onClose={() => setShowComments(false)} />}
+      
+      {showShareModal && (
+        <ShareModal 
+            url={`${window.location.origin}/post/${post.id}`}
+            onClose={() => setShowShareModal(false)}
+        />
+      )}
     </motion.div>
   );
 }
