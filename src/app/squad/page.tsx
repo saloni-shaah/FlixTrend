@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { auth } from "@/utils/firebaseClient";
 import { getFirestore, doc, getDoc, setDoc, collection, query, where, getCountFromServer, getDocs, onSnapshot, orderBy } from "firebase/firestore";
-import { Cog, Palette, Lock, UserShield, MessageCircle, LogOut, Camera, Star, Bell, Trash2, ShieldCheck, AtSign } from "lucide-react";
+import { Cog, Palette, Lock, MessageCircle, LogOut, Camera, Star, Bell, Trash2, AtSign } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -91,16 +91,15 @@ export default function SquadPage() {
         const docRef = doc(db, "users", uid);
         const docSnap = await getDoc(docRef);
         setProfile(docSnap.exists() ? docSnap.data() : null);
-
-        const postsQuery = query(collection(db, "posts"), where("userId", "==", uid));
-        const postsSnapshot = await getCountFromServer(postsQuery);
-        setPostCount(postsSnapshot.data().count || 0);
-
-        const userPostsSnap = await getDocs(postsQuery);
-        const postsData = userPostsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        // Manually sort client-side
-        postsData.sort((a,b) => b.createdAt.toDate() - a.createdAt.toDate());
-        setUserPosts(postsData);
+        
+        // Fetch posts and then filter client-side to avoid index issues
+        const postsQuery = query(collection(db, "posts"), orderBy("createdAt", "desc"));
+        const postsSnapshot = await getDocs(postsQuery);
+        const allPosts = postsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const userPostsData = allPosts.filter(post => post.userId === uid);
+        
+        setPostCount(userPostsData.length);
+        setUserPosts(userPostsData);
         
         setLoading(false);
     }
@@ -507,7 +506,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
           </div>
           
           <div className="bg-white/5 rounded-xl p-4">
-             <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan"><UserShield /> Account</h3>
+             <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan">Account</h3>
              <button className="btn-glass bg-red-500/20 text-red-400 hover:bg-red-500/40 hover:text-white w-full mt-4" onClick={handleDeleteAccount}>
                 <Trash2 className="inline-block mr-2" /> Delete Account
             </button>
