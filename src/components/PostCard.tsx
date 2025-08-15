@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -13,6 +14,7 @@ const db = getFirestore();
 export function PostCard({ post }: { post: any }) {
   const [isStarred, setIsStarred] = useState(false);
   const [starCount, setStarCount] = useState(post.starCount || 0);
+  const [isRelayed, setIsRelayed] = useState(false);
   const [relayCount, setRelayCount] = useState(post.relayCount || 0);
   const [commentCount, setCommentCount] = useState(post.commentCount || 0);
   const [showComments, setShowComments] = useState(false);
@@ -38,6 +40,14 @@ export function PostCard({ post }: { post: any }) {
         setIsStarred(docSnap.exists());
     });
     unsubscribes.push(unsubStarred);
+    
+    // Relayed post check
+    const relayedDocRef = fsDoc(db, "posts", post.id, "relays", currentUser.uid);
+    const unsubRelayed = onSnapshot(relayedDocRef, (docSnap) => {
+        setIsRelayed(docSnap.exists());
+    });
+    unsubscribes.push(unsubRelayed);
+
 
     // Counts
     const unsubStars = onSnapshot(collection(db, "posts", post.id, "stars"), (snap) => setStarCount(snap.size));
@@ -101,8 +111,49 @@ export function PostCard({ post }: { post: any }) {
   };
 
   const handleRelay = async () => {
-      // Relay logic to be implemented
-      alert("Relay functionality coming soon!");
+    if (!currentUser || isRelayed) return;
+
+    try {
+        const userDoc = await getDoc(fsDoc(db, "users", currentUser.uid));
+        if (!userDoc.exists()) throw new Error("User profile not found");
+        const userData = userDoc.data();
+
+        // Create a new post of type 'relay'
+        await addDoc(collection(db, "posts"), {
+            type: 'relay',
+            originalPost: post, // Embed original post data
+            originalPostId: post.id,
+            userId: currentUser.uid,
+            displayName: userData.name || currentUser.displayName,
+            username: userData.username,
+            avatar_url: userData.avatar_url,
+            createdAt: serverTimestamp(),
+        });
+        
+        // Mark that this user has relayed this post
+        await setDoc(fsDoc(db, "posts", post.id, "relays", currentUser.uid), {
+            userId: currentUser.uid,
+            relayedAt: serverTimestamp(),
+        });
+
+        // Notify original poster
+        if (post.userId !== currentUser.uid) {
+            const notifRef = collection(db, "notifications", post.userId, "user_notifications");
+            await addDoc(notifRef, {
+                type: 'relay',
+                fromUserId: currentUser.uid,
+                fromUsername: currentUser.displayName,
+                fromAvatarUrl: currentUser.photoURL,
+                postId: post.id,
+                postContent: (post.content || "").substring(0, 50),
+                createdAt: serverTimestamp(),
+                read: false,
+            });
+        }
+    } catch (error) {
+        console.error("Error relaying post:", error);
+        alert("Could not relay post.");
+    }
   };
 
   const handleDelete = async () => {
@@ -154,8 +205,94 @@ export function PostCard({ post }: { post: any }) {
       }
   }
 
+  const renderPostContent = (p: any) => {
+    const contentPost = p.type === 'relay' ? p.originalPost : p;
+    const initials = contentPost.displayName?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || contentPost.username?.slice(0, 2).toUpperCase() || "U";
+    
+    return (
+        <>
+            <div className="flex items-center gap-3 mb-2">
+                <Link href={`/squad/${contentPost.userId}`} className="flex items-center gap-2 group cursor-pointer">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green flex items-center justify-center font-bold text-lg overflow-hidden border-2 border-accent-green group-hover:scale-105 transition-transform">
+                        {contentPost.avatar_url ? <img src={contentPost.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : <span className="text-white">{initials}</span>}
+                    </div>
+                    <span className="font-headline text-accent-green text-sm group-hover:underline">@{contentPost.username || "user"}</span>
+                </Link>
+                <div className="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
+                    <span>{contentPost.createdAt?.toDate?.().toLocaleString?.() || "Just now"}</span>
+                </div>
+            </div>
 
-  const initials = post.displayName?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || post.username?.slice(0, 2).toUpperCase() || "U";
+            {contentPost.content && (contentPost.type !== 'poll' || (contentPost.type === 'poll' && !contentPost.pollOptions)) && (
+                <div className="text-[1.15rem] font-body whitespace-pre-line mb-2 px-4 py-3 rounded-xl" style={{ backgroundColor: contentPost.backgroundColor || 'transparent', color: contentPost.backgroundColor && contentPost.backgroundColor !== '#ffffff' ? 'hsl(var(--foreground))' : 'inherit' }}>
+                    {contentPost.content}
+                </div>
+            )}
+
+            {contentPost.hashtags && contentPost.hashtags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                    {contentPost.hashtags.map((tag: string) => <Link href={`/tags/${tag}`} key={tag} className="text-brand-gold font-bold text-sm hover:underline">#{tag}</Link>)}
+                </div>
+            )}
+
+            {(contentPost.type === "media" || contentPost.type === "audio") && contentPost.mediaUrl && (
+                <div className="w-full rounded-xl overflow-hidden relative">
+                    {contentPost.mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? (
+                        <>
+                            <video ref={videoRef} src={contentPost.mediaUrl} controls={isPlaying} className="w-full rounded-xl" onEnded={() => setIsPlaying(false)} />
+                            {!isPlaying && (
+                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center cursor-pointer" onClick={handlePlayVideo}>
+                                    {contentPost.thumbnailUrl && <img src={contentPost.thumbnailUrl} alt="thumbnail" className="w-full h-full object-cover" />}
+                                    <div className="absolute">
+                                        <FaPlay className="text-white text-6xl opacity-80" />
+                                    </div>
+                                </div>
+                            )}
+                        </>
+                    ) : contentPost.mediaUrl.match(/\.(mp3|wav|oga|m4a)$/i) || contentPost.type === 'audio' ? (
+                        <audio src={contentPost.mediaUrl} controls className="w-full" />
+                    ) : (
+                        <img src={contentPost.mediaUrl} alt="media" className="w-full rounded-xl" />
+                    )}
+                </div>
+            )}
+
+            {contentPost.type === "poll" && contentPost.pollOptions && (
+                <div className="flex flex-col gap-2 p-4">
+                    <div className="font-bold text-brand-gold mb-3">{contentPost.content}</div>
+                    {contentPost.pollOptions.map((opt: string, idx: number) => {
+                        const voteData = pollVotes[idx] || { count: 0, voters: [] };
+                        const totalVotes = Object.values(pollVotes).reduce((sum, current) => sum + current.count, 0);
+                        const percent = totalVotes > 0 ? Math.round((voteData.count / totalVotes) * 100) : 0;
+                        return (
+                            <button key={idx} className={`w-full p-2 rounded-full font-bold transition-all relative overflow-hidden btn-glass`}
+                                onClick={() => handlePollVote(idx)} disabled={userPollVote !== null}>
+                                {userPollVote !== null && <div className="absolute left-0 top-0 h-full bg-brand-gold/50" style={{ width: `${percent}%` }} />}
+                                <div className="relative flex justify-between z-10 px-2">
+                                    <span>{opt}</span>
+                                    {userPollVote !== null && <span>{percent}% ({voteData.count})</span>}
+                                </div>
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+            
+            {contentPost.song && (
+                 <div className="mt-2 p-3 rounded-xl bg-black/20 flex items-center gap-4 border border-glass-border">
+                    <img src={contentPost.song.albumArt} alt={contentPost.song.album} className="w-12 h-12 rounded-lg"/>
+                    <div className="flex-1">
+                        <div className="font-bold text-brand-gold text-base line-clamp-1">{contentPost.song.name}</div>
+                        <div className="text-xs text-muted-foreground mb-1 line-clamp-1">{contentPost.song.artists.join(", ")}</div>
+                    </div>
+                    <button onClick={toggleSong} className="p-3 rounded-full bg-brand-gold text-background shadow-lg hover:scale-110 transition-transform">
+                        <FaMusic />
+                    </button>
+                </div>
+            )}
+        </>
+    )
+  }
 
   return (
     <motion.div 
@@ -164,19 +301,15 @@ export function PostCard({ post }: { post: any }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <div className="flex items-center gap-3 mb-2">
-        <Link href={`/squad/${post.userId}`} className="flex items-center gap-2 group cursor-pointer">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green flex items-center justify-center font-bold text-lg overflow-hidden border-2 border-accent-green group-hover:scale-105 transition-transform">
-            {post.avatar_url ? <img src={post.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : <span className="text-white">{initials}</span>}
+      {post.type === 'relay' && (
+          <div className="text-xs text-muted-foreground font-bold mb-2 flex items-center gap-2">
+              <Repeat2 size={14}/> Relayed by <Link href={`/squad/${post.userId}`} className="text-accent-cyan hover:underline">@{post.username}</Link>
           </div>
-          <span className="font-headline text-accent-green text-sm group-hover:underline">@{post.username || "user"}</span>
-        </Link>
-        <div className="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1"><FaEye /> {post.viewCount || 0}</span>
-            <span>{post.createdAt?.toDate?.().toLocaleString?.() || "Just now"}</span>
-        </div>
-        <div className="relative">
-          <button onClick={() => setShowMoreMenu(!showMoreMenu)} className="text-muted-foreground hover:text-foreground">
+      )}
+
+      <div className="relative">
+        <div className="absolute top-0 right-0 z-10">
+          <button onClick={() => setShowMoreMenu(!showMoreMenu)} className="text-muted-foreground hover:text-foreground p-2">
             <FaEllipsisV />
           </button>
           {showMoreMenu && (
@@ -193,14 +326,14 @@ export function PostCard({ post }: { post: any }) {
             </motion.div>
           )}
         </div>
+        
+        {currentUser?.uid === post.userId && post.type !== 'relay' && (
+            <div className="absolute top-1 right-12 flex gap-2 z-10">
+                <button className="text-xs px-2 py-1 rounded bg-white/10 text-white font-bold hover:bg-white/20" onClick={() => setShowEdit(true)}>Edit</button>
+                <button className="text-xs px-2 py-1 rounded bg-red-500/20 text-red-400 font-bold hover:bg-red-500/40" onClick={handleDelete}>Delete</button>
+            </div>
+        )}
       </div>
-
-      {currentUser?.uid === post.userId && (
-        <div className="absolute top-3 right-12 flex gap-2 z-10">
-          <button className="text-xs px-2 py-1 rounded bg-white/10 text-white font-bold hover:bg-white/20" onClick={() => setShowEdit(true)}>Edit</button>
-          <button className="text-xs px-2 py-1 rounded bg-red-500/20 text-red-400 font-bold hover:bg-red-500/40" onClick={handleDelete}>Delete</button>
-        </div>
-      )}
       
       {showEdit && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
@@ -218,80 +351,15 @@ export function PostCard({ post }: { post: any }) {
         </div>
       )}
 
-      {post.content && (post.type !== 'poll' || (post.type === 'poll' && !post.pollOptions)) && (
-        <div className="text-[1.15rem] font-body whitespace-pre-line mb-2 px-4 py-3 rounded-xl" style={{ backgroundColor: post.backgroundColor || 'transparent', color: post.backgroundColor && post.backgroundColor !== '#ffffff' ? 'hsl(var(--foreground))' : 'inherit' }}>
-          {post.content}
-        </div>
-      )}
+      {renderPostContent(post)}
 
-      {post.hashtags && post.hashtags.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-              {post.hashtags.map((tag:string) => <Link href={`/tags/${tag}`} key={tag} className="text-brand-gold font-bold text-sm hover:underline">#{tag}</Link>)}
-          </div>
-      )}
-      
-      {(post.type === "media" || post.type === "audio") && post.mediaUrl && (
-        <div className="w-full rounded-xl overflow-hidden relative">
-          {post.mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? (
-            <>
-              <video ref={videoRef} src={post.mediaUrl} controls={isPlaying} className="w-full rounded-xl" onEnded={() => setIsPlaying(false)} />
-              {!isPlaying && (
-                <div className="absolute inset-0 bg-black/50 flex items-center justify-center cursor-pointer" onClick={handlePlayVideo}>
-                    {post.thumbnailUrl && <img src={post.thumbnailUrl} alt="thumbnail" className="w-full h-full object-cover"/>}
-                    <div className="absolute">
-                        <FaPlay className="text-white text-6xl opacity-80"/>
-                    </div>
-                </div>
-              )}
-            </>
-          ) : post.mediaUrl.match(/\.(mp3|wav|oga|m4a)$/i) || post.type === 'audio' ? (
-            <audio src={post.mediaUrl} controls className="w-full" />
-          ) : (
-            <img src={post.mediaUrl} alt="media" className="w-full rounded-xl" />
-          )}
-        </div>
-      )}
-      
-      {post.type === "poll" && post.pollOptions && (
-        <div className="flex flex-col gap-2 p-4">
-          <div className="font-bold text-brand-gold mb-3">{post.content}</div>
-          {post.pollOptions.map((opt: string, idx: number) => {
-            const voteData = pollVotes[idx] || { count: 0, voters: [] };
-            const totalVotes = Object.values(pollVotes).reduce((sum, current) => sum + current.count, 0);
-            const percent = totalVotes > 0 ? Math.round((voteData.count / totalVotes) * 100) : 0;
-            return (
-              <button key={idx} className={`w-full p-2 rounded-full font-bold transition-all relative overflow-hidden btn-glass`}
-                onClick={() => handlePollVote(idx)} disabled={userPollVote !== null}>
-                {userPollVote !== null && <div className="absolute left-0 top-0 h-full bg-brand-gold/50" style={{width: `${percent}%`}}/>}
-                <div className="relative flex justify-between z-10 px-2">
-                  <span>{opt}</span>
-                  {userPollVote !== null && <span>{percent}% ({voteData.count})</span>}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {post.song && (
-        <div className="mt-2 p-3 rounded-xl bg-black/20 flex items-center gap-4 border border-glass-border">
-            <img src={post.song.albumArt} alt={post.song.album} className="w-12 h-12 rounded-lg"/>
-            <div className="flex-1">
-                <div className="font-bold text-brand-gold text-base line-clamp-1">{post.song.name}</div>
-                <div className="text-xs text-muted-foreground mb-1 line-clamp-1">{post.song.artists.join(", ")}</div>
-            </div>
-            <button onClick={toggleSong} className="p-3 rounded-full bg-brand-gold text-background shadow-lg hover:scale-110 transition-transform">
-                <FaMusic />
-            </button>
-        </div>
-      )}
 
       <div className="flex items-center justify-between gap-6 mt-2">
         <div className="flex items-center gap-4">
           <button className="flex items-center gap-1 text-lg font-bold text-muted-foreground hover:text-brand-gold transition-all" onClick={() => setShowComments(true)}>
             <FaRegComment /> <span>{commentCount}</span>
           </button>
-          <button className="flex items-center gap-1 text-lg font-bold text-muted-foreground hover:text-brand-gold transition-all" onClick={handleRelay}>
+          <button className={`flex items-center gap-1 text-lg font-bold transition-all ${isRelayed ? "text-green-400" : "text-muted-foreground hover:text-green-400"}`} onClick={handleRelay} disabled={isRelayed}>
             <Repeat2 /> <span>{relayCount}</span>
           </button>
         </div>
