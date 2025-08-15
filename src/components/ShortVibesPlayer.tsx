@@ -122,7 +122,6 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
                                 className="w-full h-full object-contain" // Use object-contain to show full video
                                 autoPlay={idx === 0}
                                 loop
-                                muted
                                 playsInline
                                 onClick={() => handleVideoClick(idx)}
                             />
