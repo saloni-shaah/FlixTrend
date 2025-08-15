@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React from 'react';
 import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, deleteDoc, updateDoc, doc as fsDoc, setDoc, getDoc, doc, runTransaction } from "firebase/firestore";
 import { FaPlay, FaEye, FaRegComment, FaExclamationTriangle, FaVolumeMute, FaUserSlash, FaLink, FaEllipsisV, FaMusic } from "react-icons/fa";
 import { Repeat2, Star } from "lucide-react";
@@ -12,24 +12,24 @@ import { motion } from "framer-motion";
 const db = getFirestore();
 
 export function PostCard({ post }: { post: any }) {
-  const [isStarred, setIsStarred] = useState(false);
-  const [starCount, setStarCount] = useState(post.starCount || 0);
-  const [isRelayed, setIsRelayed] = useState(false);
-  const [relayCount, setRelayCount] = useState(post.relayCount || 0);
-  const [commentCount, setCommentCount] = useState(post.commentCount || 0);
-  const [showComments, setShowComments] = useState(false);
-  const [showEdit, setShowEdit] = useState(false);
-  const [editContent, setEditContent] = useState(post.content || "");
-  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [isStarred, setIsStarred] = React.useState(false);
+  const [starCount, setStarCount] = React.useState(post.starCount || 0);
+  const [isRelayed, setIsRelayed] = React.useState(false);
+  const [relayCount, setRelayCount] = React.useState(post.relayCount || 0);
+  const [commentCount, setCommentCount] = React.useState(post.commentCount || 0);
+  const [showComments, setShowComments] = React.useState(false);
+  const [showEdit, setShowEdit] = React.useState(false);
+  const [editContent, setEditContent] = React.useState(post.content || "");
+  const [showMoreMenu, setShowMoreMenu] = React.useState(false);
   const currentUser = auth.currentUser;
-  const [pollVotes, setPollVotes] = useState<{ [optionIdx: number]: { count: number, voters: string[] } }>({});
-  const [userPollVote, setUserPollVote] = useState<number | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [pollVotes, setPollVotes] = React.useState<{ [optionIdx: number]: { count: number, voters: string[] } }>({});
+  const [userPollVote, setUserPollVote] = React.useState<number | null>(null);
+  const [isPlaying, setIsPlaying] = React.useState(false);
   const videoRef = React.useRef<HTMLVideoElement>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
 
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (!currentUser) return;
 
     const unsubscribes: (() => void)[] = [];
@@ -111,45 +111,61 @@ export function PostCard({ post }: { post: any }) {
   };
 
   const handleRelay = async () => {
-    if (!currentUser || isRelayed) return;
+    if (!currentUser) return;
 
     try {
-        const userDoc = await getDoc(fsDoc(db, "users", currentUser.uid));
-        if (!userDoc.exists()) throw new Error("User profile not found");
-        const userData = userDoc.data();
+        // We'll run this as a transaction to ensure atomicity
+        await runTransaction(db, async (transaction) => {
+            const userDoc = await transaction.get(fsDoc(db, "users", currentUser.uid));
+            if (!userDoc.exists()) throw new Error("User profile not found");
+            const userData = userDoc.data();
 
-        // Create a new post of type 'relay'
-        await addDoc(collection(db, "posts"), {
-            type: 'relay',
-            originalPost: post, // Embed original post data
-            originalPostId: post.id,
-            userId: currentUser.uid,
-            displayName: userData.name || currentUser.displayName,
-            username: userData.username,
-            avatar_url: userData.avatar_url,
-            createdAt: serverTimestamp(),
-        });
-        
-        // Mark that this user has relayed this post
-        await setDoc(fsDoc(db, "posts", post.id, "relays", currentUser.uid), {
-            userId: currentUser.uid,
-            relayedAt: serverTimestamp(),
-        });
+            const relayRef = fsDoc(db, "posts", post.id, "relays", currentUser.uid);
+            const relaySnap = await transaction.get(relayRef);
 
-        // Notify original poster
-        if (post.userId !== currentUser.uid) {
-            const notifRef = collection(db, "notifications", post.userId, "user_notifications");
-            await addDoc(notifRef, {
+            if (relaySnap.exists()) {
+                // User has already relayed, so we should "un-relay"
+                // This is a bit more complex, would need to find the relayed post and delete it.
+                // For now, we'll just prevent duplicate relays.
+                console.log("Already relayed");
+                return;
+            }
+
+            // Create a new post of type 'relay'
+            const newPostRef = doc(collection(db, "posts"));
+            transaction.set(newPostRef, {
                 type: 'relay',
-                fromUserId: currentUser.uid,
-                fromUsername: currentUser.displayName,
-                fromAvatarUrl: currentUser.photoURL,
-                postId: post.id,
-                postContent: (post.content || "").substring(0, 50),
+                originalPost: post, // Embed original post data
+                originalPostId: post.id,
+                userId: currentUser.uid,
+                displayName: userData.name || currentUser.displayName,
+                username: userData.username,
+                avatar_url: userData.avatar_url,
                 createdAt: serverTimestamp(),
-                read: false,
             });
-        }
+            
+            // Mark that this user has relayed this post
+            transaction.set(relayRef, {
+                userId: currentUser.uid,
+                relayedAt: serverTimestamp(),
+            });
+
+            // Notify original poster if not relaying own post
+            if (post.userId !== currentUser.uid) {
+                const notifRef = doc(collection(db, "notifications", post.userId, "user_notifications"));
+                transaction.set(notifRef, {
+                    type: 'relay',
+                    fromUserId: currentUser.uid,
+                    fromUsername: currentUser.displayName,
+                    fromAvatarUrl: currentUser.photoURL,
+                    postId: post.id,
+                    postContent: (post.content || "").substring(0, 50),
+                    createdAt: serverTimestamp(),
+                    read: false,
+                });
+            }
+        });
+
     } catch (error) {
         console.error("Error relaying post:", error);
         alert("Could not relay post.");
@@ -185,7 +201,7 @@ export function PostCard({ post }: { post: any }) {
     setShowMoreMenu(false);
   };
   
-  useEffect(() => {
+  React.useEffect(() => {
     if (post.song && post.song.preview_url) {
         const audio = new Audio(post.song.preview_url);
         audioRef.current = audio;
@@ -359,7 +375,7 @@ export function PostCard({ post }: { post: any }) {
           <button className="flex items-center gap-1 text-lg font-bold text-muted-foreground hover:text-brand-gold transition-all" onClick={() => setShowComments(true)}>
             <FaRegComment /> <span>{commentCount}</span>
           </button>
-          <button className={`flex items-center gap-1 text-lg font-bold transition-all ${isRelayed ? "text-green-400" : "text-muted-foreground hover:text-green-400"}`} onClick={handleRelay} disabled={isRelayed}>
+          <button className={`flex items-center gap-1 text-lg font-bold transition-all ${isRelayed ? "text-green-400" : "text-muted-foreground hover:text-green-400"}`} onClick={handleRelay} >
             <Repeat2 /> <span>{relayCount}</span>
           </button>
         </div>
@@ -375,10 +391,10 @@ export function PostCard({ post }: { post: any }) {
 }
 
 function CommentModal({ postId, postAuthorId, onClose }: { postId: string; postAuthorId: string; onClose: () => void }) {
-  const [comments, setComments] = useState<any[]>([]);
-  const [replyTo, setReplyTo] = useState<string | null>(null); // State to track which comment is being replied to
+  const [comments, setComments] = React.useState<any[]>([]);
+  const [replyTo, setReplyTo] = React.useState<string | null>(null); // State to track which comment is being replied to
 
-  useEffect(() => {
+  React.useEffect(() => {
     const q = query(collection(db, "posts", postId, "comments"), orderBy("createdAt", "asc"));
     const unsub = onSnapshot(q, (snapshot) => {
       const allComments = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
@@ -432,9 +448,9 @@ function CommentThread({ comment, postId, postAuthorId, replyTo, setReplyTo }: {
 }
 
 function Comment({ comment, onReply }: { comment: any; onReply: () => void }) {
-  const [userData, setUserData] = useState<any>(null);
+  const [userData, setUserData] = React.useState<any>(null);
 
-  useEffect(() => {
+  React.useEffect(() => {
     async function fetchUserData() {
       if (comment.username && comment.avatar_url) {
         setUserData({ username: comment.username, avatar_url: comment.avatar_url, displayName: comment.displayName });
@@ -475,8 +491,8 @@ function Comment({ comment, onReply }: { comment: any; onReply: () => void }) {
 }
 
 function CommentForm({ postId, postAuthorId, parentId, onCommentPosted, isReply = false }: { postId: string; postAuthorId: string; parentId: string | null; onCommentPosted: () => void; isReply?: boolean }) {
-  const [newComment, setNewComment] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [newComment, setNewComment] = React.useState("");
+  const [loading, setLoading] = React.useState(false);
   const user = auth.currentUser;
 
   const handleAddComment = async (e: React.FormEvent) => {
