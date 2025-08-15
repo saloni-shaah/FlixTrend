@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useEffect, useState, useRef } from "react";
 import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp } from "firebase/firestore";
@@ -215,7 +216,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
   return (
     <>
     {isCalling && callTarget && <VideoCallModal peer={callTarget} onClose={() => setIsCalling(false)}/>}
-    <div className="flex h-screen bg-transparent font-body text-white pt-16 md:pt-0">
+    <div className="flex h-[calc(100vh-64px)] md:h-screen bg-transparent font-body text-white">
         <div className={`w-full md:w-1/3 md:min-w-[350px] border-r border-accent-cyan/10 bg-black/60 flex flex-col ${isMobile && selectedChat ? "hidden" : ""}`}>
             <div className="p-4 border-b border-accent-cyan/10">
                 <h2 className="text-xl font-headline font-bold text-accent-cyan">Signal</h2>
@@ -328,3 +329,5 @@ export default function SignalPage() {
   }
   return <ClientOnlySignalPage firebaseUser={firebaseUser} />;
 }
+
+    
