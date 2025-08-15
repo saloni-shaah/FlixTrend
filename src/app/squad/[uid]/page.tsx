@@ -40,7 +40,7 @@ export default function UserProfilePage() {
 
       const docRef = doc(db, "users", uid);
       const docSnap = await getDoc(docRef);
-      setProfile(docSnap.exists() ? docSnap.data() : null);
+      setProfile(docSnap.exists() ? { uid: docSnap.id, ...docSnap.data() } : null);
 
       // Fetch post count and posts
       const postsQuery = query(collection(db, "posts"), where("userId", "==", uid));
