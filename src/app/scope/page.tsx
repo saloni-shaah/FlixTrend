@@ -2,8 +2,9 @@
 import React, { useState, useEffect } from "react";
 import { getFirestore, collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
 import { ShortVibesPlayer } from "@/components/ShortVibesPlayer";
+import { app } from "@/utils/firebaseClient";
 
-const db = getFirestore();
+const db = getFirestore(app);
 
 export default function ScopePage() {
   const [shortVibes, setShortVibes] = useState<any[]>([]);
