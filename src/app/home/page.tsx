@@ -4,7 +4,7 @@ import CreatePostModal from "./CreatePostModal";
 import { getFirestore, collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import { Plus, Bell, Search } from "lucide-react";
 import { auth } from "@/utils/firebaseClient";
-import { almightyChat, AlmighyChatRequest, ChatMessage } from "@/ai/types/AlmightyChat";
+import { almightyChat, AlmighyChatRequest, ChatMessage } from "@/ai/flows/almighty-chat-flow";
 import { useAppState } from "@/utils/AppStateContext";
 import { motion } from "framer-motion";
 import { AlmightyLogo } from "@/components/AlmightyLogo";
