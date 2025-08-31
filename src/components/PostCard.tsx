@@ -12,7 +12,7 @@ import { ShareModal } from './ShareModal';
 
 const db = getFirestore();
 
-export function PostCard({ post }: { post: any }) {
+export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe?: boolean }) {
   const [isStarred, setIsStarred] = React.useState(false);
   const [starCount, setStarCount] = React.useState(post.starCount || 0);
   const [isRelayed, setIsRelayed] = React.useState(false);
@@ -21,7 +21,6 @@ export function PostCard({ post }: { post: any }) {
   const [showComments, setShowComments] = React.useState(false);
   const [showEdit, setShowEdit] = React.useState(false);
   const [editContent, setEditContent] = React.useState(post.content || "");
-  const [showMoreMenu, setShowMoreMenu] = React.useState(false);
   const [showShareModal, setShowShareModal] = React.useState(false);
   const currentUser = auth.currentUser;
   const [pollVotes, setPollVotes] = React.useState<{ [optionIdx: number]: { count: number, voters: string[] } }>({});
@@ -235,18 +234,18 @@ export function PostCard({ post }: { post: any }) {
             </div>
 
             {contentPost.content && (contentPost.type !== 'poll' || (contentPost.type === 'poll' && !contentPost.pollOptions)) && (
-                <div className="text-[1.15rem] font-body whitespace-pre-line mb-2 px-4 py-3 rounded-xl" style={{ backgroundColor: contentPost.backgroundColor || 'transparent', color: contentPost.backgroundColor && contentPost.backgroundColor !== '#ffffff' ? 'hsl(var(--foreground))' : 'inherit' }}>
+                <div className={`whitespace-pre-line mb-2 px-4 py-3 rounded-xl ${isShortVibe ? 'text-white text-base font-body line-clamp-2 text-left' : 'text-[1.15rem] font-body'}`} style={{ backgroundColor: contentPost.backgroundColor && !isShortVibe ? contentPost.backgroundColor : 'transparent', color: contentPost.backgroundColor && contentPost.backgroundColor !== '#ffffff' && !isShortVibe ? 'hsl(var(--foreground))' : 'inherit', textShadow: isShortVibe ? "0 1px 4px #000" : "none" }}>
                     {contentPost.content}
                 </div>
             )}
 
-            {contentPost.hashtags && contentPost.hashtags.length > 0 && (
+            {contentPost.hashtags && contentPost.hashtags.length > 0 && !isShortVibe && (
                 <div className="flex flex-wrap gap-2">
                     {contentPost.hashtags.map((tag: string) => <Link href={`/tags/${tag}`} key={tag} className="text-brand-gold font-bold text-sm hover:underline">#{tag}</Link>)}
                 </div>
             )}
 
-            {(contentPost.type === "media" || contentPost.type === "audio") && contentPost.mediaUrl && (
+            {(contentPost.type === "media" || contentPost.type === "audio") && contentPost.mediaUrl && !isShortVibe && (
                 <div className="w-full rounded-xl overflow-hidden relative">
                     {contentPost.mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? (
                         <>
@@ -304,6 +303,38 @@ export function PostCard({ post }: { post: any }) {
         </>
     )
   }
+  
+  const ActionButtons = () => (
+    <div className={`${isShortVibe ? 'flex flex-col items-center gap-6' : 'flex items-center justify-start gap-6 mt-2 pt-2 border-t border-glass-border'}`}>
+      <button className={`flex items-center gap-1.5 font-bold transition-all ${isShortVibe ? 'flex-col text-white' : 'text-lg text-muted-foreground hover:text-brand-gold'}`} onClick={() => setShowComments(true)}>
+        <MessageCircle size={isShortVibe ? 32 : 20} /> <span className="text-sm">{commentCount}</span>
+      </button>
+      <button className={`flex items-center gap-1.5 font-bold transition-all ${isRelayed ? "text-green-400" : isShortVibe ? "text-white hover:text-green-300" : "text-lg text-muted-foreground hover:text-green-400"}`} onClick={handleRelay} >
+        <Repeat2 size={isShortVibe ? 32 : 20} /> <span className="text-sm">{relayCount}</span>
+      </button>
+      <button className={`flex items-center gap-1.5 font-bold transition-all ${isStarred ? "text-yellow-400" : isShortVibe ? "text-white hover:text-yellow-300" : "text-lg text-muted-foreground hover:text-yellow-400"}`} onClick={handleStar}>
+        <Star size={isShortVibe ? 32 : 20} fill={isStarred ? "currentColor" : "none"} /> <span className="text-sm">{starCount}</span>
+      </button>
+      <button className={`flex items-center gap-1.5 font-bold transition-all ${isShortVibe ? 'flex-col text-white' : 'text-lg text-muted-foreground hover:text-accent-cyan'}`} onClick={() => setShowShareModal(true)}>
+        <Share size={isShortVibe ? 32 : 20} />
+      </button>
+    </div>
+  );
+
+  if (isShortVibe) {
+    return (
+        <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex justify-between items-end pointer-events-none">
+            <div className="flex flex-col gap-2 max-w-[70%] pointer-events-auto">
+                {renderPostContent(post)}
+            </div>
+            <div className="flex flex-col gap-4 pointer-events-auto">
+                <ActionButtons />
+            </div>
+            {showComments && <CommentModal postId={post.id} postAuthorId={post.userId} onClose={() => setShowComments(false)} />}
+            {showShareModal && <ShareModal url={`${window.location.origin}/post/${post.id}`} onClose={() => setShowShareModal(false)} />}
+        </div>
+    );
+  }
 
   return (
     <motion.div 
@@ -344,22 +375,7 @@ export function PostCard({ post }: { post: any }) {
       )}
 
       {renderPostContent(post)}
-
-
-      <div className="flex items-center justify-start gap-6 mt-2 pt-2 border-t border-glass-border">
-        <button className="flex items-center gap-1.5 text-lg font-bold text-muted-foreground hover:text-brand-gold transition-all" onClick={() => setShowComments(true)}>
-          <MessageCircle size={20} /> <span className="text-sm">{commentCount}</span>
-        </button>
-        <button className={`flex items-center gap-1.5 text-lg font-bold transition-all ${isRelayed ? "text-green-400" : "text-muted-foreground hover:text-green-400"}`} onClick={handleRelay} >
-          <Repeat2 size={20} /> <span className="text-sm">{relayCount}</span>
-        </button>
-        <button className={`flex items-center gap-1.5 text-lg font-bold transition-all ${isStarred ? "text-yellow-400" : "text-muted-foreground hover:text-yellow-400"}`} onClick={handleStar}>
-          <Star size={20} fill={isStarred ? "currentColor" : "none"} /> <span className="text-sm">{starCount}</span>
-        </button>
-        <button className="flex items-center gap-1.5 text-lg font-bold text-muted-foreground hover:text-accent-cyan transition-all" onClick={() => setShowShareModal(true)}>
-          <Share size={20} />
-        </button>
-      </div>
+      <ActionButtons />
       
       {showComments && <CommentModal postId={post.id} postAuthorId={post.userId} onClose={() => setShowComments(false)} />}
       
