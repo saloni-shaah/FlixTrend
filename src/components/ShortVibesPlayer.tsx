@@ -58,7 +58,7 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
             if (document.fullscreenElement) {
                 document.exitFullscreen();
             } else {
-                video.requestFullscreen().catch(err => {
+                playerRef.current?.requestFullscreen().catch(err => {
                     console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
                 });
             }
@@ -70,7 +70,6 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
         if (!currentRef) return;
         
         const handleKeyDown = (event: KeyboardEvent) => {
-            // Prevent default page scroll for arrow keys
             if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
                 event.preventDefault();
             }
@@ -86,7 +85,7 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
 
         const handleWheel = (event: WheelEvent) => {
             event.preventDefault();
-            if (scrollTimeoutRef.current) return; // Don't do anything if a scroll is already in progress
+            if (scrollTimeoutRef.current) return;
             
             if (event.deltaY > 0) {
                 scrollToNext();
@@ -94,13 +93,11 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
                 scrollToPrev();
             }
             
-            // Set a timeout to prevent rapid scrolling
             scrollTimeoutRef.current = setTimeout(() => {
                 scrollTimeoutRef.current = null;
-            }, 500); // 500ms delay between scrolls
+            }, 500);
         };
         
-        // Use the window for keydown events to capture them even in fullscreen
         window.addEventListener('keydown', handleKeyDown);
         currentRef.addEventListener('wheel', handleWheel, { passive: false });
         
