@@ -18,7 +18,7 @@ export function MusicDiscovery() {
                 if (data.access_token) {
                     setToken(data.access_token);
                 } else {
-                    throw new Error('Could not authenticate with Spotify');
+                    throw new Error('Could not authenticate with Spotify. Please ensure your SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET are set in your .env.local file.');
                 }
             })
             .catch(err => {
@@ -40,7 +40,10 @@ export function MusicDiscovery() {
         .then(data => {
             if (data.albums && data.albums.items) {
                 setNewReleases(data.albums.items);
-            } else {
+            } else if (data.error) {
+                setError(`Spotify API Error: ${data.error.message}`);
+            }
+            else {
                 setError('Could not fetch new releases.');
             }
             setLoading(false);
@@ -74,7 +77,15 @@ export function MusicDiscovery() {
     }, [activeAudio]);
 
     if (loading) return <div className="text-center text-accent-cyan animate-pulse">Loading new music...</div>
-    if (error) return <div className="text-center text-red-400">Error: {error}</div>
+    if (error) {
+        return (
+            <div className="text-center text-red-400 glass-card p-6">
+                <h3 className="font-bold text-lg mb-2">Spotify Integration Error</h3>
+                <p className="text-sm">{error}</p>
+                <p className="text-xs mt-4 text-gray-400">Please make sure you have created a `.env.local` file and added your Spotify API credentials.</p>
+            </div>
+        )
+    }
 
     return (
         <div className="w-full flex flex-col items-center">
