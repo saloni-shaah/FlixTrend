@@ -32,7 +32,7 @@ export default function AppNavBar() {
 
   return (
     <nav className="fixed bottom-0 left-0 w-full z-40 bg-background/50 backdrop-blur-lg border-t border-glass-border flex justify-around items-center py-2">
-      <NavButton href="/home" icon={Home} label="Home" />
+      <NavButton href="/home" icon={Home} label="VibeSpace" />
       <NavButton href="/scope" icon={Search} label="Scope" />
       <NavButton href="/squad" icon={Users} label="Squad" />
       <NavButton href="/signal" icon={MessageSquare} label="Signal" />
