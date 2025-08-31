@@ -1,16 +1,22 @@
+
 "use client";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useAppState } from "@/utils/AppStateContext";
 import { Home, Search, Users, MessageSquare } from "lucide-react";
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import { getFirestore, collection, query, where, onSnapshot, getDocs } from "firebase/firestore";
+import { auth } from "@/utils/firebaseClient";
 
-function NavButton({ href, icon: Icon, label }: { href: string; icon: React.ElementType; label: string }) {
+const db = getFirestore();
+
+function NavButton({ href, icon: Icon, label, hasNotification }: { href: string; icon: React.ElementType; label: string; hasNotification?: boolean }) {
   const pathname = usePathname();
   const isActive = pathname === href;
 
   return (
-    <Link href={href} className="flex flex-col items-center gap-1 px-2 py-1 text-muted-foreground hover:text-foreground transition-colors">
+    <Link href={href} className="relative flex flex-col items-center gap-1 px-2 py-1 text-muted-foreground hover:text-foreground transition-colors">
       <Icon className={`${isActive ? 'text-brand-gold' : ''}`} />
       <span className={`text-xs font-semibold ${isActive ? 'text-foreground' : ''}`}>{label}</span>
       {isActive && (
@@ -19,6 +25,9 @@ function NavButton({ href, icon: Icon, label }: { href: string; icon: React.Elem
           layoutId="nav-underline"
         />
       )}
+      {hasNotification && (
+        <div className="absolute top-0 right-0 w-2 h-2 bg-accent-pink rounded-full" />
+      )}
     </Link>
   );
 }
@@ -26,6 +35,52 @@ function NavButton({ href, icon: Icon, label }: { href: string; icon: React.Elem
 export default function AppNavBar() {
   const pathname = usePathname();
   const { isCalling } = useAppState();
+  const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
+  const currentUser = auth.currentUser;
+  
+  useEffect(() => {
+    if (!currentUser) {
+        setHasUnreadMessages(false);
+        return;
+    }
+
+    // A more scalable approach would be to have a dedicated 'unread_chats' collection
+    // For this MVP, we will check all chats involving the user by looking at their mutuals.
+    const fetchMutualsAndListen = async () => {
+        const followingRef = collection(db, "users", currentUser.uid, "following");
+        const followersRef = collection(db, "users", currentUser.uid, "followers");
+        const [followingSnap, followersSnap] = await Promise.all([getDocs(followingRef), getDocs(followersRef)]);
+        const following = followingSnap.docs.map(doc => doc.id);
+        const followers = followersSnap.docs.map(doc => doc.id);
+        const mutualUids = Array.from(new Set([...following, ...followers]));
+
+        if (mutualUids.length === 0) return;
+        
+        const unsubscribers = mutualUids.map(uid => {
+            const chatId = [currentUser.uid, uid].sort().join("_");
+            const q = query(
+                collection(db, "chats", chatId, "messages"),
+                where("read", "==", false),
+                where("sender", "!=", currentUser.uid)
+            );
+            return onSnapshot(q, () => {
+                // This is not perfectly efficient, but good for MVP
+                // We just need to know if ANY chat has unread messages
+                setHasUnreadMessages(true);
+            });
+        });
+        
+        // This is a simplified check. A full implementation would check all chats
+        // and setHasUnreadMessages(false) only if ALL are read.
+        // For now, once a notification is seen, it stays until the page reloads.
+
+        return () => unsubscribers.forEach(unsub => unsub());
+    };
+    
+    fetchMutualsAndListen();
+
+  }, [currentUser]);
+
   const hideNav = pathname === "/login" || pathname === "/signup" || pathname === "/" || isCalling;
 
   if (hideNav) return null;
@@ -35,7 +90,7 @@ export default function AppNavBar() {
       <NavButton href="/home" icon={Home} label="VibeSpace" />
       <NavButton href="/scope" icon={Search} label="Scope" />
       <NavButton href="/squad" icon={Users} label="Squad" />
-      <NavButton href="/signal" icon={MessageSquare} label="Signal" />
+      <NavButton href="/signal" icon={MessageSquare} label="Signal" hasNotification={hasUnreadMessages} />
     </nav>
   );
 }

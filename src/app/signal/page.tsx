@@ -1,7 +1,7 @@
 
 "use client";
 import React, { useEffect, useState, useRef } from "react";
-import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp } from "firebase/firestore";
+import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp, where, writeBatch, getDocs } from "firebase/firestore";
 import { auth } from "@/utils/firebaseClient";
 import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X } from "lucide-react";
 import { useAppState } from "@/utils/AppStateContext";
@@ -45,6 +45,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
   const [selectedChat, setSelectedChat] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
+  const [unreadCounts, setUnreadCounts] = useState<{ [key: string]: number }>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { useMediaQuery } = require("@uidotdev/usehooks");
@@ -71,6 +72,42 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
   }, [firebaseUser]);
 
   useEffect(() => {
+    if (!firebaseUser) return;
+
+    const unsubscribers = mutuals.map(mutual => {
+        const chatId = getChatId(firebaseUser.uid, mutual.uid);
+        const q = query(
+            collection(db, "chats", chatId, "messages"),
+            where("sender", "==", mutual.uid),
+            where("read", "==", false)
+        );
+        return onSnapshot(q, (snapshot) => {
+            setUnreadCounts(prev => ({
+                ...prev,
+                [mutual.uid]: snapshot.size
+            }));
+        });
+    });
+
+    return () => unsubscribers.forEach(unsub => unsub());
+
+  }, [mutuals, firebaseUser]);
+
+
+  const handleSelectChat = async (user: any) => {
+    setSelectedChat(user);
+    // Mark messages as read
+    const chatId = getChatId(firebaseUser.uid, user.uid);
+    const unreadQuery = query(collection(db, "chats", chatId, "messages"), where("sender", "==", user.uid), where("read", "==", false));
+    const unreadDocs = await getDocs(unreadQuery);
+    const batch = writeBatch(db);
+    unreadDocs.forEach(doc => {
+      batch.update(doc.ref, { read: true });
+    });
+    await batch.commit();
+  };
+
+  useEffect(() => {
     if (!selectedChat || !firebaseUser) return;
     const chatId = getChatId(firebaseUser.uid, selectedChat.uid);
     const q = query(collection(db, "chats", chatId, "messages"), orderBy("createdAt", "asc"));
@@ -93,6 +130,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
         sender: firebaseUser.uid,
         createdAt: serverTimestamp(),
         type: type,
+        read: false, // Mark as unread
     };
 
     if (mediaUrl) {
@@ -110,14 +148,12 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Determine file type
     let type: 'image' | 'video' | 'audio' = 'image';
     if (file.type.startsWith('video/')) type = 'video';
     if (file.type.startsWith('audio/')) type = 'audio';
 
-    const caption = newMessage; // use current input as caption
+    const caption = newMessage;
     
-    // Upload and send
     try {
         const mediaUrl = await uploadToCloudinary(file);
         if (mediaUrl) {
@@ -128,7 +164,6 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
         alert("Sorry, the file upload failed.");
     }
 
-    // Reset file input
     if (e.target) e.target.value = '';
   };
   
@@ -141,7 +176,6 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
       alert(`Starting voice call with ${selectedChat.name}... (Feature coming soon!)`);
     }
 
-    // Create a notification for a missed call
     const notifRef = collection(db, "notifications", selectedChat.uid, "user_notifications");
     await addDoc(notifRef, {
       type: 'missed_call',
@@ -167,7 +201,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                     <div className="text-gray-400 text-center p-8">No contacts yet. Follow some users to start chatting!</div>
                 ) : (
                     mutuals.map((user) => (
-                        <button key={user.uid} className={`w-full flex items-center gap-4 px-4 py-3 text-left hover:bg-accent-cyan/10 transition-colors duration-200 ${selectedChat?.uid === user.uid ? "bg-accent-cyan/20" : ""}`} onClick={() => setSelectedChat(user)}>
+                        <button key={user.uid} className={`w-full flex items-center gap-4 px-4 py-3 text-left hover:bg-accent-cyan/10 transition-colors duration-200 ${selectedChat?.uid === user.uid ? "bg-accent-cyan/20" : ""}`} onClick={() => handleSelectChat(user)}>
                             <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-xl overflow-hidden shrink-0">
                                 {user.avatar_url ? <img src={user.avatar_url} alt="avatar" className="w-full h-full object-cover"/> : getInitials(user)}
                             </div>
@@ -175,6 +209,11 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                                 <span className="font-bold text-white block truncate">{user.name || user.username}</span>
                                 <span className="text-xs text-gray-400 block truncate">@{user.username}</span>
                             </div>
+                            {unreadCounts[user.uid] > 0 && (
+                                <span className="bg-accent-pink text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                                    {unreadCounts[user.uid]}
+                                </span>
+                            )}
                         </button>
                     ))
                 )}
