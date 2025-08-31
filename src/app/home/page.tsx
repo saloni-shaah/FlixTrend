@@ -11,8 +11,9 @@ import { AlmightyLogo } from "@/components/AlmightyLogo";
 import { FlashModal } from "@/components/FlashModal";
 import { NotificationPanel } from "@/components/NotificationPanel";
 import { PostCard } from "@/components/PostCard";
+import { app } from "@/utils/firebaseClient";
 
-const db = getFirestore();
+const db = getFirestore(app);
 
 export default function HomePage() {
   const [showModal, setShowModal] = useState(false);
@@ -84,12 +85,17 @@ export default function HomePage() {
     setIsAlmightyLoading(true);
 
     try {
+      if (!currentUser) throw new Error("User not logged in");
+
       const request: AlmighyChatRequest = {
-        history: newChatHistory,
-        userId: currentUser?.uid || 'anonymous',
-        displayName: currentUser?.displayName || 'Guest',
+        history: newChatHistory.slice(0, -1), // Send history without the latest user message
+        userId: currentUser.uid,
+        displayName: currentUser.displayName || 'Guest',
       };
+      // Note: The `prompt` is now part of the history, not a separate field
       const response = await almightyChat(request);
+      
+      let modelResponse: ChatMessage | null = null;
 
       // Handle tool responses
       if (response.toolResponse) {
@@ -97,13 +103,18 @@ export default function HomePage() {
             const callTargetUser = response.toolResponse.output;
             setCallTarget(callTargetUser);
             setIsCalling(true);
-            setChat(prev => [...prev, { role: 'model', parts: [{ text: `Sure, I'm calling ${callTargetUser.name} for you now!` }] }]);
-        } else {
-            setChat(prev => [...prev, { role: 'model', parts: [{ text: response.textResponse || "Done!" }] }]);
+            modelResponse = { role: 'model', parts: [{ text: `Sure, I'm calling ${callTargetUser.name} for you now!` }] };
+        } else if (response.textResponse) {
+            modelResponse = { role: 'model', parts: [{ text: response.textResponse }] };
         }
       } else if (response.textResponse) {
-        setChat(prev => [...prev, { role: 'model', parts: [{ text: response.textResponse }] }]);
+        modelResponse = { role: 'model', parts: [{ text: response.textResponse }] };
       }
+
+      if (modelResponse) {
+        setChat(prev => [...prev, modelResponse!]);
+      }
+
     } catch (error) {
       console.error("Almighty AI Error:", error);
       setChat(prev => [...prev, { role: 'model', parts: [{ text: "Sorry, I ran into a problem. Please try again." }] }]);
@@ -114,6 +125,7 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col min-h-screen pt-6 pb-24 px-2 md:px-8 transition-colors">
+      <div className="w-full max-w-2xl mx-auto">
       {/* Centered, prominent search bar */}
       <div className="flex justify-center items-center mb-6 w-full">
         <div className="relative w-full max-w-2xl">
@@ -180,6 +192,7 @@ export default function HomePage() {
           </div>
         )}
       </section>
+      </div>
       
       {/* Top Right FABs */}
       <div className="fixed top-4 right-4 z-50 flex gap-3">

@@ -24,8 +24,9 @@ import {
   getDoc,
 } from 'firebase/firestore';
 import { z } from 'zod';
+import { app } from '@/utils/firebaseClient'; // Import the initialized app
 
-const db = getFirestore();
+const db = getFirestore(app); // Pass the app instance to getFirestore
 
 // Define the schema for a single chat message.
 export const ChatMessageSchema = z.object({
@@ -159,6 +160,7 @@ const almightyChatFlow = ai.defineFlow(
     const { history, userId, displayName } = request;
     // Call the Gemini model with the prompt and history.
     const { response } = await ai.generate({
+      model: 'googleai/gemini-1.5-flash-latest',
       prompt: almightyPrompt,
       messages: history,
       // Pass user info to the tools' context
@@ -176,7 +178,7 @@ const almightyChatFlow = ai.defineFlow(
                 name: toolRequest.tool,
                 output: toolResponse
             },
-            textResponse: response.text, // The AI might still have a text response
+            textResponse: response.text || `Done. ✅`, // Ensure text response
         };
     }
 
