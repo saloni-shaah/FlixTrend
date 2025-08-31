@@ -14,6 +14,7 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
     const [isMuted, setIsMuted] = useState(false);
     const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
     const playerRef = useRef<HTMLDivElement>(null);
+    const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     
     const scrollToNext = useCallback(() => {
         setActiveShortIndex(i => Math.min(shortVibes.length - 1, i + 1));
@@ -69,6 +70,11 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
         if (!currentRef) return;
         
         const handleKeyDown = (event: KeyboardEvent) => {
+            // Prevent default page scroll for arrow keys
+            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                event.preventDefault();
+            }
+
             if (event.key === 'ArrowDown') {
                 scrollToNext();
             } else if (event.key === 'ArrowUp') {
@@ -80,21 +86,32 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
 
         const handleWheel = (event: WheelEvent) => {
             event.preventDefault();
+            if (scrollTimeoutRef.current) return; // Don't do anything if a scroll is already in progress
+            
             if (event.deltaY > 0) {
                 scrollToNext();
             } else if (event.deltaY < 0) {
                 scrollToPrev();
             }
+            
+            // Set a timeout to prevent rapid scrolling
+            scrollTimeoutRef.current = setTimeout(() => {
+                scrollTimeoutRef.current = null;
+            }, 500); // 500ms delay between scrolls
         };
         
-        currentRef.addEventListener('wheel', handleWheel, { passive: false });
+        // Use the window for keydown events to capture them even in fullscreen
         window.addEventListener('keydown', handleKeyDown);
+        currentRef.addEventListener('wheel', handleWheel, { passive: false });
         
         return () => {
+            window.removeEventListener('keydown', handleKeyDown);
             if (currentRef) {
                 currentRef.removeEventListener('wheel', handleWheel);
             }
-            window.removeEventListener('keydown', handleKeyDown);
+             if (scrollTimeoutRef.current) {
+                clearTimeout(scrollTimeoutRef.current);
+            }
         };
     }, [scrollToNext, scrollToPrev]);
 
