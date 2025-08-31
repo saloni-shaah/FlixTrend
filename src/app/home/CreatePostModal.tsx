@@ -204,14 +204,21 @@ export default function CreatePostModal({ open, onClose }: { open: boolean; onCl
         </div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 flex-1 overflow-y-auto pr-2">
           {type === "text" && (
-            <>
-              <textarea className="w-full rounded-xl p-3 bg-gray-100 dark:bg-black/40 text-gray-800 dark:text-white border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink" placeholder="What's on your mind?" value={content} onChange={e => setContent(e.target.value)} required style={{ backgroundColor: backgroundColor, color: backgroundColor === '#ffffff' ? '' : '#000000' }} />
+            <div className="flex flex-col gap-4 flex-1">
+              <textarea 
+                className="w-full rounded-xl p-3 bg-gray-100 dark:bg-black/40 text-gray-800 dark:text-white border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink flex-1 min-h-[120px]" 
+                placeholder="What's on your mind?" 
+                value={content} 
+                onChange={e => setContent(e.target.value)} 
+                required 
+                style={{ backgroundColor: backgroundColor, color: backgroundColor === '#ffffff' ? '' : '#000000' }} 
+              />
               <div className="flex flex-wrap gap-2">
                 {backgroundColors.map(color => (
                   <button type="button" key={color} onClick={() => setBackgroundColor(color)} className="w-8 h-8 rounded-full border-2" style={{ backgroundColor: color, borderColor: backgroundColor === color ? 'var(--accent-pink)' : 'transparent' }} />
                 ))}
               </div>
-            </>
+            </div>
           )}
           {(type === "media" || type === "flash") && (
             <>
@@ -308,10 +315,12 @@ export default function CreatePostModal({ open, onClose }: { open: boolean; onCl
             </div>
           )}
           
-          <button type="submit" className="px-8 py-3 rounded-full bg-accent-cyan text-primary font-bold text-lg shadow-fab-glow hover:scale-105 hover:shadow-lg transition-all duration-200 disabled:opacity-60 mb-2 mt-auto" disabled={loading || (uploadProgress !== null && uploadProgress < 100)}>
-            {loading ? (uploadProgress !== null ? `Uploading... ${uploadProgress}%` : "Submitting...") : (scheduleDate ? "Schedule" : "Submit")}
-          </button>
-          {error && <div className="text-red-400 text-center animate-bounce mt-2">{error}</div>}
+          <div className="mt-auto">
+            <button type="submit" className="px-8 py-3 w-full rounded-full bg-accent-cyan text-primary font-bold text-lg shadow-fab-glow hover:scale-105 hover:shadow-lg transition-all duration-200 disabled:opacity-60" disabled={loading || (uploadProgress !== null && uploadProgress < 100)}>
+              {loading ? (uploadProgress !== null ? `Uploading... ${uploadProgress}%` : "Submitting...") : (scheduleDate ? "Schedule" : "Submit")}
+            </button>
+            {error && <div className="text-red-400 text-center animate-bounce mt-2">{error}</div>}
+          </div>
         </form>
       </div>
     </div>
