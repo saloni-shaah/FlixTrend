@@ -323,11 +323,24 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
 
   if (isShortVibe) {
     return (
-        <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex justify-between items-end pointer-events-none">
-            <div className="flex flex-col gap-2 max-w-[70%] pointer-events-auto">
-                {renderPostContent(post)}
+        <div className="absolute inset-0 w-full h-full p-4 flex justify-between items-end pointer-events-none bg-gradient-to-t from-black/60 via-black/20 to-transparent">
+            <div className="flex flex-col gap-2 max-w-[calc(100%-80px)] pointer-events-auto self-end">
+                <div className="flex items-center gap-2">
+                    <Link href={`/squad/${post.userId}`} className="flex items-center gap-2 group cursor-pointer">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green flex items-center justify-center font-bold text-lg overflow-hidden border-2 border-accent-green group-hover:scale-105 transition-transform">
+                            {post.avatar_url ? <img src={post.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : <span className="text-white">{post.displayName?.[0] || 'U'}</span>}
+                        </div>
+                        <span className="font-headline text-white text-base group-hover:underline drop-shadow-lg">@{post.username || "user"}</span>
+                    </Link>
+                </div>
+                <p className="text-white text-sm font-body line-clamp-3 drop-shadow-lg">{post.content}</p>
+                 {post.song && (
+                    <div className="flex items-center gap-2 text-white text-sm drop-shadow-lg">
+                        <FaMusic /> <span>{post.song.name} - {post.song.artists.join(", ")}</span>
+                    </div>
+                 )}
             </div>
-            <div className="flex flex-col gap-4 pointer-events-auto">
+            <div className="flex flex-col gap-4 pointer-events-auto self-end mb-4">
                 <ActionButtons />
             </div>
             {showComments && <CommentModal postId={post.id} postAuthorId={post.userId} onClose={() => setShowComments(false)} />}

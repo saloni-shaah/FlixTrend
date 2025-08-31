@@ -1,9 +1,9 @@
 
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Star, MessageCircle, Share, Play } from 'lucide-react';
+import { Star, MessageCircle, Share, Play, Volume2, VolumeX } from 'lucide-react';
 import Link from 'next/link';
 import { ShareModal } from './ShareModal';
 import { PostCard } from './PostCard';
@@ -11,8 +11,18 @@ import { PostCard } from './PostCard';
 export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
     const [activeShortIndex, setActiveShortIndex] = useState(0);
     const [isPlaying, setIsPlaying] = useState(true);
+    const [isMuted, setIsMuted] = useState(false);
     const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
+    const playerRef = useRef<HTMLDivElement>(null);
     
+    const scrollToNext = useCallback(() => {
+        setActiveShortIndex(i => Math.min(shortVibes.length - 1, i + 1));
+    }, [shortVibes.length]);
+
+    const scrollToPrev = useCallback(() => {
+        setActiveShortIndex(i => Math.max(0, i - 1));
+    }, []);
+
     useEffect(() => {
         // Ensure the active video plays when the index changes
         videoRefs.current.forEach((video, idx) => {
@@ -55,39 +65,41 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
     };
     
     useEffect(() => {
+        const currentRef = playerRef.current;
+        if (!currentRef) return;
+        
         const handleKeyDown = (event: KeyboardEvent) => {
-            if (event.ctrlKey) {
-                // Do not prevent default for modifier keys as it can cause issues
-                const video = videoRefs.current[activeShortIndex];
-                if (video) {
-                     if (document.fullscreenElement) {
-                        document.exitFullscreen();
-                    } else {
-                        video.requestFullscreen().catch(err => {
-                            console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
-                        });
-                    }
-                }
+            if (event.key === 'ArrowDown') {
+                scrollToNext();
+            } else if (event.key === 'ArrowUp') {
+                scrollToPrev();
+            } else if (event.key.toLowerCase() === 'm') {
+                setIsMuted(prev => !prev);
             }
         };
 
+        const handleWheel = (event: WheelEvent) => {
+            event.preventDefault();
+            if (event.deltaY > 0) {
+                scrollToNext();
+            } else if (event.deltaY < 0) {
+                scrollToPrev();
+            }
+        };
+        
+        currentRef.addEventListener('wheel', handleWheel, { passive: false });
         window.addEventListener('keydown', handleKeyDown);
+        
         return () => {
+            if (currentRef) {
+                currentRef.removeEventListener('wheel', handleWheel);
+            }
             window.removeEventListener('keydown', handleKeyDown);
         };
-    }, [activeShortIndex]);
-
-
-    const scrollUp = () => {
-        setActiveShortIndex(i => Math.max(0, i - 1));
-    };
-    
-    const scrollDown = () => {
-        setActiveShortIndex(i => Math.min(shortVibes.length - 1, i + 1));
-    };
+    }, [scrollToNext, scrollToPrev]);
 
     return (
-        <div className="w-full h-full flex flex-col items-center relative glass-card overflow-hidden bg-black">
+        <div ref={playerRef} className="w-full h-full flex flex-col items-center relative glass-card overflow-hidden bg-black focus:outline-none" tabIndex={0}>
             {shortVibes.length === 0 ? (
                 <div className="text-gray-400 text-center m-auto">
                     <div className="text-6xl mb-2">🎬</div>
@@ -98,21 +110,20 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
                 shortVibes.map((short, idx) => (
                     <div
                         key={short.id || idx}
-                        className="absolute top-0 left-0 w-full h-full"
+                        className="absolute top-0 left-0 w-full h-full transition-transform duration-500 ease-in-out"
                         style={{ 
-                            pointerEvents: idx === activeShortIndex ? "auto" : "none",
+                            transform: `translateY(${(idx - activeShortIndex) * 100}%)`,
                             zIndex: shortVibes.length - Math.abs(activeShortIndex - idx),
-                            opacity: idx === activeShortIndex ? 1 : 0,
-                            transition: 'opacity 0.3s ease-in-out',
                         }}
                     >
                         <div className="relative w-full h-full flex items-center justify-center cursor-pointer" onClick={() => handleVideoClick(idx)} onDoubleClick={() => handleDoubleClick(idx)}>
                             <video
                                 ref={el => { videoRefs.current[idx] = el; }}
                                 src={short.mediaUrl}
-                                className="w-full h-full object-contain pointer-events-none" // Use object-contain and disable pointer events on video
+                                className="w-full h-full object-contain pointer-events-none"
                                 autoPlay={idx === 0}
                                 loop
+                                muted={isMuted}
                                 playsInline
                             />
                             {!isPlaying && activeShortIndex === idx && (
@@ -125,13 +136,21 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
                     </div>
                 ))
             )}
-            {/* Scroll buttons */}
-            {activeShortIndex > 0 && (
-              <button className="absolute top-4 left-1/2 -translate-x-1/2 z-50 btn-glass-icon w-24 h-10" onClick={scrollUp}>&uarr;</button>
-            )}
-            {activeShortIndex < shortVibes.length - 1 && (
-              <button className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 btn-glass-icon w-24 h-10" onClick={scrollDown}>&darr;</button>
-            )}
+            
+            {/* Mute Button */}
+            <button className="absolute top-4 right-4 z-50 p-2 bg-black/40 rounded-full text-white" onClick={() => setIsMuted(prev => !prev)}>
+                {isMuted ? <VolumeX size={20}/> : <Volume2 size={20} />}
+            </button>
+
+            {/* Scroll buttons for touch devices */}
+            <div className="md:hidden">
+                {activeShortIndex > 0 && (
+                  <button className="absolute top-4 left-1/2 -translate-x-1/2 z-50 btn-glass-icon w-24 h-10" onClick={scrollToPrev}>&uarr;</button>
+                )}
+                {activeShortIndex < shortVibes.length - 1 && (
+                  <button className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 btn-glass-icon w-24 h-10" onClick={scrollToNext}>&darr;</button>
+                )}
+            </div>
         </div>
     );
 }
