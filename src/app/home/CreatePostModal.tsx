@@ -192,7 +192,7 @@ export default function CreatePostModal({ open, onClose }: { open: boolean; onCl
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="bg-white dark:bg-card rounded-2xl p-6 w-full max-w-md relative animate-pop shadow-xl border border-gray-100 dark:border-accent-cyan/20">
+      <div className="bg-white dark:bg-card rounded-2xl p-6 w-full max-w-md relative animate-pop shadow-xl border border-gray-100 dark:border-accent-cyan/20 flex flex-col max-h-[90vh]">
         <button onClick={onClose} className="absolute top-2 right-2 text-accent-pink text-2xl">&times;</button>
         <h2 className="text-xl font-headline font-bold mb-4 text-accent-cyan">Create Post</h2>
         <div className="flex gap-2 mb-4 flex-wrap">
@@ -202,7 +202,7 @@ export default function CreatePostModal({ open, onClose }: { open: boolean; onCl
           <button onClick={() => setType("flash")} className={`px-3 py-1 rounded-full font-bold ${type === "flash" ? "bg-accent-cyan text-primary" : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"}`}>Flash</button>
           <button onClick={() => setType("poll")} className={`px-3 py-1 rounded-full font-bold ${type === "poll" ? "bg-accent-cyan text-primary" : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"}`}>Poll</button>
         </div>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4 flex-1 overflow-y-auto pr-2">
           {type === "text" && (
             <>
               <textarea className="w-full rounded-xl p-3 bg-gray-100 dark:bg-black/40 text-gray-800 dark:text-white border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink" placeholder="What's on your mind?" value={content} onChange={e => setContent(e.target.value)} required style={{ backgroundColor: backgroundColor, color: backgroundColor === '#ffffff' ? '' : '#000000' }} />
@@ -308,7 +308,7 @@ export default function CreatePostModal({ open, onClose }: { open: boolean; onCl
             </div>
           )}
           
-          <button type="submit" className="px-8 py-3 rounded-full bg-accent-cyan text-primary font-bold text-lg shadow-fab-glow hover:scale-105 hover:shadow-lg transition-all duration-200 disabled:opacity-60 mb-2" disabled={loading || (uploadProgress !== null && uploadProgress < 100)}>
+          <button type="submit" className="px-8 py-3 rounded-full bg-accent-cyan text-primary font-bold text-lg shadow-fab-glow hover:scale-105 hover:shadow-lg transition-all duration-200 disabled:opacity-60 mb-2 mt-auto" disabled={loading || (uploadProgress !== null && uploadProgress < 100)}>
             {loading ? (uploadProgress !== null ? `Uploading... ${uploadProgress}%` : "Submitting...") : (scheduleDate ? "Schedule" : "Submit")}
           </button>
           {error && <div className="text-red-400 text-center animate-bounce mt-2">{error}</div>}
