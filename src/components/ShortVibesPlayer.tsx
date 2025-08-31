@@ -40,6 +40,43 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
             }
         }
     };
+    
+    const handleDoubleClick = (index: number) => {
+        const video = videoRefs.current[index];
+        if (video) {
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+            } else {
+                video.requestFullscreen().catch(err => {
+                    console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+                });
+            }
+        }
+    };
+    
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.ctrlKey) {
+                event.preventDefault(); // Prevent default browser behavior for Ctrl key
+                const video = videoRefs.current[activeShortIndex];
+                if (video) {
+                     if (document.fullscreenElement) {
+                        document.exitFullscreen();
+                    } else {
+                        video.requestFullscreen().catch(err => {
+                            console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+                        });
+                    }
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [activeShortIndex]);
+
 
     const scrollUp = () => {
         setActiveShortIndex(i => Math.max(0, i - 1));
@@ -69,7 +106,7 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
                             transition: 'opacity 0.3s ease-in-out',
                         }}
                     >
-                        <div className="relative w-full h-full flex items-center justify-center cursor-pointer" onClick={() => handleVideoClick(idx)}>
+                        <div className="relative w-full h-full flex items-center justify-center cursor-pointer" onClick={() => handleVideoClick(idx)} onDoubleClick={() => handleDoubleClick(idx)}>
                             <video
                                 ref={el => { videoRefs.current[idx] = el; }}
                                 src={short.mediaUrl}
