@@ -1,4 +1,4 @@
-# FlixTrend
+d .# FlixTrend
 
 **FlixTrend** is a Gen-Z-focused, futuristic social media web app MVP. It features a real-time feed, ephemeral stories (Flashes), AI-powered chat (Almighty AI), and a modern, vibrant UI inspired by platforms like GitHub and Hulu.
 
