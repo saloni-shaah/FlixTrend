@@ -57,7 +57,7 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.ctrlKey) {
-                event.preventDefault(); // Prevent default browser behavior for Ctrl key
+                // Do not prevent default for modifier keys as it can cause issues
                 const video = videoRefs.current[activeShortIndex];
                 if (video) {
                      if (document.fullscreenElement) {
