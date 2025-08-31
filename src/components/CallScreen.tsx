@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -5,6 +6,7 @@ import { getFirestore, doc, onSnapshot, updateDoc, collection, addDoc } from 'fi
 import { auth } from '@/utils/firebaseClient';
 import { Mic, MicOff, Phone, Video, VideoOff } from 'lucide-react';
 import { answerCall, endCall } from '@/utils/callService';
+import { useAppState } from '@/utils/AppStateContext';
 
 const db = getFirestore();
 
@@ -23,6 +25,7 @@ export function CallScreen({ call }: { call: any }) {
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
+  const { closeCall } = useAppState();
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -119,8 +122,9 @@ export function CallScreen({ call }: { call: any }) {
   };
 
   const handleEndCall = async () => {
-    if(pc) {
-        await endCall(pc, call.id, currentUser!.uid);
+    if(pc && currentUser) {
+        await endCall(pc, call.id, currentUser.uid);
+        closeCall(); // Immediately close the UI
     }
   };
 

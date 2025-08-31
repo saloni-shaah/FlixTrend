@@ -25,6 +25,7 @@ interface AppState {
   callTarget: any | null;
   setCallTarget: (target: any | null) => void;
   activeCall: Call | null;
+  closeCall: () => void; // New function to close the UI
   activeSong: Song | null;
   isPlaying: boolean;
   playSong: (song: Song) => void;
@@ -60,12 +61,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     };
     
     let callUnsubscribe: Unsubscribe | null = null;
+    let callDocUnsubscribe: Unsubscribe | null = null;
 
     const authUnsubscribe = auth.onAuthStateChanged(user => {
-      if (callUnsubscribe) {
-        callUnsubscribe(); // Clean up previous listener
-        callUnsubscribe = null;
-      }
+      // Clean up previous listeners on user change
+      if (callUnsubscribe) callUnsubscribe();
+      if (callDocUnsubscribe) callDocUnsubscribe();
       
       if (user) {
         handleToken(user);
@@ -74,11 +75,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         callUnsubscribe = onSnapshot(userDocRef, (snap) => {
           const data = snap.data();
           const currentCallId = data?.currentCallId;
+          
+          if (callDocUnsubscribe) callDocUnsubscribe(); // Clean up old call listener
 
           if (currentCallId) {
             // If there's a call ID, listen to that call document
             const callDocRef = doc(db, 'calls', currentCallId);
-            onSnapshot(callDocRef, (callSnap) => {
+            callDocUnsubscribe = onSnapshot(callDocRef, (callSnap) => {
               if (callSnap.exists()) {
                 setActiveCall({ id: callSnap.id, ...callSnap.data() });
               } else {
@@ -100,9 +103,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
     return () => {
         authUnsubscribe();
-        if (callUnsubscribe) {
-            callUnsubscribe();
-        }
+        if (callUnsubscribe) callUnsubscribe();
+        if (callDocUnsubscribe) callDocUnsubscribe();
     };
   }, []);
   
@@ -156,6 +158,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       }
   };
 
+  const closeCall = () => {
+    setActiveCall(null);
+  };
 
   const value = {
     isCalling,
@@ -163,6 +168,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     callTarget,
     setCallTarget,
     activeCall,
+    closeCall, // Provide the new function
     activeSong,
     isPlaying,
     playSong,

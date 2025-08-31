@@ -1,7 +1,7 @@
 
 "use client";
 
-import { getFirestore, doc, setDoc, collection, addDoc, updateDoc, onSnapshot, deleteDoc, writeBatch, getDoc, FieldValue, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, collection, addDoc, updateDoc, onSnapshot, deleteDoc, writeBatch, getDoc, FieldValue, serverTimestamp, getDocs } from 'firebase/firestore';
 
 const db = getFirestore();
 
@@ -107,9 +107,13 @@ export async function endCall(pc: RTCPeerConnection, callId: string, userId: str
         // Call document might have already been cleaned up by the other user.
         // Still try to clean up the local user's state.
         const userDocRef = doc(db, 'users', userId);
-        const userDocSnap = await getDoc(userDocRef);
-        if (userDocSnap.exists() && userDocSnap.data().currentCallId === callId) {
-            await updateDoc(userDocRef, { currentCallId: null });
+        try {
+            const userDocSnap = await getDoc(userDocRef);
+            if (userDocSnap.exists() && userDocSnap.data().currentCallId === callId) {
+                await updateDoc(userDocRef, { currentCallId: null });
+            }
+        } catch (error) {
+            console.error("Error cleaning up user state after call:", error);
         }
         return;
     }
@@ -137,5 +141,9 @@ export async function endCall(pc: RTCPeerConnection, callId: string, userId: str
         batch.update(doc(db, 'users', callData.calleeId), { currentCallId: null });
     }
 
-    await batch.commit();
+    try {
+        await batch.commit();
+    } catch (error) {
+        console.error("Error committing batch delete for call:", error);
+    }
 }
