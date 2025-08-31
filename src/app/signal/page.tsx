@@ -5,6 +5,7 @@ import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setD
 import { auth } from "@/utils/firebaseClient";
 import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X } from "lucide-react";
 import { useAppState } from "@/utils/AppStateContext";
+import { createCall } from "@/utils/callService";
 
 const db = getFirestore();
 
@@ -39,62 +40,6 @@ function getChatId(uid1: string, uid2: string) {
   return [uid1, uid2].sort().join("_");
 }
 
-function VideoCallModal({ peer, onClose }: { peer: any, onClose: () => void }) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [hasCameraPermission, setHasCameraPermission] = useState(false);
-
-  useEffect(() => {
-    const getCameraPermission = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        setHasCameraPermission(true);
-
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-      } catch (error) {
-        console.error('Error accessing camera:', error);
-        setHasCameraPermission(false);
-      }
-    };
-
-    getCameraPermission();
-
-    return () => {
-      if (videoRef.current && videoRef.current.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach(track => track.stop());
-      }
-    }
-  }, []);
-
-  return (
-    <div className="fixed inset-0 z-[100] bg-black flex flex-col">
-      <div className="relative flex-1 flex items-center justify-center">
-        <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted />
-        {!hasCameraPermission &&
-          <div className="absolute inset-0 flex items-center justify-center bg-black/70 text-white text-center p-4">
-            <div>
-              <h2 className="text-2xl font-bold mb-2">Camera Access Required</h2>
-              <p>Please allow camera and microphone access in your browser settings to use video calls.</p>
-            </div>
-          </div>
-        }
-        <div className="absolute top-4 left-4 text-white">
-          <h3 className="text-xl font-bold">{peer.name}</h3>
-          <p className="text-sm">Connecting...</p>
-        </div>
-      </div>
-      <div className="bg-black/50 p-4 flex justify-center items-center gap-4">
-        <button className="p-3 bg-gray-600 rounded-full text-white"><Mic size={24} /></button>
-        <button className="p-3 bg-gray-600 rounded-full text-white"><Video size={24} /></button>
-        <button onClick={onClose} className="p-4 bg-red-500 rounded-full text-white"><Phone size={24} /></button>
-      </div>
-    </div>
-  )
-}
-
-
 function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
   const [mutuals, setMutuals] = useState<any[]>([]);
   const [selectedChat, setSelectedChat] = useState<any>(null);
@@ -104,7 +49,6 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { useMediaQuery } = require("@uidotdev/usehooks");
   const isMobile = useMediaQuery("(max-width: 767px)");
-  const { isCalling, setIsCalling, callTarget, setCallTarget } = useAppState();
 
   useEffect(() => {
     if (!firebaseUser) return;
@@ -192,8 +136,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
     if (!selectedChat || !firebaseUser) return;
     
     if (type === 'video') {
-      setCallTarget(selectedChat);
-      setIsCalling(true);
+      await createCall(firebaseUser, selectedChat);
     } else {
       alert(`Starting voice call with ${selectedChat.name}... (Feature coming soon!)`);
     }
@@ -214,9 +157,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
   const getInitials = (user: any) => user?.name?.[0] || user?.username?.[0] || "U";
 
   return (
-    <>
-    {isCalling && callTarget && <VideoCallModal peer={callTarget} onClose={() => setIsCalling(false)}/>}
-    <div className="flex h-[calc(100vh-64px)] md:h-screen bg-transparent font-body text-white">
+    <div className="flex h-[calc(100vh-64px)] md:h-[calc(100vh-88px)] bg-transparent font-body text-white">
         <div className={`w-full md:w-1/3 md:min-w-[350px] border-r border-accent-cyan/10 bg-black/60 flex flex-col ${isMobile && selectedChat ? "hidden" : ""}`}>
             <div className="p-4 border-b border-accent-cyan/10">
                 <h2 className="text-xl font-headline font-bold text-accent-cyan">Signal</h2>
@@ -295,7 +236,6 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
             )}
         </div>
     </div>
-    </>
   );
 }
 
@@ -329,5 +269,3 @@ export default function SignalPage() {
   }
   return <ClientOnlySignalPage firebaseUser={firebaseUser} />;
 }
-
-    
