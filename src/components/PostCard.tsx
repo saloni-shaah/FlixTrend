@@ -437,7 +437,7 @@ function Comment({ comment, onReply }: { comment: any; onReply: () => void }) {
     async function fetchUserData() {
       if (comment.username && comment.avatar_url) {
         setUserData({ username: comment.username, avatar_url: comment.avatar_url, displayName: comment.displayName });
-      } else {
+      } else if (comment.userId) {
         const userDoc = await getDoc(doc(db, "users", comment.userId));
         if (userDoc.exists()) {
           const data = userDoc.data();
