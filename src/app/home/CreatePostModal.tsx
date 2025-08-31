@@ -1,6 +1,7 @@
+
 "use client";
 import React, { useRef, useState, useEffect } from "react";
-import { getFirestore, collection, addDoc, serverTimestamp, getDoc, doc } from "firebase/firestore";
+import { getFirestore, collection, addDoc, serverTimestamp, getDoc, doc, query, onSnapshot, orderBy } from "firebase/firestore";
 import { auth } from "@/utils/firebaseClient";
 import { useRouter } from "next/navigation";
 
@@ -53,29 +54,19 @@ export default function CreatePostModal({ open, onClose }: { open: boolean; onCl
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const [scheduleDate, setScheduleDate] = useState<Date | null>(null);
-  const [spotifyToken, setSpotifyToken] = useState<string | null>(null);
-  const [songSearch, setSongSearch] = useState("");
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  
+  const [appSongs, setAppSongs] = useState<any[]>([]);
   const [selectedSong, setSelectedSong] = useState<any>(null);
-  const [showSongSearch, setShowSongSearch] = useState(false);
+  const [showSongPicker, setShowSongPicker] = useState(false);
 
   useEffect(() => {
-    fetch('/api/spotify-token')
-      .then(res => res.json())
-      .then(data => {
-        if (data.access_token) setSpotifyToken(data.access_token);
-      });
+    const q = query(collection(db, "songs"), orderBy("createdAt", "desc"));
+    const unsub = onSnapshot(q, (snapshot) => {
+        setAppSongs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    return () => unsub();
   }, []);
 
-  async function handleSongSearch(e: React.FormEvent) {
-    e.preventDefault();
-    if (!spotifyToken || !songSearch.trim()) return;
-    const res = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(songSearch)}&type=track&limit=10`, {
-      headers: { Authorization: `Bearer ${spotifyToken}` }
-    });
-    const data = await res.json();
-    setSearchResults(data.tracks?.items || []);
-  }
 
   useEffect(() => {
     if (mediaFile && mediaFile.type.startsWith('video')) {
@@ -132,12 +123,11 @@ export default function CreatePostModal({ open, onClose }: { open: boolean; onCl
       
       const songData = selectedSong ? {
         id: selectedSong.id,
-        name: selectedSong.name,
-        artists: selectedSong.artists.map((a: any) => a.name),
-        album: selectedSong.album.name,
-        albumArt: selectedSong.album.images[0]?.url,
-        preview_url: selectedSong.preview_url,
-        external_url: selectedSong.external_urls.spotify,
+        name: selectedSong.title,
+        artists: [selectedSong.artist],
+        album: selectedSong.album,
+        albumArt: selectedSong.albumArtUrl,
+        preview_url: selectedSong.audioUrl,
       } : null;
 
       const postData: any = {
@@ -180,7 +170,7 @@ export default function CreatePostModal({ open, onClose }: { open: boolean; onCl
       setThumbnailUrl(null);
       setScheduleDate(null);
       setSelectedSong(null);
-      setShowSongSearch(false);
+      setShowSongPicker(false);
       onClose();
     } catch (err: any) {
       setError(err.message);
@@ -267,49 +257,41 @@ export default function CreatePostModal({ open, onClose }: { open: boolean; onCl
           <button
             type="button"
             className="w-full px-4 py-2 rounded-full bg-green-500 text-white font-bold mb-2 hover:bg-green-600 transition-all"
-            onClick={() => setShowSongSearch(v => !v)}
+            onClick={() => setShowSongPicker(v => !v)}
           >
-            {selectedSong ? `Song: ${selectedSong.name}` : (showSongSearch ? 'Cancel' : 'Add Song')}
+            {selectedSong ? `Song: ${selectedSong.title}` : (showSongPicker ? 'Cancel' : 'Add Song')}
           </button>
           
-          {spotifyToken && showSongSearch && !selectedSong && (
+          {showSongPicker && !selectedSong && (
             <div className="my-4 p-2 bg-gray-100 dark:bg-black/40 rounded-lg">
-              <form onSubmit={handleSongSearch} className="flex gap-2 mb-2">
-                <input
-                  type="text"
-                  className="flex-1 rounded-full px-4 py-2 border border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-cyan"
-                  placeholder="Search for a song..."
-                  value={songSearch}
-                  onChange={e => setSongSearch(e.target.value)}
-                />
-                <button type="submit" className="px-4 py-2 rounded-full bg-green-500 text-white font-bold hover:bg-green-600 transition-all">Search</button>
-              </form>
-              {searchResults.length > 0 && (
+              {appSongs.length > 0 ? (
                 <div className="max-h-48 overflow-y-auto bg-black/10 rounded-xl p-2">
-                  {searchResults.map(track => (
-                    <div key={track.id} className={`flex items-center gap-3 p-2 rounded cursor-pointer hover:bg-accent-cyan/10`}
+                  {appSongs.map(song => (
+                    <div key={song.id} className={`flex items-center gap-3 p-2 rounded cursor-pointer hover:bg-accent-cyan/10`}
                       onClick={() => {
-                        setSelectedSong(track);
-                        setShowSongSearch(false);
+                        setSelectedSong(song);
+                        setShowSongPicker(false);
                       }}>
-                      <img src={track.album.images[2]?.url} alt="album" className="w-10 h-10 rounded" />
+                      <img src={song.albumArtUrl} alt="album" className="w-10 h-10 rounded" />
                       <div>
-                        <div className="font-bold text-accent-cyan">{track.name}</div>
-                        <div className="text-xs text-gray-400">{track.artists.map((a: any) => a.name).join(", ")}</div>
+                        <div className="font-bold text-accent-cyan">{song.title}</div>
+                        <div className="text-xs text-gray-400">{song.artist}</div>
                       </div>
                     </div>
                   ))}
                 </div>
+              ) : (
+                <p className="text-center text-gray-400 p-4">No songs have been uploaded to the app yet.</p>
               )}
             </div>
           )}
 
           {selectedSong && (
             <div className="mb-2 p-3 rounded-xl bg-accent-cyan/10 flex items-center gap-4">
-              <img src={selectedSong.album.images[1]?.url} alt="album" className="w-12 h-12 rounded" />
+              <img src={selectedSong.albumArtUrl} alt="album" className="w-12 h-12 rounded" />
               <div>
-                <div className="font-bold text-accent-cyan text-base">{selectedSong.name}</div>
-                <div className="text-xs text-gray-400 mb-1">{selectedSong.artists.map((a: any) => a.name).join(", ")}</div>
+                <div className="font-bold text-accent-cyan text-base">{selectedSong.title}</div>
+                <div className="text-xs text-gray-400 mb-1">{selectedSong.artist}</div>
               </div>
               <button type="button" className="ml-auto px-2 py-1 rounded bg-red-200 text-red-700 text-xs font-bold" onClick={() => setSelectedSong(null)}>Remove</button>
             </div>
@@ -326,3 +308,5 @@ export default function CreatePostModal({ open, onClose }: { open: boolean; onCl
     </div>
   );
 }
+
+    
