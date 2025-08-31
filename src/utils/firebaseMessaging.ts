@@ -9,8 +9,9 @@ export const requestForToken = async () => {
 
     if (permission === 'granted') {
       console.log('Notification permission granted.');
+      // VAPID key is used to authorize send requests to web push services.
       const currentToken = await getToken(messaging, {
-        vapidKey: 'YOUR_VAPID_KEY_FROM_FIREBASE_SETTINGS', // Replace this with your actual VAPID key
+        vapidKey: 'PASTE_YOUR_VAPID_KEY_HERE', // <<<<<<< PASTE YOUR KEY HERE
       });
       if (currentToken) {
         console.log('FCM Token generated:', currentToken);
