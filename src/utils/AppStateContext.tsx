@@ -1,6 +1,7 @@
+
 "use client";
 import React, { createContext, useState, useContext, ReactNode, useEffect, useRef } from 'react';
-import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp, Unsubscribe } from 'firebase/firestore';
 import { auth } from './firebaseClient';
 import { CallScreen } from '@/components/CallScreen';
 import { requestForToken } from './firebaseMessaging';
@@ -58,38 +59,51 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         }
     };
     
-    const unsubscribe = auth.onAuthStateChanged(user => {
+    let callUnsubscribe: Unsubscribe | null = null;
+
+    const authUnsubscribe = auth.onAuthStateChanged(user => {
+      if (callUnsubscribe) {
+        callUnsubscribe(); // Clean up previous listener
+        callUnsubscribe = null;
+      }
+      
       if (user) {
-        // Request permission and get token for logged-in user
         handleToken(user);
 
-        // This effect listens for incoming calls for the logged-in user
         const userDocRef = doc(db, 'users', user.uid);
-        const unsubCall = onSnapshot(userDocRef, (snap) => {
+        callUnsubscribe = onSnapshot(userDocRef, (snap) => {
           const data = snap.data();
-          if (data?.currentCallId) {
-            return onSnapshot(doc(db, 'calls', data.currentCallId), (callSnap) => {
+          const currentCallId = data?.currentCallId;
+
+          if (currentCallId) {
+            // If there's a call ID, listen to that call document
+            const callDocRef = doc(db, 'calls', currentCallId);
+            onSnapshot(callDocRef, (callSnap) => {
               if (callSnap.exists()) {
-                const callData = callSnap.data();
-                setActiveCall({ id: callSnap.id, ...callData });
-                if (!callData.offer) {
-                    setActiveCall(null);
-                }
+                setActiveCall({ id: callSnap.id, ...callSnap.data() });
               } else {
+                // The call document was deleted, so the call has ended.
                 setActiveCall(null);
               }
             });
           } else {
+            // No current call ID, so clear the active call.
             setActiveCall(null);
           }
         });
-        return () => unsubCall();
+
       } else {
+        // User logged out, clear everything
         setActiveCall(null);
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+        authUnsubscribe();
+        if (callUnsubscribe) {
+            callUnsubscribe();
+        }
+    };
   }, []);
   
   // Cleanup audio on component unmount

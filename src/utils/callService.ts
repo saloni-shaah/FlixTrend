@@ -1,6 +1,7 @@
+
 "use client";
 
-import { getFirestore, doc, setDoc, collection, addDoc, updateDoc, onSnapshot, deleteDoc, writeBatch } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, collection, addDoc, updateDoc, onSnapshot, deleteDoc, writeBatch, getDoc, FieldValue, serverTimestamp } from 'firebase/firestore';
 
 const db = getFirestore();
 
@@ -50,7 +51,7 @@ export async function createCall(caller: any, callee: any) {
   // Listen for the answer
   onSnapshot(callDocRef, (snapshot) => {
     const data = snapshot.data();
-    if (!pc.currentRemoteDescription && data?.answer) {
+    if (pc.currentRemoteDescription?.type !== 'answer' && data?.answer) {
       const answerDescription = new RTCSessionDescription(data.answer);
       pc.setRemoteDescription(answerDescription);
     }
@@ -100,23 +101,35 @@ export async function endCall(pc: RTCPeerConnection, callId: string, userId: str
     pc.close();
 
     const callDocRef = doc(db, 'calls', callId);
-    const callDocSnap = await doc(callDocRef).get();
+    const callDocSnap = await getDoc(callDocRef);
+
+    if (!callDocSnap.exists()) {
+        // Call document might have already been cleaned up by the other user.
+        // Still try to clean up the local user's state.
+        const userDocRef = doc(db, 'users', userId);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists() && userDocSnap.data().currentCallId === callId) {
+            await updateDoc(userDocRef, { currentCallId: null });
+        }
+        return;
+    }
+
     const callData = callDocSnap.data();
 
     // Use a batch write to perform multiple operations atomically
     const batch = writeBatch(db);
 
     // Delete ICE candidates
-    const offerCandidatesQuery = await collection(callDocRef, 'offerCandidates').get();
+    const offerCandidatesQuery = await getDocs(collection(callDocRef, 'offerCandidates'));
     offerCandidatesQuery.forEach(doc => batch.delete(doc.ref));
     
-    const answerCandidatesQuery = await collection(callDocRef, 'answerCandidates').get();
+    const answerCandidatesQuery = await getDocs(collection(callDocRef, 'answerCandidates'));
     answerCandidatesQuery.forEach(doc => batch.delete(doc.ref));
 
     // Delete the main call document
     batch.delete(callDocRef);
 
-    // Update user docs to remove the call ID reference
+    // Update user docs to remove the call ID reference for both users
     if (callData?.callerId) {
         batch.update(doc(db, 'users', callData.callerId), { currentCallId: null });
     }
