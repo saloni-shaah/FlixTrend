@@ -44,12 +44,11 @@ export default function AppNavBar() {
         return;
     }
 
-    // A more scalable approach would be to have a dedicated 'unread_chats' collection
-    // For this MVP, we will check all chats involving the user by looking at their mutuals.
     const fetchMutualsAndListen = async () => {
         const followingRef = collection(db, "users", currentUser.uid, "following");
         const followersRef = collection(db, "users", currentUser.uid, "followers");
         const [followingSnap, followersSnap] = await Promise.all([getDocs(followingRef), getDocs(followersRef)]);
+        
         const following = followingSnap.docs.map(doc => doc.id);
         const followers = followersSnap.docs.map(doc => doc.id);
         const mutualUids = Array.from(new Set([...following, ...followers]));
@@ -58,21 +57,21 @@ export default function AppNavBar() {
         
         const unsubscribers = mutualUids.map(uid => {
             const chatId = [currentUser.uid, uid].sort().join("_");
+            // Simplified query to fetch messages from the other user
             const q = query(
                 collection(db, "chats", chatId, "messages"),
-                where("read", "==", false),
                 where("sender", "!=", currentUser.uid)
             );
-            return onSnapshot(q, () => {
-                // This is not perfectly efficient, but good for MVP
-                // We just need to know if ANY chat has unread messages
-                setHasUnreadMessages(true);
+            return onSnapshot(q, (snapshot) => {
+                // Filter for unread messages on the client side
+                const hasUnread = snapshot.docs.some(doc => doc.data().read === false);
+                if (hasUnread) {
+                    setHasUnreadMessages(true);
+                }
+                // Note: This logic doesn't reset to false perfectly once all messages are read app-wide
+                // without a more complex state management, but it's effective for showing the notification dot.
             });
         });
-        
-        // This is a simplified check. A full implementation would check all chats
-        // and setHasUnreadMessages(false) only if ALL are read.
-        // For now, once a notification is seen, it stays until the page reloads.
 
         return () => unsubscribers.forEach(unsub => unsub());
     };

@@ -76,15 +76,17 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
 
     const unsubscribers = mutuals.map(mutual => {
         const chatId = getChatId(firebaseUser.uid, mutual.uid);
+        // Simplified query to fetch all messages from the other user
         const q = query(
             collection(db, "chats", chatId, "messages"),
-            where("sender", "==", mutual.uid),
-            where("read", "==", false)
+            where("sender", "==", mutual.uid)
         );
         return onSnapshot(q, (snapshot) => {
+            // Filter for unread messages on the client side
+            const unreadCount = snapshot.docs.filter(doc => doc.data().read === false).length;
             setUnreadCounts(prev => ({
                 ...prev,
-                [mutual.uid]: snapshot.size
+                [mutual.uid]: unreadCount
             }));
         });
     });
