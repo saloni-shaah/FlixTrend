@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import AppNavBar from "./AppNavBar";
 import { AppStateProvider } from "@/utils/AppStateContext";
+import { GlobalMusicPlayer } from "@/components/GlobalMusicPlayer";
 
 export const metadata: Metadata = {
   title: "FlixTrend",
@@ -14,7 +15,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className="relative min-h-screen">
         <AppStateProvider>
-          {children}
+          <main className="pb-40">
+            {children}
+          </main>
+          <GlobalMusicPlayer />
           <AppNavBar />
         </AppStateProvider>
       </body>

@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Play, Pause, Plus, Music } from 'lucide-react';
 import { getFirestore, collection, addDoc, serverTimestamp, query, onSnapshot, orderBy } from 'firebase/firestore';
 import { auth } from '@/utils/firebaseClient';
+import { useAppState } from '@/utils/AppStateContext';
 
 const db = getFirestore();
 
@@ -144,8 +145,7 @@ export function MusicDiscovery() {
     const [songs, setSongs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [showAddModal, setShowAddModal] = useState(false);
-    const [activeSong, setActiveSong] = useState<any | null>(null);
-    const audioRef = useRef<HTMLAudioElement | null>(null);
+    const { activeSong, isPlaying, playSong, pauseSong } = useAppState();
 
     useEffect(() => {
         const q = query(collection(db, "songs"), orderBy("createdAt", "desc"));
@@ -155,29 +155,14 @@ export function MusicDiscovery() {
         });
         return () => unsub();
     }, []);
-
-    const playSong = (song: any) => {
-        if (audioRef.current) {
-            audioRef.current.pause();
+    
+    const handlePlayPause = (song: any) => {
+        if (activeSong?.id === song.id && isPlaying) {
+            pauseSong();
+        } else {
+            playSong(song);
         }
-        if (activeSong?.id === song.id) {
-            setActiveSong(null);
-            audioRef.current = null;
-            return;
-        }
-
-        const audio = new Audio(song.audioUrl);
-        audio.play();
-        setActiveSong(song);
-        audioRef.current = audio;
-        audio.onended = () => setActiveSong(null);
     };
-
-    useEffect(() => {
-      return () => {
-        audioRef.current?.pause();
-      }
-    }, []);
 
     if (loading) return <div className="text-center text-accent-cyan animate-pulse">Loading music library...</div>
 
@@ -198,12 +183,12 @@ export function MusicDiscovery() {
                             key={song.id}
                             className="glass-card flex flex-col items-center text-center group cursor-pointer"
                             whileHover={{ scale: 1.05 }}
-                            onClick={() => playSong(song)}
+                            onClick={() => handlePlayPause(song)}
                         >
                             <div className="relative w-full">
                                 <img src={song.albumArtUrl} alt={song.title} className="w-full h-auto rounded-t-2xl aspect-square object-cover"/>
                                 <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                    {activeSong?.id === song.id ? <Pause size={48} className="text-white"/> : <Play size={48} className="text-white"/>}
+                                    {activeSong?.id === song.id && isPlaying ? <Pause size={48} className="text-white"/> : <Play size={48} className="text-white"/>}
                                 </div>
                             </div>
                             <div className="p-4 w-full">
