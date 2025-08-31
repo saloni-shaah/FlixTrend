@@ -1,8 +1,9 @@
 "use client";
 import React, { createContext, useState, useContext, ReactNode, useEffect, useRef } from 'react';
-import { getFirestore, doc, onSnapshot } from 'firebase/firestore';
+import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth } from './firebaseClient';
 import { CallScreen } from '@/components/CallScreen';
+import { requestForToken } from './firebaseMessaging';
 
 const db = getFirestore();
 
@@ -41,12 +42,30 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Effect for handling push notification setup
   useEffect(() => {
-    // This effect listens for incoming calls for the logged-in user
+    const handleToken = async (user: any) => {
+        try {
+            const token = await requestForToken();
+            if (token && user) {
+                console.log('FCM Token:', token);
+                // Save the token to the user's profile in Firestore
+                const userDocRef = doc(db, 'users', user.uid);
+                await setDoc(userDocRef, { fcmToken: token, lastLogin: serverTimestamp() }, { merge: true });
+            }
+        } catch (error) {
+            console.error('Error getting FCM token:', error);
+        }
+    };
+    
     const unsubscribe = auth.onAuthStateChanged(user => {
       if (user) {
+        // Request permission and get token for logged-in user
+        handleToken(user);
+
+        // This effect listens for incoming calls for the logged-in user
         const userDocRef = doc(db, 'users', user.uid);
-        return onSnapshot(userDocRef, (snap) => {
+        const unsubCall = onSnapshot(userDocRef, (snap) => {
           const data = snap.data();
           if (data?.currentCallId) {
             return onSnapshot(doc(db, 'calls', data.currentCallId), (callSnap) => {
@@ -64,6 +83,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             setActiveCall(null);
           }
         });
+        return () => unsubCall();
       } else {
         setActiveCall(null);
       }
