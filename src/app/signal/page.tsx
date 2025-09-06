@@ -489,22 +489,29 @@ export default function SignalPage() {
   const [firebaseUser, setFirebaseUser] = useState<any>(null);
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(async (user) => {
-      setFirebaseUser(user);
       if (user) {
+        // Fetch full user profile from Firestore to get all necessary details
         const userDocRef = doc(db, "users", user.uid);
         const userDocSnap = await getDoc(userDocRef);
-        if (!userDocSnap.exists()) {
-          await setDoc(userDocRef, {
+        if (userDocSnap.exists()) {
+          setFirebaseUser({ ...user, ...userDocSnap.data() });
+        } else {
+          // Fallback or create a new profile if it doesn't exist
+          const newProfile = {
             uid: user.uid,
             name: user.displayName || "",
-            username: user.displayName ? user.displayName.replace(/\s+/g, "").toLowerCase() : "",
+            username: user.displayName ? user.displayName.replace(/\s+/g, "").toLowerCase() : `user${user.uid.substring(0,5)}`,
             email: user.email || "",
-            avatar_url: user.photoURL || "",
+            avatar_url: user.photoURL || `https://api.dicebear.com/8.x/bottts-neutral/svg?seed=${user.uid}`,
             bio: "",
             interests: "",
             createdAt: new Date(),
-          });
+          };
+          await setDoc(userDocRef, newProfile);
+          setFirebaseUser({ ...user, ...newProfile });
         }
+      } else {
+        setFirebaseUser(null);
       }
     });
     return () => unsub();
@@ -515,3 +522,5 @@ export default function SignalPage() {
   }
   return <ClientOnlySignalPage firebaseUser={firebaseUser} />;
 }
+
+    
