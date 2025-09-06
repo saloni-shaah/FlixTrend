@@ -24,11 +24,15 @@ async function uploadToCloudinary(file: File, onProgress?: (percent: number) => 
       }
     };
     xhr.onload = () => {
-      const data = JSON.parse(xhr.responseText);
-      if (xhr.status === 200 && data.secure_url) {
-        resolve(data.secure_url);
+      if (xhr.responseText) {
+        const data = JSON.parse(xhr.responseText);
+        if (xhr.status === 200 && data.secure_url) {
+          resolve(data.secure_url);
+        } else {
+          reject(new Error(data.error?.message || "Upload failed"));
+        }
       } else {
-        reject(new Error(data.error?.message || "Upload failed"));
+        reject(new Error("Upload failed with empty response"));
       }
     };
     xhr.onerror = () => reject(new Error("Upload failed"));
@@ -169,7 +173,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
     const fetchMutuals = async () => {
         const followingRef = collection(db, "users", firebaseUser.uid, "following");
         const followersRef = collection(db, "users", firebaseUser.uid, "followers");
-        const [followingSnap, followersSnap] = await Promise.all([getDocs(followingRef), getDocs(followersSnap)]);
+        const [followingSnap, followersSnap] = await Promise.all([getDocs(followingRef), getDocs(followersRef)]);
         
         const following = followingSnap.docs.map(doc => doc.id);
         const followers = followersSnap.docs.map(doc => doc.id);
@@ -511,3 +515,5 @@ export default function SignalPage() {
   }
   return <ClientOnlySignalPage firebaseUser={firebaseUser} />;
 }
+
+    
