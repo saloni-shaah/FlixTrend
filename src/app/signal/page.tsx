@@ -3,9 +3,10 @@
 import React, { useEffect, useState, useRef } from "react";
 import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp, where, writeBatch, getDocs, updateDoc, deleteDoc, arrayUnion } from "firebase/firestore";
 import { auth } from "@/utils/firebaseClient";
-import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, Smile, Trash2, Users } from "lucide-react";
+import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, Smile, Trash2, Users, CheckSquare, Square } from "lucide-react";
 import { useAppState } from "@/utils/AppStateContext";
 import { createCall } from "@/utils/callService";
+import { motion } from "framer-motion";
 
 const db = getFirestore();
 
@@ -35,13 +36,104 @@ async function uploadToCloudinary(file: File, onProgress?: (percent: number) => 
   });
 }
 
-
 function getChatId(uid1: string, uid2: string) {
   return [uid1, uid2].sort().join("_");
 }
 
+function CreateGroupModal({ mutuals, currentUser, onClose }: { mutuals: any[], currentUser: any, onClose: () => void }) {
+    const [selectedUids, setSelectedUids] = useState<string[]>([]);
+    const [groupName, setGroupName] = useState('');
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    const handleToggleUser = (uid: string) => {
+        setSelectedUids(prev => 
+            prev.includes(uid) ? prev.filter(id => id !== uid) : [...prev, uid]
+        );
+    };
+
+    const handleCreateGroup = async () => {
+        if (selectedUids.length < 1) {
+            setError("You must select at least one other member.");
+            return;
+        }
+        if (!groupName.trim()) {
+            setError("Please give your group a name.");
+            return;
+        }
+        setLoading(true);
+        setError('');
+
+        try {
+            const memberUids = [...selectedUids, currentUser.uid];
+            const groupDocRef = await addDoc(collection(db, "groups"), {
+                name: groupName,
+                members: memberUids,
+                admins: [currentUser.uid],
+                createdAt: serverTimestamp(),
+                createdBy: currentUser.uid,
+                isGroup: true,
+            });
+
+            // You might want to add a "Welcome" message to the group chat here
+            await addDoc(collection(db, "chats", groupDocRef.id, "messages"), {
+                text: `${currentUser.displayName} created the group "${groupName}"`,
+                sender: 'system',
+                createdAt: serverTimestamp(),
+                readBy: [currentUser.uid]
+            });
+            
+            onClose();
+        } catch (err: any) {
+            setError(err.message);
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="glass-card p-6 w-full max-w-md relative flex flex-col max-h-[90vh]"
+            >
+                <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white">&times;</button>
+                <h2 className="text-xl font-headline font-bold mb-4 text-accent-cyan">Create a New Group</h2>
+                
+                <input
+                    type="text"
+                    placeholder="Group Name"
+                    className="input-glass w-full mb-4"
+                    value={groupName}
+                    onChange={e => setGroupName(e.target.value)}
+                />
+
+                <h3 className="font-bold mb-2 text-accent-cyan">Select Members</h3>
+                <div className="flex-1 overflow-y-auto mb-4 border-y border-accent-cyan/10">
+                    {mutuals.map(user => (
+                        <div key={user.uid} className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent-cyan/10 cursor-pointer" onClick={() => handleToggleUser(user.uid)}>
+                            {selectedUids.includes(user.uid) ? <CheckSquare className="text-accent-cyan"/> : <Square className="text-gray-500"/>}
+                            <img src={user.avatar_url} alt={user.name} className="w-10 h-10 rounded-full object-cover"/>
+                            <div>
+                                <div className="font-bold">{user.name || user.username}</div>
+                                <div className="text-xs text-gray-400">@{user.username}</div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {error && <p className="text-red-400 text-center mb-2">{error}</p>}
+                
+                <button className="btn-glass bg-accent-cyan text-black" onClick={handleCreateGroup} disabled={loading}>
+                    {loading ? "Creating..." : "Create Group"}
+                </button>
+            </motion.div>
+        </div>
+    );
+}
+
 function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
-  const [mutuals, setMutuals] = useState<any[]>([]);
+  const [chats, setChats] = useState<any[]>([]);
   const [selectedChat, setSelectedChat] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
@@ -51,68 +143,61 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
   const { useMediaQuery } = require("@uidotdev/usehooks");
   const isMobile = useMediaQuery("(max-width: 767px)");
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
 
   useEffect(() => {
     if (!firebaseUser) return;
-    const followingUnsub = onSnapshot(collection(db, "users", firebaseUser.uid, "following"), async (followingSnap) => {
-      const following = followingSnap.docs.map((doc) => doc.id);
-      const followersUnsub = onSnapshot(collection(db, "users", firebaseUser.uid, "followers"), async (followersSnap) => {
-        const followers = followersSnap.docs.map((doc) => doc.id);
-        const mutualUids = Array.from(new Set([...following, ...followers])).filter((uid) => uid !== firebaseUser.uid);
+
+    const fetchChats = async () => {
+        // Fetch 1-on-1 chats (mutuals)
+        const followingRef = collection(db, "users", firebaseUser.uid, "following");
+        const followersRef = collection(db, "users", firebaseUser.uid, "followers");
+        const [followingSnap, followersSnap] = await Promise.all([getDocs(followingRef), getDocs(followersRef)]);
+        
+        const following = followingSnap.docs.map(doc => doc.id);
+        const followers = followersSnap.docs.map(doc => doc.id);
+        const mutualUids = Array.from(new Set([...following, ...followers])).filter(uid => uid !== firebaseUser.uid);
+        
         const mutualProfiles = await Promise.all(
           mutualUids.map(async (uid) => {
             const userDoc = await getDoc(doc(db, "users", uid));
-            return userDoc.exists() ? { uid, ...userDoc.data() } : null;
+            return userDoc.exists() ? { uid, ...userDoc.data(), isGroup: false } : null;
           })
         );
-        setMutuals(mutualProfiles.filter(Boolean) as any[]);
-      });
-      return () => followersUnsub();
-    });
-    return () => followingUnsub();
+        
+        // Fetch group chats
+        const groupsQuery = query(collection(db, "groups"), where("members", "array-contains", firebaseUser.uid));
+        const groupsSnap = await getDocs(groupsQuery);
+        const groupChats = groupsSnap.docs.map(doc => ({ id: doc.id, ...doc.data(), isGroup: true, uid: doc.id }));
+        
+        setChats([...(mutualProfiles.filter(Boolean) as any[]), ...groupChats]);
+    };
+
+    fetchChats();
+
+    // Could add snapshots here for real-time adding/removing of chats
   }, [firebaseUser]);
 
-  useEffect(() => {
-    if (!firebaseUser) return;
 
-    const unsubscribers = mutuals.map(mutual => {
-        const chatId = getChatId(firebaseUser.uid, mutual.uid);
-        // Simplified query to fetch all messages from the other user
-        const q = query(
-            collection(db, "chats", chatId, "messages"),
-            where("sender", "==", mutual.uid)
-        );
-        return onSnapshot(q, (snapshot) => {
-            // Filter for unread messages on the client side
-            const unreadCount = snapshot.docs.filter(doc => doc.data().read === false).length;
-            setUnreadCounts(prev => ({
-                ...prev,
-                [mutual.uid]: unreadCount
-            }));
-        });
-    });
-
-    return () => unsubscribers.forEach(unsub => unsub());
-
-  }, [mutuals, firebaseUser]);
-
-
-  const handleSelectChat = async (user: any) => {
-    setSelectedChat(user);
-    // Mark messages as read
-    const chatId = getChatId(firebaseUser.uid, user.uid);
-    const unreadQuery = query(collection(db, "chats", chatId, "messages"), where("sender", "==", user.uid), where("read", "==", false));
+  const handleSelectChat = async (chat: any) => {
+    setSelectedChat(chat);
+    const chatId = chat.isGroup ? chat.id : getChatId(firebaseUser.uid, chat.uid);
+    // Mark messages as read by adding user's UID to `readBy` array for unread messages
+    const unreadQuery = query(
+        collection(db, "chats", chatId, "messages"), 
+        where("readBy", "not-in", [[firebaseUser.uid]])
+    );
     const unreadDocs = await getDocs(unreadQuery);
     const batch = writeBatch(db);
     unreadDocs.forEach(doc => {
-      batch.update(doc.ref, { read: true });
+      batch.update(doc.ref, { readBy: arrayUnion(firebaseUser.uid) });
     });
     await batch.commit();
   };
 
   useEffect(() => {
     if (!selectedChat || !firebaseUser) return;
-    const chatId = getChatId(firebaseUser.uid, selectedChat.uid);
+    const chatId = selectedChat.isGroup ? selectedChat.id : getChatId(firebaseUser.uid, selectedChat.uid);
     const q = query(collection(db, "chats", chatId, "messages"), orderBy("createdAt", "asc"));
     const unsub = onSnapshot(q, (snap) => {
       setMessages(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
@@ -128,12 +213,12 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
     e.preventDefault();
     if ((!newMessage.trim() && !mediaUrl) || !firebaseUser || !selectedChat) return;
 
-    const chatId = getChatId(firebaseUser.uid, selectedChat.uid);
+    const chatId = selectedChat.isGroup ? selectedChat.id : getChatId(firebaseUser.uid, selectedChat.uid);
     const messageData: any = {
         sender: firebaseUser.uid,
         createdAt: serverTimestamp(),
         type: type,
-        read: false, // Mark as unread
+        readBy: [firebaseUser.uid],
         reactions: {},
     };
 
@@ -150,14 +235,16 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
   
   const handleDeleteMessage = async (messageId: string) => {
     if (!selectedChat || !firebaseUser) return;
-    const chatId = getChatId(firebaseUser.uid, selectedChat.uid);
+    const chatId = selectedChat.isGroup ? selectedChat.id : getChatId(firebaseUser.uid, selectedChat.uid);
     const messageRef = doc(db, "chats", chatId, "messages", messageId);
-    await deleteDoc(messageRef);
+    if(window.confirm("Are you sure you want to delete this message for everyone? This action is irreversible.")) {
+      await deleteDoc(messageRef);
+    }
   };
 
   const handleReact = async (messageId: string, emoji: string) => {
     if (!selectedChat || !firebaseUser) return;
-    const chatId = getChatId(firebaseUser.uid, selectedChat.uid);
+    const chatId = selectedChat.isGroup ? selectedChat.id : getChatId(firebaseUser.uid, selectedChat.uid);
     const messageRef = doc(db, "chats", chatId, "messages", messageId);
     
     // Using dot notation to update a map field
@@ -174,8 +261,6 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
     let type: 'image' | 'video' | 'audio' = 'image';
     if (file.type.startsWith('video/')) type = 'video';
     if (file.type.startsWith('audio/')) type = 'audio';
-
-    const caption = newMessage;
     
     try {
         const mediaUrl = await uploadToCloudinary(file);
@@ -191,7 +276,10 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
   };
   
   const handleCall = async (type: 'video' | 'voice') => {
-    if (!selectedChat || !firebaseUser) return;
+    if (!selectedChat || !firebaseUser || selectedChat.isGroup) {
+      alert("Calls can only be made in one-on-one chats for now.");
+      return;
+    };
     
     if (type === 'video') {
       await createCall(firebaseUser, selectedChat);
@@ -213,33 +301,37 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
   
   const getInitials = (user: any) => user?.name?.[0] || user?.username?.[0] || "U";
   
-  const defaultReactions = ["👍", "❤️", "😂", "😢", "😮"];
+  const defaultReactions = ["👍", "❤️", "😂", "😢", "😮", "🙏"];
 
   return (
     <div className="flex h-[calc(100vh-64px)] md:h-[calc(100vh-88px)] bg-transparent font-body text-white">
+        {showCreateGroup && <CreateGroupModal mutuals={chats.filter(c => !c.isGroup)} currentUser={firebaseUser} onClose={() => setShowCreateGroup(false)} />}
         <div className={`w-full md:w-1/3 md:min-w-[350px] border-r border-accent-cyan/10 bg-black/60 flex flex-col ${isMobile && selectedChat ? "hidden" : ""}`}>
             <div className="p-4 border-b border-accent-cyan/10 flex items-center justify-between">
                 <h2 className="text-xl font-headline font-bold text-accent-cyan">Signal</h2>
-                <button className="btn-glass-icon w-10 h-10" title="Create Group">
+                <button className="btn-glass-icon w-10 h-10" title="Create Group" onClick={() => setShowCreateGroup(true)}>
                     <Users size={20} />
                 </button>
             </div>
             <div className="flex-1 overflow-y-auto">
-                {mutuals.length === 0 ? (
-                    <div className="text-gray-400 text-center p-8">No contacts yet. Follow some users to start chatting!</div>
+                {chats.length === 0 ? (
+                    <div className="text-gray-400 text-center p-8">No contacts or groups yet. Follow some users to start chatting!</div>
                 ) : (
-                    mutuals.map((user) => (
-                        <button key={user.uid} className={`w-full flex items-center gap-4 px-4 py-3 text-left hover:bg-accent-cyan/10 transition-colors duration-200 ${selectedChat?.uid === user.uid ? "bg-accent-cyan/20" : ""}`} onClick={() => handleSelectChat(user)}>
+                    chats.map((chat) => (
+                        <button key={chat.uid} className={`w-full flex items-center gap-4 px-4 py-3 text-left hover:bg-accent-cyan/10 transition-colors duration-200 ${selectedChat?.uid === chat.uid ? "bg-accent-cyan/20" : ""}`} onClick={() => handleSelectChat(chat)}>
                             <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-xl overflow-hidden shrink-0">
-                                {user.avatar_url ? <img src={user.avatar_url} alt="avatar" className="w-full h-full object-cover"/> : getInitials(user)}
+                                {chat.isGroup ? 
+                                    <Users/> :
+                                    (chat.avatar_url ? <img src={chat.avatar_url} alt="avatar" className="w-full h-full object-cover"/> : getInitials(chat))
+                                }
                             </div>
                             <div className="flex-1 overflow-hidden">
-                                <span className="font-bold text-white block truncate">{user.name || user.username}</span>
-                                <span className="text-xs text-gray-400 block truncate">@{user.username}</span>
+                                <span className="font-bold text-white block truncate">{chat.name || chat.username}</span>
+                                {!chat.isGroup && <span className="text-xs text-gray-400 block truncate">@{chat.username}</span>}
                             </div>
-                            {unreadCounts[user.uid] > 0 && (
+                            {unreadCounts[chat.uid] > 0 && (
                                 <span className="bg-accent-pink text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
-                                    {unreadCounts[user.uid]}
+                                    {unreadCounts[chat.uid]}
                                 </span>
                             )}
                         </button>
@@ -254,29 +346,29 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                     <div className="flex items-center gap-3 p-3 border-b border-accent-cyan/10 bg-black/60 shadow-md">
                         {isMobile && <button onClick={() => setSelectedChat(null)} className="p-2 rounded-full hover:bg-accent-cyan/10"><ArrowLeft size={20}/></button>}
                         <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-lg overflow-hidden shrink-0">
-                           {selectedChat.avatar_url ? <img src={selectedChat.avatar_url} alt="avatar" className="w-full h-full object-cover"/> : getInitials(selectedChat)}
+                           {selectedChat.isGroup ? <Users/> : (selectedChat.avatar_url ? <img src={selectedChat.avatar_url} alt="avatar" className="w-full h-full object-cover"/> : getInitials(selectedChat))}
                         </div>
                         <div className="flex-1">
                             <h3 className="font-bold text-white">{selectedChat.name}</h3>
-                            <p className="text-xs text-green-400">Online</p>
+                            <p className="text-xs text-green-400">{selectedChat.isGroup ? `${selectedChat.members.length} members` : 'Online'}</p>
                         </div>
                         <div className="flex items-center gap-2">
-                            <button onClick={() => handleCall('video')} className="p-2 rounded-full hover:bg-accent-cyan/10"><Video size={20}/></button>
-                            <button onClick={() => handleCall('voice')} className="p-2 rounded-full hover:bg-accent-cyan/10"><Phone size={20}/></button>
+                           {!selectedChat.isGroup && <button onClick={() => handleCall('video')} className="p-2 rounded-full hover:bg-accent-cyan/10"><Video size={20}/></button>}
+                           {!selectedChat.isGroup && <button onClick={() => handleCall('voice')} className="p-2 rounded-full hover:bg-accent-cyan/10"><Phone size={20}/></button>}
                         </div>
                     </div>
                     
                     <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-1">
                         {messages.map(msg => (
-                            <div key={msg.id} className={`group flex items-end gap-2 max-w-[80%] ${msg.sender === firebaseUser.uid ? "self-end flex-row-reverse" : "self-start"}`}>
-                                <div className={`relative px-4 py-2 rounded-2xl ${msg.sender === firebaseUser.uid ? "bg-accent-cyan text-black rounded-br-none" : "bg-gray-700 text-white rounded-bl-none"}`}>
+                             <div key={msg.id} className={`group flex items-end gap-2 max-w-[80%] ${msg.sender === firebaseUser.uid ? "self-end flex-row-reverse" : msg.sender === 'system' ? 'self-center' : "self-start"}`}>
+                                <div className={`relative px-4 py-2 rounded-2xl ${msg.sender === firebaseUser.uid ? "bg-accent-cyan text-black rounded-br-none" : msg.sender === 'system' ? "bg-gray-800 text-gray-400 text-xs italic" : "bg-gray-700 text-white rounded-bl-none"}`}>
                                     {msg.type === 'image' && <img src={msg.mediaUrl} alt={msg.text || "image"} className="rounded-lg max-w-xs" />}
                                     {msg.type === 'video' && <video src={msg.mediaUrl} controls className="rounded-lg max-w-xs" />}
                                     {msg.type === 'audio' && <audio src={msg.mediaUrl} controls />}
                                     {msg.text && <p className="mt-1">{msg.text}</p>}
-                                    <div className="text-xs mt-1 text-right opacity-70">
+                                    {msg.sender !== 'system' && <div className="text-xs mt-1 text-right opacity-70">
                                         {msg.createdAt?.toDate?.().toLocaleTimeString() || ""}
-                                    </div>
+                                    </div>}
                                     {msg.reactions && Object.keys(msg.reactions).length > 0 && (
                                         <div className="absolute -bottom-3 right-2 flex gap-1">
                                             {Object.entries(msg.reactions).map(([emoji, uids]: [string, any]) => (
@@ -289,8 +381,8 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                                     )}
                                 </div>
                                 <div className="hidden group-hover:flex items-center gap-1">
-                                    <button onClick={() => setShowEmojiPicker(showEmojiPicker === msg.id ? null : msg.id)} className="p-1 rounded-full bg-gray-600 hover:bg-gray-500"><Smile size={16}/></button>
-                                    {msg.sender === firebaseUser.uid && <button onClick={() => handleDeleteMessage(msg.id)} className="p-1 rounded-full bg-gray-600 hover:bg-red-500"><Trash2 size={16}/></button>}
+                                   {msg.sender !== 'system' && <button onClick={() => setShowEmojiPicker(showEmojiPicker === msg.id ? null : msg.id)} className="p-1 rounded-full bg-gray-600 hover:bg-gray-500"><Smile size={16}/></button>}
+                                   {msg.sender === firebaseUser.uid && <button onClick={() => handleDeleteMessage(msg.id)} className="p-1 rounded-full bg-gray-600 hover:bg-red-500"><Trash2 size={16}/></button>}
                                 </div>
                                 {showEmojiPicker === msg.id && (
                                     <div className="absolute z-10 bg-gray-800 rounded-full p-2 flex gap-2 shadow-lg">
@@ -319,7 +411,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                 <div className="flex-1 flex flex-col items-center justify-center text-gray-400 text-center p-4">
                     <div className="text-5xl mb-4">💬</div>
                     <h3 className="text-xl font-bold">Select a chat</h3>
-                    <p className="max-w-xs">Start a conversation with your mutuals. Your messages are private and secure.</p>
+                    <p className="max-w-xs">Start a conversation with your mutuals or create a group to chat with friends.</p>
                 </div>
             )}
         </div>
@@ -357,3 +449,5 @@ export default function SignalPage() {
   }
   return <ClientOnlySignalPage firebaseUser={firebaseUser} />;
 }
+
+    
