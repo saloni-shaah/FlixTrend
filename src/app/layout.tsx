@@ -1,31 +1,26 @@
-import type { Metadata } from 'next';
-import './globals.css';
-import { Toaster } from '@/components/ui/toaster';
-import { cn } from '@/lib/utils';
+import "./globals.css";
+import type { Metadata } from "next";
+import Link from "next/link";
+import AppNavBar from "./AppNavBar";
+import { AppStateProvider } from "@/utils/AppStateContext";
+import { GlobalMusicPlayer } from "@/components/GlobalMusicPlayer";
 
 export const metadata: Metadata = {
-  title: 'TrendStream',
-  description: 'A modern social media experience.',
+  title: "FlixTrend",
+  description: "Where Trends Find You First",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
-      <body className={cn('font-body antialiased min-h-screen bg-background')}>
-        {children}
-        <Toaster />
+    <html lang="en">
+      <body className="relative min-h-screen">
+        <AppStateProvider>
+          <main className="pb-40">
+            {children}
+          </main>
+          <GlobalMusicPlayer />
+          <AppNavBar />
+        </AppStateProvider>
       </body>
     </html>
   );

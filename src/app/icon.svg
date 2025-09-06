@@ -1,0 +1,15 @@
+<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="none">
+  <rect width="100" height="100" rx="20" fill="#4A4A4A"/>
+  <g transform="translate(50 50) rotate(18)">
+    <path d="M0 -35 C 10 -35, 15 -10, 25 0" stroke="#57C2C3" stroke-width="8" stroke-linecap="round" />
+    <path d="M0 -35 C 10 -35, 15 -10, 25 0" stroke="#F2727D" stroke-width="8" stroke-linecap="round" transform="rotate(36)" />
+    <path d="M0 -35 C 10 -35, 15 -10, 25 0" stroke="#7B56A1" stroke-width="8" stroke-linecap="round" transform="rotate(72)" />
+    <path d="M0 -35 C 10 -35, 15 -10, 25 0" stroke="#268D9A" stroke-width="8" stroke-linecap="round" transform="rotate(108)" />
+    <path d="M0 -35 C 10 -35, 15 -10, 25 0" stroke="#E4A1B1" stroke-width="8" stroke-linecap="round" transform="rotate(144)" />
+    <path d="M0 -35 C 10 -35, 15 -10, 25 0" stroke="#A782D9" stroke-width="8" stroke-linecap="round" transform="rotate(180)" />
+    <path d="M0 -35 C 10 -35, 15 -10, 25 0" stroke="#3A4A8C" stroke-width="8" stroke-linecap="round" transform="rotate(216)" />
+    <path d="M0 -35 C 10 -35, 15 -10, 25 0" stroke="#A28B7A" stroke-width="8" stroke-linecap="round" transform="rotate(252)" />
+    <path d="M0 -35 C 10 -35, 15 -10, 25 0" stroke="#E1C090" stroke-width="8" stroke-linecap="round" transform="rotate(288)" />
+    <path d="M0 -35 C 10 -35, 15 -10, 25 0" stroke="#82D8D3" stroke-width="8" stroke-linecap="round" transform="rotate(324)" />
+  </g>
+</svg>
