@@ -1,8 +1,9 @@
+
 "use client";
 import React, { useEffect, useState, useRef } from "react";
-import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp, where, writeBatch, getDocs } from "firebase/firestore";
+import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp, where, writeBatch, getDocs, updateDoc, deleteDoc, arrayUnion } from "firebase/firestore";
 import { auth } from "@/utils/firebaseClient";
-import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X } from "lucide-react";
+import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, Smile, Trash2, Users } from "lucide-react";
 import { useAppState } from "@/utils/AppStateContext";
 import { createCall } from "@/utils/callService";
 
@@ -49,6 +50,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { useMediaQuery } = require("@uidotdev/usehooks");
   const isMobile = useMediaQuery("(max-width: 767px)");
+  const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
 
   useEffect(() => {
     if (!firebaseUser) return;
@@ -132,6 +134,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
         createdAt: serverTimestamp(),
         type: type,
         read: false, // Mark as unread
+        reactions: {},
     };
 
     if (mediaUrl) {
@@ -143,6 +146,25 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
 
     await addDoc(collection(db, "chats", chatId, "messages"), messageData);
     setNewMessage("");
+  };
+  
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!selectedChat || !firebaseUser) return;
+    const chatId = getChatId(firebaseUser.uid, selectedChat.uid);
+    const messageRef = doc(db, "chats", chatId, "messages", messageId);
+    await deleteDoc(messageRef);
+  };
+
+  const handleReact = async (messageId: string, emoji: string) => {
+    if (!selectedChat || !firebaseUser) return;
+    const chatId = getChatId(firebaseUser.uid, selectedChat.uid);
+    const messageRef = doc(db, "chats", chatId, "messages", messageId);
+    
+    // Using dot notation to update a map field
+    await updateDoc(messageRef, {
+      [`reactions.${emoji}`]: arrayUnion(firebaseUser.uid)
+    });
+    setShowEmojiPicker(null);
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -190,12 +212,17 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
   };
   
   const getInitials = (user: any) => user?.name?.[0] || user?.username?.[0] || "U";
+  
+  const defaultReactions = ["👍", "❤️", "😂", "😢", "😮"];
 
   return (
     <div className="flex h-[calc(100vh-64px)] md:h-[calc(100vh-88px)] bg-transparent font-body text-white">
         <div className={`w-full md:w-1/3 md:min-w-[350px] border-r border-accent-cyan/10 bg-black/60 flex flex-col ${isMobile && selectedChat ? "hidden" : ""}`}>
-            <div className="p-4 border-b border-accent-cyan/10">
+            <div className="p-4 border-b border-accent-cyan/10 flex items-center justify-between">
                 <h2 className="text-xl font-headline font-bold text-accent-cyan">Signal</h2>
+                <button className="btn-glass-icon w-10 h-10" title="Create Group">
+                    <Users size={20} />
+                </button>
             </div>
             <div className="flex-1 overflow-y-auto">
                 {mutuals.length === 0 ? (
@@ -239,10 +266,10 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                         </div>
                     </div>
                     
-                    <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
+                    <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-1">
                         {messages.map(msg => (
-                            <div key={msg.id} className={`flex items-end gap-2 max-w-[80%] ${msg.sender === firebaseUser.uid ? "self-end flex-row-reverse" : "self-start"}`}>
-                                <div className={`px-4 py-2 rounded-2xl ${msg.sender === firebaseUser.uid ? "bg-accent-cyan text-black rounded-br-none" : "bg-gray-700 text-white rounded-bl-none"}`}>
+                            <div key={msg.id} className={`group flex items-end gap-2 max-w-[80%] ${msg.sender === firebaseUser.uid ? "self-end flex-row-reverse" : "self-start"}`}>
+                                <div className={`relative px-4 py-2 rounded-2xl ${msg.sender === firebaseUser.uid ? "bg-accent-cyan text-black rounded-br-none" : "bg-gray-700 text-white rounded-bl-none"}`}>
                                     {msg.type === 'image' && <img src={msg.mediaUrl} alt={msg.text || "image"} className="rounded-lg max-w-xs" />}
                                     {msg.type === 'video' && <video src={msg.mediaUrl} controls className="rounded-lg max-w-xs" />}
                                     {msg.type === 'audio' && <audio src={msg.mediaUrl} controls />}
@@ -250,7 +277,28 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                                     <div className="text-xs mt-1 text-right opacity-70">
                                         {msg.createdAt?.toDate?.().toLocaleTimeString() || ""}
                                     </div>
+                                    {msg.reactions && Object.keys(msg.reactions).length > 0 && (
+                                        <div className="absolute -bottom-3 right-2 flex gap-1">
+                                            {Object.entries(msg.reactions).map(([emoji, uids]: [string, any]) => (
+                                                <div key={emoji} className="bg-gray-600 px-2 py-0.5 rounded-full text-xs flex items-center gap-1">
+                                                    <span>{emoji}</span>
+                                                    <span className="font-bold">{Array.isArray(uids) ? uids.length : 0}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
+                                <div className="hidden group-hover:flex items-center gap-1">
+                                    <button onClick={() => setShowEmojiPicker(showEmojiPicker === msg.id ? null : msg.id)} className="p-1 rounded-full bg-gray-600 hover:bg-gray-500"><Smile size={16}/></button>
+                                    {msg.sender === firebaseUser.uid && <button onClick={() => handleDeleteMessage(msg.id)} className="p-1 rounded-full bg-gray-600 hover:bg-red-500"><Trash2 size={16}/></button>}
+                                </div>
+                                {showEmojiPicker === msg.id && (
+                                    <div className="absolute z-10 bg-gray-800 rounded-full p-2 flex gap-2 shadow-lg">
+                                        {defaultReactions.map(emoji => (
+                                            <button key={emoji} onClick={() => handleReact(msg.id, emoji)} className="text-xl hover:scale-125 transition-transform">{emoji}</button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         ))}
                          <div ref={messagesEndRef} />
