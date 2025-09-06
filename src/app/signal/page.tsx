@@ -3,10 +3,10 @@
 import React, { useEffect, useState, useRef } from "react";
 import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp, where, writeBatch, getDocs, updateDoc, deleteDoc, arrayUnion } from "firebase/firestore";
 import { auth } from "@/utils/firebaseClient";
-import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, Smile, Trash2, Users, CheckSquare, Square } from "lucide-react";
+import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, Smile, Trash2, Users, CheckSquare, Square, MoreVertical } from "lucide-react";
 import { useAppState } from "@/utils/AppStateContext";
 import { createCall } from "@/utils/callService";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 const db = getFirestore();
 
@@ -40,7 +40,7 @@ function getChatId(uid1: string, uid2: string) {
   return [uid1, uid2].sort().join("_");
 }
 
-function CreateGroupModal({ mutuals, currentUser, onClose }: { mutuals: any[], currentUser: any, onClose: () => void }) {
+function CreateGroupModal({ mutuals, currentUser, onClose, onGroupCreated }: { mutuals: any[], currentUser: any, onClose: () => void, onGroupCreated: (group:any) => void }) {
     const [selectedUids, setSelectedUids] = useState<string[]>([]);
     const [groupName, setGroupName] = useState('');
     const [error, setError] = useState('');
@@ -66,16 +66,27 @@ function CreateGroupModal({ mutuals, currentUser, onClose }: { mutuals: any[], c
 
         try {
             const memberUids = [...selectedUids, currentUser.uid];
+            const memberProfiles = await Promise.all(
+                memberUids.map(async uid => {
+                    const userDoc = await getDoc(doc(db, "users", uid));
+                    return userDoc.exists() ? { uid, ...userDoc.data() } : null;
+                })
+            );
+
+            const validMembers = memberProfiles.filter(Boolean);
+
             const groupDocRef = await addDoc(collection(db, "groups"), {
                 name: groupName,
                 members: memberUids,
+                memberInfo: validMembers.reduce((acc, user) => ({ ...acc, [user!.uid]: { name: user!.name, avatar_url: user!.avatar_url, username: user!.username } }), {}),
                 admins: [currentUser.uid],
                 createdAt: serverTimestamp(),
                 createdBy: currentUser.uid,
                 isGroup: true,
             });
+            
+            const groupData = (await getDoc(groupDocRef)).data();
 
-            // You might want to add a "Welcome" message to the group chat here
             await addDoc(collection(db, "chats", groupDocRef.id, "messages"), {
                 text: `${currentUser.displayName} created the group "${groupName}"`,
                 sender: 'system',
@@ -83,6 +94,7 @@ function CreateGroupModal({ mutuals, currentUser, onClose }: { mutuals: any[], c
                 readBy: [currentUser.uid]
             });
             
+            onGroupCreated({ id: groupDocRef.id, ...groupData });
             onClose();
         } catch (err: any) {
             setError(err.message);
@@ -148,15 +160,16 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
   const isMobile = useMediaQuery("(max-width: 767px)");
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [showMenu, setShowMenu] = useState<string | null>(null);
 
   useEffect(() => {
     if (!firebaseUser) return;
 
-    const fetchChats = async () => {
-        // Fetch 1-on-1 chats (mutuals)
+    // Fetch 1-on-1 chats (mutuals)
+    const fetchMutuals = async () => {
         const followingRef = collection(db, "users", firebaseUser.uid, "following");
         const followersRef = collection(db, "users", firebaseUser.uid, "followers");
-        const [followingSnap, followersSnap] = await Promise.all([getDocs(followingRef), getDocs(followersRef)]);
+        const [followingSnap, followersSnap] = await Promise.all([getDocs(followingRef), getDocs(followersSnap)]);
         
         const following = followingSnap.docs.map(doc => doc.id);
         const followers = followersSnap.docs.map(doc => doc.id);
@@ -165,38 +178,50 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
         const mutualProfiles = await Promise.all(
           mutualUids.map(async (uid) => {
             const userDoc = await getDoc(doc(db, "users", uid));
-            return userDoc.exists() ? { uid, ...userDoc.data(), isGroup: false } : null;
+            return userDoc.exists() ? { uid, ...userDoc.data(), isGroup: false, id: uid } : null;
           })
         );
-        
-        // Fetch group chats
-        const groupsQuery = query(collection(db, "groups"), where("members", "array-contains", firebaseUser.uid));
-        const groupsSnap = await getDocs(groupsQuery);
-        const groupChats = groupsSnap.docs.map(doc => ({ id: doc.id, ...doc.data(), isGroup: true, uid: doc.id }));
-        
-        setChats([...(mutualProfiles.filter(Boolean) as any[]), ...groupChats]);
+        return mutualProfiles.filter(Boolean) as any[];
     };
+    
+    // Listener for group chats
+    const groupsQuery = query(collection(db, "groups"), where("members", "array-contains", firebaseUser.uid));
+    const unsubGroups = onSnapshot(groupsQuery, async (groupsSnap) => {
+        const groupChats = groupsSnap.docs.map(doc => ({ id: doc.id, ...doc.data(), isGroup: true, uid: doc.id }));
+        const oneOnOneChats = await fetchMutuals();
+        
+        // Combine and remove duplicates, prioritizing group chats if ID is same as a user UID somehow
+        const allChats = [...groupChats, ...oneOnOneChats];
+        const uniqueChats = allChats.filter((v,i,a)=>a.findIndex(t=>(t.id === v.id))===i);
 
-    fetchChats();
+        setChats(uniqueChats);
+    });
 
-    // Could add snapshots here for real-time adding/removing of chats
+    return () => unsubGroups();
+
   }, [firebaseUser]);
 
 
   const handleSelectChat = async (chat: any) => {
     setSelectedChat(chat);
+    setShowMenu(null);
+    setShowEmojiPicker(null);
     const chatId = chat.isGroup ? chat.id : getChatId(firebaseUser.uid, chat.uid);
-    // Mark messages as read by adding user's UID to `readBy` array for unread messages
     const unreadQuery = query(
         collection(db, "chats", chatId, "messages"), 
         where("readBy", "not-in", [[firebaseUser.uid]])
     );
     const unreadDocs = await getDocs(unreadQuery);
     const batch = writeBatch(db);
+    let hasUnread = false;
     unreadDocs.forEach(doc => {
-      batch.update(doc.ref, { readBy: arrayUnion(firebaseUser.uid) });
+      const data = doc.data();
+      if(!data.readBy || !data.readBy.includes(firebaseUser.uid)){
+        hasUnread = true;
+        batch.update(doc.ref, { readBy: arrayUnion(firebaseUser.uid) });
+      }
     });
-    await batch.commit();
+    if(hasUnread) await batch.commit();
   };
 
   useEffect(() => {
@@ -250,11 +275,30 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
     if (!selectedChat || !firebaseUser) return;
     const chatId = selectedChat.isGroup ? selectedChat.id : getChatId(firebaseUser.uid, selectedChat.uid);
     const messageRef = doc(db, "chats", chatId, "messages", messageId);
-    
-    // Using dot notation to update a map field
-    await updateDoc(messageRef, {
-      [`reactions.${emoji}`]: arrayUnion(firebaseUser.uid)
-    });
+    const messageSnap = await getDoc(messageRef);
+    const messageData = messageSnap.data();
+
+    if (messageData) {
+        const currentReactions = messageData.reactions || {};
+        const uidsForEmoji = currentReactions[emoji] || [];
+
+        if (uidsForEmoji.includes(firebaseUser.uid)) {
+            // User is removing their reaction
+            const newUids = uidsForEmoji.filter((uid: string) => uid !== firebaseUser.uid);
+            if (newUids.length > 0) {
+                await updateDoc(messageRef, { [`reactions.${emoji}`]: newUids });
+            } else {
+                // If no one is left, remove the emoji key
+                delete currentReactions[emoji];
+                await updateDoc(messageRef, { reactions: currentReactions });
+            }
+        } else {
+            // User is adding a reaction
+            await updateDoc(messageRef, {
+              [`reactions.${emoji}`]: arrayUnion(firebaseUser.uid)
+            });
+        }
+    }
     setShowEmojiPicker(null);
   };
 
@@ -309,7 +353,10 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
 
   return (
     <div className="flex h-[calc(100vh-64px)] md:h-[calc(100vh-88px)] bg-transparent font-body text-white">
-        {showCreateGroup && <CreateGroupModal mutuals={chats.filter(c => !c.isGroup)} currentUser={firebaseUser} onClose={() => setShowCreateGroup(false)} />}
+        {showCreateGroup && <CreateGroupModal mutuals={chats.filter(c => !c.isGroup)} currentUser={firebaseUser} onClose={() => setShowCreateGroup(false)} onGroupCreated={(newGroup) => {
+            setChats(prev => [newGroup, ...prev]);
+            setSelectedChat(newGroup);
+        }} />}
         <div className={`w-full md:w-1/3 md:min-w-[350px] border-r border-accent-cyan/10 bg-black/60 flex flex-col ${isMobile && selectedChat ? "hidden" : ""}`}>
             <div className="p-4 border-b border-accent-cyan/10 flex items-center justify-between">
                 <h2 className="text-xl font-headline font-bold text-accent-cyan">Signal</h2>
@@ -322,7 +369,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                     <div className="text-gray-400 text-center p-8">No contacts or groups yet. Follow some users to start chatting!</div>
                 ) : (
                     chats.map((chat) => (
-                        <button key={chat.uid} className={`w-full flex items-center gap-4 px-4 py-3 text-left hover:bg-accent-cyan/10 transition-colors duration-200 ${selectedChat?.uid === chat.uid ? "bg-accent-cyan/20" : ""}`} onClick={() => handleSelectChat(chat)}>
+                        <button key={chat.id} className={`w-full flex items-center gap-4 px-4 py-3 text-left hover:bg-accent-cyan/10 transition-colors duration-200 ${selectedChat?.id === chat.id ? "bg-accent-cyan/20" : ""}`} onClick={() => handleSelectChat(chat)}>
                             <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-xl overflow-hidden shrink-0">
                                 {chat.isGroup ? 
                                     <Users/> :
@@ -333,9 +380,9 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                                 <span className="font-bold text-white block truncate">{chat.name || chat.username}</span>
                                 {!chat.isGroup && <span className="text-xs text-gray-400 block truncate">@{chat.username}</span>}
                             </div>
-                            {unreadCounts[chat.uid] > 0 && (
+                            {unreadCounts[chat.id] > 0 && (
                                 <span className="bg-accent-pink text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
-                                    {unreadCounts[chat.uid]}
+                                    {unreadCounts[chat.id]}
                                 </span>
                             )}
                         </button>
@@ -374,27 +421,38 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                                         {msg.createdAt?.toDate?.().toLocaleTimeString() || ""}
                                     </div>}
                                     {msg.reactions && Object.keys(msg.reactions).length > 0 && (
-                                        <div className="absolute -bottom-3 right-2 flex gap-1">
+                                        <div className="absolute -bottom-4 -right-1 flex gap-1">
                                             {Object.entries(msg.reactions).map(([emoji, uids]: [string, any]) => (
-                                                <div key={emoji} className="bg-gray-600 px-2 py-0.5 rounded-full text-xs flex items-center gap-1">
+                                                <div key={emoji} className="bg-gray-600 px-1.5 py-0.5 rounded-full text-xs flex items-center gap-1">
                                                     <span>{emoji}</span>
-                                                    <span className="font-bold">{Array.isArray(uids) ? uids.length : 0}</span>
+                                                    <span className="font-bold text-xs">{Array.isArray(uids) ? uids.length : 0}</span>
                                                 </div>
                                             ))}
                                         </div>
                                     )}
                                 </div>
-                                <div className="hidden group-hover:flex items-center gap-1">
-                                   {msg.sender !== 'system' && <button onClick={() => setShowEmojiPicker(showEmojiPicker === msg.id ? null : msg.id)} className="p-1 rounded-full bg-gray-600 hover:bg-gray-500"><Smile size={16}/></button>}
+                                <div className={`relative hidden group-hover:flex items-center gap-1 ${msg.sender === firebaseUser.uid ? "flex-row-reverse" : ""}`}>
+                                   {msg.sender !== 'system' && 
+                                    <div className="relative">
+                                       <button onClick={() => setShowEmojiPicker(showEmojiPicker === msg.id ? null : msg.id)} className="p-1 rounded-full bg-gray-600 hover:bg-gray-500"><Smile size={16}/></button>
+                                        <AnimatePresence>
+                                        {showEmojiPicker === msg.id && (
+                                            <motion.div 
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, y: 10 }}
+                                                className="absolute z-10 -top-10 bg-gray-800 rounded-full p-2 flex gap-1 shadow-lg"
+                                            >
+                                                {defaultReactions.map(emoji => (
+                                                    <button key={emoji} onClick={() => handleReact(msg.id, emoji)} className="text-xl hover:scale-125 transition-transform">{emoji}</button>
+                                                ))}
+                                            </motion.div>
+                                        )}
+                                        </AnimatePresence>
+                                    </div>
+                                   }
                                    {msg.sender === firebaseUser.uid && <button onClick={() => handleDeleteMessage(msg.id)} className="p-1 rounded-full bg-gray-600 hover:bg-red-500"><Trash2 size={16}/></button>}
                                 </div>
-                                {showEmojiPicker === msg.id && (
-                                    <div className="absolute z-10 bg-gray-800 rounded-full p-2 flex gap-2 shadow-lg">
-                                        {defaultReactions.map(emoji => (
-                                            <button key={emoji} onClick={() => handleReact(msg.id, emoji)} className="text-xl hover:scale-125 transition-transform">{emoji}</button>
-                                        ))}
-                                    </div>
-                                )}
                             </div>
                         ))}
                          <div ref={messagesEndRef} />
