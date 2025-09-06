@@ -89,6 +89,8 @@ function CreateGroupModal({ mutuals, currentUser, onClose }: { mutuals: any[], c
             setLoading(false);
         }
     };
+    
+    const getInitials = (user: any) => user?.name?.[0] || user?.username?.[0] || "U";
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
@@ -113,7 +115,9 @@ function CreateGroupModal({ mutuals, currentUser, onClose }: { mutuals: any[], c
                     {mutuals.map(user => (
                         <div key={user.uid} className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent-cyan/10 cursor-pointer" onClick={() => handleToggleUser(user.uid)}>
                             {selectedUids.includes(user.uid) ? <CheckSquare className="text-accent-cyan"/> : <Square className="text-gray-500"/>}
-                            <img src={user.avatar_url} alt={user.name} className="w-10 h-10 rounded-full object-cover"/>
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-lg overflow-hidden shrink-0">
+                                {user.avatar_url ? <img src={user.avatar_url} alt={user.name || user.username} className="w-full h-full object-cover"/> : getInitials(user)}
+                            </div>
                             <div>
                                 <div className="font-bold">{user.name || user.username}</div>
                                 <div className="text-xs text-gray-400">@{user.username}</div>
@@ -449,5 +453,3 @@ export default function SignalPage() {
   }
   return <ClientOnlySignalPage firebaseUser={firebaseUser} />;
 }
-
-    
