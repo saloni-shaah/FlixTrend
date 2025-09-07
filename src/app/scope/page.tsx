@@ -1,13 +1,13 @@
 
 "use client";
 import React, { useState, useEffect } from "react";
-import { getFirestore, collection, query, onSnapshot, getDocs } from "firebase/firestore";
+import { getFirestore, collection, query, onSnapshot, getDocs, orderBy } from "firebase/firestore";
 import { app, auth } from "@/utils/firebaseClient";
 import { ShortVibesPlayer } from "@/components/ShortVibesPlayer";
 import { FollowButton } from "@/components/FollowButton";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Flame, Music, Gamepad2, Compass } from "lucide-react";
+import { Flame, Music, Gamepad2, Compass, Crown, Heart } from "lucide-react";
 import { MusicDiscovery } from "@/components/MusicDiscovery";
 import { GamesHub } from "@/components/GamesHub";
 
@@ -18,7 +18,9 @@ function ForYouContent() {
   const [loading, setLoading] = useState(true);
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [trendingTags, setTrendingTags] = useState<string[]>([]);
+  const [topPosters, setTopPosters] = useState<any[]>([]);
+  const [topLiked, setTopLiked] = useState<any[]>([]);
+
 
   useEffect(() => {
     const unsubAuth = auth.onAuthStateChanged((user) => {
@@ -27,7 +29,7 @@ function ForYouContent() {
 
     const q = query(collection(db, "posts"));
 
-    const unsubPosts = onSnapshot(q, (snapshot) => {
+    const unsubPosts = onSnapshot(q, async (snapshot) => {
       const allPosts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       
       const videos = allPosts.filter(post => 
@@ -35,16 +37,45 @@ function ForYouContent() {
       );
       setShortVibes(videos);
 
-      const tagCounts: { [tag: string]: number } = {};
+      // Calculate Top Posters
+      const postCounts: { [userId: string]: number } = {};
       allPosts.forEach(post => {
-          if (post.hashtags && Array.isArray(post.hashtags)) {
-              post.hashtags.forEach((tag: string) => {
-                  tagCounts[tag] = (tagCounts[tag] || 0) + 1;
-              });
-          }
+          postCounts[post.userId] = (postCounts[post.userId] || 0) + 1;
       });
-      const sortedTags = Object.keys(tagCounts).sort((a, b) => tagCounts[b] - tagCounts[a]);
-      setTrendingTags(sortedTags.slice(0, 10));
+
+      const sortedPosters = Object.keys(postCounts)
+          .sort((a, b) => postCounts[b] - postCounts[a])
+          .slice(0, 3);
+
+      // Calculate Top Liked Creators
+      const likeCounts: { [userId: string]: number } = {};
+      for (const post of allPosts) {
+          const starsQuery = query(collection(db, "posts", post.id, "stars"));
+          const starsSnap = await getDocs(starsQuery);
+          const numStars = starsSnap.size;
+          likeCounts[post.userId] = (likeCounts[post.userId] || 0) + numStars;
+      }
+      
+      const sortedLikers = Object.keys(likeCounts)
+          .sort((a, b) => likeCounts[b] - likeCounts[a])
+          .slice(0, 3);
+      
+      // Fetch user data for leaderboards
+      const usersSnap = await getDocs(collection(db, "users"));
+      const usersData = usersSnap.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
+      setAllUsers(usersData);
+
+      const topPostersData = sortedPosters.map(uid => {
+          const user = usersData.find(u => u.uid === uid);
+          return user ? { ...user, count: postCounts[uid] } : null;
+      }).filter(Boolean);
+      setTopPosters(topPostersData);
+
+      const topLikedData = sortedLikers.map(uid => {
+          const user = usersData.find(u => u.uid === uid);
+          return user ? { ...user, count: likeCounts[uid] } : null;
+      }).filter(Boolean);
+      setTopLiked(topLikedData);
       
       setLoading(false);
     }, (error) => {
@@ -52,14 +83,6 @@ function ForYouContent() {
       setLoading(false);
     });
     
-    async function fetchAllUsers() {
-      const usersSnap = await getDocs(collection(db, "users"));
-      const usersData = usersSnap.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
-      setAllUsers(usersData);
-    }
-    
-    fetchAllUsers();
-
     return () => {
       unsubAuth();
       unsubPosts();
@@ -79,6 +102,32 @@ function ForYouContent() {
     );
   }
 
+  const CreatorCard = ({ user, type, rank }: { user: any, type: 'posts' | 'likes', rank: number }) => (
+    <Link href={`/squad/${user.uid}`} className="block">
+        <motion.div 
+            className="glass-card p-4 flex items-center gap-4 hover:border-accent-cyan transition-all cursor-pointer"
+            whileHover={{ scale: 1.05, y: -2 }}
+        >
+            <span className="text-2xl font-bold text-brand-gold w-8 text-center">{rank}</span>
+            <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-lg overflow-hidden">
+                {user.avatar_url ? (
+                    <img src={user.avatar_url} alt="avatar" className="w-full h-full object-cover rounded-full" />
+                ) : (
+                    <span>{user.name ? user.name[0] : user.username?.[0] || "U"}</span>
+                )}
+            </div>
+            <div className="flex-1 text-left">
+                <div className="font-headline text-accent-cyan">{user.name}</div>
+                <div className="text-xs text-gray-400">@{user.username}</div>
+            </div>
+            <div className="flex items-center gap-1 font-bold text-white">
+                {type === 'posts' ? <Crown className="text-yellow-400"/> : <Heart className="text-red-400"/>}
+                {user.count}
+            </div>
+        </motion.div>
+    </Link>
+  );
+
   return (
     <div className="flex flex-col items-center w-full">
       <h2 className="text-2xl font-headline text-accent-cyan mb-4 font-bold">Short Vibes</h2>
@@ -87,24 +136,21 @@ function ForYouContent() {
       </div>
 
       <div className="mt-8 w-full max-w-4xl mx-auto">
-          <h3 className="text-xl font-headline bg-gradient-to-r from-accent-pink to-accent-cyan bg-clip-text text-transparent mb-4">TrendBoard</h3>
-          <motion.div 
-              className="glass-card p-4 flex flex-wrap gap-3 justify-center"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-          >
-              {trendingTags.length > 0 ? trendingTags.map(tag => (
-                  <motion.button 
-                      key={tag}
-                      className="btn-glass flex items-center gap-2"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                  >
-                      <Flame className="text-red-400" /> #{tag}
-                  </motion.button>
-              )) : <p className="text-muted-foreground">No trending tags yet.</p>}
-          </motion.div>
+          <h3 className="text-2xl font-headline bg-gradient-to-r from-accent-pink to-accent-cyan bg-clip-text text-transparent mb-4 text-center">TrendBoard</h3>
+          <div className="grid md:grid-cols-2 gap-8">
+            <div>
+              <h4 className="font-bold text-lg text-center mb-3 text-accent-cyan flex items-center justify-center gap-2"><Crown/> Top Posters</h4>
+              <div className="flex flex-col gap-3">
+                {topPosters.map((user, idx) => <CreatorCard key={user.uid} user={user} type="posts" rank={idx + 1} />)}
+              </div>
+            </div>
+             <div>
+              <h4 className="font-bold text-lg text-center mb-3 text-accent-cyan flex items-center justify-center gap-2"><Heart/> Most Liked</h4>
+              <div className="flex flex-col gap-3">
+                {topLiked.map((user, idx) => <CreatorCard key={user.uid} user={user} type="likes" rank={idx + 1} />)}
+              </div>
+            </div>
+          </div>
       </div>
 
       <div className="mt-12 w-full max-w-4xl mx-auto">
@@ -175,3 +221,5 @@ export default function ScopePage() {
     </div>
   );
 }
+
+    
