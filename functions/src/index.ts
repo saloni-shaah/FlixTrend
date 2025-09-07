@@ -1,3 +1,4 @@
+
 /**
  * Import function triggers from their respective submodules:
  *
@@ -12,6 +13,7 @@ import * as admin from "firebase-admin";
 
 // Initialize the Firebase Admin SDK
 admin.initializeApp();
+const db = admin.firestore();
 
 /**
  * Cloud Function to send a push notification when a new notification
@@ -84,3 +86,80 @@ exports.sendPushNotification = functions.firestore
       console.error("Error sending message:", error);
     }
   });
+
+
+/**
+ * Deletes all data associated with a user when they delete their account.
+ * This is an HTTPS Callable function, meaning it must be triggered by the client app.
+ */
+exports.deleteUserAccount = functions.https.onCall(async (data, context) => {
+  // Check if the user is authenticated.
+  if (!context.auth) {
+    throw new functions.https.HttpsError(
+      "unauthenticated",
+      "The function must be called while authenticated."
+    );
+  }
+
+  const uid = context.auth.uid;
+  const batchSize = 500; // Firestore batch limit
+
+  try {
+    // 1. Delete user from Firebase Authentication
+    await admin.auth().deleteUser(uid);
+    console.log(`Successfully deleted auth user: ${uid}`);
+
+    const batch = db.batch();
+
+    // 2. Delete user's main profile document
+    const userDocRef = db.collection("users").doc(uid);
+    batch.delete(userDocRef);
+
+    // 3. Delete all of the user's posts
+    const userPostsQuery = db.collection("posts").where("userId", "==", uid);
+    const userPostsSnap = await userPostsQuery.get();
+    userPostsSnap.forEach((doc) => batch.delete(doc.ref));
+
+    // 4. Delete all of the user's flashes
+    const userFlashesQuery = db.collection("flashes").where("userId", "==", uid);
+    const userFlashesSnap = await userFlashesQuery.get();
+    userFlashesSnap.forEach((doc) => batch.delete(doc.ref));
+    
+    // 5. Delete all user notifications
+    const userNotifsRef = db.collection("notifications").doc(uid);
+    // This requires recursive delete, which is complex. For MVP, we delete the doc.
+    // In production, a more robust solution (e.g. another function) is needed.
+    batch.delete(userNotifsRef);
+
+    // 6. Remove user from following/followers lists of other users
+    const followingQuery = db.collection("users").doc(uid).collection("following");
+    const followingSnap = await followingQuery.get();
+    for (const doc of followingSnap.docs) {
+        const otherUserId = doc.id;
+        const otherUserFollowerRef = db.collection("users").doc(otherUserId).collection("followers").doc(uid);
+        batch.delete(otherUserFollowerRef);
+    }
+
+    const followersQuery = db.collection("users").doc(uid).collection("followers");
+    const followersSnap = await followersQuery.get();
+    for (const doc of followersSnap.docs) {
+        const otherUserId = doc.id;
+        const otherUserFollowingRef = db.collection("users").doc(otherUserId).collection("following").doc(uid);
+        batch.delete(otherUserFollowingRef);
+    }
+
+    // You might need more logic here to delete comments, likes, etc.
+    // This can get very complex. For an MVP, this is a strong start.
+
+    await batch.commit();
+
+    return { result: `Successfully deleted user data for ${uid}` };
+
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    throw new functions.https.HttpsError(
+      "internal",
+      "An error occurred while deleting the user account."
+    );
+  }
+});

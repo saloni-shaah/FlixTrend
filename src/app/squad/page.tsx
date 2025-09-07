@@ -2,16 +2,18 @@
 "use client";
 import React, { useEffect, useState, useRef } from "react";
 import { auth } from "@/utils/firebaseClient";
-import { getFirestore, doc, getDoc, setDoc, collection, query, where, getCountFromServer, getDocs, onSnapshot, orderBy, updateDoc } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc, collection, query, where, getCountFromServer, getDocs, onSnapshot, orderBy, updateDoc, writeBatch, deleteDoc } from "firebase/firestore";
 import { Cog, Palette, Lock, MessageCircle, LogOut, Camera, Star, Bell, Trash2, AtSign } from "lucide-react";
-import { signOut } from "firebase/auth";
+import { signOut, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { PostCard } from "@/components/PostCard";
 import { FollowButton } from "@/components/FollowButton";
+import { getFunctions, httpsCallable } from "firebase/functions";
 
 const db = getFirestore();
+const functions = getFunctions();
 
 async function uploadToCloudinary(file: File, onProgress?: (percent: number) => void): Promise<string | null> {
   const url = `https://api.cloudinary.com/v1_1/drrzvi2jp/upload`;
@@ -313,7 +315,7 @@ function EditProfileModal({ profile, onClose }: { profile: any; onClose: () => v
       setUploading(field);
       setUploadProgress(0);
       try {
-        const url = await uploadToCloudinary(e.target.files[0], setUploadProgress);
+        const url = await uploadToCloudinary(e.target.files[0], (p) => setUploadProgress(p));
         setForm((prev) => ({ ...prev, [field]: url || "" }));
       } catch (err: any) {
         setError(err.message);
@@ -412,6 +414,7 @@ function SettingsModal({ profile, firebaseUser, onClose }: { profile: any; fireb
     emailNotifications: false,
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -464,90 +467,204 @@ function SettingsModal({ profile, firebaseUser, onClose }: { profile: any; fireb
     router.push("/login");
   };
 
-  const handleDeleteAccount = () => {
-    if(window.confirm("Are you sure you want to delete your account? This action is irreversible.")) {
-      alert("Account deletion feature coming soon.");
-    }
-  }
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="glass-card p-6 w-full max-w-lg relative max-h-[90vh] flex flex-col"
-      >
-        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white">&times;</button>
-        <h2 className="text-2xl font-headline font-bold mb-6 text-accent-cyan flex items-center gap-2"><Cog /> Settings</h2>
-        
-        <div className="flex-1 overflow-y-auto pr-2 flex flex-col gap-4">
-          <div className="bg-white/5 rounded-xl p-4">
-            <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan"><Palette /> Theme & UI</h3>
-            <div className="flex items-center justify-between py-2">
-              <span>Dark Mode</span>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" checked={settings.darkMode} onChange={(e) => handleSettingChange('darkMode', e.target.checked)} className="sr-only peer" />
-                <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-accent-cyan peer-checked:after:translate-x-full after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-cyan"></div>
-              </label>
-            </div>
-            <div className="flex items-center justify-between py-2">
-                <span>Accent Color</span>
-                <input type="color" value={settings.accentColor} onChange={(e) => handleSettingChange('accentColor', e.target.value)} className="w-10 h-10 bg-transparent border-none rounded-full cursor-pointer"/>
-            </div>
-          </div>
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="glass-card p-6 w-full max-w-lg relative max-h-[90vh] flex flex-col"
+        >
+          <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white">&times;</button>
+          <h2 className="text-2xl font-headline font-bold mb-6 text-accent-cyan flex items-center gap-2"><Cog /> Settings</h2>
           
-          <div className="bg-white/5 rounded-xl p-4">
-            <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan"><Lock /> Privacy & Security</h3>
-            <div className="flex items-center justify-between py-2">
-              <span><MessageCircle className="inline-block mr-2"/> Who can DM you?</span>
-              <select value={settings.dmPrivacy} onChange={(e) => handleSettingChange('dmPrivacy', e.target.value)} className="input-glass text-sm">
-                <option value="everyone">Everyone</option>
-                <option value="mutuals">Mutuals</option>
-                <option value="none">No one</option>
-              </select>
+          <div className="flex-1 overflow-y-auto pr-2 flex flex-col gap-4">
+            <div className="bg-white/5 rounded-xl p-4">
+              <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan"><Palette /> Theme & UI</h3>
+              <div className="flex items-center justify-between py-2">
+                <span>Dark Mode</span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" checked={settings.darkMode} onChange={(e) => handleSettingChange('darkMode', e.target.checked)} className="sr-only peer" />
+                  <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-accent-cyan peer-checked:after:translate-x-full after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-cyan"></div>
+                </label>
+              </div>
+              <div className="flex items-center justify-between py-2">
+                  <span>Accent Color</span>
+                  <input type="color" value={settings.accentColor} onChange={(e) => handleSettingChange('accentColor', e.target.value)} className="w-10 h-10 bg-transparent border-none rounded-full cursor-pointer"/>
+              </div>
             </div>
-             <div className="flex items-center justify-between py-2">
-              <span><AtSign className="inline-block mr-2"/> Who can tag you?</span>
-              <select value={settings.tagPrivacy} onChange={(e) => handleSettingChange('tagPrivacy', e.target.value)} className="input-glass text-sm">
-                <option value="everyone">Everyone</option>
-                <option value="following">Following</option>
-                 <option value="none">No one</option>
-              </select>
+            
+            <div className="bg-white/5 rounded-xl p-4">
+              <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan"><Lock /> Privacy & Security</h3>
+              <div className="flex items-center justify-between py-2">
+                <span><MessageCircle className="inline-block mr-2"/> Who can DM you?</span>
+                <select value={settings.dmPrivacy} onChange={(e) => handleSettingChange('dmPrivacy', e.target.value)} className="input-glass text-sm">
+                  <option value="everyone">Everyone</option>
+                  <option value="mutuals">Mutuals</option>
+                  <option value="none">No one</option>
+                </select>
+              </div>
+              <div className="flex items-center justify-between py-2">
+                <span><AtSign className="inline-block mr-2"/> Who can tag you?</span>
+                <select value={settings.tagPrivacy} onChange={(e) => handleSettingChange('tagPrivacy', e.target.value)} className="input-glass text-sm">
+                  <option value="everyone">Everyone</option>
+                  <option value="following">Following</option>
+                  <option value="none">No one</option>
+                </select>
+              </div>
             </div>
-          </div>
 
-          <div className="bg-white/5 rounded-xl p-4">
-            <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan"><Bell /> Notifications</h3>
-            <div className="flex items-center justify-between py-2">
-              <span>Push Notifications</span>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" checked={settings.pushNotifications} onChange={(e) => handleSettingChange('pushNotifications', e.target.checked)} className="sr-only peer" />
-                <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-accent-cyan peer-checked:after:translate-x-full after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-cyan"></div>
-              </label>
+            <div className="bg-white/5 rounded-xl p-4">
+              <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan"><Bell /> Notifications</h3>
+              <div className="flex items-center justify-between py-2">
+                <span>Push Notifications</span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" checked={settings.pushNotifications} onChange={(e) => handleSettingChange('pushNotifications', e.target.checked)} className="sr-only peer" />
+                  <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-accent-cyan peer-checked:after:translate-x-full after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-cyan"></div>
+                </label>
+              </div>
+              <div className="flex items-center justify-between py-2">
+                <span>Email Notifications</span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" checked={settings.emailNotifications} onChange={(e) => handleSettingChange('emailNotifications', e.target.checked)} className="sr-only peer" />
+                  <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-accent-cyan peer-checked:after:translate-x-full after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-cyan"></div>
+                </label>
+              </div>
             </div>
-             <div className="flex items-center justify-between py-2">
-              <span>Email Notifications</span>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" checked={settings.emailNotifications} onChange={(e) => handleSettingChange('emailNotifications', e.target.checked)} className="sr-only peer" />
-                <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-accent-cyan peer-checked:after:translate-x-full after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-cyan"></div>
-              </label>
+            
+            <div className="bg-white/5 rounded-xl p-4">
+              <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan">Account</h3>
+              <button className="btn-glass bg-red-500/20 text-red-400 hover:bg-red-500/40 hover:text-white w-full mt-4" onClick={() => setShowDeleteModal(true)}>
+                  <Trash2 className="inline-block mr-2" /> Delete Account
+              </button>
             </div>
-          </div>
-          
-          <div className="bg-white/5 rounded-xl p-4">
-             <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan">Account</h3>
-             <button className="btn-glass bg-red-500/20 text-red-400 hover:bg-red-500/40 hover:text-white w-full mt-4" onClick={handleDeleteAccount}>
-                <Trash2 className="inline-block mr-2" /> Delete Account
+
+            <button className="btn-glass bg-accent-pink/20 text-accent-pink hover:bg-accent-pink/40 hover:text-white w-full mt-4" onClick={handleLogout}>
+              <LogOut className="inline-block mr-2" /> Log Out
             </button>
           </div>
-
-          <button className="btn-glass bg-accent-pink/20 text-accent-pink hover:bg-accent-pink/40 hover:text-white w-full mt-4" onClick={handleLogout}>
-            <LogOut className="inline-block mr-2" /> Log Out
-          </button>
-        </div>
-      </motion.div>
-    </div>
+        </motion.div>
+      </div>
+      {showDeleteModal && (
+        <DeleteAccountModal 
+            profile={profile}
+            onClose={() => setShowDeleteModal(false)}
+        />
+      )}
+    </>
   );
 }
 
+function DeleteAccountModal({ profile, onClose }: { profile: any, onClose: () => void }) {
+    const [step, setStep] = useState(1);
+    const [confirmationText, setConfirmationText] = useState("");
+    const [credentials, setCredentials] = useState({ username: '', email: '', password: '' });
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
+    const router = useRouter();
+
+    const deleteAccountCallable = httpsCallable(functions, 'deleteUserAccount');
+
+    const handleCredentialsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setCredentials({ ...credentials, [e.target.name]: e.target.value });
+    };
+
+    const handleDelete = async () => {
+        setError("");
+        if (credentials.username.toLowerCase() !== profile.username.toLowerCase() || credentials.email.toLowerCase() !== profile.email.toLowerCase()) {
+            setError("Username or email does not match.");
+            return;
+        }
+
+        setLoading(true);
+        const user = auth.currentUser;
+        if (!user) {
+            setError("You are not logged in.");
+            setLoading(false);
+            return;
+        }
+
+        try {
+            // Re-authenticate user to confirm their identity
+            const credential = EmailAuthProvider.credential(user.email!, credentials.password);
+            await reauthenticateWithCredential(user, credential);
+            
+            // If re-authentication is successful, call the cloud function
+            await deleteAccountCallable();
+            
+            alert("Account deleted successfully.");
+            router.push('/signup'); // Redirect to signup page after deletion
+
+        } catch (err: any) {
+            console.error("Account deletion error:", err);
+            setError(err.code === 'auth/wrong-password' ? "Incorrect password." : "An error occurred. Please try again.");
+        } finally {
+            setLoading(false);
+        }
+    };
     
+    const isStep2Valid = confirmationText === 'delete my account';
+    const isStep3Valid = credentials.username && credentials.email && credentials.password;
+
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-md">
+            <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="glass-card p-6 w-full max-w-lg relative flex flex-col gap-4"
+            >
+                <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white">&times;</button>
+                <h2 className="text-2xl font-headline font-bold text-red-500 flex items-center gap-2"><Trash2 /> Delete Account</h2>
+                
+                {error && <div className="p-3 bg-red-500/20 text-red-400 rounded-lg text-center">{error}</div>}
+
+                {step === 1 && (
+                    <div className="flex flex-col gap-4">
+                        <p className="font-bold text-lg text-center">Are you absolutely sure?</p>
+                        <p className="text-center text-gray-300">This action cannot be undone. This will permanently delete your account, posts, comments, chats, and all other associated data.</p>
+                        <div className="flex justify-end gap-4 mt-4">
+                            <button className="btn-glass" onClick={onClose}>Cancel</button>
+                            <button className="btn-glass bg-red-500/80 text-white" onClick={() => setStep(2)}>I understand, proceed</button>
+                        </div>
+                    </div>
+                )}
+
+                {step === 2 && (
+                    <div className="flex flex-col gap-4">
+                        <p>To confirm, please type "<strong className="text-accent-cyan">delete my account</strong>" in the box below.</p>
+                        <input 
+                            type="text" 
+                            className="input-glass w-full"
+                            value={confirmationText}
+                            onChange={(e) => setConfirmationText(e.target.value)}
+                        />
+                         <div className="flex justify-end gap-4 mt-4">
+                            <button className="btn-glass" onClick={() => setStep(1)}>Back</button>
+                            <button className="btn-glass bg-red-500/80 text-white" disabled={!isStep2Valid} onClick={() => setStep(3)}>Confirm & Proceed</button>
+                        </div>
+                    </div>
+                )}
+                
+                {step === 3 && (
+                    <div className="flex flex-col gap-4">
+                        <p>For your security, please re-enter your account details to finalize the deletion.</p>
+                        <input type="text" name="username" placeholder="Username" className="input-glass w-full" value={credentials.username} onChange={handleCredentialsChange} />
+                        <input type="email" name="email" placeholder="Email" className="input-glass w-full" value={credentials.email} onChange={handleCredentialsChange} />
+                        <input type="password" name="password" placeholder="Password" className="input-glass w-full" value={credentials.password} onChange={handleCredentialsChange} />
+                        <div className="flex justify-end gap-4 mt-4">
+                             <button className="btn-glass" onClick={() => setStep(2)}>Back</button>
+                             <button 
+                                className="btn-glass bg-red-900 text-white" 
+                                disabled={!isStep3Valid || loading}
+                                onClick={handleDelete}
+                            >
+                                {loading ? "Deleting..." : "Permanently Delete Account"}
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+            </motion.div>
+        </div>
+    )
+}
