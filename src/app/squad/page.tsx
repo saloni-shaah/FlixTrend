@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { auth } from "@/utils/firebaseClient";
 import { getFirestore, doc, getDoc, setDoc, collection, query, where, getCountFromServer, getDocs, onSnapshot, orderBy, updateDoc, writeBatch, deleteDoc } from "firebase/firestore";
-import { Cog, Palette, Lock, MessageCircle, LogOut, Camera, Star, Bell, Trash2, AtSign } from "lucide-react";
+import { Cog, Palette, Lock, MessageCircle, LogOut, Camera, Star, Bell, Trash2, AtSign, Compass } from "lucide-react";
 import { signOut, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -58,7 +58,6 @@ export default function SquadPage() {
   const [activeTab, setActiveTab] = useState("posts");
   const [userPosts, setUserPosts] = useState<any[]>([]);
   const [starredPosts, setStarredPosts] = useState<any[]>([]);
-  const [allUsers, setAllUsers] = useState<any[]>([]);
   const [showFollowList, setShowFollowList] = useState<null | 'followers' | 'following'>(null);
 
   useEffect(() => {
@@ -101,10 +100,9 @@ export default function SquadPage() {
           setProfile(docSnap.exists() ? docSnap.data() : null);
         });
 
-        const postsQuery = query(collection(db, "posts"), orderBy("createdAt", "desc"));
+        const postsQuery = query(collection(db, "posts"), where("userId", "==", uid), orderBy("createdAt", "desc"));
         const postsSnapshot = await getDocs(postsQuery);
-        const allPosts = postsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        const userPostsData = allPosts.filter(post => post.userId === uid);
+        const userPostsData = postsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
         setPostCount(userPostsData.length);
         setUserPosts(userPostsData);
@@ -135,17 +133,6 @@ export default function SquadPage() {
     };
   }, [firebaseUser]);
   
-  useEffect(() => {
-    if (!firebaseUser) return;
-    async function fetchAllUsers() {
-      const usersSnap = await getDocs(collection(db, "users"));
-      const usersData = usersSnap.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
-      setAllUsers(usersData.filter(u => u.uid !== firebaseUser.uid));
-    }
-    fetchAllUsers();
-  }, [firebaseUser]);
-
-
   if (loading) {
     return <div className="flex flex-col min-h-screen items-center justify-center text-accent-cyan">Loading profile...</div>;
   }
@@ -251,35 +238,17 @@ export default function SquadPage() {
         )}
       </div>
       {/* Discover Other Users */}
-      <div className="mt-16 w-full max-w-4xl mx-auto">
-        <h3 className="text-xl font-headline bg-gradient-to-r from-accent-pink to-accent-cyan bg-clip-text text-transparent mb-4">Discover Users</h3>
-        {allUsers.length === 0 ? (
-          <div className="text-gray-400 text-center py-8">No other users found. Invite your friends to join!</div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {allUsers.map((user) => (
-              <Link key={user.uid} href={`/squad/${user.uid}`} className="block">
-                <motion.div 
-                  className="glass-card p-4 flex items-center gap-4 hover:border-accent-cyan transition-all cursor-pointer"
-                  whileHover={{ scale: 1.03 }}
-                >
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-lg overflow-hidden">
-                    {user.avatar_url ? (
-                      <img src={user.avatar_url} alt="avatar" className="w-full h-full object-cover rounded-full" />
-                    ) : (
-                      <span>{user.name ? user.name[0] : user.username?.[0] || "U"}</span>
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-headline text-accent-cyan">{user.name}</div>
-                    <div className="text-xs text-gray-500">@{user.username}</div>
-                  </div>
-                  <FollowButton profileUser={user} currentUser={firebaseUser} />
-                </motion.div>
-              </Link>
-            ))}
-          </div>
-        )}
+      <div className="mt-16 w-full max-w-4xl mx-auto flex justify-center">
+        <Link href="/squad/explore">
+            <motion.button 
+                className="btn-glass bg-accent-pink/80 flex items-center gap-3 text-lg"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+            >
+                <Compass />
+                Explore Creators
+            </motion.button>
+        </Link>
       </div>
       {showEdit && (
         <EditProfileModal profile={profile} onClose={() => setShowEdit(false)} />
