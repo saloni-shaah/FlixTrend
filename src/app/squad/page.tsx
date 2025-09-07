@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { auth } from "@/utils/firebaseClient";
 import { getFirestore, doc, getDoc, setDoc, collection, query, where, getCountFromServer, getDocs, onSnapshot, orderBy, updateDoc, writeBatch, deleteDoc } from "firebase/firestore";
-import { Cog, Palette, Lock, MessageCircle, LogOut, Camera, Star, Bell, Trash2, AtSign, Compass, CheckBadgeIcon, Code } from "lucide-react";
+import { Cog, Palette, Lock, MessageCircle, LogOut, Camera, Star, Bell, Trash2, AtSign, Compass, CheckBadge, Code } from "lucide-react";
 import { signOut, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -267,7 +267,7 @@ export default function SquadPage() {
                 <Code className="w-6 h-6 text-accent-green" title="Developer"/>
             )}
             {profile.accountType === 'creator' && !isDeveloper && (
-                <CheckBadgeIcon className="w-6 h-6 text-accent-cyan" title="Verified Creator"/>
+                <CheckBadge className="w-6 h-6 text-accent-cyan" title="Verified Creator"/>
             )}
         </div>
         <p className="text-accent-cyan mb-2 text-center">@{profile.username || "username"}</p>
@@ -589,7 +589,7 @@ function SettingsModal({ profile, firebaseUser, onClose }: { profile: any; fireb
               <div className="flex items-center justify-between py-2">
                 <span><AtSign className="inline-block mr-2"/> Who can tag you?</span>
                 <select value={settings.tagPrivacy} onChange={(e) => handleSettingChange('tagPrivacy', e.target.value)} className="input-glass text-sm">
-                  <option value="everyone">Everyone</option>
+                  <option value="everyone">Following</option>
                   <option value="following">Following</option>
                   <option value="none">No one</option>
                 </select>
@@ -750,3 +750,5 @@ function DeleteAccountModal({ profile, onClose }: { profile: any, onClose: () =>
         </div>
     )
 }
+
+    
