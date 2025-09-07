@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
@@ -156,11 +157,11 @@ export function MusicDiscovery() {
         return () => unsub();
     }, []);
     
-    const handlePlayPause = (song: any) => {
+    const handlePlayPause = (song: any, index: number) => {
         if (activeSong?.id === song.id && isPlaying) {
             pauseSong();
         } else {
-            playSong(song);
+            playSong(song, songs, index);
         }
     };
 
@@ -178,12 +179,12 @@ export function MusicDiscovery() {
                 </div>
             ) : (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                    {songs.map(song => (
+                    {songs.map((song, index) => (
                         <motion.div
                             key={song.id}
                             className="glass-card flex flex-col items-center text-center group cursor-pointer"
                             whileHover={{ scale: 1.05 }}
-                            onClick={() => handlePlayPause(song)}
+                            onClick={() => handlePlayPause(song, index)}
                         >
                             <div className="relative w-full">
                                 <img src={song.albumArtUrl} alt={song.title} className="w-full h-auto rounded-t-2xl aspect-square object-cover"/>

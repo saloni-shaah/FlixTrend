@@ -25,12 +25,14 @@ interface AppState {
   callTarget: any | null;
   setCallTarget: (target: any | null) => void;
   activeCall: Call | null;
-  closeCall: () => void; // New function to close the UI
+  closeCall: () => void;
   activeSong: Song | null;
   isPlaying: boolean;
-  playSong: (song: Song) => void;
+  playSong: (song: Song, queue?: Song[], index?: number) => void;
   pauseSong: () => void;
   toggleSong: () => void;
+  playNext: () => void;
+  playPrevious: () => void;
   audioPlayer: HTMLAudioElement | null;
 }
 
@@ -40,7 +42,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [isCalling, setIsCalling] = useState(false);
   const [callTarget, setCallTarget] = useState<any | null>(null);
   const [activeCall, setActiveCall] = useState<Call | null>(null);
+  
   const [activeSong, setActiveSong] = useState<Song | null>(null);
+  const [songQueue, setSongQueue] = useState<Song[]>([]);
+  const [currentSongIndex, setCurrentSongIndex] = useState<number>(-1);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -51,7 +56,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             const token = await requestForToken();
             if (token && user) {
                 console.log('FCM Token:', token);
-                // Save the token to the user's profile in Firestore
                 const userDocRef = doc(db, 'users', user.uid);
                 await setDoc(userDocRef, { fcmToken: token, lastLogin: serverTimestamp() }, { merge: true });
             }
@@ -64,39 +68,32 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     let callDocUnsubscribe: Unsubscribe | null = null;
 
     const authUnsubscribe = auth.onAuthStateChanged(user => {
-      // Clean up previous listeners on user change
       if (callUnsubscribe) callUnsubscribe();
       if (callDocUnsubscribe) callDocUnsubscribe();
       
       if (user) {
         handleToken(user);
-
         const userDocRef = doc(db, 'users', user.uid);
         callUnsubscribe = onSnapshot(userDocRef, (snap) => {
           const data = snap.data();
           const currentCallId = data?.currentCallId;
           
-          if (callDocUnsubscribe) callDocUnsubscribe(); // Clean up old call listener
+          if (callDocUnsubscribe) callDocUnsubscribe();
 
           if (currentCallId) {
-            // If there's a call ID, listen to that call document
             const callDocRef = doc(db, 'calls', currentCallId);
             callDocUnsubscribe = onSnapshot(callDocRef, (callSnap) => {
               if (callSnap.exists()) {
                 setActiveCall({ id: callSnap.id, ...callSnap.data() });
               } else {
-                // The call document was deleted, so the call has ended.
                 setActiveCall(null);
               }
             });
           } else {
-            // No current call ID, so clear the active call.
             setActiveCall(null);
           }
         });
-
       } else {
-        // User logged out, clear everything
         setActiveCall(null);
       }
     });
@@ -108,7 +105,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     };
   }, []);
   
-  // Cleanup audio on component unmount
   useEffect(() => {
     return () => {
         if (audioRef.current) {
@@ -118,34 +114,31 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const playSong = (song: Song) => {
-    if (audioRef.current && activeSong?.id !== song.id) {
-        audioRef.current.pause();
-        audioRef.current = null;
+  const startSong = (song: Song) => {
+    if (audioRef.current) {
+      audioRef.current.pause();
     }
-    
-    if (!audioRef.current) {
-        const audio = new Audio(song.audioUrl);
-        audioRef.current = audio;
-        audio.play();
+    const audio = new Audio(song.audioUrl);
+    audioRef.current = audio;
+    audio.play();
 
-        audio.addEventListener('play', () => setIsPlaying(true));
-        audio.addEventListener('pause', () => setIsPlaying(false));
-        audio.addEventListener('ended', () => {
-            setActiveSong(null);
-            setIsPlaying(false);
-        });
-    } else {
-        audioRef.current.play();
-    }
+    audio.addEventListener('play', () => setIsPlaying(true));
+    audio.addEventListener('pause', () => setIsPlaying(false));
+    audio.addEventListener('ended', playNext); // Play next song when current one ends
+
     setActiveSong(song);
     setIsPlaying(true);
+  };
+  
+  const playSong = (song: Song, queue: Song[] = [], index: number = -1) => {
+    startSong(song);
+    setSongQueue(queue);
+    setCurrentSongIndex(index);
   };
   
   const pauseSong = () => {
     if(audioRef.current) {
         audioRef.current.pause();
-        setIsPlaying(false);
     }
   };
   
@@ -154,8 +147,21 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           pauseSong();
       } else if(audioRef.current) {
           audioRef.current.play();
-          setIsPlaying(true);
       }
+  };
+
+  const playNext = () => {
+    if (songQueue.length === 0) return;
+    const nextIndex = (currentSongIndex + 1) % songQueue.length;
+    setCurrentSongIndex(nextIndex);
+    startSong(songQueue[nextIndex]);
+  };
+
+  const playPrevious = () => {
+    if (songQueue.length === 0) return;
+    const prevIndex = (currentSongIndex - 1 + songQueue.length) % songQueue.length;
+    setCurrentSongIndex(prevIndex);
+    startSong(songQueue[prevIndex]);
   };
 
   const closeCall = () => {
@@ -168,12 +174,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     callTarget,
     setCallTarget,
     activeCall,
-    closeCall, // Provide the new function
+    closeCall,
     activeSong,
     isPlaying,
     playSong,
     pauseSong,
     toggleSong,
+    playNext,
+    playPrevious,
     audioPlayer: audioRef.current,
   };
 
