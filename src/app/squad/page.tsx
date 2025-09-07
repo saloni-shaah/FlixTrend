@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { auth } from "@/utils/firebaseClient";
 import { getFirestore, doc, getDoc, setDoc, collection, query, where, getCountFromServer, getDocs, onSnapshot, orderBy, updateDoc, writeBatch, deleteDoc } from "firebase/firestore";
-import { Cog, Palette, Lock, MessageCircle, LogOut, Camera, Star, Bell, Trash2, AtSign, Compass, MapPin, User, Tag, ShieldCheck } from "lucide-react";
+import { Cog, Palette, Lock, MessageCircle, LogOut, Camera, Star, Bell, Trash2, AtSign, Compass, MapPin, User, Tag, ShieldCheck, Music } from "lucide-react";
 import { signOut, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -115,6 +115,17 @@ function CompleteProfileModal({ profile, onClose }: { profile: any, onClose: () 
                     </button>
                 </form>
             </motion.div>
+        </div>
+    );
+}
+
+function UserPlaylists({ userId }: { userId: string }) {
+    // This is a placeholder for now. We will add full functionality later.
+    return (
+        <div className="text-gray-400 text-center mt-16">
+            <div className="text-4xl mb-2"><Music /></div>
+            <div className="text-lg font-semibold">No playlists yet</div>
+            <div className="text-sm">Your created playlists will appear here.</div>
         </div>
     );
 }
@@ -301,6 +312,7 @@ export default function SquadPage() {
       <div className="flex justify-center gap-4 my-8">
         <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "posts" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("posts")}>Posts</button>
         <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "starred" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("starred")}>Starred</button>
+        <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "playlists" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("playlists")}>Playlists</button>
       </div>
       {/* Tab Content */}
       <div className="flex-1 flex flex-col items-center justify-center w-full">
@@ -333,6 +345,9 @@ export default function SquadPage() {
                     <div className="text-sm">Your starred posts will appear here!</div>
                 </div>
             )
+        )}
+        {activeTab === "playlists" && firebaseUser && (
+            <UserPlaylists userId={firebaseUser.uid} />
         )}
       </div>
       {/* Discover Other Users */}

@@ -2,7 +2,7 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Play, Pause, Plus, Music } from 'lucide-react';
+import { Play, Pause, Plus, Music, Search } from 'lucide-react';
 import { getFirestore, collection, addDoc, serverTimestamp, query, onSnapshot, orderBy } from 'firebase/firestore';
 import { auth } from '@/utils/firebaseClient';
 import { useAppState } from '@/utils/AppStateContext';
@@ -141,11 +141,37 @@ function AddMusicModal({ onClose }: { onClose: () => void }) {
     );
 }
 
+export function AddToPlaylistModal({ song, onClose }: { song: any; onClose: () => void }) {
+    // This is a placeholder for now. We will add full functionality later.
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="glass-card p-6 w-full max-w-md relative flex flex-col"
+            >
+                <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white">&times;</button>
+                <h2 className="text-xl font-headline font-bold mb-4 text-accent-cyan">Add to Playlist</h2>
+                <p className="text-gray-300 mb-4">Adding "{song.title}"</p>
+                <div className="flex-1 overflow-y-auto mb-4 border-y border-accent-cyan/10 py-2">
+                    <p className="text-center text-gray-400">Playlist functionality is coming soon!</p>
+                    {/* Placeholder for playlist list */}
+                </div>
+                <button className="btn-glass bg-accent-cyan/50 text-white" disabled>
+                    Create New Playlist
+                </button>
+            </motion.div>
+        </div>
+    );
+}
+
 
 export function MusicDiscovery() {
     const [songs, setSongs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [showAddModal, setShowAddModal] = useState(false);
+    const [showPlaylistModal, setShowPlaylistModal] = useState<any | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
     const { activeSong, isPlaying, playSong, pauseSong } = useAppState();
 
     useEffect(() => {
@@ -161,38 +187,68 @@ export function MusicDiscovery() {
         if (activeSong?.id === song.id && isPlaying) {
             pauseSong();
         } else {
-            playSong(song, songs, index);
+            playSong(song, filteredSongs, index);
         }
     };
+
+    const filteredSongs = searchTerm
+        ? songs.filter(song =>
+            song.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            song.artist?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            song.album?.toLowerCase().includes(searchTerm.toLowerCase())
+          )
+        : songs;
 
     if (loading) return <div className="text-center text-accent-cyan animate-pulse">Loading music library...</div>
 
     return (
         <div className="w-full flex flex-col items-center relative">
-            <h2 className="text-3xl font-headline bg-gradient-to-r from-accent-pink to-accent-cyan bg-clip-text text-transparent mb-8">Community Music</h2>
+            <h2 className="text-3xl font-headline bg-gradient-to-r from-accent-pink to-accent-green bg-clip-text text-transparent mb-6">Community Music</h2>
             
-            {songs.length === 0 ? (
+             <div className="relative mb-8 w-full max-w-lg mx-auto">
+                <input
+                    type="text"
+                    className="input-glass w-full pl-12 pr-4 py-3"
+                    placeholder="Search for songs, artists, albums..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl text-brand-gold pointer-events-none">
+                    <Search />
+                </span>
+            </div>
+
+            {filteredSongs.length === 0 ? (
                 <div className="text-center text-gray-400 mt-16">
                     <Music size={64} className="mx-auto mb-4"/>
-                    <h3 className="text-xl font-bold">The Stage is Empty</h3>
-                    <p>Be the first to upload a song and share it with the community!</p>
+                    <h3 className="text-xl font-bold">{searchTerm ? "No Results Found" : "The Stage is Empty"}</h3>
+                    <p>{searchTerm ? "Try a different search term." : "Be the first to upload a song!"}</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                    {songs.map((song, index) => (
+                    {filteredSongs.map((song, index) => (
                         <motion.div
                             key={song.id}
-                            className="glass-card flex flex-col items-center text-center group cursor-pointer"
+                            className="glass-card flex flex-col items-center text-center group"
                             whileHover={{ scale: 1.05 }}
-                            onClick={() => handlePlayPause(song, index)}
                         >
                             <div className="relative w-full">
                                 <img src={song.albumArtUrl} alt={song.title} className="w-full h-auto rounded-t-2xl aspect-square object-cover"/>
-                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div 
+                                    className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={() => handlePlayPause(song, index)}
+                                >
                                     {activeSong?.id === song.id && isPlaying ? <Pause size={48} className="text-white"/> : <Play size={48} className="text-white"/>}
                                 </div>
+                                <button
+                                    className="absolute top-2 right-2 p-2 bg-black/40 rounded-full text-white hover:bg-accent-pink"
+                                    title="Add to playlist"
+                                    onClick={(e) => { e.stopPropagation(); setShowPlaylistModal(song); }}
+                                >
+                                    <Plus size={16}/>
+                                </button>
                             </div>
-                            <div className="p-4 w-full">
+                            <div className="p-4 w-full" onClick={() => handlePlayPause(song, index)}>
                                 <h3 className="font-headline text-base font-bold mb-1 text-accent-cyan truncate">{song.title}</h3>
                                 <p className="text-xs text-gray-400 truncate">{song.artist}</p>
                             </div>
@@ -210,6 +266,7 @@ export function MusicDiscovery() {
             </button>
 
             {showAddModal && <AddMusicModal onClose={() => setShowAddModal(false)} />}
+            {showPlaylistModal && <AddToPlaylistModal song={showPlaylistModal} onClose={() => setShowPlaylistModal(null)} />}
         </div>
     );
 }
