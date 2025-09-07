@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { auth } from "@/utils/firebaseClient";
 import { getFirestore, doc, getDoc, setDoc, collection, query, where, getCountFromServer, getDocs, onSnapshot, orderBy, updateDoc, writeBatch, deleteDoc } from "firebase/firestore";
-import { Cog, Palette, Lock, MessageCircle, LogOut, Camera, Star, Bell, Trash2, AtSign, Compass } from "lucide-react";
+import { Cog, Palette, Lock, MessageCircle, LogOut, Camera, Star, Bell, Trash2, AtSign, Compass, MapPin, User, Tag } from "lucide-react";
 import { signOut, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -252,45 +252,44 @@ export default function SquadPage() {
         )}
       </div>
       {/* Profile Card */}
-      <div className="mx-auto w-full max-w-2xl glass-card p-6 -mt-24 flex flex-col items-center">
-        <div className="w-32 h-32 rounded-full bg-accent-cyan border-4 border-accent-pink shadow-fab-glow mb-2 overflow-hidden -mt-20">
+      <div className="mx-auto w-full max-w-2xl glass-card p-6 -mt-24 flex flex-col items-center text-center">
+        <div className="w-32 h-32 rounded-full bg-accent-cyan border-4 border-accent-pink shadow-fab-glow mb-4 overflow-hidden -mt-20">
           {profile.avatar_url ? (
             <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
           ) : (
             <span className="text-5xl text-white flex items-center justify-center h-full w-full">{initials}</span>
           )}
         </div>
-        <div className="flex items-center gap-2">
-            <h2 className="text-2xl font-headline font-bold mb-1 text-center">{profile.name}</h2>
-        </div>
-        <p className="text-accent-cyan mb-2 text-center">@{profile.username || "username"}</p>
-        <p className="text-gray-300 text-center mb-2">{profile.bio || "This is your bio. Edit it to tell the world about your vibes!"}</p>
+        <h2 className="text-2xl font-headline font-bold">{profile.name}</h2>
+        <p className="text-accent-cyan font-semibold mb-3">@{profile.username || "username"}</p>
         
-        <div className="flex justify-center gap-4 my-2 w-full text-xs text-gray-400">
-            {profile.location && <span>{profile.location}</span>}
-            {profile.gender && <span>{profile.gender}</span>}
+        {/* Stats */}
+        <div className="flex justify-center gap-8 my-2 w-full">
+          <div className="text-center">
+            <span className="font-bold text-lg text-accent-cyan">{postCount}</span>
+            <span className="text-xs text-gray-400 block">Posts</span>
+          </div>
+          <button className="text-center" onClick={() => setShowFollowList('followers')}>
+            <span className="font-bold text-lg text-accent-cyan">{followers}</span>
+            <span className="text-xs text-gray-400 block hover:underline">Followers</span>
+          </button>
+          <button className="text-center" onClick={() => setShowFollowList('following')}>
+            <span className="font-bold text-lg text-accent-cyan">{following}</span>
+            <span className="text-xs text-gray-400 block hover:underline">Following</span>
+          </button>
         </div>
 
-        <div className="flex justify-center gap-8 my-4 w-full">
-          <div className="flex flex-col items-center">
-            <span className="font-bold text-lg text-accent-cyan">{postCount}</span>
-            <span className="text-xs text-gray-500">Posts</span>
-          </div>
-          <button className="flex flex-col items-center" onClick={() => setShowFollowList('followers')}>
-            <span className="font-bold text-lg text-accent-cyan">{followers}</span>
-            <span className="text-xs text-gray-500 hover:underline">Followers</span>
-          </button>
-          <button className="flex flex-col items-center" onClick={() => setShowFollowList('following')}>
-            <span className="font-bold text-lg text-accent-cyan">{following}</span>
-            <span className="text-xs text-gray-500 hover:underline">Following</span>
-          </button>
+        {/* Bio and Details */}
+        <div className="mt-4 w-full max-w-lg">
+            <p className="text-gray-300 text-center mb-4 text-sm">{profile.bio || "This is your bio. Edit it to tell the world about your vibes!"}</p>
+            <div className="flex justify-center flex-wrap gap-x-4 gap-y-2 text-xs text-gray-400">
+                {profile.location && <span className="flex items-center gap-1.5"><MapPin size={12}/> {profile.location}</span>}
+                {profile.gender && <span className="flex items-center gap-1.5"><User size={12}/> {profile.gender}</span>}
+                {profile.interests && <span className="flex items-center gap-1.5"><Tag size={12}/> {profile.interests}</span>}
+            </div>
         </div>
-        <div className="flex gap-2 flex-wrap justify-center mb-2">
-          {profile.interests && profile.interests.split(",").map((interest: string) => (
-            <span key={interest} className="px-3 py-1 rounded-full bg-white/10 text-accent-cyan text-xs font-bold">{interest.trim()}</span>
-          ))}
-        </div>
-        <button className="btn-glass mt-4" onClick={() => setShowEdit(true)}>Edit Profile</button>
+
+        <button className="btn-glass mt-6" onClick={() => setShowEdit(true)}>Edit Profile</button>
       </div>
       {/* Tabs */}
       <div className="flex justify-center gap-4 my-8">
