@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
@@ -6,6 +7,7 @@ import { auth } from "@/utils/firebaseClient";
 import { AlmightyLogo } from "@/components/AlmightyLogo";
 import { motion } from "framer-motion";
 import { Bot, Music, ShieldCheck, Sparkles } from "lucide-react";
+import { SplashScreen } from "@/components/SplashScreen";
 
 export default function LandingPage() {
   const router = useRouter();
@@ -18,7 +20,7 @@ export default function LandingPage() {
         router.replace('/home');
       } else {
         // User is signed out, show the landing page.
-        setLoading(false);
+        setTimeout(() => setLoading(false), 3000); // Show splash for 3 seconds
       }
     });
 
@@ -27,11 +29,7 @@ export default function LandingPage() {
   }, [router]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen w-full flex items-center justify-center">
-        <div className="text-2xl font-bold text-accent-cyan animate-pulse">FlixTrend</div>
-      </div>
-    );
+    return <SplashScreen />;
   }
 
 
