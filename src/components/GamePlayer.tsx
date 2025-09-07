@@ -1,3 +1,4 @@
+
 "use client";
 
 import { ArrowLeft } from "lucide-react";
@@ -18,7 +19,7 @@ export function GamePlayer({ game, onBack }: { game: any; onBack: () => void }) 
       <div className="w-full max-w-4xl aspect-video bg-black rounded-lg overflow-hidden border-2 border-accent-cyan">
         <iframe
           src={game.gameUrl}
-          sandbox="allow-scripts" // Security: This is crucial. It isolates the iframe content.
+          sandbox="allow-scripts allow-same-origin" // Security: This is crucial. It isolates the iframe content.
           className="w-full h-full border-0"
           title={game.title}
         />
