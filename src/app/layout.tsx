@@ -16,7 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className="relative min-h-screen">
         <AppStateProvider>
-          <main className="pb-24">
+          <main className="pb-28">
             {children}
           </main>
           <GlobalMusicPlayer />
