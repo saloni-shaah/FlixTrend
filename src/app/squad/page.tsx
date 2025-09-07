@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { auth } from "@/utils/firebaseClient";
 import { getFirestore, doc, getDoc, setDoc, collection, query, where, getCountFromServer, getDocs, onSnapshot, orderBy, updateDoc, writeBatch, deleteDoc } from "firebase/firestore";
-import { Cog, Palette, Lock, MessageCircle, LogOut, Camera, Star, Bell, Trash2, AtSign, Compass } from "lucide-react";
+import { Cog, Palette, Lock, MessageCircle, LogOut, Camera, Star, Bell, Trash2, AtSign, Compass, CheckBadgeIcon, CheckBadge } from "lucide-react";
 import { signOut, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -46,6 +46,80 @@ async function uploadToCloudinary(file: File, onProgress?: (percent: number) => 
   });
 }
 
+function CompleteProfileModal({ profile, onClose }: { profile: any, onClose: () => void }) {
+    const [form, setForm] = useState({
+        dob: profile.dob || "",
+        gender: profile.gender || "",
+        location: profile.location || "",
+        accountType: profile.accountType || "user",
+    });
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        setForm({ ...form, [e.target.name]: e.target.value });
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setError("");
+        try {
+            const user = auth.currentUser;
+            if (!user) throw new Error("Not logged in");
+            const docRef = doc(db, "users", user.uid);
+            await updateDoc(docRef, { ...form, profileComplete: true });
+            onClose();
+        } catch (err: any) {
+            setError(err.message);
+        }
+        setLoading(false);
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="glass-card p-6 w-full max-w-md relative flex flex-col"
+            >
+                <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white">&times;</button>
+                <h2 className="text-xl font-headline font-bold mb-4 text-accent-cyan">Complete Your Profile</h2>
+                <p className="text-sm text-gray-300 mb-4">Help others get to know you better by adding a few more details!</p>
+                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                    <input
+                        type="text" name="location" placeholder="Location (e.g., City, Country)"
+                        className="input-glass w-full" value={form.location} onChange={handleChange}
+                    />
+                    <input
+                        type="date" name="dob" placeholder="Date of Birth"
+                        className="input-glass w-full" value={form.dob} onChange={handleChange}
+                    />
+                    <select name="gender" className="input-glass w-full" value={form.gender} onChange={handleChange}>
+                        <option value="" disabled>Select Gender...</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                        <option value="non-binary">Non-binary</option>
+                        <option value="other">Other</option>
+                        <option value="prefer-not-to-say">Prefer not to say</option>
+                    </select>
+                    <select name="accountType" className="input-glass w-full" value={form.accountType} onChange={handleChange}>
+                        <option value="user">I'm a User</option>
+                        <option value="creator">I'm a Creator</option>
+                    </select>
+
+                    {error && <div className="text-red-400 text-center">{error}</div>}
+
+                    <button type="submit" className="btn-glass bg-accent-cyan text-black mt-4" disabled={loading}>
+                        {loading ? "Saving..." : "Save Details"}
+                    </button>
+                </form>
+            </motion.div>
+        </div>
+    );
+}
+
+
 export default function SquadPage() {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -59,6 +133,8 @@ export default function SquadPage() {
   const [userPosts, setUserPosts] = useState<any[]>([]);
   const [starredPosts, setStarredPosts] = useState<any[]>([]);
   const [showFollowList, setShowFollowList] = useState<null | 'followers' | 'following'>(null);
+  const [showCompleteProfile, setShowCompleteProfile] = useState(false);
+
 
   useEffect(() => {
     const unsubAuth = auth.onAuthStateChanged(async (user) => {
@@ -77,6 +153,11 @@ export default function SquadPage() {
             interests: "",
             createdAt: new Date(),
           });
+        } else {
+            const data = userDocSnap.data();
+            if (!data.profileComplete) {
+                setShowCompleteProfile(true);
+            }
         }
       } else {
         setFirebaseUser(null);
@@ -178,9 +259,20 @@ export default function SquadPage() {
             <span className="text-5xl text-white flex items-center justify-center h-full w-full">{initials}</span>
           )}
         </div>
-        <h2 className="text-2xl font-headline font-bold mb-1 text-center">{profile.name}</h2>
+        <div className="flex items-center gap-2">
+            <h2 className="text-2xl font-headline font-bold mb-1 text-center">{profile.name}</h2>
+            {profile.accountType === 'creator' && (
+                <CheckBadge className="w-6 h-6 text-accent-cyan" title="Verified Creator"/>
+            )}
+        </div>
         <p className="text-accent-cyan mb-2 text-center">@{profile.username || "username"}</p>
         <p className="text-gray-300 text-center mb-2">{profile.bio || "This is your bio. Edit it to tell the world about your vibes!"}</p>
+        
+        <div className="flex justify-center gap-4 my-2 w-full text-xs text-gray-400">
+            {profile.location && <span>{profile.location}</span>}
+            {profile.gender && <span>{profile.gender}</span>}
+        </div>
+
         <div className="flex justify-center gap-8 my-4 w-full">
           <div className="flex flex-col items-center">
             <span className="font-bold text-lg text-accent-cyan">{postCount}</span>
@@ -253,6 +345,9 @@ export default function SquadPage() {
             </motion.button>
         </Link>
       </div>
+       {showCompleteProfile && profile && (
+        <CompleteProfileModal profile={profile} onClose={() => setShowCompleteProfile(false)} />
+       )}
       {showEdit && (
         <EditProfileModal profile={profile} onClose={() => setShowEdit(false)} />
       )}

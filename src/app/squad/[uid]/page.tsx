@@ -6,7 +6,7 @@ import { getFirestore, doc, getDoc, collection, query, where, getDocs, onSnapsho
 import { auth } from "@/utils/firebaseClient";
 import { PostCard } from "@/components/PostCard";
 import { FollowButton } from "@/components/FollowButton";
-import { Star } from "lucide-react";
+import { Star, CheckBadge } from "lucide-react";
 import { FollowListModal } from "@/components/FollowListModal";
 
 const db = getFirestore();
@@ -109,9 +109,20 @@ export default function UserProfilePage() {
             <span className="text-5xl text-white flex items-center justify-center h-full w-full">{initials}</span>
           )}
         </div>
-        <h2 className="text-2xl font-headline font-bold mb-1 text-center">{profile.name}</h2>
+        <div className="flex items-center gap-2">
+            <h2 className="text-2xl font-headline font-bold mb-1 text-center">{profile.name}</h2>
+            {profile.accountType === 'creator' && (
+                <CheckBadge className="w-6 h-6 text-accent-cyan" title="Verified Creator"/>
+            )}
+        </div>
         <p className="text-accent-cyan mb-2 text-center">@{profile.username || "username"}</p>
         <p className="text-gray-300 text-center mb-2">{profile.bio || "This is their bio."}</p>
+        
+        <div className="flex justify-center gap-4 my-2 w-full text-xs text-gray-400">
+            {profile.location && <span>{profile.location}</span>}
+            {profile.gender && <span>{profile.gender}</span>}
+        </div>
+        
         <div className="flex justify-center gap-8 my-4 w-full">
           <div className="flex flex-col items-center">
             <span className="font-bold text-lg text-accent-cyan">{postCount}</span>
@@ -185,5 +196,3 @@ export default function UserProfilePage() {
     </div>
   );
 }
-
-    
