@@ -22,9 +22,9 @@ const AdBanner = () => {
             <ins className="adsbygoogle"
                 style={{ display: 'block' }}
                 data-ad-client="ca-pub-4402800926226975"
-                data-ad-slot="YOUR_AD_SLOT_ID" // Replace with your ad slot ID
-                data-ad-format="auto"
-                data-full-width-responsive="true"></ins>
+                data-ad-slot="7578594077"
+                data-ad-format="fluid"
+                data-ad-layout-key="-ef+6k-30-ac+ty"></ins>
             <p className="text-xs text-muted-foreground mt-2">Advertisement</p>
         </div>
     );
