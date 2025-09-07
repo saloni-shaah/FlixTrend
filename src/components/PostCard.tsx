@@ -1,13 +1,15 @@
+
 "use client";
 
 import React from 'react';
 import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, deleteDoc, updateDoc, doc as fsDoc, setDoc, getDoc, doc, runTransaction } from "firebase/firestore";
 import { FaPlay, FaRegComment, FaExclamationTriangle, FaVolumeMute, FaUserSlash, FaLink, FaEllipsisV, FaMusic } from "react-icons/fa";
-import { Repeat2, Star, Share, MessageCircle } from "lucide-react";
+import { Repeat2, Star, Share, MessageCircle, Bookmark } from "lucide-react";
 import { auth } from "@/utils/firebaseClient";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ShareModal } from './ShareModal';
+import { AddToCollectionModal } from './AddToCollectionModal';
 
 const db = getFirestore();
 
@@ -21,6 +23,8 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
   const [showEdit, setShowEdit] = React.useState(false);
   const [editContent, setEditContent] = React.useState(post.content || "");
   const [showShareModal, setShowShareModal] = React.useState(false);
+  const [showCollectionModal, setShowCollectionModal] = React.useState(false);
+  const [isSaved, setIsSaved] = React.useState(false);
   const currentUser = auth.currentUser;
   const [pollVotes, setPollVotes] = React.useState<{ [optionIdx: number]: { count: number, voters: string[] } }>({});
   const [userPollVote, setUserPollVote] = React.useState<number | null>(null);
@@ -40,6 +44,13 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
         setIsStarred(docSnap.exists());
     });
     unsubscribes.push(unsubStarred);
+
+    // Saved post check - this is a quick check, doesn't tell us *which* collection
+    const savedQuery = query(collection(db, "collections"), where("ownerId", "==", currentUser.uid), where("postIds", "array-contains", post.id));
+    const unsubSaved = onSnapshot(savedQuery, (snap) => {
+      setIsSaved(!snap.empty);
+    });
+    unsubscribes.push(unsubSaved);
     
     // Relayed post check
     const relayedDocRef = fsDoc(db, "posts", post.id, "relays", currentUser.uid);
@@ -304,19 +315,26 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
   }
   
   const ActionButtons = () => (
-    <div className={`${isShortVibe ? 'flex flex-col items-center gap-6' : 'flex items-center justify-start gap-6 mt-2 pt-2 border-t border-glass-border'}`}>
-      <button className={`flex items-center gap-1.5 font-bold transition-all ${isShortVibe ? 'flex-col text-white' : 'text-lg text-muted-foreground hover:text-brand-gold'}`} onClick={(e) => { e.stopPropagation(); setShowComments(true); }}>
-        <MessageCircle size={isShortVibe ? 32 : 20} /> <span className="text-sm">{commentCount}</span>
-      </button>
-      <button className={`flex items-center gap-1.5 font-bold transition-all ${isRelayed ? "text-green-400" : isShortVibe ? "text-white hover:text-green-300" : "text-lg text-muted-foreground hover:text-green-400"}`} onClick={(e) => { e.stopPropagation(); handleRelay(); }} >
-        <Repeat2 size={isShortVibe ? 32 : 20} /> <span className="text-sm">{relayCount}</span>
-      </button>
-      <button className={`flex items-center gap-1.5 font-bold transition-all ${isStarred ? "text-yellow-400" : isShortVibe ? "text-white hover:text-yellow-300" : "text-lg text-muted-foreground hover:text-yellow-400"}`} onClick={(e) => { e.stopPropagation(); handleStar(); }}>
-        <Star size={isShortVibe ? 32 : 20} fill={isStarred ? "currentColor" : "none"} /> <span className="text-sm">{starCount}</span>
-      </button>
-      <button className={`flex items-center gap-1.5 font-bold transition-all ${isShortVibe ? 'flex-col text-white' : 'text-lg text-muted-foreground hover:text-accent-cyan'}`} onClick={(e) => { e.stopPropagation(); setShowShareModal(true); }}>
-        <Share size={isShortVibe ? 32 : 20} />
-      </button>
+    <div className={`flex items-center justify-between mt-2 pt-2 border-t border-glass-border ${isShortVibe ? 'w-full' : ''}`}>
+        <div className={`${isShortVibe ? 'flex flex-col items-center gap-6' : 'flex items-center justify-start gap-6'}`}>
+          <button className={`flex items-center gap-1.5 font-bold transition-all ${isShortVibe ? 'flex-col text-white' : 'text-lg text-muted-foreground hover:text-brand-gold'}`} onClick={(e) => { e.stopPropagation(); setShowComments(true); }}>
+            <MessageCircle size={isShortVibe ? 32 : 20} /> <span className="text-sm">{commentCount}</span>
+          </button>
+          <button className={`flex items-center gap-1.5 font-bold transition-all ${isRelayed ? "text-green-400" : isShortVibe ? "text-white hover:text-green-300" : "text-lg text-muted-foreground hover:text-green-400"}`} onClick={(e) => { e.stopPropagation(); handleRelay(); }} >
+            <Repeat2 size={isShortVibe ? 32 : 20} /> <span className="text-sm">{relayCount}</span>
+          </button>
+          <button className={`flex items-center gap-1.5 font-bold transition-all ${isStarred ? "text-yellow-400" : isShortVibe ? "text-white hover:text-yellow-300" : "text-lg text-muted-foreground hover:text-yellow-400"}`} onClick={(e) => { e.stopPropagation(); handleStar(); }}>
+            <Star size={isShortVibe ? 32 : 20} fill={isStarred ? "currentColor" : "none"} /> <span className="text-sm">{starCount}</span>
+          </button>
+          <button className={`flex items-center gap-1.5 font-bold transition-all ${isShortVibe ? 'flex-col text-white' : 'text-lg text-muted-foreground hover:text-accent-cyan'}`} onClick={(e) => { e.stopPropagation(); setShowShareModal(true); }}>
+            <Share size={isShortVibe ? 32 : 20} />
+          </button>
+        </div>
+        {!isShortVibe && (
+           <button className={`flex items-center gap-1.5 font-bold transition-all ${isSaved ? "text-accent-purple" : "text-lg text-muted-foreground hover:text-accent-purple"}`} onClick={(e) => { e.stopPropagation(); setShowCollectionModal(true); }}>
+                <Bookmark size={20} fill={isSaved ? "currentColor" : "none"}/>
+            </button>
+        )}
     </div>
   );
 
@@ -395,6 +413,12 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
         <ShareModal 
             url={`${window.location.origin}/post/${post.id}`}
             onClose={() => setShowShareModal(false)}
+        />
+      )}
+      {showCollectionModal && (
+        <AddToCollectionModal 
+            post={post}
+            onClose={() => setShowCollectionModal(false)}
         />
       )}
     </motion.div>
@@ -566,3 +590,5 @@ function CommentForm({ postId, postAuthorId, parentId, onCommentPosted, isReply 
     </form>
   )
 }
+
+    

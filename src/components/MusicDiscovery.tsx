@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Play, Pause, Plus, Music, Search } from 'lucide-react';
-import { getFirestore, collection, addDoc, serverTimestamp, query, onSnapshot, orderBy } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, serverTimestamp, query, onSnapshot, orderBy, where, updateDoc, arrayUnion, doc } from 'firebase/firestore';
 import { auth } from '@/utils/firebaseClient';
 import { useAppState } from '@/utils/AppStateContext';
 
@@ -141,25 +141,82 @@ function AddMusicModal({ onClose }: { onClose: () => void }) {
     );
 }
 
-export function AddToPlaylistModal({ song, onClose }: { song: any; onClose: () => void }) {
-    // This is a placeholder for now. We will add full functionality later.
+function AddToPlaylistModal({ song, onClose }: { song: any; onClose: () => void }) {
+    const [playlists, setPlaylists] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [showNewPlaylist, setShowNewPlaylist] = useState(false);
+    const [newPlaylistName, setNewPlaylistName] = useState('');
+    const currentUser = auth.currentUser;
+
+    useEffect(() => {
+        if (!currentUser) return;
+        const q = query(collection(db, "playlists"), where("ownerId", "==", currentUser.uid));
+        const unsub = onSnapshot(q, (snapshot) => {
+            setPlaylists(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            setLoading(false);
+        });
+        return () => unsub();
+    }, [currentUser]);
+
+    const handleCreatePlaylist = async () => {
+        if (!newPlaylistName.trim() || !currentUser) return;
+        await addDoc(collection(db, "playlists"), {
+            name: newPlaylistName,
+            ownerId: currentUser.uid,
+            createdAt: serverTimestamp(),
+            songIds: [song.id] // Add current song to new playlist
+        });
+        setNewPlaylistName('');
+        setShowNewPlaylist(false);
+        onClose(); // Close modal after creating and adding
+    };
+    
+    const handleAddToPlaylist = async (playlistId: string) => {
+        const playlistRef = doc(db, "playlists", playlistId);
+        await updateDoc(playlistRef, {
+            songIds: arrayUnion(song.id)
+        });
+        onClose();
+    };
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
             <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="glass-card p-6 w-full max-w-md relative flex flex-col"
+                className="glass-card p-6 w-full max-w-md relative flex flex-col max-h-[80vh]"
             >
                 <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white">&times;</button>
                 <h2 className="text-xl font-headline font-bold mb-4 text-accent-cyan">Add to Playlist</h2>
-                <p className="text-gray-300 mb-4">Adding "{song.title}"</p>
                 <div className="flex-1 overflow-y-auto mb-4 border-y border-accent-cyan/10 py-2">
-                    <p className="text-center text-gray-400">Playlist functionality is coming soon!</p>
-                    {/* Placeholder for playlist list */}
+                    {loading ? (
+                        <p className="text-center text-gray-400">Loading playlists...</p>
+                    ) : (
+                        <div className="flex flex-col gap-2">
+                            {playlists.map(p => (
+                                <button key={p.id} onClick={() => handleAddToPlaylist(p.id)} className="text-left p-3 rounded-lg hover:bg-accent-cyan/10 w-full">
+                                    {p.name}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </div>
-                <button className="btn-glass bg-accent-cyan/50 text-white" disabled>
-                    Create New Playlist
-                </button>
+                {showNewPlaylist ? (
+                    <div className="flex gap-2">
+                        <input 
+                            type="text"
+                            placeholder="New playlist name..."
+                            value={newPlaylistName}
+                            onChange={(e) => setNewPlaylistName(e.target.value)}
+                            className="input-glass flex-1"
+                        />
+                        <button onClick={handleCreatePlaylist} className="btn-glass bg-accent-pink">Create</button>
+                    </div>
+                ) : (
+                    <button className="btn-glass bg-accent-cyan/50 text-white" onClick={() => setShowNewPlaylist(true)}>
+                        Create New Playlist
+                    </button>
+                )}
             </motion.div>
         </div>
     );
@@ -235,7 +292,7 @@ export function MusicDiscovery() {
                             <div className="relative w-full">
                                 <img src={song.albumArtUrl} alt={song.title} className="w-full h-auto rounded-t-2xl aspect-square object-cover"/>
                                 <div 
-                                    className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                    className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                                     onClick={() => handlePlayPause(song, index)}
                                 >
                                     {activeSong?.id === song.id && isPlaying ? <Pause size={48} className="text-white"/> : <Play size={48} className="text-white"/>}
@@ -248,7 +305,7 @@ export function MusicDiscovery() {
                                     <Plus size={16}/>
                                 </button>
                             </div>
-                            <div className="p-4 w-full" onClick={() => handlePlayPause(song, index)}>
+                            <div className="p-4 w-full cursor-pointer" onClick={() => handlePlayPause(song, index)}>
                                 <h3 className="font-headline text-base font-bold mb-1 text-accent-cyan truncate">{song.title}</h3>
                                 <p className="text-xs text-gray-400 truncate">{song.artist}</p>
                             </div>
@@ -270,3 +327,5 @@ export function MusicDiscovery() {
         </div>
     );
 }
+
+    

@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { auth } from "@/utils/firebaseClient";
 import { getFirestore, doc, getDoc, setDoc, collection, query, where, getCountFromServer, getDocs, onSnapshot, orderBy, updateDoc, writeBatch, deleteDoc } from "firebase/firestore";
-import { Cog, Palette, Lock, MessageCircle, LogOut, Camera, Star, Bell, Trash2, AtSign, Compass, MapPin, User, Tag, ShieldCheck, Music } from "lucide-react";
+import { Cog, Palette, Lock, MessageCircle, LogOut, Camera, Star, Bell, Trash2, AtSign, Compass, MapPin, User, Tag, ShieldCheck, Music, Bookmark, Heart, Folder } from "lucide-react";
 import { signOut, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -120,12 +120,120 @@ function CompleteProfileModal({ profile, onClose }: { profile: any, onClose: () 
 }
 
 function UserPlaylists({ userId }: { userId: string }) {
-    // This is a placeholder for now. We will add full functionality later.
+    const [playlists, setPlaylists] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const q = query(collection(db, "playlists"), where("ownerId", "==", userId), orderBy("createdAt", "desc"));
+        const unsub = onSnapshot(q, (snapshot) => {
+            setPlaylists(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            setLoading(false);
+        });
+        return () => unsub();
+    }, [userId]);
+
+    if (loading) return <div className="text-gray-400 text-center mt-16 animate-pulse">Loading playlists...</div>
+    
+    if (playlists.length === 0) {
+        return (
+            <div className="text-gray-400 text-center mt-16">
+                <div className="text-4xl mb-2"><Music /></div>
+                <div className="text-lg font-semibold">No playlists yet</div>
+                <div className="text-sm">Your created playlists will appear here.</div>
+            </div>
+        );
+    }
+    
     return (
-        <div className="text-gray-400 text-center mt-16">
-            <div className="text-4xl mb-2"><Music /></div>
-            <div className="text-lg font-semibold">No playlists yet</div>
-            <div className="text-sm">Your created playlists will appear here.</div>
+      <div className="w-full max-w-xl flex flex-col gap-4">
+        {playlists.map(playlist => (
+          <div key={playlist.id} className="glass-card p-4 flex items-center gap-4">
+            <div className="w-16 h-16 rounded-lg bg-accent-purple/20 flex items-center justify-center">
+              <Music className="text-accent-purple" size={32} />
+            </div>
+            <div>
+              <h3 className="font-bold text-lg text-accent-cyan">{playlist.name}</h3>
+              <p className="text-sm text-gray-400">{playlist.songIds?.length || 0} songs</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+}
+
+function UserCollections({ userId }: { userId: string }) {
+    const [collections, setCollections] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [selectedCollection, setSelectedCollection] = useState<any | null>(null);
+
+    useEffect(() => {
+        const q = query(collection(db, "collections"), where("ownerId", "==", userId), orderBy("createdAt", "desc"));
+        const unsub = onSnapshot(q, (snapshot) => {
+            setCollections(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            setLoading(false);
+        });
+        return () => unsub();
+    }, [userId]);
+
+    if (loading) return <div className="text-gray-400 text-center mt-16 animate-pulse">Loading collections...</div>;
+
+    if (selectedCollection) {
+        return <CollectionDetailView collection={selectedCollection} onBack={() => setSelectedCollection(null)} />
+    }
+
+    if (collections.length === 0) {
+        return (
+            <div className="text-gray-400 text-center mt-16">
+                <div className="text-4xl mb-2"><Bookmark /></div>
+                <div className="text-lg font-semibold">No collections yet</div>
+                <div className="text-sm">Save posts to a collection to see them here.</div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="w-full max-w-xl grid grid-cols-2 md:grid-cols-3 gap-4">
+            {collections.map(collectionItem => (
+                <div key={collectionItem.id} className="glass-card rounded-lg overflow-hidden cursor-pointer" onClick={() => setSelectedCollection(collectionItem)}>
+                    <div className="w-full aspect-square bg-accent-pink/20 flex items-center justify-center">
+                        <Folder className="text-accent-pink" size={48} />
+                    </div>
+                    <div className="p-3">
+                        <h3 className="font-bold text-accent-cyan truncate">{collectionItem.name}</h3>
+                        <p className="text-xs text-gray-400">{collectionItem.postIds?.length || 0} posts</p>
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+function CollectionDetailView({ collection, onBack }: { collection: any, onBack: () => void }) {
+    const [posts, setPosts] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchPosts = async () => {
+            if (!collection.postIds || collection.postIds.length === 0) {
+                setLoading(false);
+                return;
+            }
+            // Firestore 'in' queries are limited to 10 items. For a real app, pagination would be needed here.
+            const postsQuery = query(collection(db, "posts"), where("__name__", "in", collection.postIds.slice(0, 10)));
+            const postsSnap = await getDocs(postsQuery);
+            setPosts(postsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            setLoading(false);
+        };
+        fetchPosts();
+    }, [collection]);
+
+    return (
+        <div className="w-full max-w-xl flex flex-col gap-6">
+            <button onClick={onBack} className="btn-glass self-start">{"< Back to Collections"}</button>
+            <h2 className="text-2xl font-bold text-accent-cyan">{collection.name}</h2>
+            {loading && <p className="text-center text-gray-400">Loading posts...</p>}
+            {!loading && posts.length === 0 && <p className="text-center text-gray-400">This collection is empty.</p>}
+            {posts.map(post => <PostCard key={post.id} post={post} />)}
         </div>
     );
 }
@@ -309,10 +417,11 @@ export default function SquadPage() {
         <button className="btn-glass mt-6" onClick={() => setShowEdit(true)}>Edit Profile</button>
       </div>
       {/* Tabs */}
-      <div className="flex justify-center gap-4 my-8">
+      <div className="flex justify-center gap-2 md:gap-4 my-8 flex-wrap">
         <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "posts" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("posts")}>Posts</button>
-        <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "starred" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("starred")}>Starred</button>
+        <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "likes" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("likes")}>Likes</button>
         <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "playlists" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("playlists")}>Playlists</button>
+        <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "collections" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("collections")}>Collections</button>
       </div>
       {/* Tab Content */}
       <div className="flex-1 flex flex-col items-center justify-center w-full">
@@ -331,7 +440,7 @@ export default function SquadPage() {
             </div>
           )
         )}
-        {activeTab === "starred" && (
+        {activeTab === "likes" && (
             starredPosts.length > 0 ? (
                 <div className="w-full max-w-xl flex flex-col gap-6">
                     {starredPosts.map((post) => (
@@ -340,14 +449,17 @@ export default function SquadPage() {
                 </div>
             ) : (
                 <div className="text-gray-400 text-center mt-16">
-                    <div className="text-4xl mb-2"><Star /></div>
-                    <div className="text-lg font-semibold">No starred posts</div>
-                    <div className="text-sm">Your starred posts will appear here!</div>
+                    <div className="text-4xl mb-2"><Heart /></div>
+                    <div className="text-lg font-semibold">No liked posts</div>
+                    <div className="text-sm">Your liked posts will appear here!</div>
                 </div>
             )
         )}
         {activeTab === "playlists" && firebaseUser && (
             <UserPlaylists userId={firebaseUser.uid} />
+        )}
+        {activeTab === "collections" && firebaseUser && (
+            <UserCollections userId={firebaseUser.uid} />
         )}
       </div>
       {/* Discover Other Users */}
@@ -763,3 +875,5 @@ function DeleteAccountModal({ profile, onClose }: { profile: any, onClose: () =>
         </div>
     )
 }
+
+    

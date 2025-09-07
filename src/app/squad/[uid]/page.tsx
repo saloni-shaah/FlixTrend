@@ -6,7 +6,7 @@ import { getFirestore, doc, getDoc, collection, query, where, getDocs, onSnapsho
 import { auth } from "@/utils/firebaseClient";
 import { PostCard } from "@/components/PostCard";
 import { FollowButton } from "@/components/FollowButton";
-import { Star, MapPin, User, Tag, ShieldCheck } from "lucide-react";
+import { Star, MapPin, User, Tag, ShieldCheck, Heart } from "lucide-react";
 import { FollowListModal } from "@/components/FollowListModal";
 
 const db = getFirestore();
@@ -154,7 +154,7 @@ export default function UserProfilePage() {
       {/* Tabs */}
       <div className="flex justify-center gap-4 my-8">
         <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "posts" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("posts")}>Posts</button>
-        <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "starred" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("starred")}>Starred</button>
+        <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "likes" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("likes")}>Likes</button>
       </div>
       {/* Tab Content */}
       <div className="flex-1 flex flex-col items-center justify-center w-full">
@@ -173,7 +173,7 @@ export default function UserProfilePage() {
             </div>
           )
         )}
-        {activeTab === "starred" && (
+        {activeTab === "likes" && (
             starredPosts.length > 0 ? (
                 <div className="w-full max-w-xl flex flex-col gap-6">
                     {starredPosts.map((post) => (
@@ -182,9 +182,9 @@ export default function UserProfilePage() {
                 </div>
             ) : (
                 <div className="text-gray-400 text-center mt-16">
-                    <div className="text-4xl mb-2"><Star/></div>
-                    <div className="text-lg font-semibold">No starred posts</div>
-                    <div className="text-sm">Their starred posts will appear here.</div>
+                    <div className="text-4xl mb-2"><Heart/></div>
+                    <div className="text-lg font-semibold">No liked posts</div>
+                    <div className="text-sm">Their liked posts will appear here.</div>
                 </div>
             )
         )}
@@ -200,3 +200,5 @@ export default function UserProfilePage() {
     </div>
   );
 }
+
+    
