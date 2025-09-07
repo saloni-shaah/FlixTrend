@@ -1,7 +1,7 @@
 
 "use client";
 import React, { useEffect, useState, useRef } from "react";
-import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp, where, writeBatch, getDocs, updateDoc, deleteDoc, arrayUnion, arrayRemove } from "firebase/firestore";
+import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp, where, writeBatch, getDocs, updateDoc, deleteField, arrayUnion, arrayRemove } from "firebase/firestore";
 import { auth } from "@/utils/firebaseClient";
 import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, Smile, Trash2, Users, CheckSquare, Square, MoreVertical, UserPlus, UserX, Edit } from "lucide-react";
 import { useAppState } from "@/utils/AppStateContext";
@@ -168,9 +168,10 @@ function GroupInfoPanel({ group, currentUser, mutuals, onClose, onGroupUpdate }:
 
     const handleAddMember = async (userToAdd: any) => {
         const groupRef = doc(db, "groups", group.id);
+        const updatedMemberInfo = { ...group.memberInfo, [userToAdd.uid]: { name: userToAdd.name, avatar_url: userToAdd.avatar_url, username: userToAdd.username } };
         await updateDoc(groupRef, {
             members: arrayUnion(userToAdd.uid),
-            [`memberInfo.${userToAdd.uid}`]: { name: userToAdd.name, avatar_url: userToAdd.avatar_url, username: userToAdd.username }
+            memberInfo: updatedMemberInfo
         });
         await addDoc(collection(db, "chats", group.id, "messages"), {
                 text: `${userToAdd.name} was added to the group.`,
@@ -178,21 +179,19 @@ function GroupInfoPanel({ group, currentUser, mutuals, onClose, onGroupUpdate }:
                 createdAt: serverTimestamp(),
                 readBy: [currentUser.uid]
             });
-        onGroupUpdate({ ...group, members: [...group.members, userToAdd.uid], memberInfo: {...group.memberInfo, [userToAdd.uid]: {name: userToAdd.name, avatar_url: userToAdd.avatar_url, username: userToAdd.username}} });
+        onGroupUpdate({ ...group, members: [...group.members, userToAdd.uid], memberInfo: updatedMemberInfo });
     };
 
     const handleRemoveMember = async (uidToRemove: string) => {
         if (!window.confirm("Are you sure you want to remove this member?")) return;
         const groupRef = doc(db, "groups", group.id);
         const memberName = group.memberInfo[uidToRemove]?.name || 'A user';
-        await updateDoc(groupRef, {
-            members: arrayRemove(uidToRemove),
-            [`memberInfo.${uidToRemove}`]: deleteDoc // This is not correct for field deletion.
-        });
         const updatedMemberInfo = { ...group.memberInfo };
         delete updatedMemberInfo[uidToRemove];
-        await updateDoc(groupRef, { memberInfo: updatedMemberInfo });
-
+        await updateDoc(groupRef, {
+            members: arrayRemove(uidToRemove),
+            memberInfo: updatedMemberInfo,
+        });
 
         await addDoc(collection(db, "chats", group.id, "messages"), {
                 text: `${memberName} was removed from the group.`,
@@ -206,6 +205,8 @@ function GroupInfoPanel({ group, currentUser, mutuals, onClose, onGroupUpdate }:
     const getInitials = (user: any) => user?.name?.[0] || user?.username?.[0] || "U";
     
     const usersToAdd = mutuals.filter(m => !group.members.includes(m.uid));
+    const memberInfo = group.memberInfo || {};
+
 
     return (
         <AnimatePresence>
@@ -250,7 +251,7 @@ function GroupInfoPanel({ group, currentUser, mutuals, onClose, onGroupUpdate }:
                     <h4 className="font-bold text-accent-cyan mb-2">{group.members.length} Members</h4>
                     <div className="flex flex-col gap-2">
                         {group.members.map((uid: string) => {
-                            const member = group.memberInfo[uid];
+                            const member = memberInfo[uid];
                             if (!member) return null;
                             return (
                                 <div key={uid} className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent-cyan/10">
