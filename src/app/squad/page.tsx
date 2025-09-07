@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { auth } from "@/utils/firebaseClient";
 import { getFirestore, doc, getDoc, setDoc, collection, query, where, getCountFromServer, getDocs, onSnapshot, orderBy, updateDoc, writeBatch, deleteDoc } from "firebase/firestore";
-import { Cog, Palette, Lock, MessageCircle, LogOut, Camera, Star, Bell, Trash2, AtSign, Compass, CheckBadgeIcon } from "lucide-react";
+import { Cog, Palette, Lock, MessageCircle, LogOut, Camera, Star, Bell, Trash2, AtSign, Compass, CheckBadgeIcon, Code } from "lucide-react";
 import { signOut, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -181,9 +181,11 @@ export default function SquadPage() {
           setProfile(docSnap.exists() ? docSnap.data() : null);
         });
 
-        const postsQuery = query(collection(db, "posts"), where("userId", "==", uid), orderBy("createdAt", "desc"));
+        const postsQuery = query(collection(db, "posts"), where("userId", "==", uid));
         const postsSnapshot = await getDocs(postsQuery);
-        const userPostsData = postsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const userPostsData = postsSnapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() }))
+            .sort((a, b) => b.createdAt.toDate() - a.createdAt.toDate());
         
         setPostCount(userPostsData.length);
         setUserPosts(userPostsData);
@@ -225,6 +227,8 @@ export default function SquadPage() {
   }
   
   const initials = profile.name?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || profile.username?.slice(0, 2).toUpperCase() || "U";
+  const isDeveloper = profile.email === 'next181489111@gmail.com';
+
 
   return (
     <div className="flex flex-col min-h-screen pt-6 pb-24 px-2 md:px-8">
@@ -259,7 +263,10 @@ export default function SquadPage() {
         </div>
         <div className="flex items-center gap-2">
             <h2 className="text-2xl font-headline font-bold mb-1 text-center">{profile.name}</h2>
-            {profile.accountType === 'creator' && (
+            {isDeveloper && (
+                <Code className="w-6 h-6 text-accent-green" title="Developer"/>
+            )}
+            {profile.accountType === 'creator' && !isDeveloper && (
                 <CheckBadgeIcon className="w-6 h-6 text-accent-cyan" title="Verified Creator"/>
             )}
         </div>
@@ -743,7 +750,3 @@ function DeleteAccountModal({ profile, onClose }: { profile: any, onClose: () =>
         </div>
     )
 }
-
-    
-
-    
