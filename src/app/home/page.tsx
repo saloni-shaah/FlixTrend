@@ -12,6 +12,7 @@ import { FlashModal } from "@/components/FlashModal";
 import { NotificationPanel } from "@/components/NotificationPanel";
 import { PostCard } from "@/components/PostCard";
 import { app } from "@/utils/firebaseClient";
+import { VibeSpaceLoader } from "@/components/VibeSpaceLoader";
 
 const db = getFirestore(app);
 
@@ -24,12 +25,15 @@ export default function HomePage() {
   const [showNotifications, setShowNotifications] = useState(false);
   const { setCallTarget, setIsCalling } = useAppState();
   const currentUser = auth.currentUser;
+  const [loading, setLoading] = useState(true);
 
 
   useEffect(() => {
+    setLoading(true);
     const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
     const unsub = onSnapshot(q, (snapshot) => {
       setPosts(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+      setLoading(false);
     });
     return () => unsub();
   }, []);
@@ -123,12 +127,8 @@ export default function HomePage() {
       </section>
       {/* Feed Section */}
       <section className="flex-1 flex flex-col items-center mt-4">
-        {filteredPosts.length === 0 ? (
-          <div className="text-gray-400 text-center mt-16 animate-fade-in">
-            <div className="text-4xl mb-2">🪐</div>
-            <div className="text-lg font-semibold">No posts yet</div>
-            <div className="text-sm">When users join, their photos, videos, and vibes will appear here!</div>
-          </div>
+        {loading || filteredPosts.length === 0 ? (
+          <VibeSpaceLoader />
         ) : (
           <div className="w-full max-w-xl flex flex-col gap-6">
             {filteredPosts.map((post) => (
