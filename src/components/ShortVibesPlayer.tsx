@@ -11,12 +11,15 @@ import { PostCard } from './PostCard';
 export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
     const [activeShortIndex, setActiveShortIndex] = useState(0);
     const [isPlaying, setIsPlaying] = useState(true);
-    const [isMuted, setIsMuted] = useState(true); // Start muted by default
+    const [isMuted, setIsMuted] = useState(true);
     const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
     const playerRef = useRef<HTMLDivElement>(null);
     const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const touchStartY = useRef<number | null>(null);
-    
+
+    // *** NEW: Centralized audio controller ***
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+
     const scrollToNext = useCallback(() => {
         setActiveShortIndex(i => Math.min(shortVibes.length - 1, i + 1));
     }, [shortVibes.length]);
@@ -24,54 +27,87 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
     const scrollToPrev = useCallback(() => {
         setActiveShortIndex(i => Math.max(0, i - 1));
     }, []);
-
+    
+    // Create the single audio element when the component mounts
     useEffect(() => {
-        // This is the core logic fix. When the active video changes,
-        // we forcefully iterate through ALL video elements.
+        audioRef.current = new Audio();
+        audioRef.current.loop = true;
+        return () => {
+            audioRef.current?.pause();
+            audioRef.current = null;
+        }
+    }, []);
+
+    // *** NEW: Overhauled playback logic ***
+    useEffect(() => {
+        const activeVideo = videoRefs.current[activeShortIndex];
+        const audio = audioRef.current;
+        
+        if (!activeVideo || !audio) return;
+        
+        // Pause and reset all other videos
         videoRefs.current.forEach((video, idx) => {
-            if (video) {
-                if (idx === activeShortIndex) {
-                    // Play the active one
-                    video.play().then(() => {
-                        setIsPlaying(true);
-                    }).catch((e) => {
-                        // Autoplay was likely blocked, update state accordingly
-                        setIsPlaying(false);
-                        console.error("Autoplay failed:", e);
-                    });
-                } else {
-                    // And explicitly pause all others.
-                    video.pause();
-                    video.currentTime = 0;
-                }
+            if (video && idx !== activeShortIndex) {
+                video.pause();
+                video.currentTime = 0;
             }
         });
-    }, [activeShortIndex]);
+        
+        // Sync audio to the new active video
+        const handleSyncPlay = () => {
+            audio.src = activeVideo.src;
+            audio.currentTime = activeVideo.currentTime;
+            audio.muted = isMuted;
+            
+            const playPromise = audio.play();
+            if(playPromise !== undefined) {
+                playPromise.then(_ => {
+                     // If video is not already playing, play it.
+                    if (activeVideo.paused) {
+                        activeVideo.play().catch(e => console.error("Video play failed", e));
+                    }
+                    setIsPlaying(true);
+                }).catch(error => {
+                    console.error("Audio play failed", error);
+                    setIsPlaying(false);
+                });
+            }
+        };
 
-    const handleVideoClick = (index: number) => {
-        const video = videoRefs.current[index];
-        if (video) {
-            // Directly check the video's state, not a React state
+        handleSyncPlay();
+
+    }, [activeShortIndex, shortVibes]);
+    
+    // Effect to control the central audio mute state
+    useEffect(() => {
+        if (audioRef.current) {
+            audioRef.current.muted = isMuted;
+        }
+    }, [isMuted]);
+
+    const handleVideoClick = () => {
+        const video = videoRefs.current[activeShortIndex];
+        const audio = audioRef.current;
+        if (video && audio) {
             if (video.paused) {
-                video.play().catch(() => {});
+                video.play();
+                audio.play();
                 setIsPlaying(true);
             } else {
                 video.pause();
+                audio.pause();
                 setIsPlaying(false);
             }
         }
     };
     
-    const handleDoubleClick = (index: number) => {
-        const video = videoRefs.current[index];
-        if (video) {
-            if (document.fullscreenElement) {
-                document.exitFullscreen();
-            } else {
-                playerRef.current?.requestFullscreen().catch(err => {
-                    console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
-                });
-            }
+    const handleDoubleClick = () => {
+        if (document.fullscreenElement) {
+            document.exitFullscreen();
+        } else {
+            playerRef.current?.requestFullscreen().catch(err => {
+                console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+            });
         }
     };
     
@@ -80,54 +116,30 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
         if (!currentRef) return;
         
         const handleKeyDown = (event: KeyboardEvent) => {
-            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-                event.preventDefault();
-            }
-
-            if (event.key === 'ArrowDown') {
-                scrollToNext();
-            } else if (event.key === 'ArrowUp') {
-                scrollToPrev();
-            } else if (event.key.toLowerCase() === 'm') {
-                setIsMuted(prev => !prev);
-            }
+            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') event.preventDefault();
+            if (event.key === 'ArrowDown') scrollToNext();
+            else if (event.key === 'ArrowUp') scrollToPrev();
+            else if (event.key.toLowerCase() === 'm') setIsMuted(prev => !prev);
         };
 
         const handleWheel = (event: WheelEvent) => {
             event.preventDefault();
             if (scrollTimeoutRef.current) return;
-            
-            if (event.deltaY > 0) {
-                scrollToNext();
-            } else if (event.deltaY < 0) {
-                scrollToPrev();
-            }
-            
-            scrollTimeoutRef.current = setTimeout(() => {
-                scrollTimeoutRef.current = null;
-            }, 500);
+            if (event.deltaY > 0) scrollToNext();
+            else if (event.deltaY < 0) scrollToPrev();
+            scrollTimeoutRef.current = setTimeout(() => { scrollTimeoutRef.current = null; }, 500);
         };
         
-        // Touch controls for swipe navigation
-        const handleTouchStart = (event: TouchEvent) => {
-            touchStartY.current = event.touches[0].clientY;
-        };
-
+        const handleTouchStart = (event: TouchEvent) => { touchStartY.current = event.touches[0].clientY; };
         const handleTouchEnd = (event: TouchEvent) => {
             if (touchStartY.current === null) return;
-            const touchEndY = event.changedTouches[0].clientY;
-            const deltaY = touchStartY.current - touchEndY;
-            
-            if (Math.abs(deltaY) > 50) { // Threshold for swipe
-                if (deltaY > 0) {
-                    scrollToNext();
-                } else {
-                    scrollToPrev();
-                }
+            const deltaY = touchStartY.current - event.changedTouches[0].clientY;
+            if (Math.abs(deltaY) > 50) {
+                if (deltaY > 0) scrollToNext();
+                else scrollToPrev();
             }
             touchStartY.current = null;
         };
-
 
         window.addEventListener('keydown', handleKeyDown);
         currentRef.addEventListener('wheel', handleWheel, { passive: false });
@@ -141,9 +153,7 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
                 currentRef.removeEventListener('touchstart', handleTouchStart);
                 currentRef.removeEventListener('touchend', handleTouchEnd);
             }
-             if (scrollTimeoutRef.current) {
-                clearTimeout(scrollTimeoutRef.current);
-            }
+             if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
         };
     }, [scrollToNext, scrollToPrev]);
 
@@ -172,10 +182,10 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
                                 className="w-full h-full object-cover"
                                 autoPlay={idx === 0}
                                 loop
-                                muted={isMuted}
+                                muted // *** Videos are ALWAYS muted now ***
                                 playsInline
-                                onClick={() => handleVideoClick(idx)}
-                                onDoubleClick={() => handleDoubleClick(idx)}
+                                onClick={handleVideoClick}
+                                onDoubleClick={handleDoubleClick}
                             />
                             {!isPlaying && activeShortIndex === idx && (
                                 <div className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none">
@@ -188,7 +198,6 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
                 ))
             )}
             
-            {/* Mute Button */}
             <button className="absolute top-4 right-4 z-50 p-2 bg-black/40 rounded-full text-white" onClick={() => setIsMuted(prev => !prev)}>
                 {isMuted ? <VolumeX size={20}/> : <Volume2 size={20} />}
             </button>
