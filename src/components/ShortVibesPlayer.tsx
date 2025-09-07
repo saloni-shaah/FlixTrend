@@ -11,7 +11,7 @@ import { PostCard } from './PostCard';
 export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
     const [activeShortIndex, setActiveShortIndex] = useState(0);
     const [isPlaying, setIsPlaying] = useState(true);
-    const [isMuted, setIsMuted] = useState(false);
+    const [isMuted, setIsMuted] = useState(true); // Start muted by default
     const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
     const playerRef = useRef<HTMLDivElement>(null);
     const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -26,23 +26,32 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
     }, []);
 
     useEffect(() => {
-        // Ensure the active video plays when the index changes
+        // This is the core logic fix. When the active video changes,
+        // we forcefully iterate through ALL video elements.
         videoRefs.current.forEach((video, idx) => {
             if (video) {
                 if (idx === activeShortIndex) {
-                    video.play().catch(() => {}); // Autoplay might be blocked
-                    setIsPlaying(true);
+                    // Play the active one
+                    video.play().then(() => {
+                        setIsPlaying(true);
+                    }).catch((e) => {
+                        // Autoplay was likely blocked, update state accordingly
+                        setIsPlaying(false);
+                        console.error("Autoplay failed:", e);
+                    });
                 } else {
+                    // And explicitly pause all others.
                     video.pause();
                     video.currentTime = 0;
                 }
             }
         });
-    }, [activeShortIndex, shortVibes]);
+    }, [activeShortIndex]);
 
     const handleVideoClick = (index: number) => {
         const video = videoRefs.current[index];
         if (video) {
+            // Directly check the video's state, not a React state
             if (video.paused) {
                 video.play().catch(() => {});
                 setIsPlaying(true);
