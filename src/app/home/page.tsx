@@ -13,6 +13,7 @@ import { NotificationPanel } from "@/components/NotificationPanel";
 import { PostCard } from "@/components/PostCard";
 import { app } from "@/utils/firebaseClient";
 import { VibeSpaceLoader } from "@/components/VibeSpaceLoader";
+import AdBanner from "@/components/AdBanner";
 
 const db = getFirestore(app);
 
@@ -131,8 +132,11 @@ export default function HomePage() {
           <VibeSpaceLoader />
         ) : (
           <div className="w-full max-w-xl flex flex-col gap-6">
-            {filteredPosts.map((post) => (
-              <PostCard key={post.id} post={post} />
+            {filteredPosts.map((post, index) => (
+              <React.Fragment key={post.id}>
+                <PostCard post={post} />
+                {(index + 1) % 5 === 0 && <AdBanner />}
+              </React.Fragment>
             ))}
           </div>
         )}
