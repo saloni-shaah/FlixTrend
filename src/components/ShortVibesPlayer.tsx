@@ -17,7 +17,6 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
     const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const touchStartY = useRef<number | null>(null);
 
-    // *** NEW: Centralized audio controller ***
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
     const scrollToNext = useCallback(() => {
@@ -28,57 +27,60 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
         setActiveShortIndex(i => Math.max(0, i - 1));
     }, []);
     
-    // Create the single audio element when the component mounts
     useEffect(() => {
-        audioRef.current = new Audio();
-        audioRef.current.loop = true;
+        if (!audioRef.current) {
+            audioRef.current = new Audio();
+            audioRef.current.loop = true;
+        }
         return () => {
             audioRef.current?.pause();
             audioRef.current = null;
         }
     }, []);
 
-    // *** NEW: Overhauled playback logic ***
     useEffect(() => {
         const activeVideo = videoRefs.current[activeShortIndex];
         const audio = audioRef.current;
         
         if (!activeVideo || !audio) return;
         
-        // Pause and reset all other videos
         videoRefs.current.forEach((video, idx) => {
             if (video && idx !== activeShortIndex) {
                 video.pause();
-                video.currentTime = 0;
+                if(video.currentTime !== 0) video.currentTime = 0;
             }
         });
         
-        // Sync audio to the new active video
-        const handleSyncPlay = () => {
-            audio.src = activeVideo.src;
-            audio.currentTime = activeVideo.currentTime;
-            audio.muted = isMuted;
-            
-            const playPromise = audio.play();
-            if(playPromise !== undefined) {
-                playPromise.then(_ => {
-                     // If video is not already playing, play it.
-                    if (activeVideo.paused) {
-                        activeVideo.play().catch(e => console.error("Video play failed", e));
-                    }
-                    setIsPlaying(true);
-                }).catch(error => {
-                    console.error("Audio play failed", error);
-                    setIsPlaying(false);
-                });
+        const syncAndPlay = async () => {
+            try {
+                if (audio.src !== activeVideo.src) {
+                    audio.src = activeVideo.src;
+                    await audio.load(); 
+                }
+                
+                audio.currentTime = 0;
+                activeVideo.currentTime = 0;
+                
+                audio.muted = isMuted;
+
+                if (isPlaying) {
+                    await activeVideo.play();
+                    await audio.play();
+                } else {
+                    activeVideo.pause();
+                    audio.pause();
+                }
+
+            } catch (e) {
+                console.error("Error during playback sync:", e);
+                setIsPlaying(false); 
             }
         };
 
-        handleSyncPlay();
+        syncAndPlay();
 
     }, [activeShortIndex, shortVibes]);
     
-    // Effect to control the central audio mute state
     useEffect(() => {
         if (audioRef.current) {
             audioRef.current.muted = isMuted;
@@ -88,16 +90,16 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
     const handleVideoClick = () => {
         const video = videoRefs.current[activeShortIndex];
         const audio = audioRef.current;
-        if (video && audio) {
-            if (video.paused) {
-                video.play();
-                audio.play();
-                setIsPlaying(true);
-            } else {
-                video.pause();
-                audio.pause();
-                setIsPlaying(false);
-            }
+        if (!video || !audio) return;
+
+        if (video.paused) {
+            video.play().catch(e=>console.error("video play error", e));
+            audio.play().catch(e=>console.error("audio play error", e));
+            setIsPlaying(true);
+        } else {
+            video.pause();
+            audio.pause();
+            setIsPlaying(false);
         }
     };
     
@@ -180,9 +182,9 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
                                 ref={el => { videoRefs.current[idx] = el; }}
                                 src={short.mediaUrl}
                                 className="w-full h-full object-cover"
-                                autoPlay={idx === 0}
+                                autoPlay={idx === 0 && isPlaying}
                                 loop
-                                muted // *** Videos are ALWAYS muted now ***
+                                muted
                                 playsInline
                                 onClick={handleVideoClick}
                                 onDoubleClick={handleDoubleClick}
