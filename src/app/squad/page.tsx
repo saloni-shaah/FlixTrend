@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { auth } from "@/utils/firebaseClient";
 import { getFirestore, doc, getDoc, setDoc, collection, query, where, getCountFromServer, getDocs, onSnapshot, orderBy, updateDoc, writeBatch, deleteDoc } from "firebase/firestore";
-import { Cog, Palette, Lock, MessageCircle, LogOut, Camera, Star, Bell, Trash2, AtSign, Compass, CheckBadge } from "lucide-react";
+import { Cog, Palette, Lock, MessageCircle, LogOut, Camera, Star, Bell, Trash2, AtSign, Compass, CheckBadgeIcon } from "lucide-react";
 import { signOut, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -181,11 +181,9 @@ export default function SquadPage() {
           setProfile(docSnap.exists() ? docSnap.data() : null);
         });
 
-        const postsQuery = query(collection(db, "posts"), where("userId", "==", uid));
+        const postsQuery = query(collection(db, "posts"), where("userId", "==", uid), orderBy("createdAt", "desc"));
         const postsSnapshot = await getDocs(postsQuery);
-        // Manually sort by date client-side to avoid needing a composite index
         const userPostsData = postsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        userPostsData.sort((a,b) => b.createdAt.toDate() - a.createdAt.toDate());
         
         setPostCount(userPostsData.length);
         setUserPosts(userPostsData);
@@ -230,7 +228,7 @@ export default function SquadPage() {
 
   return (
     <div className="flex flex-col min-h-screen pt-6 pb-24 px-2 md:px-8">
-        {showFollowList && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" />}
+        {showFollowList && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" onClick={() => setShowFollowList(null)} />}
         <button
           className="fixed top-6 right-6 z-50 btn-glass-icon"
           onClick={() => setShowSettings(true)}
@@ -262,7 +260,7 @@ export default function SquadPage() {
         <div className="flex items-center gap-2">
             <h2 className="text-2xl font-headline font-bold mb-1 text-center">{profile.name}</h2>
             {profile.accountType === 'creator' && (
-                <CheckBadge className="w-6 h-6 text-accent-cyan" title="Verified Creator"/>
+                <CheckBadgeIcon className="w-6 h-6 text-accent-cyan" title="Verified Creator"/>
             )}
         </div>
         <p className="text-accent-cyan mb-2 text-center">@{profile.username || "username"}</p>

@@ -6,7 +6,7 @@ import { getFirestore, doc, getDoc, collection, query, where, getDocs, onSnapsho
 import { auth } from "@/utils/firebaseClient";
 import { PostCard } from "@/components/PostCard";
 import { FollowButton } from "@/components/FollowButton";
-import { Star, CheckBadge } from "lucide-react";
+import { Star, CheckBadgeIcon } from "lucide-react";
 import { FollowListModal } from "@/components/FollowListModal";
 
 const db = getFirestore();
@@ -45,12 +45,10 @@ export default function UserProfilePage() {
       setProfile(docSnap.exists() ? { uid: docSnap.id, ...docSnap.data() } : null);
 
       // Fetch post count and posts
-      const postsQuery = query(collection(db, "posts"), where("userId", "==", uid));
+      const postsQuery = query(collection(db, "posts"), where("userId", "==", uid), orderBy("createdAt", "desc"));
       const userPostsSnap = await getDocs(postsQuery);
       setPostCount(userPostsSnap.size);
-      // Manually sort by date client-side to avoid needing a composite index
       const postsData = userPostsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      postsData.sort((a, b) => b.createdAt.toDate() - a.createdAt.toDate());
       setUserPosts(postsData);
       
       setLoading(false);
@@ -87,7 +85,7 @@ export default function UserProfilePage() {
 
   return (
     <div className="flex flex-col min-h-screen pt-6 pb-24 px-2 md:px-8">
-      {showFollowList && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" />}
+      {showFollowList && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" onClick={() => setShowFollowList(null)} />}
       {/* Banner */}
       <div className="relative h-40 md:h-60 w-full rounded-2xl overflow-hidden mb-8 glass-card">
         {profile.banner_url ? (
@@ -112,7 +110,7 @@ export default function UserProfilePage() {
         <div className="flex items-center gap-2">
             <h2 className="text-2xl font-headline font-bold mb-1 text-center">{profile.name}</h2>
             {profile.accountType === 'creator' && (
-                <CheckBadge className="w-6 h-6 text-accent-cyan" title="Verified Creator"/>
+                <CheckBadgeIcon className="w-6 h-6 text-accent-cyan" title="Verified Creator"/>
             )}
         </div>
         <p className="text-accent-cyan mb-2 text-center">@{profile.username || "username"}</p>
