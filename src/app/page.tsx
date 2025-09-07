@@ -7,7 +7,6 @@ import { auth } from "@/utils/firebaseClient";
 import { AlmightyLogo } from "@/components/AlmightyLogo";
 import { motion } from "framer-motion";
 import { Bot, Music, ShieldCheck, Sparkles } from "lucide-react";
-import { SplashScreen } from "@/components/SplashScreen";
 
 export default function LandingPage() {
   const router = useRouter();
@@ -20,7 +19,8 @@ export default function LandingPage() {
         router.replace('/home');
       } else {
         // User is signed out, show the landing page.
-        setTimeout(() => setLoading(false), 3000); // Show splash for 3 seconds
+        // Removed splash screen logic, set loading to false directly.
+        setLoading(false);
       }
     });
 
@@ -29,7 +29,15 @@ export default function LandingPage() {
   }, [router]);
 
   if (loading) {
-    return <SplashScreen />;
+    // Show a simple loading state instead of the crashing component
+    return (
+      <div className="min-h-screen w-full flex flex-col items-center justify-center bg-background">
+        <AlmightyLogo size={80} />
+        <h1 className="text-3xl font-headline text-accent-cyan font-bold mt-4 animate-glow">
+          FlixTrend
+        </h1>
+      </div>
+    );
   }
 
 
@@ -155,3 +163,5 @@ function FeatureCard({ icon, title, desc }: { icon: React.ReactNode; title: stri
     </motion.div>
   );
 }
+
+    
