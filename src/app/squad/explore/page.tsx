@@ -39,8 +39,8 @@ export default function ExploreCreatorsPage() {
         : allUsers;
 
     return (
-        <div className="flex flex-col min-h-screen items-center p-4 pt-16 pb-24">
-            <div className="w-full max-w-4xl">
+        <div className="flex flex-col w-full pb-24">
+            <div className="w-full max-w-4xl mx-auto">
                 <h1 className="text-3xl font-headline bg-gradient-to-r from-accent-pink to-accent-cyan bg-clip-text text-transparent mb-6 text-center">
                     Discover Creators
                 </h1>
@@ -96,5 +96,3 @@ export default function ExploreCreatorsPage() {
         </div>
     );
 }
-
-    

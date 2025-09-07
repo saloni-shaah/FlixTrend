@@ -233,8 +233,8 @@ export default function ScopePage() {
   };
 
   return (
-    <div className="flex flex-col items-center w-full overflow-x-hidden">
-      <div className="w-full max-w-4xl mb-8">
+    <div className="flex flex-col w-full h-full overflow-hidden">
+      <div className="w-full max-w-4xl mb-8 mx-auto">
         <div className="glass-card p-2 flex justify-around items-center rounded-full">
           {tabs.map((tab, index) => (
             <button
@@ -254,11 +254,11 @@ export default function ScopePage() {
         </div>
       </div>
 
-      <div className="w-full max-w-5xl flex-1 relative">
+      <div className="w-full flex-1 relative">
         <AnimatePresence initial={false} custom={activeTab}>
              <motion.div
                 key={activeTab}
-                className="w-full h-full absolute"
+                className="w-full h-full absolute top-0 left-0"
                 custom={activeTab}
                 variants={variants}
                 initial="enter"

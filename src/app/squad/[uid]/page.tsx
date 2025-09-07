@@ -87,7 +87,7 @@ export default function UserProfilePage() {
   const isDeveloper = profile.email === 'next181489111@gmail.com';
   
   return (
-    <div className="flex flex-col min-h-screen pt-6 pb-24 px-2 md:px-8">
+    <div className="flex flex-col w-full pb-24">
       {showFollowList && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" onClick={() => setShowFollowList(null)} />}
       {/* Banner */}
       <div className="relative h-40 md:h-60 w-full rounded-2xl overflow-hidden mb-8 glass-card">

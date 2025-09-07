@@ -355,7 +355,7 @@ export default function SquadPage() {
 
 
   return (
-    <div className="flex flex-col w-full">
+    <div className="flex flex-col w-full pb-24">
         {showFollowList && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" onClick={() => setShowFollowList(null)} />}
         <button
           className="fixed top-6 right-6 z-50 btn-glass-icon"
