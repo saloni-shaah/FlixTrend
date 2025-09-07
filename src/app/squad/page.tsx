@@ -124,9 +124,12 @@ function UserPlaylists({ userId }: { userId: string }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const q = query(collection(db, "playlists"), where("ownerId", "==", userId), orderBy("createdAt", "desc"));
+        const q = query(collection(db, "playlists"), where("ownerId", "==", userId));
         const unsub = onSnapshot(q, (snapshot) => {
-            setPlaylists(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            const playlistsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            // Sort client-side
+            playlistsData.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
+            setPlaylists(playlistsData);
             setLoading(false);
         });
         return () => unsub();
@@ -875,5 +878,7 @@ function DeleteAccountModal({ profile, onClose }: { profile: any, onClose: () =>
         </div>
     )
 }
+
+    
 
     
