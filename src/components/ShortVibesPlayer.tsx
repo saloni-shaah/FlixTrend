@@ -134,7 +134,7 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
                             <video
                                 ref={el => { videoRefs.current[idx] = el; }}
                                 src={short.mediaUrl}
-                                className="w-full h-full object-contain pointer-events-none"
+                                className="w-full h-full object-cover pointer-events-none"
                                 autoPlay={idx === 0}
                                 loop
                                 muted={isMuted}
