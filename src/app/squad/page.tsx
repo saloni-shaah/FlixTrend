@@ -750,5 +750,3 @@ function DeleteAccountModal({ profile, onClose }: { profile: any, onClose: () =>
         </div>
     )
 }
-
-    
