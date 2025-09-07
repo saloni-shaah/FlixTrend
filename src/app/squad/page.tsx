@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { auth } from "@/utils/firebaseClient";
 import { getFirestore, doc, getDoc, setDoc, collection, query, where, getCountFromServer, getDocs, onSnapshot, orderBy, updateDoc, writeBatch, deleteDoc } from "firebase/firestore";
-import { Cog, Palette, Lock, MessageCircle, LogOut, Camera, Star, Bell, Trash2, AtSign, Compass, MapPin, User, Tag } from "lucide-react";
+import { Cog, Palette, Lock, MessageCircle, LogOut, Camera, Star, Bell, Trash2, AtSign, Compass, MapPin, User, Tag, ShieldCheck } from "lucide-react";
 import { signOut, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -227,6 +227,7 @@ export default function SquadPage() {
   }
   
   const initials = profile.name?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || profile.username?.slice(0, 2).toUpperCase() || "U";
+  const isDeveloper = profile.email === 'next181489111@gmail.com';
 
 
   return (
@@ -260,8 +261,13 @@ export default function SquadPage() {
             <span className="text-5xl text-white flex items-center justify-center h-full w-full">{initials}</span>
           )}
         </div>
-        <h2 className="text-2xl font-headline font-bold">{profile.name}</h2>
-        <p className="text-accent-cyan font-semibold mb-3">@{profile.username || "username"}</p>
+        <div className="flex items-center justify-center gap-2">
+            <h2 className="text-2xl font-headline font-bold text-center">{profile.name}</h2>
+            {isDeveloper && (
+                <ShieldCheck className="w-6 h-6 text-accent-purple" title="FlixTrend Developer"/>
+            )}
+        </div>
+        <p className="text-accent-cyan font-semibold mb-3 text-center">@{profile.username || "username"}</p>
         
         {/* Stats */}
         <div className="flex justify-center gap-8 my-2 w-full">
@@ -281,8 +287,8 @@ export default function SquadPage() {
 
         {/* Bio and Details */}
         <div className="mt-4 w-full max-w-lg">
-            <p className="text-gray-300 text-center mb-4 text-sm">{profile.bio || "This is your bio. Edit it to tell the world about your vibes!"}</p>
-            <div className="flex justify-center flex-wrap gap-x-4 gap-y-2 text-xs text-gray-400">
+            <p className="text-gray-400 text-center mb-4 text-sm">{profile.bio || "This user hasn't set a bio yet."}</p>
+            <div className="flex justify-center flex-wrap gap-x-4 gap-y-2 text-xs text-gray-500">
                 {profile.location && <span className="flex items-center gap-1.5"><MapPin size={12}/> {profile.location}</span>}
                 {profile.gender && <span className="flex items-center gap-1.5"><User size={12}/> {profile.gender}</span>}
                 {profile.interests && <span className="flex items-center gap-1.5"><Tag size={12}/> {profile.interests}</span>}
