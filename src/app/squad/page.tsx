@@ -100,9 +100,11 @@ export default function SquadPage() {
           setProfile(docSnap.exists() ? docSnap.data() : null);
         });
 
-        const postsQuery = query(collection(db, "posts"), where("userId", "==", uid), orderBy("createdAt", "desc"));
+        const postsQuery = query(collection(db, "posts"), where("userId", "==", uid));
         const postsSnapshot = await getDocs(postsQuery);
+        // Manually sort by date client-side to avoid needing a composite index
         const userPostsData = postsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        userPostsData.sort((a,b) => b.createdAt.toDate() - a.createdAt.toDate());
         
         setPostCount(userPostsData.length);
         setUserPosts(userPostsData);
@@ -147,6 +149,7 @@ export default function SquadPage() {
 
   return (
     <div className="flex flex-col min-h-screen pt-6 pb-24 px-2 md:px-8">
+        {showFollowList && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" />}
         <button
           className="fixed top-6 right-6 z-50 btn-glass-icon"
           onClick={() => setShowSettings(true)}

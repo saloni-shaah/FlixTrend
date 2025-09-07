@@ -48,7 +48,7 @@ export default function UserProfilePage() {
       const postsQuery = query(collection(db, "posts"), where("userId", "==", uid));
       const userPostsSnap = await getDocs(postsQuery);
       setPostCount(userPostsSnap.size);
-      // Manually sort by date client-side
+      // Manually sort by date client-side to avoid needing a composite index
       const postsData = userPostsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       postsData.sort((a, b) => b.createdAt.toDate() - a.createdAt.toDate());
       setUserPosts(postsData);
@@ -87,6 +87,7 @@ export default function UserProfilePage() {
 
   return (
     <div className="flex flex-col min-h-screen pt-6 pb-24 px-2 md:px-8">
+      {showFollowList && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" />}
       {/* Banner */}
       <div className="relative h-40 md:h-60 w-full rounded-2xl overflow-hidden mb-8 glass-card">
         {profile.banner_url ? (
