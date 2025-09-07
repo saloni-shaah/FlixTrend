@@ -170,9 +170,11 @@ function UserCollections({ userId }: { userId: string }) {
     const [selectedCollection, setSelectedCollection] = useState<any | null>(null);
 
     useEffect(() => {
-        const q = query(collection(db, "collections"), where("ownerId", "==", userId), orderBy("createdAt", "desc"));
+        const q = query(collection(db, "collections"), where("ownerId", "==", userId));
         const unsub = onSnapshot(q, (snapshot) => {
-            setCollections(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            const collectionsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            collectionsData.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
+            setCollections(collectionsData);
             setLoading(false);
         });
         return () => unsub();
