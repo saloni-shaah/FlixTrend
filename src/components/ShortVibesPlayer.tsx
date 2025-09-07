@@ -155,15 +155,17 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
                             zIndex: shortVibes.length - Math.abs(activeShortIndex - idx),
                         }}
                     >
-                        <div className="relative w-full h-full flex items-center justify-center cursor-pointer" onClick={() => handleVideoClick(idx)} onDoubleClick={() => handleDoubleClick(idx)}>
+                        <div className="relative w-full h-full flex items-center justify-center">
                             <video
                                 ref={el => { videoRefs.current[idx] = el; }}
                                 src={short.mediaUrl}
-                                className="w-full h-full object-cover pointer-events-none"
+                                className="w-full h-full object-cover"
                                 autoPlay={idx === 0}
                                 loop
                                 muted={isMuted}
                                 playsInline
+                                onClick={() => handleVideoClick(idx)}
+                                onDoubleClick={() => handleDoubleClick(idx)}
                             />
                             {!isPlaying && activeShortIndex === idx && (
                                 <div className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none">

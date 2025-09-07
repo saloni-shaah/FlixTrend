@@ -305,16 +305,16 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
   
   const ActionButtons = () => (
     <div className={`${isShortVibe ? 'flex flex-col items-center gap-6' : 'flex items-center justify-start gap-6 mt-2 pt-2 border-t border-glass-border'}`}>
-      <button className={`flex items-center gap-1.5 font-bold transition-all ${isShortVibe ? 'flex-col text-white' : 'text-lg text-muted-foreground hover:text-brand-gold'}`} onClick={() => setShowComments(true)}>
+      <button className={`flex items-center gap-1.5 font-bold transition-all ${isShortVibe ? 'flex-col text-white' : 'text-lg text-muted-foreground hover:text-brand-gold'}`} onClick={(e) => { e.stopPropagation(); setShowComments(true); }}>
         <MessageCircle size={isShortVibe ? 32 : 20} /> <span className="text-sm">{commentCount}</span>
       </button>
-      <button className={`flex items-center gap-1.5 font-bold transition-all ${isRelayed ? "text-green-400" : isShortVibe ? "text-white hover:text-green-300" : "text-lg text-muted-foreground hover:text-green-400"}`} onClick={handleRelay} >
+      <button className={`flex items-center gap-1.5 font-bold transition-all ${isRelayed ? "text-green-400" : isShortVibe ? "text-white hover:text-green-300" : "text-lg text-muted-foreground hover:text-green-400"}`} onClick={(e) => { e.stopPropagation(); handleRelay(); }} >
         <Repeat2 size={isShortVibe ? 32 : 20} /> <span className="text-sm">{relayCount}</span>
       </button>
-      <button className={`flex items-center gap-1.5 font-bold transition-all ${isStarred ? "text-yellow-400" : isShortVibe ? "text-white hover:text-yellow-300" : "text-lg text-muted-foreground hover:text-yellow-400"}`} onClick={handleStar}>
+      <button className={`flex items-center gap-1.5 font-bold transition-all ${isStarred ? "text-yellow-400" : isShortVibe ? "text-white hover:text-yellow-300" : "text-lg text-muted-foreground hover:text-yellow-400"}`} onClick={(e) => { e.stopPropagation(); handleStar(); }}>
         <Star size={isShortVibe ? 32 : 20} fill={isStarred ? "currentColor" : "none"} /> <span className="text-sm">{starCount}</span>
       </button>
-      <button className={`flex items-center gap-1.5 font-bold transition-all ${isShortVibe ? 'flex-col text-white' : 'text-lg text-muted-foreground hover:text-accent-cyan'}`} onClick={() => setShowShareModal(true)}>
+      <button className={`flex items-center gap-1.5 font-bold transition-all ${isShortVibe ? 'flex-col text-white' : 'text-lg text-muted-foreground hover:text-accent-cyan'}`} onClick={(e) => { e.stopPropagation(); setShowShareModal(true); }}>
         <Share size={isShortVibe ? 32 : 20} />
       </button>
     </div>
@@ -323,8 +323,8 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
   if (isShortVibe) {
     return (
         <div className="absolute inset-0 w-full h-full p-4 flex justify-between items-end pointer-events-none bg-gradient-to-t from-black/60 via-black/20 to-transparent">
-            <div className="flex flex-col gap-2 max-w-[calc(100%-80px)] pointer-events-auto self-end">
-                <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-2 max-w-[calc(100%-80px)] self-end">
+                <div className="flex items-center gap-2 pointer-events-auto">
                     <Link href={`/squad/${post.userId}`} className="flex items-center gap-2 group cursor-pointer">
                         <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green flex items-center justify-center font-bold text-lg overflow-hidden border-2 border-accent-green group-hover:scale-105 transition-transform">
                             {post.avatar_url ? <img src={post.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : <span className="text-white">{post.displayName?.[0] || 'U'}</span>}
@@ -339,7 +339,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
                     </div>
                  )}
             </div>
-            <div className="flex flex-col gap-4 pointer-events-auto self-end mb-4">
+            <div className="flex flex-col gap-4 self-end mb-4 pointer-events-auto">
                 <ActionButtons />
             </div>
             {showComments && <CommentModal postId={post.id} postAuthorId={post.userId} onClose={() => setShowComments(false)} />}
