@@ -129,7 +129,7 @@ function ForYouContent() {
   );
 
   return (
-    <div className="flex flex-col items-center w-full pb-24">
+    <div className="flex flex-col items-center w-full">
       <h2 className="text-2xl font-headline text-accent-cyan mb-4 font-bold">Short Vibes</h2>
       <div className="w-full max-w-md h-[32rem] mb-8">
           <ShortVibesPlayer shortVibes={shortVibes} />
@@ -233,7 +233,7 @@ export default function ScopePage() {
   };
 
   return (
-    <div className="flex flex-col w-full h-full overflow-hidden">
+    <div className="flex flex-col w-full">
       <div className="w-full max-w-4xl mb-8 mx-auto">
         <div className="glass-card p-2 flex justify-around items-center rounded-full">
           {tabs.map((tab, index) => (
@@ -254,7 +254,7 @@ export default function ScopePage() {
         </div>
       </div>
 
-      <div className="w-full flex-1 relative">
+      <div className="w-full flex-1 relative min-h-[60vh] overflow-y-auto">
         <AnimatePresence initial={false} custom={activeTab}>
              <motion.div
                 key={activeTab}
@@ -280,3 +280,5 @@ export default function ScopePage() {
     </div>
   );
 }
+
+    
