@@ -6,7 +6,7 @@ import { app, auth } from "@/utils/firebaseClient";
 import { ShortVibesPlayer } from "@/components/ShortVibesPlayer";
 import { FollowButton } from "@/components/FollowButton";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Flame, Music, Gamepad2, Compass, Crown, Heart } from "lucide-react";
 import { MusicDiscovery } from "@/components/MusicDiscovery";
 import { GamesHub } from "@/components/GamesHub";
@@ -188,35 +188,94 @@ function ForYouContent() {
 }
 
 export default function ScopePage() {
-  const [activeTab, setActiveTab] = useState("for-you");
+  const [activeTab, setActiveTab] = useState(0);
 
   const tabs = [
-    { id: "for-you", label: "For You", icon: Compass },
-    { id: "music", label: "Music", icon: Music },
-    { id: "games", label: "Games", icon: Gamepad2 },
+    { id: "for-you", label: "For You", icon: Compass, component: <ForYouContent/> },
+    { id: "music", label: "Music", icon: Music, component: <MusicDiscovery/> },
+    { id: "games", label: "Games", icon: Gamepad2, component: <GamesHub/> },
   ];
+  
+  const swipeConfidenceThreshold = 10000;
+  const swipePower = (offset: number, velocity: number) => {
+    return Math.abs(offset) * velocity;
+  };
+
+  const handleDragEnd = (e: any, { offset, velocity }: any) => {
+    const swipe = swipePower(offset.x, velocity.x);
+
+    if (swipe < -swipeConfidenceThreshold) {
+      setActiveTab(prev => Math.min(prev + 1, tabs.length - 1));
+    } else if (swipe > swipeConfidenceThreshold) {
+      setActiveTab(prev => Math.max(prev - 1, 0));
+    }
+  };
+
+  const variants = {
+    enter: (direction: number) => {
+      return {
+        x: direction > 0 ? 1000 : -1000,
+        opacity: 0
+      };
+    },
+    center: {
+      zIndex: 1,
+      x: 0,
+      opacity: 1
+    },
+    exit: (direction: number) => {
+      return {
+        zIndex: 0,
+        x: direction < 0 ? 1000 : -1000,
+        opacity: 0
+      };
+    }
+  };
 
   return (
-    <div className="flex flex-col min-h-screen items-center p-4 pb-24 pt-16">
+    <div className="flex flex-col min-h-screen items-center p-4 pb-24 pt-16 overflow-x-hidden">
       <div className="w-full max-w-4xl mb-8">
         <div className="glass-card p-2 flex justify-around items-center rounded-full">
-          {tabs.map(tab => (
+          {tabs.map((tab, index) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 px-4 py-2 rounded-full font-bold text-sm md:text-base flex items-center justify-center gap-2 transition-all ${activeTab === tab.id ? "bg-accent-cyan text-primary shadow-lg" : "bg-transparent text-muted-foreground"}`}
+              onClick={() => setActiveTab(index)}
+              className={`relative flex-1 px-4 py-2 rounded-full font-bold text-sm md:text-base flex items-center justify-center gap-2 transition-colors ${activeTab === index ? "text-primary" : "bg-transparent text-muted-foreground"}`}
             >
-              <tab.icon size={20} />
-              <span>{tab.label}</span>
+              {activeTab === index && (
+                <motion.div layoutId="activeScopeTab" className="absolute inset-0 bg-accent-cyan rounded-full z-0"/>
+              )}
+              <span className="relative z-10 flex items-center gap-2">
+                <tab.icon size={20} />
+                <span>{tab.label}</span>
+              </span>
             </button>
           ))}
         </div>
       </div>
 
-      <div className="w-full max-w-5xl">
-        {activeTab === "for-you" && <ForYouContent />}
-        {activeTab === "music" && <MusicDiscovery />}
-        {activeTab === "games" && <GamesHub />}
+      <div className="w-full max-w-5xl flex-1 relative">
+        <AnimatePresence initial={false} custom={activeTab}>
+             <motion.div
+                key={activeTab}
+                className="w-full h-full absolute"
+                custom={activeTab}
+                variants={variants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{
+                    x: { type: "spring", stiffness: 300, damping: 30 },
+                    opacity: { duration: 0.2 }
+                }}
+                drag="x"
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={1}
+                onDragEnd={handleDragEnd}
+             >
+                {tabs[activeTab].component}
+             </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   );
