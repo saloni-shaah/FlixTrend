@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
@@ -15,6 +14,7 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
     const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
     const playerRef = useRef<HTMLDivElement>(null);
     const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const touchStartY = useRef<number | null>(null);
     
     const scrollToNext = useCallback(() => {
         setActiveShortIndex(i => Math.min(shortVibes.length - 1, i + 1));
@@ -98,13 +98,38 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
             }, 500);
         };
         
+        // Touch controls for swipe navigation
+        const handleTouchStart = (event: TouchEvent) => {
+            touchStartY.current = event.touches[0].clientY;
+        };
+
+        const handleTouchEnd = (event: TouchEvent) => {
+            if (touchStartY.current === null) return;
+            const touchEndY = event.changedTouches[0].clientY;
+            const deltaY = touchStartY.current - touchEndY;
+            
+            if (Math.abs(deltaY) > 50) { // Threshold for swipe
+                if (deltaY > 0) {
+                    scrollToNext();
+                } else {
+                    scrollToPrev();
+                }
+            }
+            touchStartY.current = null;
+        };
+
+
         window.addEventListener('keydown', handleKeyDown);
         currentRef.addEventListener('wheel', handleWheel, { passive: false });
+        currentRef.addEventListener('touchstart', handleTouchStart, { passive: true });
+        currentRef.addEventListener('touchend', handleTouchEnd, { passive: true });
         
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
             if (currentRef) {
                 currentRef.removeEventListener('wheel', handleWheel);
+                currentRef.removeEventListener('touchstart', handleTouchStart);
+                currentRef.removeEventListener('touchend', handleTouchEnd);
             }
              if (scrollTimeoutRef.current) {
                 clearTimeout(scrollTimeoutRef.current);
@@ -155,16 +180,6 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
             <button className="absolute top-4 right-4 z-50 p-2 bg-black/40 rounded-full text-white" onClick={() => setIsMuted(prev => !prev)}>
                 {isMuted ? <VolumeX size={20}/> : <Volume2 size={20} />}
             </button>
-
-            {/* Scroll buttons for touch devices */}
-            <div className="md:hidden">
-                {activeShortIndex > 0 && (
-                  <button className="absolute top-4 left-1/2 -translate-x-1/2 z-50 btn-glass-icon w-24 h-10" onClick={scrollToPrev}>&uarr;</button>
-                )}
-                {activeShortIndex < shortVibes.length - 1 && (
-                  <button className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 btn-glass-icon w-24 h-10" onClick={scrollToNext}>&darr;</button>
-                )}
-            </div>
         </div>
     );
 }
