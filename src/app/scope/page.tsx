@@ -82,7 +82,7 @@ function ForYouContent() {
   return (
     <div className="flex flex-col items-center w-full">
       <h2 className="text-2xl font-headline text-accent-cyan mb-4 font-bold">Short Vibes</h2>
-      <div className="w-full max-w-md mb-8">
+      <div className="w-full max-w-md h-[32rem] mb-8">
           <ShortVibesPlayer shortVibes={shortVibes} />
       </div>
 
