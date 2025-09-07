@@ -2,7 +2,7 @@
 "use client";
 import React, { useEffect, useState, useRef } from "react";
 import { auth } from "@/utils/firebaseClient";
-import { getFirestore, doc, getDoc, setDoc, collection, query, where, getCountFromServer, getDocs, onSnapshot, orderBy } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc, collection, query, where, getCountFromServer, getDocs, onSnapshot, orderBy, updateDoc } from "firebase/firestore";
 import { Cog, Palette, Lock, MessageCircle, LogOut, Camera, Star, Bell, Trash2, AtSign } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
@@ -93,10 +93,10 @@ export default function SquadPage() {
         const uid = firebaseUser.uid;
 
         const docRef = doc(db, "users", uid);
-        const docSnap = await getDoc(docRef);
-        setProfile(docSnap.exists() ? docSnap.data() : null);
-        
-        // Fetch posts and then filter client-side to avoid index issues
+        const unsubProfile = onSnapshot(docRef, (docSnap) => {
+          setProfile(docSnap.exists() ? docSnap.data() : null);
+        });
+
         const postsQuery = query(collection(db, "posts"), orderBy("createdAt", "desc"));
         const postsSnapshot = await getDocs(postsQuery);
         const allPosts = postsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -106,9 +106,11 @@ export default function SquadPage() {
         setUserPosts(userPostsData);
         
         setLoading(false);
+
+        return () => unsubProfile();
     }
     if (firebaseUser) fetchProfileData();
-  }, [firebaseUser, showEdit]);
+  }, [firebaseUser]);
 
   useEffect(() => {
     if (!firebaseUser) return;
@@ -278,8 +280,8 @@ export default function SquadPage() {
       {showEdit && (
         <EditProfileModal profile={profile} onClose={() => setShowEdit(false)} />
       )}
-      {showSettings && (
-        <SettingsModal onClose={() => setShowSettings(false)} />
+      {showSettings && profile && firebaseUser && (
+        <SettingsModal profile={profile} firebaseUser={firebaseUser} onClose={() => setShowSettings(false)} />
       )}
     </div>
   );
@@ -400,27 +402,39 @@ function EditProfileModal({ profile, onClose }: { profile: any; onClose: () => v
   );
 }
 
-function SettingsModal({ onClose }: { onClose: () => void }) {
+function SettingsModal({ profile, firebaseUser, onClose }: { profile: any; firebaseUser: any; onClose: () => void }) {
   const [settings, setSettings] = useState({
     darkMode: false,
     accentColor: '#00F0FF',
     dmPrivacy: 'everyone',
     tagPrivacy: 'everyone',
     pushNotifications: true,
-    emailNotifications: false
+    emailNotifications: false,
   });
+  const [isSaving, setIsSaving] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    const isDark = document.documentElement.classList.contains('dark') || localStorage.getItem('theme') === 'dark';
-    const savedAccent = localStorage.getItem('accentColor') || '#00F0FF';
-    setSettings(prev => ({ ...prev, darkMode: isDark, accentColor: savedAccent }));
-    document.documentElement.classList.toggle('dark', isDark);
-    document.documentElement.style.setProperty('--accent-cyan', savedAccent); // This is a simplification
-  }, []);
+    // Load initial settings from profile
+    setSettings({
+        darkMode: localStorage.getItem('theme') === 'dark',
+        accentColor: profile.settings?.accentColor || '#00F0FF',
+        dmPrivacy: profile.settings?.dmPrivacy || 'everyone',
+        tagPrivacy: profile.settings?.tagPrivacy || 'everyone',
+        pushNotifications: profile.settings?.pushNotifications ?? true,
+        emailNotifications: profile.settings?.emailNotifications ?? false,
+    });
 
-  const handleSettingChange = (key: keyof typeof settings, value: any) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
+    // Apply theme settings immediately
+    document.documentElement.classList.toggle('dark', localStorage.getItem('theme') === 'dark');
+    document.documentElement.style.setProperty('--accent-cyan', profile.settings?.accentColor || '#00F0FF');
+    document.documentElement.style.setProperty('--brand-gold', profile.settings?.accentColor || '#FFB400');
+  }, [profile]);
+  
+  const handleSettingChange = async (key: keyof typeof settings, value: any) => {
+    setIsSaving(true);
+    const newSettings = { ...settings, [key]: value };
+    setSettings(newSettings);
 
     if (key === 'darkMode') {
       document.documentElement.classList.toggle('dark', value);
@@ -428,9 +442,20 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
     }
     if (key === 'accentColor') {
       localStorage.setItem('accentColor', value);
-      // In a real app, you would have CSS variables for this
       document.documentElement.style.setProperty('--accent-cyan', value);
-      alert("Note: Full theme application requires a refresh in this demo.");
+      document.documentElement.style.setProperty('--brand-gold', value);
+    }
+    
+    // Save to Firestore
+    try {
+        const userDocRef = doc(db, "users", firebaseUser.uid);
+        await updateDoc(userDocRef, {
+            [`settings.${key}`]: value
+        });
+    } catch (error) {
+        console.error("Failed to save settings:", error);
+    } finally {
+        setIsSaving(false);
     }
   };
   
@@ -477,7 +502,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
               <span><MessageCircle className="inline-block mr-2"/> Who can DM you?</span>
               <select value={settings.dmPrivacy} onChange={(e) => handleSettingChange('dmPrivacy', e.target.value)} className="input-glass text-sm">
                 <option value="everyone">Everyone</option>
-                <option value="followers">Mutuals</option>
+                <option value="mutuals">Mutuals</option>
                 <option value="none">No one</option>
               </select>
             </div>
@@ -485,7 +510,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
               <span><AtSign className="inline-block mr-2"/> Who can tag you?</span>
               <select value={settings.tagPrivacy} onChange={(e) => handleSettingChange('tagPrivacy', e.target.value)} className="input-glass text-sm">
                 <option value="everyone">Everyone</option>
-                <option value="followers">Following</option>
+                <option value="following">Following</option>
                  <option value="none">No one</option>
               </select>
             </div>
