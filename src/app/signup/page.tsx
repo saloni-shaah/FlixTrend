@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 
+=======
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
 "use client";
 import React, { useState } from "react";
 import Link from "next/link";
@@ -17,17 +20,24 @@ export default function SignupPage() {
     confirmPassword: "",
     name: "",
     username: "",
+<<<<<<< HEAD
     dob: "",
     gender: "",
     location: "",
     accountType: "user",
+=======
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
   });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
+<<<<<<< HEAD
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+=======
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
@@ -51,6 +61,7 @@ export default function SignupPage() {
         email: form.email,
         name: form.name,
         username: form.username,
+<<<<<<< HEAD
         dob: form.dob,
         gender: form.gender,
         location: form.location,
@@ -58,6 +69,10 @@ export default function SignupPage() {
         avatar_url: `https://api.dicebear.com/8.x/bottts-neutral/svg?seed=${form.username}`,
         created_at: new Date().toISOString(),
         profileComplete: true, // Mark as complete since they filled new fields
+=======
+        avatar_url: `https://api.dicebear.com/8.x/bottts-neutral/svg?seed=${form.username}`,
+        created_at: new Date().toISOString(),
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
       });
       setSuccess("Signup successful! Redirecting to home...");
       router.push("/home");
@@ -74,6 +89,7 @@ export default function SignupPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
         onSubmit={handleSubmit}
+<<<<<<< HEAD
         className="glass-card p-8 w-full max-w-lg flex flex-col gap-4"
       >
         <h2 className="text-3xl font-headline font-bold text-accent-cyan mb-2 text-center">Create Your Account</h2>
@@ -118,6 +134,57 @@ export default function SignupPage() {
                 <option value="user">I'm a User</option>
                 <option value="creator">I'm a Creator</option>
             </select>
+=======
+        className="glass-card p-8 w-full max-w-md flex flex-col gap-6"
+      >
+        <h2 className="text-3xl font-headline font-bold text-accent-cyan mb-2 text-center">Create Account</h2>
+        <input
+          type="text"
+          name="name"
+          placeholder="Full Name"
+          className="input-glass w-full"
+          value={form.name}
+          onChange={handleChange}
+          required
+        />
+        <input
+          type="text"
+          name="username"
+          placeholder="Username"
+          className="input-glass w-full"
+          value={form.username}
+          onChange={handleChange}
+          required
+        />
+        <input
+          type="email"
+          name="email"
+          placeholder="Email"
+          className="input-glass w-full"
+          value={form.email}
+          onChange={handleChange}
+          required
+        />
+        <div className="flex gap-2">
+          <input
+            type="password"
+            name="password"
+            placeholder="Password"
+            className="input-glass w-full"
+            value={form.password}
+            onChange={handleChange}
+            required
+          />
+          <input
+            type="password"
+            name="confirmPassword"
+            placeholder="Confirm Password"
+            className="input-glass w-full"
+            value={form.confirmPassword}
+            onChange={handleChange}
+            required
+          />
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
         </div>
         
         {error && <div className="text-red-400 text-center animate-bounce mt-2">{error}</div>}
@@ -136,4 +203,8 @@ export default function SignupPage() {
       </motion.form>
     </div>
   );
+<<<<<<< HEAD
 }
+=======
+} 
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf

@@ -2,19 +2,30 @@
 "use client";
 import React, { useEffect, useState, useRef } from "react";
 import { auth } from "@/utils/firebaseClient";
+<<<<<<< HEAD
 import { getFirestore, doc, getDoc, setDoc, collection, query, where, getCountFromServer, getDocs, onSnapshot, orderBy, updateDoc, writeBatch, deleteDoc } from "firebase/firestore";
 import { Cog, Palette, Lock, MessageCircle, LogOut, Camera, Star, Bell, Trash2, AtSign, Compass, MapPin, User, Tag, ShieldCheck, Music, Bookmark, Heart, Folder } from "lucide-react";
 import { signOut, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
+=======
+import { getFirestore, doc, getDoc, setDoc, collection, query, where, getCountFromServer, getDocs, onSnapshot, orderBy } from "firebase/firestore";
+import { Cog, Palette, Lock, MessageCircle, LogOut, Camera, Star, Bell, Trash2, AtSign } from "lucide-react";
+import { signOut } from "firebase/auth";
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { PostCard } from "@/components/PostCard";
 import { FollowButton } from "@/components/FollowButton";
+<<<<<<< HEAD
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { FollowListModal } from "@/components/FollowListModal";
 
 const db = getFirestore();
 const functions = getFunctions();
+=======
+
+const db = getFirestore();
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
 
 async function uploadToCloudinary(file: File, onProgress?: (percent: number) => void): Promise<string | null> {
   const url = `https://api.cloudinary.com/v1_1/drrzvi2jp/upload`;
@@ -30,6 +41,7 @@ async function uploadToCloudinary(file: File, onProgress?: (percent: number) => 
       }
     };
     xhr.onload = () => {
+<<<<<<< HEAD
       if (xhr.responseText) {
         const data = JSON.parse(xhr.responseText);
         if (xhr.status === 200 && data.secure_url) {
@@ -39,6 +51,13 @@ async function uploadToCloudinary(file: File, onProgress?: (percent: number) => 
         }
       } else {
         reject(new Error("Upload failed with empty response"));
+=======
+      const data = JSON.parse(xhr.responseText);
+      if (xhr.status === 200 && data.secure_url) {
+        resolve(data.secure_url);
+      } else {
+        reject(new Error(data.error?.message || "Upload failed"));
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
       }
     };
     xhr.onerror = () => reject(new Error("Upload failed"));
@@ -46,6 +65,7 @@ async function uploadToCloudinary(file: File, onProgress?: (percent: number) => 
   });
 }
 
+<<<<<<< HEAD
 function CompleteProfileModal({ profile, onClose }: { profile: any, onClose: () => void }) {
     const [form, setForm] = useState({
         dob: profile.dob || "",
@@ -244,6 +264,8 @@ function CollectionDetailView({ collection, onBack }: { collection: any, onBack:
 }
 
 
+=======
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
 export default function SquadPage() {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -256,9 +278,13 @@ export default function SquadPage() {
   const [activeTab, setActiveTab] = useState("posts");
   const [userPosts, setUserPosts] = useState<any[]>([]);
   const [starredPosts, setStarredPosts] = useState<any[]>([]);
+<<<<<<< HEAD
   const [showFollowList, setShowFollowList] = useState<null | 'followers' | 'following'>(null);
   const [showCompleteProfile, setShowCompleteProfile] = useState(false);
 
+=======
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
 
   useEffect(() => {
     const unsubAuth = auth.onAuthStateChanged(async (user) => {
@@ -277,11 +303,14 @@ export default function SquadPage() {
             interests: "",
             createdAt: new Date(),
           });
+<<<<<<< HEAD
         } else {
             const data = userDocSnap.data();
             if (!data.profileComplete) {
                 setShowCompleteProfile(true);
             }
+=======
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
         }
       } else {
         setFirebaseUser(null);
@@ -301,6 +330,7 @@ export default function SquadPage() {
         const uid = firebaseUser.uid;
 
         const docRef = doc(db, "users", uid);
+<<<<<<< HEAD
         const unsubProfile = onSnapshot(docRef, (docSnap) => {
           setProfile(docSnap.exists() ? docSnap.data() : null);
         });
@@ -310,16 +340,32 @@ export default function SquadPage() {
         const userPostsData = postsSnapshot.docs
             .map(doc => ({ id: doc.id, ...doc.data() }))
             .sort((a, b) => b.createdAt.toDate() - a.createdAt.toDate());
+=======
+        const docSnap = await getDoc(docRef);
+        setProfile(docSnap.exists() ? docSnap.data() : null);
+        
+        // Fetch posts and then filter client-side to avoid index issues
+        const postsQuery = query(collection(db, "posts"), orderBy("createdAt", "desc"));
+        const postsSnapshot = await getDocs(postsQuery);
+        const allPosts = postsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const userPostsData = allPosts.filter(post => post.userId === uid);
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
         
         setPostCount(userPostsData.length);
         setUserPosts(userPostsData);
         
         setLoading(false);
+<<<<<<< HEAD
 
         return () => unsubProfile();
     }
     if (firebaseUser) fetchProfileData();
   }, [firebaseUser]);
+=======
+    }
+    if (firebaseUser) fetchProfileData();
+  }, [firebaseUser, showEdit]);
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
 
   useEffect(() => {
     if (!firebaseUser) return;
@@ -340,6 +386,7 @@ export default function SquadPage() {
     };
   }, [firebaseUser]);
   
+<<<<<<< HEAD
   if (loading) {
     return <div className="flex flex-col items-center justify-center text-accent-cyan">Loading profile...</div>;
   }
@@ -357,6 +404,33 @@ export default function SquadPage() {
   return (
     <div className="flex flex-col w-full pb-24">
         {showFollowList && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" onClick={() => setShowFollowList(null)} />}
+=======
+  useEffect(() => {
+    if (!firebaseUser) return;
+    async function fetchAllUsers() {
+      const usersSnap = await getDocs(collection(db, "users"));
+      const usersData = usersSnap.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
+      setAllUsers(usersData.filter(u => u.uid !== firebaseUser.uid));
+    }
+    fetchAllUsers();
+  }, [firebaseUser]);
+
+
+  if (loading) {
+    return <div className="flex flex-col min-h-screen items-center justify-center text-accent-cyan">Loading profile...</div>;
+  }
+  if (!firebaseUser) {
+    return <div className="flex flex-col min-h-screen items-center justify-center text-red-400">Not logged in.</div>;
+  }
+  if (!profile) {
+    return <div className="flex flex-col min-h-screen items-center justify-center text-red-400">Could not load profile.</div>;
+  }
+  
+  const initials = profile.name?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || profile.username?.slice(0, 2).toUpperCase() || "U";
+
+  return (
+    <div className="flex flex-col min-h-screen pt-6 pb-24 px-2 md:px-8">
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
         <button
           className="fixed top-6 right-6 z-50 btn-glass-icon"
           onClick={() => setShowSettings(true)}
@@ -377,14 +451,20 @@ export default function SquadPage() {
         )}
       </div>
       {/* Profile Card */}
+<<<<<<< HEAD
       <div className="mx-auto w-full max-w-2xl glass-card p-6 -mt-24 flex flex-col items-center text-center">
         <div className="w-32 h-32 rounded-full bg-accent-cyan border-4 border-accent-pink shadow-fab-glow mb-4 overflow-hidden -mt-20">
+=======
+      <div className="mx-auto w-full max-w-2xl glass-card p-6 -mt-24 flex flex-col items-center">
+        <div className="w-32 h-32 rounded-full bg-accent-cyan border-4 border-accent-pink shadow-fab-glow mb-2 overflow-hidden -mt-20">
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
           {profile.avatar_url ? (
             <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
           ) : (
             <span className="text-5xl text-white flex items-center justify-center h-full w-full">{initials}</span>
           )}
         </div>
+<<<<<<< HEAD
         <div className="flex items-center justify-center gap-2">
             <h2 className="text-2xl font-headline font-bold text-center">{profile.name}</h2>
             {isDeveloper && (
@@ -427,6 +507,36 @@ export default function SquadPage() {
         <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "likes" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("likes")}>Likes</button>
         <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "playlists" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("playlists")}>Playlists</button>
         <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "collections" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("collections")}>Collections</button>
+=======
+        <h2 className="text-2xl font-headline font-bold mb-1 text-center">{profile.name}</h2>
+        <p className="text-accent-cyan mb-2 text-center">@{profile.username || "username"}</p>
+        <p className="text-gray-300 text-center mb-2">{profile.bio || "This is your bio. Edit it to tell the world about your vibes!"}</p>
+        <div className="flex justify-center gap-8 my-4 w-full">
+          <div className="flex flex-col items-center">
+            <span className="font-bold text-lg text-accent-cyan">{postCount}</span>
+            <span className="text-xs text-gray-500">Posts</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="font-bold text-lg text-accent-cyan">{followers}</span>
+            <span className="text-xs text-gray-500">Followers</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="font-bold text-lg text-accent-cyan">{following}</span>
+            <span className="text-xs text-gray-500">Following</span>
+          </div>
+        </div>
+        <div className="flex gap-2 flex-wrap justify-center mb-2">
+          {profile.interests && profile.interests.split(",").map((interest: string) => (
+            <span key={interest} className="px-3 py-1 rounded-full bg-white/10 text-accent-cyan text-xs font-bold">{interest.trim()}</span>
+          ))}
+        </div>
+        <button className="btn-glass mt-4" onClick={() => setShowEdit(true)}>Edit Profile</button>
+      </div>
+      {/* Tabs */}
+      <div className="flex justify-center gap-4 my-8">
+        <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "posts" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("posts")}>Posts</button>
+        <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "starred" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("starred")}>Starred</button>
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
       </div>
       {/* Tab Content */}
       <div className="flex-1 flex flex-col items-center justify-center w-full">
@@ -445,7 +555,11 @@ export default function SquadPage() {
             </div>
           )
         )}
+<<<<<<< HEAD
         {activeTab === "likes" && (
+=======
+        {activeTab === "starred" && (
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
             starredPosts.length > 0 ? (
                 <div className="w-full max-w-xl flex flex-col gap-6">
                     {starredPosts.map((post) => (
@@ -454,6 +568,7 @@ export default function SquadPage() {
                 </div>
             ) : (
                 <div className="text-gray-400 text-center mt-16">
+<<<<<<< HEAD
                     <div className="text-4xl mb-2"><Heart /></div>
                     <div className="text-lg font-semibold">No liked posts</div>
                     <div className="text-sm">Your liked posts will appear here!</div>
@@ -496,6 +611,51 @@ export default function SquadPage() {
             onClose={() => setShowFollowList(null)}
             currentUser={firebaseUser}
         />
+=======
+                    <div className="text-4xl mb-2"><Star /></div>
+                    <div className="text-lg font-semibold">No starred posts</div>
+                    <div className="text-sm">Your starred posts will appear here!</div>
+                </div>
+            )
+        )}
+      </div>
+      {/* Discover Other Users */}
+      <div className="mt-16 w-full max-w-4xl mx-auto">
+        <h3 className="text-xl font-headline bg-gradient-to-r from-accent-pink to-accent-cyan bg-clip-text text-transparent mb-4">Discover Users</h3>
+        {allUsers.length === 0 ? (
+          <div className="text-gray-400 text-center py-8">No other users found. Invite your friends to join!</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {allUsers.map((user) => (
+              <Link key={user.uid} href={`/squad/${user.uid}`} className="block">
+                <motion.div 
+                  className="glass-card p-4 flex items-center gap-4 hover:border-accent-cyan transition-all cursor-pointer"
+                  whileHover={{ scale: 1.03 }}
+                >
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-lg overflow-hidden">
+                    {user.avatar_url ? (
+                      <img src={user.avatar_url} alt="avatar" className="w-full h-full object-cover rounded-full" />
+                    ) : (
+                      <span>{user.name ? user.name[0] : user.username?.[0] || "U"}</span>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-headline text-accent-cyan">{user.name}</div>
+                    <div className="text-xs text-gray-500">@{user.username}</div>
+                  </div>
+                  <FollowButton profileUser={user} currentUser={firebaseUser} />
+                </motion.div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+      {showEdit && (
+        <EditProfileModal profile={profile} onClose={() => setShowEdit(false)} />
+      )}
+      {showSettings && (
+        <SettingsModal onClose={() => setShowSettings(false)} />
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
       )}
     </div>
   );
@@ -527,7 +687,11 @@ function EditProfileModal({ profile, onClose }: { profile: any; onClose: () => v
       setUploading(field);
       setUploadProgress(0);
       try {
+<<<<<<< HEAD
         const url = await uploadToCloudinary(e.target.files[0], (p) => setUploadProgress(p));
+=======
+        const url = await uploadToCloudinary(e.target.files[0], setUploadProgress);
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
         setForm((prev) => ({ ...prev, [field]: url || "" }));
       } catch (err: any) {
         setError(err.message);
@@ -616,13 +780,18 @@ function EditProfileModal({ profile, onClose }: { profile: any; onClose: () => v
   );
 }
 
+<<<<<<< HEAD
 function SettingsModal({ profile, firebaseUser, onClose }: { profile: any; firebaseUser: any; onClose: () => void }) {
+=======
+function SettingsModal({ onClose }: { onClose: () => void }) {
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
   const [settings, setSettings] = useState({
     darkMode: false,
     accentColor: '#00F0FF',
     dmPrivacy: 'everyone',
     tagPrivacy: 'everyone',
     pushNotifications: true,
+<<<<<<< HEAD
     emailNotifications: false,
   });
   const [isSaving, setIsSaving] = useState(false);
@@ -650,6 +819,22 @@ function SettingsModal({ profile, firebaseUser, onClose }: { profile: any; fireb
     setIsSaving(true);
     const newSettings = { ...settings, [key]: value };
     setSettings(newSettings);
+=======
+    emailNotifications: false
+  });
+  const router = useRouter();
+
+  useEffect(() => {
+    const isDark = document.documentElement.classList.contains('dark') || localStorage.getItem('theme') === 'dark';
+    const savedAccent = localStorage.getItem('accentColor') || '#00F0FF';
+    setSettings(prev => ({ ...prev, darkMode: isDark, accentColor: savedAccent }));
+    document.documentElement.classList.toggle('dark', isDark);
+    document.documentElement.style.setProperty('--accent-cyan', savedAccent); // This is a simplification
+  }, []);
+
+  const handleSettingChange = (key: keyof typeof settings, value: any) => {
+    setSettings(prev => ({ ...prev, [key]: value }));
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
 
     if (key === 'darkMode') {
       document.documentElement.classList.toggle('dark', value);
@@ -657,6 +842,7 @@ function SettingsModal({ profile, firebaseUser, onClose }: { profile: any; fireb
     }
     if (key === 'accentColor') {
       localStorage.setItem('accentColor', value);
+<<<<<<< HEAD
       document.documentElement.style.setProperty('--accent-cyan', value);
       document.documentElement.style.setProperty('--brand-gold', value);
     }
@@ -671,6 +857,11 @@ function SettingsModal({ profile, firebaseUser, onClose }: { profile: any; fireb
         console.error("Failed to save settings:", error);
     } finally {
         setIsSaving(false);
+=======
+      // In a real app, you would have CSS variables for this
+      document.documentElement.style.setProperty('--accent-cyan', value);
+      alert("Note: Full theme application requires a refresh in this demo.");
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
     }
   };
   
@@ -679,6 +870,7 @@ function SettingsModal({ profile, firebaseUser, onClose }: { profile: any; fireb
     router.push("/login");
   };
 
+<<<<<<< HEAD
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
@@ -880,3 +1072,90 @@ function DeleteAccountModal({ profile, onClose }: { profile: any, onClose: () =>
         </div>
     )
 }
+=======
+  const handleDeleteAccount = () => {
+    if(window.confirm("Are you sure you want to delete your account? This action is irreversible.")) {
+      alert("Account deletion feature coming soon.");
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="glass-card p-6 w-full max-w-lg relative max-h-[90vh] flex flex-col"
+      >
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white">&times;</button>
+        <h2 className="text-2xl font-headline font-bold mb-6 text-accent-cyan flex items-center gap-2"><Cog /> Settings</h2>
+        
+        <div className="flex-1 overflow-y-auto pr-2 flex flex-col gap-4">
+          <div className="bg-white/5 rounded-xl p-4">
+            <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan"><Palette /> Theme & UI</h3>
+            <div className="flex items-center justify-between py-2">
+              <span>Dark Mode</span>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked={settings.darkMode} onChange={(e) => handleSettingChange('darkMode', e.target.checked)} className="sr-only peer" />
+                <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-accent-cyan peer-checked:after:translate-x-full after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-cyan"></div>
+              </label>
+            </div>
+            <div className="flex items-center justify-between py-2">
+                <span>Accent Color</span>
+                <input type="color" value={settings.accentColor} onChange={(e) => handleSettingChange('accentColor', e.target.value)} className="w-10 h-10 bg-transparent border-none rounded-full cursor-pointer"/>
+            </div>
+          </div>
+          
+          <div className="bg-white/5 rounded-xl p-4">
+            <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan"><Lock /> Privacy & Security</h3>
+            <div className="flex items-center justify-between py-2">
+              <span><MessageCircle className="inline-block mr-2"/> Who can DM you?</span>
+              <select value={settings.dmPrivacy} onChange={(e) => handleSettingChange('dmPrivacy', e.target.value)} className="input-glass text-sm">
+                <option value="everyone">Everyone</option>
+                <option value="followers">Mutuals</option>
+                <option value="none">No one</option>
+              </select>
+            </div>
+             <div className="flex items-center justify-between py-2">
+              <span><AtSign className="inline-block mr-2"/> Who can tag you?</span>
+              <select value={settings.tagPrivacy} onChange={(e) => handleSettingChange('tagPrivacy', e.target.value)} className="input-glass text-sm">
+                <option value="everyone">Everyone</option>
+                <option value="followers">Following</option>
+                 <option value="none">No one</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="bg-white/5 rounded-xl p-4">
+            <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan"><Bell /> Notifications</h3>
+            <div className="flex items-center justify-between py-2">
+              <span>Push Notifications</span>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked={settings.pushNotifications} onChange={(e) => handleSettingChange('pushNotifications', e.target.checked)} className="sr-only peer" />
+                <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-accent-cyan peer-checked:after:translate-x-full after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-cyan"></div>
+              </label>
+            </div>
+             <div className="flex items-center justify-between py-2">
+              <span>Email Notifications</span>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked={settings.emailNotifications} onChange={(e) => handleSettingChange('emailNotifications', e.target.checked)} className="sr-only peer" />
+                <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-accent-cyan peer-checked:after:translate-x-full after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-cyan"></div>
+              </label>
+            </div>
+          </div>
+          
+          <div className="bg-white/5 rounded-xl p-4">
+             <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan">Account</h3>
+             <button className="btn-glass bg-red-500/20 text-red-400 hover:bg-red-500/40 hover:text-white w-full mt-4" onClick={handleDeleteAccount}>
+                <Trash2 className="inline-block mr-2" /> Delete Account
+            </button>
+          </div>
+
+          <button className="btn-glass bg-accent-pink/20 text-accent-pink hover:bg-accent-pink/40 hover:text-white w-full mt-4" onClick={handleLogout}>
+            <LogOut className="inline-block mr-2" /> Log Out
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf

@@ -19,7 +19,6 @@ export default function LandingPage() {
         router.replace('/home');
       } else {
         // User is signed out, show the landing page.
-        // Removed splash screen logic, set loading to false directly.
         setLoading(false);
       }
     });
@@ -29,7 +28,6 @@ export default function LandingPage() {
   }, [router]);
 
   if (loading) {
-    // Show a simple loading state instead of the crashing component
     return (
       <div className="min-h-screen w-full flex flex-col items-center justify-center bg-background">
         <AlmightyLogo size={80} />

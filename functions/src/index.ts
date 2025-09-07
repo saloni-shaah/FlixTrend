@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 
+=======
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
 /**
  * Import function triggers from their respective submodules:
  *
@@ -13,7 +16,10 @@ import * as admin from "firebase-admin";
 
 // Initialize the Firebase Admin SDK
 admin.initializeApp();
+<<<<<<< HEAD
 const db = admin.firestore();
+=======
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
 
 /**
  * Cloud Function to send a push notification when a new notification
@@ -86,6 +92,7 @@ exports.sendPushNotification = functions.firestore
       console.error("Error sending message:", error);
     }
   });
+<<<<<<< HEAD
 
 
 /**
@@ -163,3 +170,5 @@ exports.deleteUserAccount = functions.https.onCall(async (data, context) => {
     );
   }
 });
+=======
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf

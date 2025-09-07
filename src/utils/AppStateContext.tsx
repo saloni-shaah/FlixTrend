@@ -25,6 +25,7 @@ interface AppState {
   callTarget: any | null;
   setCallTarget: (target: any | null) => void;
   activeCall: Call | null;
+<<<<<<< HEAD
   closeCall: () => void;
   activeSong: Song | null;
   isPlaying: boolean;
@@ -33,6 +34,14 @@ interface AppState {
   toggleSong: () => void;
   playNext: () => void;
   playPrevious: () => void;
+=======
+  closeCall: () => void; // New function to close the UI
+  activeSong: Song | null;
+  isPlaying: boolean;
+  playSong: (song: Song) => void;
+  pauseSong: () => void;
+  toggleSong: () => void;
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
   audioPlayer: HTMLAudioElement | null;
 }
 
@@ -42,10 +51,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [isCalling, setIsCalling] = useState(false);
   const [callTarget, setCallTarget] = useState<any | null>(null);
   const [activeCall, setActiveCall] = useState<Call | null>(null);
+<<<<<<< HEAD
   
   const [activeSong, setActiveSong] = useState<Song | null>(null);
   const [songQueue, setSongQueue] = useState<Song[]>([]);
   const [currentSongIndex, setCurrentSongIndex] = useState<number>(-1);
+=======
+  const [activeSong, setActiveSong] = useState<Song | null>(null);
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -56,6 +69,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             const token = await requestForToken();
             if (token && user) {
                 console.log('FCM Token:', token);
+<<<<<<< HEAD
+=======
+                // Save the token to the user's profile in Firestore
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
                 const userDocRef = doc(db, 'users', user.uid);
                 await setDoc(userDocRef, { fcmToken: token, lastLogin: serverTimestamp() }, { merge: true });
             }
@@ -68,32 +85,61 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     let callDocUnsubscribe: Unsubscribe | null = null;
 
     const authUnsubscribe = auth.onAuthStateChanged(user => {
+<<<<<<< HEAD
+=======
+      // Clean up previous listeners on user change
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
       if (callUnsubscribe) callUnsubscribe();
       if (callDocUnsubscribe) callDocUnsubscribe();
       
       if (user) {
         handleToken(user);
+<<<<<<< HEAD
+=======
+
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
         const userDocRef = doc(db, 'users', user.uid);
         callUnsubscribe = onSnapshot(userDocRef, (snap) => {
           const data = snap.data();
           const currentCallId = data?.currentCallId;
           
+<<<<<<< HEAD
           if (callDocUnsubscribe) callDocUnsubscribe();
 
           if (currentCallId) {
+=======
+          if (callDocUnsubscribe) callDocUnsubscribe(); // Clean up old call listener
+
+          if (currentCallId) {
+            // If there's a call ID, listen to that call document
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
             const callDocRef = doc(db, 'calls', currentCallId);
             callDocUnsubscribe = onSnapshot(callDocRef, (callSnap) => {
               if (callSnap.exists()) {
                 setActiveCall({ id: callSnap.id, ...callSnap.data() });
               } else {
+<<<<<<< HEAD
+=======
+                // The call document was deleted, so the call has ended.
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
                 setActiveCall(null);
               }
             });
           } else {
+<<<<<<< HEAD
             setActiveCall(null);
           }
         });
       } else {
+=======
+            // No current call ID, so clear the active call.
+            setActiveCall(null);
+          }
+        });
+
+      } else {
+        // User logged out, clear everything
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
         setActiveCall(null);
       }
     });
@@ -105,6 +151,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     };
   }, []);
   
+<<<<<<< HEAD
+=======
+  // Cleanup audio on component unmount
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
   useEffect(() => {
     return () => {
         if (audioRef.current) {
@@ -114,6 +164,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+<<<<<<< HEAD
   const startSong = (song: Song) => {
     if (audioRef.current) {
       audioRef.current.pause();
@@ -126,10 +177,33 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     audio.addEventListener('pause', () => setIsPlaying(false));
     audio.addEventListener('ended', playNext); // Play next song when current one ends
 
+=======
+  const playSong = (song: Song) => {
+    if (audioRef.current && activeSong?.id !== song.id) {
+        audioRef.current.pause();
+        audioRef.current = null;
+    }
+    
+    if (!audioRef.current) {
+        const audio = new Audio(song.audioUrl);
+        audioRef.current = audio;
+        audio.play();
+
+        audio.addEventListener('play', () => setIsPlaying(true));
+        audio.addEventListener('pause', () => setIsPlaying(false));
+        audio.addEventListener('ended', () => {
+            setActiveSong(null);
+            setIsPlaying(false);
+        });
+    } else {
+        audioRef.current.play();
+    }
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
     setActiveSong(song);
     setIsPlaying(true);
   };
   
+<<<<<<< HEAD
   const playSong = (song: Song, queue: Song[] = [], index: number = -1) => {
     startSong(song);
     setSongQueue(queue);
@@ -139,6 +213,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const pauseSong = () => {
     if(audioRef.current) {
         audioRef.current.pause();
+=======
+  const pauseSong = () => {
+    if(audioRef.current) {
+        audioRef.current.pause();
+        setIsPlaying(false);
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
     }
   };
   
@@ -147,6 +227,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           pauseSong();
       } else if(audioRef.current) {
           audioRef.current.play();
+<<<<<<< HEAD
       }
   };
 
@@ -164,6 +245,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     startSong(songQueue[prevIndex]);
   };
 
+=======
+          setIsPlaying(true);
+      }
+  };
+
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
   const closeCall = () => {
     setActiveCall(null);
   };
@@ -174,14 +261,21 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     callTarget,
     setCallTarget,
     activeCall,
+<<<<<<< HEAD
     closeCall,
+=======
+    closeCall, // Provide the new function
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
     activeSong,
     isPlaying,
     playSong,
     pauseSong,
     toggleSong,
+<<<<<<< HEAD
     playNext,
     playPrevious,
+=======
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
     audioPlayer: audioRef.current,
   };
 

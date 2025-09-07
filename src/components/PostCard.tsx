@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 
 "use client";
 
@@ -5,11 +6,22 @@ import React from 'react';
 import { getFirestore, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, deleteDoc, updateDoc, doc as fsDoc, setDoc, getDoc, doc, runTransaction } from "firebase/firestore";
 import { FaPlay, FaRegComment, FaExclamationTriangle, FaVolumeMute, FaUserSlash, FaLink, FaEllipsisV, FaMusic } from "react-icons/fa";
 import { Repeat2, Star, Share, MessageCircle, Bookmark } from "lucide-react";
+=======
+"use client";
+
+import React from 'react';
+import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, deleteDoc, updateDoc, doc as fsDoc, setDoc, getDoc, doc, runTransaction } from "firebase/firestore";
+import { FaPlay, FaRegComment, FaExclamationTriangle, FaVolumeMute, FaUserSlash, FaLink, FaEllipsisV, FaMusic } from "react-icons/fa";
+import { Repeat2, Star, Share, MessageCircle } from "lucide-react";
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
 import { auth } from "@/utils/firebaseClient";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ShareModal } from './ShareModal';
+<<<<<<< HEAD
 import { AddToCollectionModal } from './AddToCollectionModal';
+=======
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
 
 const db = getFirestore();
 
@@ -23,8 +35,11 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
   const [showEdit, setShowEdit] = React.useState(false);
   const [editContent, setEditContent] = React.useState(post.content || "");
   const [showShareModal, setShowShareModal] = React.useState(false);
+<<<<<<< HEAD
   const [showCollectionModal, setShowCollectionModal] = React.useState(false);
   const [isSaved, setIsSaved] = React.useState(false);
+=======
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
   const currentUser = auth.currentUser;
   const [pollVotes, setPollVotes] = React.useState<{ [optionIdx: number]: { count: number, voters: string[] } }>({});
   const [userPollVote, setUserPollVote] = React.useState<number | null>(null);
@@ -44,6 +59,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
         setIsStarred(docSnap.exists());
     });
     unsubscribes.push(unsubStarred);
+<<<<<<< HEAD
 
     // Saved post check - this is a quick check, doesn't tell us *which* collection
     const savedQuery = query(collection(db, "collections"), where("ownerId", "==", currentUser.uid), where("postIds", "array-contains", post.id));
@@ -51,6 +67,8 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
       setIsSaved(!snap.empty);
     });
     unsubscribes.push(unsubSaved);
+=======
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
     
     // Relayed post check
     const relayedDocRef = fsDoc(db, "posts", post.id, "relays", currentUser.uid);
@@ -315,6 +333,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
   }
   
   const ActionButtons = () => (
+<<<<<<< HEAD
     <div className={`flex items-center justify-between mt-2 pt-2 border-t border-glass-border ${isShortVibe ? 'w-full' : ''}`}>
         <div className={`${isShortVibe ? 'flex flex-col items-center gap-6' : 'flex items-center justify-start gap-6'}`}>
           <button className={`flex items-center gap-1.5 font-bold transition-all ${isShortVibe ? 'flex-col text-white' : 'text-lg text-muted-foreground hover:text-brand-gold'}`} onClick={(e) => { e.stopPropagation(); setShowComments(true); }}>
@@ -335,14 +354,34 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
                 <Bookmark size={20} fill={isSaved ? "currentColor" : "none"}/>
             </button>
         )}
+=======
+    <div className={`${isShortVibe ? 'flex flex-col items-center gap-6' : 'flex items-center justify-start gap-6 mt-2 pt-2 border-t border-glass-border'}`}>
+      <button className={`flex items-center gap-1.5 font-bold transition-all ${isShortVibe ? 'flex-col text-white' : 'text-lg text-muted-foreground hover:text-brand-gold'}`} onClick={() => setShowComments(true)}>
+        <MessageCircle size={isShortVibe ? 32 : 20} /> <span className="text-sm">{commentCount}</span>
+      </button>
+      <button className={`flex items-center gap-1.5 font-bold transition-all ${isRelayed ? "text-green-400" : isShortVibe ? "text-white hover:text-green-300" : "text-lg text-muted-foreground hover:text-green-400"}`} onClick={handleRelay} >
+        <Repeat2 size={isShortVibe ? 32 : 20} /> <span className="text-sm">{relayCount}</span>
+      </button>
+      <button className={`flex items-center gap-1.5 font-bold transition-all ${isStarred ? "text-yellow-400" : isShortVibe ? "text-white hover:text-yellow-300" : "text-lg text-muted-foreground hover:text-yellow-400"}`} onClick={handleStar}>
+        <Star size={isShortVibe ? 32 : 20} fill={isStarred ? "currentColor" : "none"} /> <span className="text-sm">{starCount}</span>
+      </button>
+      <button className={`flex items-center gap-1.5 font-bold transition-all ${isShortVibe ? 'flex-col text-white' : 'text-lg text-muted-foreground hover:text-accent-cyan'}`} onClick={() => setShowShareModal(true)}>
+        <Share size={isShortVibe ? 32 : 20} />
+      </button>
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
     </div>
   );
 
   if (isShortVibe) {
     return (
         <div className="absolute inset-0 w-full h-full p-4 flex justify-between items-end pointer-events-none bg-gradient-to-t from-black/60 via-black/20 to-transparent">
+<<<<<<< HEAD
             <div className="flex flex-col gap-2 max-w-[calc(100%-80px)] self-end">
                 <div className="flex items-center gap-2 pointer-events-auto">
+=======
+            <div className="flex flex-col gap-2 max-w-[calc(100%-80px)] pointer-events-auto self-end">
+                <div className="flex items-center gap-2">
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
                     <Link href={`/squad/${post.userId}`} className="flex items-center gap-2 group cursor-pointer">
                         <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green flex items-center justify-center font-bold text-lg overflow-hidden border-2 border-accent-green group-hover:scale-105 transition-transform">
                             {post.avatar_url ? <img src={post.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : <span className="text-white">{post.displayName?.[0] || 'U'}</span>}
@@ -357,7 +396,11 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
                     </div>
                  )}
             </div>
+<<<<<<< HEAD
             <div className="flex flex-col gap-4 self-end mb-4 pointer-events-auto">
+=======
+            <div className="flex flex-col gap-4 pointer-events-auto self-end mb-4">
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
                 <ActionButtons />
             </div>
             {showComments && <CommentModal postId={post.id} postAuthorId={post.userId} onClose={() => setShowComments(false)} />}
@@ -415,12 +458,15 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
             onClose={() => setShowShareModal(false)}
         />
       )}
+<<<<<<< HEAD
       {showCollectionModal && (
         <AddToCollectionModal 
             post={post}
             onClose={() => setShowCollectionModal(false)}
         />
       )}
+=======
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
     </motion.div>
   );
 }
@@ -590,5 +636,8 @@ function CommentForm({ postId, postAuthorId, parentId, onCommentPosted, isReply 
     </form>
   )
 }
+<<<<<<< HEAD
 
     
+=======
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf

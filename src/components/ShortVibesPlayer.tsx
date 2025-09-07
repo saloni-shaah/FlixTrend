@@ -11,6 +11,7 @@ import { PostCard } from './PostCard';
 export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
     const [activeShortIndex, setActiveShortIndex] = useState(0);
     const [isPlaying, setIsPlaying] = useState(true);
+<<<<<<< HEAD
     const [isMuted, setIsMuted] = useState(true);
     const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
     const playerRef = useRef<HTMLDivElement>(null);
@@ -19,6 +20,13 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
 
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
+=======
+    const [isMuted, setIsMuted] = useState(false);
+    const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
+    const playerRef = useRef<HTMLDivElement>(null);
+    const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
     const scrollToNext = useCallback(() => {
         setActiveShortIndex(i => Math.min(shortVibes.length - 1, i + 1));
     }, [shortVibes.length]);
@@ -26,6 +34,7 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
     const scrollToPrev = useCallback(() => {
         setActiveShortIndex(i => Math.max(0, i - 1));
     }, []);
+<<<<<<< HEAD
     
     useEffect(() => {
         if (!audioRef.current) {
@@ -110,6 +119,47 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
             playerRef.current?.requestFullscreen().catch(err => {
                 console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
             });
+=======
+
+    useEffect(() => {
+        // Ensure the active video plays when the index changes
+        videoRefs.current.forEach((video, idx) => {
+            if (video) {
+                if (idx === activeShortIndex) {
+                    video.play().catch(() => {}); // Autoplay might be blocked
+                    setIsPlaying(true);
+                } else {
+                    video.pause();
+                    video.currentTime = 0;
+                }
+            }
+        });
+    }, [activeShortIndex, shortVibes]);
+
+    const handleVideoClick = (index: number) => {
+        const video = videoRefs.current[index];
+        if (video) {
+            if (video.paused) {
+                video.play().catch(() => {});
+                setIsPlaying(true);
+            } else {
+                video.pause();
+                setIsPlaying(false);
+            }
+        }
+    };
+    
+    const handleDoubleClick = (index: number) => {
+        const video = videoRefs.current[index];
+        if (video) {
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+            } else {
+                playerRef.current?.requestFullscreen().catch(err => {
+                    console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+                });
+            }
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
         }
     };
     
@@ -118,15 +168,30 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
         if (!currentRef) return;
         
         const handleKeyDown = (event: KeyboardEvent) => {
+<<<<<<< HEAD
             if (event.key === 'ArrowDown' || event.key === 'ArrowUp') event.preventDefault();
             if (event.key === 'ArrowDown') scrollToNext();
             else if (event.key === 'ArrowUp') scrollToPrev();
             else if (event.key.toLowerCase() === 'm') setIsMuted(prev => !prev);
+=======
+            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                event.preventDefault();
+            }
+
+            if (event.key === 'ArrowDown') {
+                scrollToNext();
+            } else if (event.key === 'ArrowUp') {
+                scrollToPrev();
+            } else if (event.key.toLowerCase() === 'm') {
+                setIsMuted(prev => !prev);
+            }
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
         };
 
         const handleWheel = (event: WheelEvent) => {
             event.preventDefault();
             if (scrollTimeoutRef.current) return;
+<<<<<<< HEAD
             if (event.deltaY > 0) scrollToNext();
             else if (event.deltaY < 0) scrollToPrev();
             scrollTimeoutRef.current = setTimeout(() => { scrollTimeoutRef.current = null; }, 500);
@@ -147,15 +212,38 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
         currentRef.addEventListener('wheel', handleWheel, { passive: false });
         currentRef.addEventListener('touchstart', handleTouchStart, { passive: true });
         currentRef.addEventListener('touchend', handleTouchEnd, { passive: true });
+=======
+            
+            if (event.deltaY > 0) {
+                scrollToNext();
+            } else if (event.deltaY < 0) {
+                scrollToPrev();
+            }
+            
+            scrollTimeoutRef.current = setTimeout(() => {
+                scrollTimeoutRef.current = null;
+            }, 500);
+        };
+        
+        window.addEventListener('keydown', handleKeyDown);
+        currentRef.addEventListener('wheel', handleWheel, { passive: false });
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
         
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
             if (currentRef) {
                 currentRef.removeEventListener('wheel', handleWheel);
+<<<<<<< HEAD
                 currentRef.removeEventListener('touchstart', handleTouchStart);
                 currentRef.removeEventListener('touchend', handleTouchEnd);
             }
              if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+=======
+            }
+             if (scrollTimeoutRef.current) {
+                clearTimeout(scrollTimeoutRef.current);
+            }
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
         };
     }, [scrollToNext, scrollToPrev]);
 
@@ -177,6 +265,7 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
                             zIndex: shortVibes.length - Math.abs(activeShortIndex - idx),
                         }}
                     >
+<<<<<<< HEAD
                         <div className="relative w-full h-full flex items-center justify-center">
                             <video
                                 ref={el => { videoRefs.current[idx] = el; }}
@@ -188,6 +277,17 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
                                 playsInline
                                 onClick={handleVideoClick}
                                 onDoubleClick={handleDoubleClick}
+=======
+                        <div className="relative w-full h-full flex items-center justify-center cursor-pointer" onClick={() => handleVideoClick(idx)} onDoubleClick={() => handleDoubleClick(idx)}>
+                            <video
+                                ref={el => { videoRefs.current[idx] = el; }}
+                                src={short.mediaUrl}
+                                className="w-full h-full object-contain pointer-events-none"
+                                autoPlay={idx === 0}
+                                loop
+                                muted={isMuted}
+                                playsInline
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
                             />
                             {!isPlaying && activeShortIndex === idx && (
                                 <div className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none">
@@ -200,9 +300,26 @@ export function ShortVibesPlayer({ shortVibes }: { shortVibes: any[] }) {
                 ))
             )}
             
+<<<<<<< HEAD
             <button className="absolute top-4 right-4 z-50 p-2 bg-black/40 rounded-full text-white" onClick={() => setIsMuted(prev => !prev)}>
                 {isMuted ? <VolumeX size={20}/> : <Volume2 size={20} />}
             </button>
+=======
+            {/* Mute Button */}
+            <button className="absolute top-4 right-4 z-50 p-2 bg-black/40 rounded-full text-white" onClick={() => setIsMuted(prev => !prev)}>
+                {isMuted ? <VolumeX size={20}/> : <Volume2 size={20} />}
+            </button>
+
+            {/* Scroll buttons for touch devices */}
+            <div className="md:hidden">
+                {activeShortIndex > 0 && (
+                  <button className="absolute top-4 left-1/2 -translate-x-1/2 z-50 btn-glass-icon w-24 h-10" onClick={scrollToPrev}>&uarr;</button>
+                )}
+                {activeShortIndex < shortVibes.length - 1 && (
+                  <button className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 btn-glass-icon w-24 h-10" onClick={scrollToNext}>&darr;</button>
+                )}
+            </div>
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
         </div>
     );
 }

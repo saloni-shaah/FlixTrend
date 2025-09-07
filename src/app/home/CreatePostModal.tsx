@@ -21,6 +21,7 @@ async function uploadToCloudinary(file: File, onProgress?: (percent: number) => 
       }
     };
     xhr.onload = () => {
+<<<<<<< HEAD
       if (xhr.responseText) {
         const data = JSON.parse(xhr.responseText);
         if (xhr.status === 200 && data.secure_url) {
@@ -30,6 +31,13 @@ async function uploadToCloudinary(file: File, onProgress?: (percent: number) => 
         }
       } else {
         reject(new Error("Upload failed with empty response"));
+=======
+      const data = JSON.parse(xhr.responseText);
+      if (xhr.status === 200 && data.secure_url) {
+        resolve(data.secure_url);
+      } else {
+        reject(new Error(data.error?.message || "Upload failed"));
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
       }
     };
     xhr.onerror = () => reject(new Error("Upload failed"));
@@ -313,5 +321,8 @@ export default function CreatePostModal({ open, onClose }: { open: boolean; onCl
   );
 }
 
+<<<<<<< HEAD
     
+=======
+>>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
     
