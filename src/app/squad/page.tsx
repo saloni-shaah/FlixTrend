@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { auth } from "@/utils/firebaseClient";
 import { getFirestore, doc, getDoc, setDoc, collection, query, where, getCountFromServer, getDocs, onSnapshot, orderBy, updateDoc, writeBatch, deleteDoc } from "firebase/firestore";
-import { Cog, Palette, Lock, MessageCircle, LogOut, Camera, Star, Bell, Trash2, AtSign, Compass, CheckBadge, Code } from "lucide-react";
+import { Cog, Palette, Lock, MessageCircle, LogOut, Camera, Star, Bell, Trash2, AtSign, Compass } from "lucide-react";
 import { signOut, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -227,7 +227,6 @@ export default function SquadPage() {
   }
   
   const initials = profile.name?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || profile.username?.slice(0, 2).toUpperCase() || "U";
-  const isDeveloper = profile.email === 'next181489111@gmail.com';
 
 
   return (
@@ -263,12 +262,6 @@ export default function SquadPage() {
         </div>
         <div className="flex items-center gap-2">
             <h2 className="text-2xl font-headline font-bold mb-1 text-center">{profile.name}</h2>
-            {isDeveloper && (
-                <Code className="w-6 h-6 text-accent-green" title="Developer"/>
-            )}
-            {profile.accountType === 'creator' && !isDeveloper && (
-                <CheckBadge className="w-6 h-6 text-accent-cyan" title="Verified Creator"/>
-            )}
         </div>
         <p className="text-accent-cyan mb-2 text-center">@{profile.username || "username"}</p>
         <p className="text-gray-300 text-center mb-2">{profile.bio || "This is your bio. Edit it to tell the world about your vibes!"}</p>

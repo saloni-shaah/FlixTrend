@@ -6,7 +6,7 @@ import { getFirestore, doc, getDoc, collection, query, where, getDocs, onSnapsho
 import { auth } from "@/utils/firebaseClient";
 import { PostCard } from "@/components/PostCard";
 import { FollowButton } from "@/components/FollowButton";
-import { Star, CheckBadge, Code } from "lucide-react";
+import { Star } from "lucide-react";
 import { FollowListModal } from "@/components/FollowListModal";
 
 const db = getFirestore();
@@ -84,8 +84,7 @@ export default function UserProfilePage() {
   }
   
   const initials = profile.name?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || profile.username?.slice(0, 2).toUpperCase() || "U";
-  const isDeveloper = profile.email === 'next181489111@gmail.com';
-
+  
   return (
     <div className="flex flex-col min-h-screen pt-6 pb-24 px-2 md:px-8">
       {showFollowList && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" onClick={() => setShowFollowList(null)} />}
@@ -112,12 +111,6 @@ export default function UserProfilePage() {
         </div>
         <div className="flex items-center gap-2">
             <h2 className="text-2xl font-headline font-bold mb-1 text-center">{profile.name}</h2>
-            {isDeveloper && (
-                <Code className="w-6 h-6 text-accent-green" title="Developer"/>
-            )}
-            {profile.accountType === 'creator' && !isDeveloper && (
-                <CheckBadge className="w-6 h-6 text-accent-cyan" title="Verified Creator"/>
-            )}
         </div>
         <p className="text-accent-cyan mb-2 text-center">@{profile.username || "username"}</p>
         <p className="text-gray-300 text-center mb-2">{profile.bio || "This is their bio."}</p>
