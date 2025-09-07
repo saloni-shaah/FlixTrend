@@ -341,13 +341,13 @@ export default function SquadPage() {
   }, [firebaseUser]);
   
   if (loading) {
-    return <div className="flex flex-col min-h-screen items-center justify-center text-accent-cyan">Loading profile...</div>;
+    return <div className="flex flex-col items-center justify-center text-accent-cyan">Loading profile...</div>;
   }
   if (!firebaseUser) {
-    return <div className="flex flex-col min-h-screen items-center justify-center text-red-400">Not logged in.</div>;
+    return <div className="flex flex-col items-center justify-center text-red-400">Not logged in.</div>;
   }
   if (!profile) {
-    return <div className="flex flex-col min-h-screen items-center justify-center text-red-400">Could not load profile.</div>;
+    return <div className="flex flex-col items-center justify-center text-red-400">Could not load profile.</div>;
   }
   
   const initials = profile.name?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || profile.username?.slice(0, 2).toUpperCase() || "U";
@@ -355,7 +355,7 @@ export default function SquadPage() {
 
 
   return (
-    <div className="flex flex-col min-h-screen pt-6 pb-24 px-2 md:px-8">
+    <div className="flex flex-col w-full">
         {showFollowList && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" onClick={() => setShowFollowList(null)} />}
         <button
           className="fixed top-6 right-6 z-50 btn-glass-icon"
@@ -880,7 +880,3 @@ function DeleteAccountModal({ profile, onClose }: { profile: any, onClose: () =>
         </div>
     )
 }
-
-    
-
-    

@@ -95,7 +95,7 @@ function ForYouContent() {
 
   if (loading) {
     return (
-      <div className="flex flex-col min-h-screen items-center justify-center text-center p-4 pb-24">
+      <div className="flex flex-col items-center justify-center text-center p-4">
         <div className="text-4xl animate-pulse">🎬</div>
         <p className="text-lg text-muted-foreground mt-2">Loading Vibes...</p>
       </div>
@@ -233,7 +233,7 @@ export default function ScopePage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen items-center p-4 pb-24 pt-16 overflow-x-hidden">
+    <div className="flex flex-col items-center w-full overflow-x-hidden">
       <div className="w-full max-w-4xl mb-8">
         <div className="glass-card p-2 flex justify-around items-center rounded-full">
           {tabs.map((tab, index) => (
@@ -280,5 +280,3 @@ export default function ScopePage() {
     </div>
   );
 }
-
-    

@@ -356,7 +356,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
   const defaultReactions = ["👍", "❤️", "😂", "😢", "😮", "🙏"];
 
   return (
-    <div className="flex h-[calc(100vh-64px)] md:h-[calc(100vh-88px)] bg-transparent font-body text-white">
+    <div className="flex h-full w-full bg-transparent font-body text-white">
         {showCreateGroup && <CreateGroupModal mutuals={chats.filter(c => !c.isGroup)} currentUser={firebaseUser} onClose={() => setShowCreateGroup(false)} onGroupCreated={(newGroup) => {
             setChats(prev => [newGroup, ...prev]);
             setSelectedChat(newGroup);
@@ -518,9 +518,7 @@ export default function SignalPage() {
   }, []);
   
   if (!firebaseUser) {
-    return <div className="flex min-h-screen items-center justify-center text-accent-cyan">Loading Signal...</div>;
+    return <div className="flex h-full items-center justify-center text-accent-cyan">Loading Signal...</div>;
   }
   return <ClientOnlySignalPage firebaseUser={firebaseUser} />;
 }
-
-    
