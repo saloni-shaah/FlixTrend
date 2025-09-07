@@ -1,11 +1,21 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Lottie from 'lottie-react';
-import animationData from './animations/splash-animation.json';
+import animationJson from './animations/splash-animation.json';
 import { motion } from 'framer-motion';
 
 export function SplashScreen() {
+  const [animationData, setAnimationData] = useState<any>(null);
+
+  useEffect(() => {
+    setAnimationData(animationJson);
+  }, []);
+
+  if (!animationData) {
+    return null; // Or a fallback loader
+  }
+
   return (
     <motion.div 
       className="min-h-screen w-full flex flex-col items-center justify-center bg-background"
