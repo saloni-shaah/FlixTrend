@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useAppState } from "@/utils/AppStateContext";
-import { Home, Search, Users, MessageSquare } from "lucide-react";
+import { Home, Search, Users, MessageSquare, Bell } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { getFirestore, collection, query, where, onSnapshot, getDocs } from "firebase/firestore";
@@ -26,7 +26,7 @@ function NavButton({ href, icon: Icon, label, hasNotification }: { href: string;
         />
       )}
       {hasNotification && (
-        <div className="absolute top-0 right-0 w-2 h-2 bg-accent-pink rounded-full" />
+        <div className="absolute top-0 right-1 w-2 h-2 bg-accent-pink rounded-full" />
       )}
     </Link>
   );
@@ -36,8 +36,10 @@ export default function AppNavBar() {
   const pathname = usePathname();
   const { isCalling } = useAppState();
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
+  const [hasUnreadNotifs, setHasUnreadNotifs] = useState(false);
   const currentUser = auth.currentUser;
   
+  // Listener for unread messages
   useEffect(() => {
     if (!currentUser) {
         setHasUnreadMessages(false);
@@ -49,36 +51,69 @@ export default function AppNavBar() {
         const followersRef = collection(db, "users", currentUser.uid, "followers");
         const [followingSnap, followersSnap] = await Promise.all([getDocs(followingRef), getDocs(followersRef)]);
         
-        const following = followingSnap.docs.map(doc => doc.id);
-        const followers = followersSnap.docs.map(doc => doc.id);
-        const mutualUids = Array.from(new Set([...following, ...followers]));
+        const followingIds = followingSnap.docs.map(doc => doc.id);
+        const followersIds = followersSnap.docs.map(doc => doc.id);
+        const mutualUids = Array.from(new Set([...followingIds, ...followersIds]));
 
         if (mutualUids.length === 0) return;
         
         const unsubscribers = mutualUids.map(uid => {
             const chatId = [currentUser.uid, uid].sort().join("_");
-            // Simplified query to fetch messages from the other user
             const q = query(
                 collection(db, "chats", chatId, "messages"),
-                where("sender", "!=", currentUser.uid)
+                where("sender", "!=", currentUser.uid),
+                where("readBy", "array-contains", currentUser.uid) // This logic is simplified
             );
             return onSnapshot(q, (snapshot) => {
-                // Filter for unread messages on the client side
-                const hasUnread = snapshot.docs.some(doc => doc.data().read === false);
+                const hasUnread = snapshot.docs.some(doc => {
+                    const data = doc.data();
+                    return !data.readBy || !data.readBy.includes(currentUser.uid)
+                });
                 if (hasUnread) {
                     setHasUnreadMessages(true);
                 }
-                // Note: This logic doesn't reset to false perfectly once all messages are read app-wide
-                // without a more complex state management, but it's effective for showing the notification dot.
             });
         });
-
         return () => unsubscribers.forEach(unsub => unsub());
     };
     
+    const groupsQuery = query(collection(db, "groups"), where("members", "array-contains", currentUser.uid));
+    const unsubGroups = onSnapshot(groupsQuery, (groupsSnap) => {
+        groupsSnap.docs.forEach(groupDoc => {
+             const q = query(
+                collection(db, "chats", groupDoc.id, "messages"),
+                where("sender", "!=", currentUser.uid)
+            );
+             onSnapshot(q, (snapshot) => {
+                const hasUnread = snapshot.docs.some(doc => {
+                    const data = doc.data();
+                    return !data.readBy || !data.readBy.includes(currentUser.uid)
+                });
+                if (hasUnread) {
+                    setHasUnreadMessages(true);
+                }
+            });
+        })
+    });
+    
     fetchMutualsAndListen();
+    return () => unsubGroups();
 
   }, [currentUser]);
+
+  // Listener for general notifications
+  useEffect(() => {
+    if (!currentUser) {
+        setHasUnreadNotifs(false);
+        return;
+    }
+    const q = query(collection(db, "notifications", currentUser.uid, "user_notifications"), where("read", "==", false));
+    const unsub = onSnapshot(q, (snapshot) => {
+        setHasUnreadNotifs(!snapshot.empty);
+    });
+    return () => unsub();
+  }, [currentUser]);
+
 
   const hideNav = pathname === "/login" || pathname === "/signup" || pathname === "/" || isCalling;
 

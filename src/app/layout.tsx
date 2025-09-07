@@ -1,3 +1,4 @@
+
 import "./globals.css";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -15,7 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className="relative min-h-screen">
         <AppStateProvider>
-          <main className="pb-40">
+          <main className="pb-24">
             {children}
           </main>
           <GlobalMusicPlayer />

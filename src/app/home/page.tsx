@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useState, useEffect } from "react";
 import CreatePostModal from "./CreatePostModal";
@@ -68,7 +69,7 @@ export default function HomePage() {
     : posts;
 
   return (
-    <div className="flex flex-col min-h-screen pt-6 pb-24 px-2 md:px-8 transition-colors">
+    <div className="flex flex-col min-h-screen pt-6 pb-24 px-4 sm:px-6 lg:px-8">
       <div className="w-full max-w-2xl mx-auto">
       {/* Centered, prominent search bar */}
       <div className="flex justify-center items-center mb-6 w-full">
