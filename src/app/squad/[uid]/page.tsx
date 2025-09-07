@@ -7,6 +7,7 @@ import { auth } from "@/utils/firebaseClient";
 import { PostCard } from "@/components/PostCard";
 import { FollowButton } from "@/components/FollowButton";
 import { Star } from "lucide-react";
+import { FollowListModal } from "@/components/FollowListModal";
 
 const db = getFirestore();
 
@@ -22,6 +23,7 @@ export default function UserProfilePage() {
   const [userPosts, setUserPosts] = useState<any[]>([]);
   const [starredPosts, setStarredPosts] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("posts");
+  const [showFollowList, setShowFollowList] = useState<null | 'followers' | 'following'>(null);
 
   useEffect(() => {
     const unsub = auth.onAuthStateChanged((user) => {
@@ -114,14 +116,14 @@ export default function UserProfilePage() {
             <span className="font-bold text-lg text-accent-cyan">{postCount}</span>
             <span className="text-xs text-gray-500">Posts</span>
           </div>
-          <div className="flex flex-col items-center">
+          <button className="flex flex-col items-center" onClick={() => setShowFollowList('followers')}>
             <span className="font-bold text-lg text-accent-cyan">{followers}</span>
-            <span className="text-xs text-gray-500">Followers</span>
-          </div>
-          <div className="flex flex-col items-center">
+            <span className="text-xs text-gray-500 hover:underline">Followers</span>
+          </button>
+          <button className="flex flex-col items-center" onClick={() => setShowFollowList('following')}>
             <span className="font-bold text-lg text-accent-cyan">{following}</span>
-            <span className="text-xs text-gray-500">Following</span>
-          </div>
+            <span className="text-xs text-gray-500 hover:underline">Following</span>
+          </button>
         </div>
         <div className="flex gap-2 flex-wrap justify-center mb-2">
           {profile.interests && profile.interests.split(",").map((interest: string) => (
@@ -171,6 +173,16 @@ export default function UserProfilePage() {
             )
         )}
       </div>
+      {showFollowList && uid && firebaseUser && (
+        <FollowListModal 
+            userId={uid} 
+            type={showFollowList} 
+            onClose={() => setShowFollowList(null)}
+            currentUser={firebaseUser}
+        />
+      )}
     </div>
   );
 }
+
+    

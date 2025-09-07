@@ -11,6 +11,7 @@ import { motion } from "framer-motion";
 import { PostCard } from "@/components/PostCard";
 import { FollowButton } from "@/components/FollowButton";
 import { getFunctions, httpsCallable } from "firebase/functions";
+import { FollowListModal } from "@/components/FollowListModal";
 
 const db = getFirestore();
 const functions = getFunctions();
@@ -58,6 +59,7 @@ export default function SquadPage() {
   const [userPosts, setUserPosts] = useState<any[]>([]);
   const [starredPosts, setStarredPosts] = useState<any[]>([]);
   const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [showFollowList, setShowFollowList] = useState<null | 'followers' | 'following'>(null);
 
   useEffect(() => {
     const unsubAuth = auth.onAuthStateChanged(async (user) => {
@@ -194,14 +196,14 @@ export default function SquadPage() {
             <span className="font-bold text-lg text-accent-cyan">{postCount}</span>
             <span className="text-xs text-gray-500">Posts</span>
           </div>
-          <div className="flex flex-col items-center">
+          <button className="flex flex-col items-center" onClick={() => setShowFollowList('followers')}>
             <span className="font-bold text-lg text-accent-cyan">{followers}</span>
-            <span className="text-xs text-gray-500">Followers</span>
-          </div>
-          <div className="flex flex-col items-center">
+            <span className="text-xs text-gray-500 hover:underline">Followers</span>
+          </button>
+          <button className="flex flex-col items-center" onClick={() => setShowFollowList('following')}>
             <span className="font-bold text-lg text-accent-cyan">{following}</span>
-            <span className="text-xs text-gray-500">Following</span>
-          </div>
+            <span className="text-xs text-gray-500 hover:underline">Following</span>
+          </button>
         </div>
         <div className="flex gap-2 flex-wrap justify-center mb-2">
           {profile.interests && profile.interests.split(",").map((interest: string) => (
@@ -284,6 +286,14 @@ export default function SquadPage() {
       )}
       {showSettings && profile && firebaseUser && (
         <SettingsModal profile={profile} firebaseUser={firebaseUser} onClose={() => setShowSettings(false)} />
+      )}
+      {showFollowList && firebaseUser && (
+        <FollowListModal 
+            userId={firebaseUser.uid} 
+            type={showFollowList} 
+            onClose={() => setShowFollowList(null)}
+            currentUser={firebaseUser}
+        />
       )}
     </div>
   );
@@ -668,3 +678,5 @@ function DeleteAccountModal({ profile, onClose }: { profile: any, onClose: () =>
         </div>
     )
 }
+
+    
