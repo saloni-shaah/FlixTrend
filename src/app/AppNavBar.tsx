@@ -3,11 +3,7 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useAppState } from "@/utils/AppStateContext";
-<<<<<<< HEAD
 import { Home, Search, Users, MessageSquare, Bell } from "lucide-react";
-=======
-import { Home, Search, Users, MessageSquare } from "lucide-react";
->>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { getFirestore, collection, query, where, onSnapshot, getDocs } from "firebase/firestore";
@@ -30,11 +26,7 @@ function NavButton({ href, icon: Icon, label, hasNotification }: { href: string;
         />
       )}
       {hasNotification && (
-<<<<<<< HEAD
         <div className="absolute top-0 right-1 w-2 h-2 bg-accent-pink rounded-full" />
-=======
-        <div className="absolute top-0 right-0 w-2 h-2 bg-accent-pink rounded-full" />
->>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
       )}
     </Link>
   );
@@ -44,15 +36,10 @@ export default function AppNavBar() {
   const pathname = usePathname();
   const { isCalling } = useAppState();
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
-<<<<<<< HEAD
   const [hasUnreadNotifs, setHasUnreadNotifs] = useState(false);
   const currentUser = auth.currentUser;
   
   // Listener for unread messages
-=======
-  const currentUser = auth.currentUser;
-  
->>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
   useEffect(() => {
     if (!currentUser) {
         setHasUnreadMessages(false);
@@ -64,30 +51,19 @@ export default function AppNavBar() {
         const followersRef = collection(db, "users", currentUser.uid, "followers");
         const [followingSnap, followersSnap] = await Promise.all([getDocs(followingRef), getDocs(followersRef)]);
         
-<<<<<<< HEAD
         const followingIds = followingSnap.docs.map(doc => doc.id);
         const followersIds = followersSnap.docs.map(doc => doc.id);
         const mutualUids = Array.from(new Set([...followingIds, ...followersIds]));
-=======
-        const following = followingSnap.docs.map(doc => doc.id);
-        const followers = followersSnap.docs.map(doc => doc.id);
-        const mutualUids = Array.from(new Set([...following, ...followers]));
->>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
 
         if (mutualUids.length === 0) return;
         
         const unsubscribers = mutualUids.map(uid => {
             const chatId = [currentUser.uid, uid].sort().join("_");
-<<<<<<< HEAD
-=======
-            // Simplified query to fetch messages from the other user
->>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
             const q = query(
                 collection(db, "chats", chatId, "messages"),
                 where("sender", "!=", currentUser.uid)
             );
             return onSnapshot(q, (snapshot) => {
-<<<<<<< HEAD
                 const hasUnread = snapshot.docs.some(doc => {
                     const data = doc.data();
                     // Check if readBy exists and if the current user's UID is NOT in it
@@ -139,25 +115,6 @@ export default function AppNavBar() {
   }, [currentUser]);
 
 
-=======
-                // Filter for unread messages on the client side
-                const hasUnread = snapshot.docs.some(doc => doc.data().read === false);
-                if (hasUnread) {
-                    setHasUnreadMessages(true);
-                }
-                // Note: This logic doesn't reset to false perfectly once all messages are read app-wide
-                // without a more complex state management, but it's effective for showing the notification dot.
-            });
-        });
-
-        return () => unsubscribers.forEach(unsub => unsub());
-    };
-    
-    fetchMutualsAndListen();
-
-  }, [currentUser]);
-
->>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
   const hideNav = pathname === "/login" || pathname === "/signup" || pathname === "/" || isCalling;
 
   if (hideNav) return null;

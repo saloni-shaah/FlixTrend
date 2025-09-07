@@ -2,33 +2,16 @@
 "use client";
 import React from 'react';
 import { useAppState } from '@/utils/AppStateContext';
-<<<<<<< HEAD
 import { Play, Pause, X, SkipBack, SkipForward } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export function GlobalMusicPlayer() {
   const { activeSong, isPlaying, toggleSong, playNext, playPrevious } = useAppState();
-=======
-import { Play, Pause, X } from 'lucide-react';
-import { motion } from 'framer-motion';
-
-export function GlobalMusicPlayer() {
-  const { activeSong, isPlaying, toggleSong, pauseSong } = useAppState();
->>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
 
   if (!activeSong) {
     return null;
   }
 
-<<<<<<< HEAD
-=======
-  const handleClose = () => {
-    pauseSong();
-    // A function to clear the active song would be needed in context for full functionality
-    // For now, pauseSong effectively stops it.
-  };
-
->>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
   return (
     <motion.div
       initial={{ y: 100 }}
@@ -47,7 +30,6 @@ export function GlobalMusicPlayer() {
           <p className="font-bold text-accent-cyan truncate">{activeSong.title}</p>
           <p className="text-sm text-gray-400 truncate">{activeSong.artist}</p>
         </div>
-<<<<<<< HEAD
         <div className="flex items-center gap-2">
           <button onClick={playPrevious} className="p-2 text-gray-300 hover:text-white transition-colors">
             <SkipBack size={20} />
@@ -62,17 +44,6 @@ export function GlobalMusicPlayer() {
             <SkipForward size={20} />
           </button>
         </div>
-=======
-        <button
-          onClick={toggleSong}
-          className="p-3 rounded-full bg-accent-cyan text-black shadow-lg hover:scale-110 transition-transform"
-        >
-          {isPlaying ? <Pause size={20} /> : <Play size={20} />}
-        </button>
-        {/* <button onClick={handleClose} className="p-2 text-gray-400 hover:text-white">
-          <X size={20}/>
-        </button> */}
->>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
       </div>
     </motion.div>
   );

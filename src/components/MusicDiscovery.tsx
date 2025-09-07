@@ -1,17 +1,9 @@
-<<<<<<< HEAD
 
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Play, Pause, Plus, Music, Search } from 'lucide-react';
 import { getFirestore, collection, addDoc, serverTimestamp, query, onSnapshot, orderBy, where, updateDoc, arrayUnion, doc } from 'firebase/firestore';
-=======
-"use client";
-import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { Play, Pause, Plus, Music } from 'lucide-react';
-import { getFirestore, collection, addDoc, serverTimestamp, query, onSnapshot, orderBy } from 'firebase/firestore';
->>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
 import { auth } from '@/utils/firebaseClient';
 import { useAppState } from '@/utils/AppStateContext';
 
@@ -149,7 +141,6 @@ function AddMusicModal({ onClose }: { onClose: () => void }) {
     );
 }
 
-<<<<<<< HEAD
 function AddToPlaylistModal({ song, onClose }: { song: any; onClose: () => void }) {
     const [playlists, setPlaylists] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -231,18 +222,12 @@ function AddToPlaylistModal({ song, onClose }: { song: any; onClose: () => void 
     );
 }
 
-=======
->>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
-
 export function MusicDiscovery() {
     const [songs, setSongs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [showAddModal, setShowAddModal] = useState(false);
-<<<<<<< HEAD
     const [showPlaylistModal, setShowPlaylistModal] = useState<any | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
-=======
->>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
     const { activeSong, isPlaying, playSong, pauseSong } = useAppState();
 
     useEffect(() => {
@@ -254,7 +239,6 @@ export function MusicDiscovery() {
         return () => unsub();
     }, []);
     
-<<<<<<< HEAD
     const handlePlayPause = (song: any, index: number) => {
         if (activeSong?.id === song.id && isPlaying) {
             pauseSong();
@@ -271,21 +255,10 @@ export function MusicDiscovery() {
           )
         : songs;
 
-=======
-    const handlePlayPause = (song: any) => {
-        if (activeSong?.id === song.id && isPlaying) {
-            pauseSong();
-        } else {
-            playSong(song);
-        }
-    };
-
->>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
     if (loading) return <div className="text-center text-accent-cyan animate-pulse">Loading music library...</div>
 
     return (
         <div className="w-full flex flex-col items-center relative">
-<<<<<<< HEAD
             <h2 className="text-3xl font-headline bg-gradient-to-r from-accent-pink to-accent-green bg-clip-text text-transparent mb-6">Community Music</h2>
             
              <div className="relative mb-8 w-full max-w-lg mx-auto">
@@ -332,32 +305,6 @@ export function MusicDiscovery() {
                                 </button>
                             </div>
                             <div className="p-4 w-full cursor-pointer" onClick={() => handlePlayPause(song, index)}>
-=======
-            <h2 className="text-3xl font-headline bg-gradient-to-r from-accent-pink to-accent-cyan bg-clip-text text-transparent mb-8">Community Music</h2>
-            
-            {songs.length === 0 ? (
-                <div className="text-center text-gray-400 mt-16">
-                    <Music size={64} className="mx-auto mb-4"/>
-                    <h3 className="text-xl font-bold">The Stage is Empty</h3>
-                    <p>Be the first to upload a song and share it with the community!</p>
-                </div>
-            ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                    {songs.map(song => (
-                        <motion.div
-                            key={song.id}
-                            className="glass-card flex flex-col items-center text-center group cursor-pointer"
-                            whileHover={{ scale: 1.05 }}
-                            onClick={() => handlePlayPause(song)}
-                        >
-                            <div className="relative w-full">
-                                <img src={song.albumArtUrl} alt={song.title} className="w-full h-auto rounded-t-2xl aspect-square object-cover"/>
-                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                    {activeSong?.id === song.id && isPlaying ? <Pause size={48} className="text-white"/> : <Play size={48} className="text-white"/>}
-                                </div>
-                            </div>
-                            <div className="p-4 w-full">
->>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
                                 <h3 className="font-headline text-base font-bold mb-1 text-accent-cyan truncate">{song.title}</h3>
                                 <p className="text-xs text-gray-400 truncate">{song.artist}</p>
                             </div>
@@ -375,15 +322,9 @@ export function MusicDiscovery() {
             </button>
 
             {showAddModal && <AddMusicModal onClose={() => setShowAddModal(false)} />}
-<<<<<<< HEAD
             {showPlaylistModal && <AddToPlaylistModal song={showPlaylistModal} onClose={() => setShowPlaylistModal(null)} />}
         </div>
     );
 }
 
     
-=======
-        </div>
-    );
-}
->>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf

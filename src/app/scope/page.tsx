@@ -1,24 +1,13 @@
-<<<<<<< HEAD
 
 "use client";
 import React, { useState, useEffect } from "react";
 import { getFirestore, collection, query, onSnapshot, getDocs, orderBy } from "firebase/firestore";
-=======
-"use client";
-import React, { useState, useEffect } from "react";
-import { getFirestore, collection, query, onSnapshot, getDocs } from "firebase/firestore";
->>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
 import { app, auth } from "@/utils/firebaseClient";
 import { ShortVibesPlayer } from "@/components/ShortVibesPlayer";
 import { FollowButton } from "@/components/FollowButton";
 import Link from "next/link";
-<<<<<<< HEAD
 import { motion, AnimatePresence } from "framer-motion";
 import { Flame, Music, Gamepad2, Compass, Crown, Heart } from "lucide-react";
-=======
-import { motion } from "framer-motion";
-import { Flame, Music, Gamepad2, Compass } from "lucide-react";
->>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
 import { MusicDiscovery } from "@/components/MusicDiscovery";
 import { GamesHub } from "@/components/GamesHub";
 
@@ -29,13 +18,9 @@ function ForYouContent() {
   const [loading, setLoading] = useState(true);
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
-<<<<<<< HEAD
   const [topPosters, setTopPosters] = useState<any[]>([]);
   const [topLiked, setTopLiked] = useState<any[]>([]);
 
-=======
-  const [trendingTags, setTrendingTags] = useState<string[]>([]);
->>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
 
   useEffect(() => {
     const unsubAuth = auth.onAuthStateChanged((user) => {
@@ -44,11 +29,7 @@ function ForYouContent() {
 
     const q = query(collection(db, "posts"));
 
-<<<<<<< HEAD
     const unsubPosts = onSnapshot(q, async (snapshot) => {
-=======
-    const unsubPosts = onSnapshot(q, (snapshot) => {
->>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
       const allPosts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       
       const videos = allPosts.filter(post => 
@@ -56,7 +37,6 @@ function ForYouContent() {
       );
       setShortVibes(videos);
 
-<<<<<<< HEAD
       // Calculate Top Posters
       const postCounts: { [userId: string]: number } = {};
       allPosts.forEach(post => {
@@ -96,18 +76,6 @@ function ForYouContent() {
           return user ? { ...user, count: likeCounts[uid] } : null;
       }).filter(Boolean);
       setTopLiked(topLikedData);
-=======
-      const tagCounts: { [tag: string]: number } = {};
-      allPosts.forEach(post => {
-          if (post.hashtags && Array.isArray(post.hashtags)) {
-              post.hashtags.forEach((tag: string) => {
-                  tagCounts[tag] = (tagCounts[tag] || 0) + 1;
-              });
-          }
-      });
-      const sortedTags = Object.keys(tagCounts).sort((a, b) => tagCounts[b] - tagCounts[a]);
-      setTrendingTags(sortedTags.slice(0, 10));
->>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
       
       setLoading(false);
     }, (error) => {
@@ -115,17 +83,6 @@ function ForYouContent() {
       setLoading(false);
     });
     
-<<<<<<< HEAD
-=======
-    async function fetchAllUsers() {
-      const usersSnap = await getDocs(collection(db, "users"));
-      const usersData = usersSnap.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
-      setAllUsers(usersData);
-    }
-    
-    fetchAllUsers();
-
->>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
     return () => {
       unsubAuth();
       unsubPosts();
@@ -138,18 +95,13 @@ function ForYouContent() {
 
   if (loading) {
     return (
-<<<<<<< HEAD
       <div className="flex flex-col items-center justify-center text-center p-4">
-=======
-      <div className="flex flex-col min-h-screen items-center justify-center text-center p-4 pb-24">
->>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
         <div className="text-4xl animate-pulse">🎬</div>
         <p className="text-lg text-muted-foreground mt-2">Loading Vibes...</p>
       </div>
     );
   }
 
-<<<<<<< HEAD
   const CreatorCard = ({ user, type, rank }: { user: any, type: 'posts' | 'likes', rank: number }) => (
     <Link href={`/squad/${user.uid}`} className="block">
         <motion.div 
@@ -180,17 +132,10 @@ function ForYouContent() {
     <div className="flex flex-col items-center w-full">
       <h2 className="text-2xl font-headline text-accent-cyan mb-4 font-bold">Short Vibes</h2>
       <div className="w-full max-w-md h-[32rem] mb-8">
-=======
-  return (
-    <div className="flex flex-col items-center w-full">
-      <h2 className="text-2xl font-headline text-accent-cyan mb-4 font-bold">Short Vibes</h2>
-      <div className="w-full max-w-md h-[70vh] mb-8">
->>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
           <ShortVibesPlayer shortVibes={shortVibes} />
       </div>
 
       <div className="mt-8 w-full max-w-4xl mx-auto">
-<<<<<<< HEAD
           <h3 className="text-2xl font-headline bg-gradient-to-r from-accent-pink to-accent-cyan bg-clip-text text-transparent mb-4 text-center">TrendBoard</h3>
           <div className="grid md:grid-cols-2 gap-8">
             <div>
@@ -206,26 +151,6 @@ function ForYouContent() {
               </div>
             </div>
           </div>
-=======
-          <h3 className="text-xl font-headline bg-gradient-to-r from-accent-pink to-accent-cyan bg-clip-text text-transparent mb-4">TrendBoard</h3>
-          <motion.div 
-              className="glass-card p-4 flex flex-wrap gap-3 justify-center"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-          >
-              {trendingTags.length > 0 ? trendingTags.map(tag => (
-                  <motion.button 
-                      key={tag}
-                      className="btn-glass flex items-center gap-2"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                  >
-                      <Flame className="text-red-400" /> #{tag}
-                  </motion.button>
-              )) : <p className="text-muted-foreground">No trending tags yet.</p>}
-          </motion.div>
->>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
       </div>
 
       <div className="mt-12 w-full max-w-4xl mx-auto">
@@ -263,7 +188,6 @@ function ForYouContent() {
 }
 
 export default function ScopePage() {
-<<<<<<< HEAD
   const [activeTab, setActiveTab] = useState(0);
 
   const tabs = [
@@ -325,34 +249,11 @@ export default function ScopePage() {
                 <tab.icon size={20} />
                 <span>{tab.label}</span>
               </span>
-=======
-  const [activeTab, setActiveTab] = useState("for-you");
-
-  const tabs = [
-    { id: "for-you", label: "For You", icon: Compass },
-    { id: "music", label: "Music", icon: Music },
-    { id: "games", label: "Games", icon: Gamepad2 },
-  ];
-
-  return (
-    <div className="flex flex-col min-h-screen items-center p-4 pb-24 pt-16">
-      <div className="w-full max-w-4xl mb-8">
-        <div className="glass-card p-2 flex justify-around items-center rounded-full">
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 px-4 py-2 rounded-full font-bold text-sm md:text-base flex items-center justify-center gap-2 transition-all ${activeTab === tab.id ? "bg-accent-cyan text-primary shadow-lg" : "bg-transparent text-muted-foreground"}`}
-            >
-              <tab.icon size={20} />
-              <span>{tab.label}</span>
->>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
             </button>
           ))}
         </div>
       </div>
 
-<<<<<<< HEAD
       <div className="w-full flex-1 relative min-h-[60vh] overflow-y-auto">
         <AnimatePresence initial={false} custom={activeTab}>
              <motion.div
@@ -375,18 +276,9 @@ export default function ScopePage() {
                 {tabs[activeTab].component}
              </motion.div>
         </AnimatePresence>
-=======
-      <div className="w-full max-w-5xl">
-        {activeTab === "for-you" && <ForYouContent />}
-        {activeTab === "music" && <MusicDiscovery />}
-        {activeTab === "games" && <GamesHub />}
->>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
       </div>
     </div>
   );
 }
-<<<<<<< HEAD
 
     
-=======
->>>>>>> 41a2162a78298df970810cb54c8ed33fc2c24ecf
