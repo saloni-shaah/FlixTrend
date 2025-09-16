@@ -29,7 +29,7 @@ export function TrendChase() {
     const [gameState, setGameState] = useState<'idle' | 'playing' | 'ended'>('idle');
     const [score, setScore] = useState(0);
     const [timeLeft, setTimeLeft] = useState(GAME_DURATION);
-    const [currentPosts, setCurrentPosts] = useState<{ real: any, fake: any } | null>(null);
+    const [currentPosts, setCurrentPosts] = useState<any[]>([]);
     const [loadingNext, setLoadingNext] = useState(true);
     const [feedback, setFeedback] = useState<'correct' | 'incorrect' | null>(null);
 
@@ -37,24 +37,47 @@ export function TrendChase() {
         setLoadingNext(true);
         setFeedback(null);
         
-        // 1. Fetch a random real post from Firestore
-        const postsRef = collection(db, "posts");
-        const q = query(postsRef, orderBy("createdAt", "desc"), limit(20)); // Fetch 20 recent posts
-        const postsSnap = await getDocs(q);
-        const posts = postsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        const realPost = posts[Math.floor(Math.random() * posts.length)];
+        try {
+            // 1. Fetch recent real posts
+            const postsRef = collection(db, "posts");
+            const q = query(postsRef, orderBy("createdAt", "desc"), limit(20));
+            const postsSnap = await getDocs(q);
+            const posts = postsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            
+            if (posts.length === 0) {
+                // Handle case where there are no posts
+                setGameState('ended');
+                alert("Not enough posts to play Trend Chase!");
+                return;
+            }
 
-        // 2. Generate a fake post using the AI flow
-        const fakePost = await generateFakePost({ theme: realPost.hashtags?.[0] || 'social media' });
+            const realPost = posts[Math.floor(Math.random() * posts.length)];
 
-        // 3. Randomly shuffle their positions
-        const isRealFirst = Math.random() > 0.5;
-        setCurrentPosts({
-            real: { ...realPost, isReal: true },
-            fake: { ...fakePost, isReal: false }
-        });
+            // 2. Generate fake posts
+            const fakePostPromises = [
+                generateFakePost({ theme: realPost.hashtags?.[0] || 'social media' }),
+                generateFakePost({ theme: 'random' }),
+                generateFakePost({ theme: 'funny' })
+            ];
+            const fakePostsData = await Promise.all(fakePostPromises);
 
-        setLoadingNext(false);
+            const allPosts = [
+                { ...realPost, isReal: true },
+                { ...fakePostsData[0], isReal: false },
+                { ...fakePostsData[1], isReal: false },
+                { ...fakePostsData[2], isReal: false }
+            ];
+
+            // 3. Shuffle the posts
+            const shuffledPosts = allPosts.sort(() => Math.random() - 0.5);
+            setCurrentPosts(shuffledPosts);
+
+        } catch (error) {
+            console.error("Error fetching posts for round:", error);
+            // Handle error, maybe end the game
+        } finally {
+            setLoadingNext(false);
+        }
     }, []);
 
     useEffect(() => {
@@ -75,8 +98,10 @@ export function TrendChase() {
     }, [gameState, fetchPostsForRound]);
 
     const handleSelectPost = (isSelectedReal: boolean) => {
+        if (!!feedback) return;
+
         if (isSelectedReal) {
-            setScore(s => s + 1);
+            setScore(s => s + 100 + timeLeft); // Base points + time bonus
             setFeedback('correct');
         } else {
             setFeedback('incorrect');
@@ -102,7 +127,7 @@ export function TrendChase() {
                 className="w-full max-w-4xl glass-card p-8 text-center"
             >
                 <h2 className="text-3xl font-headline text-accent-pink mb-4">Trend Chase</h2>
-                <p className="text-gray-400 mb-8">Can you spot the real vibe? Two posts will appear. One is a certified trend, the other is a fake. Choose wisely and quickly!</p>
+                <p className="text-gray-400 mb-8">Fast-paced bluff-detection. Given a set of posts, pick the real trending one. Speed + accuracy win.</p>
                 <button className="btn-glass bg-accent-pink text-white text-xl" onClick={startGame}>Start Game</button>
             </motion.div>
         );
@@ -127,7 +152,7 @@ export function TrendChase() {
         <div className="w-full max-w-4xl">
             <div className="flex justify-between items-center mb-4 text-white">
                 <div className="text-xl font-bold">Score: <span className="text-brand-gold">{score}</span></div>
-                <div className="text-xl font-bold">Time: <span className="text-accent-pink">{timeLeft}</span></div>
+                <div className="text-xl font-bold">Time: <span className="text-accent-pink">{timeLeft}s</span></div>
             </div>
 
             <div className="relative">
@@ -138,15 +163,16 @@ export function TrendChase() {
                 ) : (
                     <AnimatePresence mode="wait">
                         <motion.div
-                            key={currentPosts?.real.id}
+                            key={currentPosts[0]?.id || Math.random()}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -20}}
                             transition={{ duration: 0.3 }}
                             className="grid grid-cols-1 md:grid-cols-2 gap-6"
                         >
-                            <GamePostCard post={currentPosts?.real} onSelect={() => handleSelectPost(true)} disabled={!!feedback} />
-                            <GamePostCard post={currentPosts?.fake} onSelect={() => handleSelectPost(false)} disabled={!!feedback} />
+                            {currentPosts.map((post, index) => (
+                                <GamePostCard key={index} post={post} onSelect={() => handleSelectPost(post.isReal)} disabled={!!feedback} />
+                            ))}
                         </motion.div>
                     </AnimatePresence>
                 )}
@@ -163,4 +189,3 @@ export function TrendChase() {
         </div>
     );
 }
-

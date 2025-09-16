@@ -4,8 +4,6 @@
  * Used by the "Trend Chase" game to create distractors.
  *
  * - generateFakePost: The main function to call the flow.
- * - GenerateFakePostInput: The input type for the flow.
- * - GenerateFakePostOutput: The return type for the flow.
  */
 
 import { ai } from '@/ai/ai';
@@ -14,14 +12,11 @@ import { z } from 'zod';
 const GenerateFakePostInputSchema = z.object({
   theme: z.string().describe('The theme or topic for the fake post, like "tech", "music", or "fashion".'),
 });
-export type GenerateFakePostInput = z.infer<typeof GenerateFakePostInputSchema>;
 
 const GenerateFakePostOutputSchema = z.object({
   username: z.string().describe("A plausible but fake username for a social media user (e.g., 'VibeMaster22', 'AstroKay'). Should not use real names."),
   content: z.string().describe('The text content of the fake social media post. Should be a short, engaging, and believable post related to the theme. Use Gen-Z style language and emojis.'),
 });
-export type GenerateFakePostOutput = z.infer<typeof GenerateFakePostOutputSchema>;
-
 
 const prompt = ai.definePrompt({
   name: 'generateFakePostPrompt',
@@ -49,6 +44,6 @@ const generateFakePostFlow = ai.defineFlow(
 );
 
 // Wrapper function for client-side calling
-export async function generateFakePost(input: GenerateFakePostInput): Promise<GenerateFakePostOutput> {
+export async function generateFakePost(input: z.infer<typeof GenerateFakePostInputSchema>): Promise<z.infer<typeof GenerateFakePostOutputSchema>> {
   return await generateFakePostFlow(input);
 }
