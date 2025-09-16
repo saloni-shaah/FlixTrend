@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview An AI flow to generate realistic but fake social media posts.
@@ -12,12 +11,12 @@
 import { ai } from '@/ai/ai';
 import { z } from 'zod';
 
-export const GenerateFakePostInputSchema = z.object({
+const GenerateFakePostInputSchema = z.object({
   theme: z.string().describe('The theme or topic for the fake post, like "tech", "music", or "fashion".'),
 });
 export type GenerateFakePostInput = z.infer<typeof GenerateFakePostInputSchema>;
 
-export const GenerateFakePostOutputSchema = z.object({
+const GenerateFakePostOutputSchema = z.object({
   username: z.string().describe("A plausible but fake username for a social media user (e.g., 'VibeMaster22', 'AstroKay'). Should not use real names."),
   content: z.string().describe('The text content of the fake social media post. Should be a short, engaging, and believable post related to the theme. Use Gen-Z style language and emojis.'),
 });
