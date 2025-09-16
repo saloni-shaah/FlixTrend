@@ -1,57 +1,86 @@
 
 "use client";
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Gamepad2, Users, Heart, Bot, Brain, MapPin, Search, Music, Video } from 'lucide-react';
+import { Users, Video, MapPin, Brain, Bot, ArrowLeft } from 'lucide-react';
+import { TrendChase } from './games/TrendChase';
+import { FlashPollWars } from './games/FlashPollWars';
+import { SquadQuests } from './games/SquadQuests';
+import { TapTheVibe } from './games/TapTheVibe';
+import { FlixSwipe } from './games/FlixSwipe';
+import { SpotTheFake } from './games/SpotTheFake';
+import { RadarHunt } from './games/RadarHunt';
+import { GeoVibes } from './games/GeoVibes';
+import { CaptionClash } from './games/CaptionClash';
+import { VibePuzzle } from './games/VibePuzzle';
+import { EmojiDecode } from './games/EmojiDecode';
+import { AIRoastBattle } from './games/AIRoastBattle';
+import { DailyAlmightyChallenge } from './games/DailyAlmightyChallenge';
+import { AIVsYou } from './games/AIVsYou';
 
 const gameCategories = [
     {
         title: "Social & Interactive",
         icon: <Users className="text-accent-pink"/>,
         games: [
-            { name: "Trend Chase", description: "Quickly pick the real trending post among fakes. Compete with friends for the top spot!" },
-            { name: "Flash Poll Wars", description: "Predict which side of a fun poll will get the majority vote. Settle debates with data." },
-            { name: "Squad Quests", description: "Team up with your squad to solve daily riddles and meme puzzles." },
+            { id: 'trend-chase', name: "Trend Chase", description: "Quickly pick the real trending vibe (post) out of fake ones. Compete with friends.", component: TrendChase },
+            { id: 'flash-poll-wars', name: "Flash Poll Wars", description: "Users get fun polls (“Best song of 2025?”, “This or That vibes?”) and compete to predict which side gets the majority.", component: FlashPollWars },
+            { id: 'squad-quests', name: "Squad Quests", description: "A collaborative challenge where a squad (friends/followers) solves short riddles or meme puzzles daily.", component: SquadQuests },
         ]
     },
     {
-        title: "Quick Play",
+        title: "Quick Play, TikTok/Shorts Style",
         icon: <Video className="text-accent-cyan"/>,
         games: [
-            { name: "Tap the Vibe", description: "A rhythm game synced to music from posts. Tap to the beat!" },
-            { name: "FlixSwipe", description: "Rapidly categorize posts into 'Music', 'Meme', or 'Movie' before the timer runs out." },
-            { name: "Spot the Fake", description: "Two posts appear. One is AI-generated. Can you spot the real one?" },
+            { id: 'tap-the-vibe', name: "Tap the Vibe", description: "A rhythm game synced with music/audio from posts. Like a mini beat-tap game in the feed.", component: TapTheVibe },
+            { id: 'flix-swipe', name: "FlixSwipe", description: "Users swipe fast to match posts with categories (“Music”, “Meme”, “Movie”) before timer ends.", component: FlixSwipe },
+            { id: 'spot-the-fake', name: "Spot the Fake", description: "Show two posts; one is AI-generated or fake, the other is real. Guess quick.", component: SpotTheFake },
         ]
     },
     {
-        title: "Location & Social",
+        title: "Location & Social Twist",
         icon: <MapPin className="text-accent-green"/>,
         games: [
-            { name: "Radar Hunt", description: "AR-style treasure hunts where hints are posted as vibes in the feed." },
-            { name: "Geo Vibes", description: "Unlock badges by posting vibes from different real-world locations." },
+            { id: 'radar-hunt', name: "Radar Hunt", description: "AR-style treasure hunts where hints are posted as vibes (like your treasure hunt idea for Teachers’ Day, but in-app).", component: RadarHunt },
+            { id: 'geo-vibes', name: "Geo Vibes", description: "A game where you unlock badges by vibing from different places (like posting from school, café, etc.).", component: GeoVibes },
         ]
     },
     {
         title: "Brainy & Meme-Driven",
         icon: <Brain className="text-brand-gold"/>,
         games: [
-            { name: "Caption Clash", description: "A photo is shown. Submit the wittiest caption. Users vote for the best." },
-            { name: "Vibe Puzzle", description: "Solve mini jigsaw puzzles made from trending posts to unlock exclusive content." },
-            { name: "Emoji Decode", description: "Guess the movie, song, or meme from a string of emojis faster than your friends." },
+            { id: 'caption-clash', name: "Caption Clash", description: "Show a photo, users submit captions, others vote.", component: CaptionClash },
+            { id: 'vibe-puzzle', name: "Vibe Puzzle", description: "A mini image puzzle where trending posts break into tiles, and you solve to unlock it.", component: VibePuzzle },
+            { id: 'emoji-decode', name: "Emoji Decode", description: "Guess the movie/song/meme from emojis before others do.", component: EmojiDecode },
         ]
     },
     {
-        title: "Almighty AI Twist",
+        title: "Future-Forward / Almighty AI Twist",
         icon: <Bot className="text-accent-purple"/>,
         games: [
-            { name: "AI Roast Battle", description: "Almighty AI throws a funny roast at you. Reply with your best comeback. Let the votes decide!" },
-            { name: "Daily Almighty Challenge", description: "A daily quiz, riddle, or creative prompt from your AI companion. Earn badges for completing." },
-            { name: "AI vs You", description: "A fast-paced trivia duel between you and Almighty AI. Who's smarter?" },
+            { id: 'ai-roast-battle', name: "AI Roast Battle", description: "Almighty throws a funny roast at you; you reply with your roast. Friends vote winner.", component: AIRoastBattle },
+            { id: 'daily-almighty-challenge', name: "Daily Almighty Challenge", description: "Almighty gives you a quiz, riddle, or creative prompt. Completing it earns you badges.", component: DailyAlmightyChallenge },
+            { id: 'ai-vs-you', name: "AI vs You", description: "A mini trivia duel between Almighty and the user.", component: AIVsYou },
         ]
     }
 ];
 
 export function GamesHub() {
+    const [activeGame, setActiveGame] = useState<React.ComponentType<any> | null>(null);
+
+    const GameComponent = activeGame;
+
+    if (GameComponent) {
+        return (
+            <div className="w-full flex flex-col items-center">
+                <button onClick={() => setActiveGame(null)} className="btn-glass self-start mb-4 flex items-center gap-2">
+                    <ArrowLeft size={16}/> Back to Games
+                </button>
+                <GameComponent />
+            </div>
+        );
+    }
+
     return (
         <div className="w-full flex flex-col items-center">
             <h2 className="text-3xl font-headline bg-gradient-to-r from-accent-pink to-accent-green bg-clip-text text-transparent mb-8">
@@ -59,7 +88,7 @@ export function GamesHub() {
             </h2>
             
             <p className="text-center text-gray-400 mb-12 max-w-2xl">
-                Get ready for a new era of social gaming! These lightweight, interactive mini-games are built right into the FlixTrend experience. Challenge friends, join quests, and earn rewards. More games coming soon!
+                Get ready for a new era of social gaming! These lightweight, interactive mini-games are built right into the FlixTrend experience. Challenge friends, join quests, and earn rewards.
             </p>
 
             <div className="w-full space-y-12">
@@ -76,13 +105,16 @@ export function GamesHub() {
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {category.games.map(game => (
-                                <div key={game.name} className="glass-card p-6 flex flex-col gap-3 relative overflow-hidden">
-                                     <div className="absolute top-2 right-2 px-3 py-1 text-xs font-bold bg-accent-pink/20 text-accent-pink rounded-full">
-                                        Coming Soon
-                                    </div>
+                                <motion.div 
+                                    key={game.id} 
+                                    className="glass-card p-6 flex flex-col gap-3 hover:border-accent-cyan transition-colors duration-300 cursor-pointer"
+                                    whileHover={{ y: -5 }}
+                                    onClick={() => setActiveGame(() => game.component)}
+                                >
                                     <h4 className="font-bold text-lg text-accent-cyan">{game.name}</h4>
                                     <p className="text-sm text-gray-400 flex-1">{game.description}</p>
-                                </div>
+                                    <div className="text-right text-xs font-bold text-accent-pink">Play Now &rarr;</div>
+                                </motion.div>
                             ))}
                         </div>
                     </motion.section>
