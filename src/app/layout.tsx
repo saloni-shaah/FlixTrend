@@ -11,10 +11,14 @@ export const metadata: Metadata = {
   description: "Where Trends Find You First",
   other: {
     "google-adsense-account": "ca-pub-4402800926226975",
-  }
+  },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en">
       <head>
@@ -27,9 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="relative min-h-screen">
         <AppStateProvider>
-          <main className="pb-20 pt-6 px-4">
-            {children}
-          </main>
+          <main className="pb-20 pt-6 px-4">{children}</main>
           <GlobalMusicPlayer />
           <AppNavBar />
         </AppStateProvider>
