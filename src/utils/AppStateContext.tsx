@@ -1,0 +1,202 @@
+
+"use client";
+import React, { createContext, useState, useContext, ReactNode, useEffect, useRef } from 'react';
+import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp, Unsubscribe } from 'firebase/firestore';
+import { auth, app } from './firebaseClient';
+import { CallScreen } from '@/components/CallScreen';
+import { requestForToken } from './firebaseMessaging';
+
+const db = getFirestore(app);
+
+interface Call {
+  id: string;
+  [key: string]: any;
+}
+
+interface Song {
+  id: string;
+  audioUrl: string;
+  [key: string]: any;
+}
+
+interface AppState {
+  isCalling: boolean;
+  setIsCalling: (isCalling: boolean) => void;
+  callTarget: any | null;
+  setCallTarget: (target: any | null) => void;
+  activeCall: Call | null;
+  closeCall: () => void;
+  activeSong: Song | null;
+  isPlaying: boolean;
+  playSong: (song: Song, queue?: Song[], index?: number) => void;
+  pauseSong: () => void;
+  toggleSong: () => void;
+  playNext: () => void;
+  playPrevious: () => void;
+  audioPlayer: HTMLAudioElement | null;
+}
+
+const AppStateContext = createContext<AppState | undefined>(undefined);
+
+export function AppStateProvider({ children }: { children: ReactNode }) {
+  const [isCalling, setIsCalling] = useState(false);
+  const [callTarget, setCallTarget] = useState<any | null>(null);
+  const [activeCall, setActiveCall] = useState<Call | null>(null);
+  
+  const [activeSong, setActiveSong] = useState<Song | null>(null);
+  const [songQueue, setSongQueue] = useState<Song[]>([]);
+  const [currentSongIndex, setCurrentSongIndex] = useState<number>(-1);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Effect for handling push notification setup
+  useEffect(() => {
+    const handleToken = async (user: any) => {
+        try {
+            const token = await requestForToken();
+            if (token && user) {
+                console.log('FCM Token:', token);
+                const userDocRef = doc(db, 'users', user.uid);
+                await setDoc(userDocRef, { fcmToken: token, lastLogin: serverTimestamp() }, { merge: true });
+            }
+        } catch (error) {
+            console.error('Error getting FCM token:', error);
+        }
+    };
+    
+    let callUnsubscribe: Unsubscribe | null = null;
+    let callDocUnsubscribe: Unsubscribe | null = null;
+
+    const authUnsubscribe = auth.onAuthStateChanged(user => {
+      if (callUnsubscribe) callUnsubscribe();
+      if (callDocUnsubscribe) callDocUnsubscribe();
+      
+      if (user) {
+        handleToken(user);
+        const userDocRef = doc(db, 'users', user.uid);
+        callUnsubscribe = onSnapshot(userDocRef, (snap) => {
+          const data = snap.data();
+          const currentCallId = data?.currentCallId;
+          
+          if (callDocUnsubscribe) callDocUnsubscribe();
+
+          if (currentCallId) {
+            const callDocRef = doc(db, 'calls', currentCallId);
+            callDocUnsubscribe = onSnapshot(callDocRef, (callSnap) => {
+              if (callSnap.exists()) {
+                setActiveCall({ id: callSnap.id, ...callSnap.data() });
+              } else {
+                setActiveCall(null);
+              }
+            });
+          } else {
+            setActiveCall(null);
+          }
+        });
+      } else {
+        setActiveCall(null);
+      }
+    });
+
+    return () => {
+        authUnsubscribe();
+        if (callUnsubscribe) callUnsubscribe();
+        if (callDocUnsubscribe) callDocUnsubscribe();
+    };
+  }, []);
+  
+  useEffect(() => {
+    return () => {
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current = null;
+        }
+    }
+  }, []);
+
+  const startSong = (song: Song) => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+    const audio = new Audio(song.audioUrl);
+    audioRef.current = audio;
+    audio.play();
+
+    audio.addEventListener('play', () => setIsPlaying(true));
+    audio.addEventListener('pause', () => setIsPlaying(false));
+    audio.addEventListener('ended', playNext); // Play next song when current one ends
+
+    setActiveSong(song);
+    setIsPlaying(true);
+  };
+  
+  const playSong = (song: Song, queue: Song[] = [], index: number = -1) => {
+    startSong(song);
+    setSongQueue(queue);
+    setCurrentSongIndex(index);
+  };
+  
+  const pauseSong = () => {
+    if(audioRef.current) {
+        audioRef.current.pause();
+    }
+  };
+  
+  const toggleSong = () => {
+      if (isPlaying) {
+          pauseSong();
+      } else if(audioRef.current) {
+          audioRef.current.play();
+      }
+  };
+
+  const playNext = () => {
+    if (songQueue.length === 0) return;
+    const nextIndex = (currentSongIndex + 1) % songQueue.length;
+    setCurrentSongIndex(nextIndex);
+    startSong(songQueue[nextIndex]);
+  };
+
+  const playPrevious = () => {
+    if (songQueue.length === 0) return;
+    const prevIndex = (currentSongIndex - 1 + songQueue.length) % songQueue.length;
+    setCurrentSongIndex(prevIndex);
+    startSong(songQueue[prevIndex]);
+  };
+
+  const closeCall = () => {
+    setActiveCall(null);
+  };
+
+  const value = {
+    isCalling,
+    setIsCalling,
+    callTarget,
+    setCallTarget,
+    activeCall,
+    closeCall,
+    activeSong,
+    isPlaying,
+    playSong,
+    pauseSong,
+    toggleSong,
+    playNext,
+    playPrevious,
+    audioPlayer: audioRef.current,
+  };
+
+  return (
+    <AppStateContext.Provider value={value}>
+      {children}
+      {activeCall && <CallScreen call={activeCall} />}
+    </AppStateContext.Provider>
+  );
+}
+
+export function useAppState() {
+  const context = useContext(AppStateContext);
+  if (context === undefined) {
+    throw new Error('useAppState must be used within an AppStateProvider');
+  }
+  return context;
+}
