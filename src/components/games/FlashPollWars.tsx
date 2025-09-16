@@ -3,15 +3,17 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getFirestore, collection, query, where, orderBy, limit, getDocs, doc, onSnapshot } from 'firebase/firestore';
 import { app } from '@/utils/firebaseClient';
-import { Loader, BarChart3, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Loader, BarChart3, Clock, CheckCircle, XCircle, Trophy } from 'lucide-react';
 
 const db = getFirestore(app);
 
-const ROUND_DURATION = 10; // seconds
+const ROUND_DURATION = 10;
+const TOTAL_ROUNDS = 5;
 
 export function FlashPollWars() {
     const [gameState, setGameState] = useState<'idle' | 'playing' | 'results' | 'ended'>('idle');
     const [score, setScore] = useState(0);
+    const [round, setRound] = useState(0);
     const [currentPoll, setCurrentPoll] = useState<any>(null);
     const [loading, setLoading] = useState(false);
     const [roundTimeLeft, setRoundTimeLeft] = useState(ROUND_DURATION);
@@ -25,7 +27,8 @@ export function FlashPollWars() {
         setRoundTimeLeft(ROUND_DURATION);
 
         const postsRef = collection(db, "posts");
-        const q = query(postsRef, where("type", "==", "poll"), orderBy("createdAt", "desc"), limit(20));
+        // NOTE: This query requires a composite index in Firestore (type asc, createdAt desc)
+        const q = query(postsRef, where("type", "==", "poll"), orderBy("createdAt", "desc"), limit(50));
         const postsSnap = await getDocs(q);
         
         if (postsSnap.empty) {
@@ -40,24 +43,6 @@ export function FlashPollWars() {
         setLoading(false);
     }, []);
 
-    useEffect(() => {
-        let roundTimer: NodeJS.Timeout;
-        if (gameState === 'playing' && !loading) {
-            roundTimer = setInterval(() => {
-                setRoundTimeLeft(t => {
-                    if (t <= 1) {
-                        clearInterval(roundTimer);
-                        // Time's up, move to results
-                        calculateResults();
-                        return 0;
-                    }
-                    return t - 1;
-                });
-            }, 1000);
-        }
-        return () => clearInterval(roundTimer);
-    }, [gameState, loading]);
-    
     const calculateResults = useCallback(async () => {
         if (!currentPoll) return;
         setGameState('results');
@@ -87,22 +72,45 @@ export function FlashPollWars() {
         setPollResults(results);
 
         if (results.isCorrect) {
-             const rarity = 1 - (voteCounts[winningIndex] / totalVotes);
-             const points = 100 + Math.floor(rarity * 100);
+             const rarity = totalVotes > 0 ? 1 - (voteCounts[winningIndex] / totalVotes) : 0;
+             const points = 100 + Math.floor(rarity * 150); // Higher reward for predicting unpopular winners
              setScore(s => s + points);
         }
 
     }, [currentPoll, userPrediction]);
 
+    useEffect(() => {
+        let roundTimer: NodeJS.Timeout;
+        if (gameState === 'playing' && !loading) {
+            roundTimer = setInterval(() => {
+                setRoundTimeLeft(t => {
+                    if (t <= 1) {
+                        clearInterval(roundTimer);
+                        calculateResults();
+                        return 0;
+                    }
+                    return t - 1;
+                });
+            }, 1000);
+        }
+        return () => clearInterval(roundTimer);
+    }, [gameState, loading, calculateResults]);
+
     const startGame = () => {
         setScore(0);
+        setRound(1);
         fetchRandomPoll();
         setGameState('playing');
     };
     
     const nextRound = () => {
-        fetchRandomPoll();
-        setGameState('playing');
+        if (round >= TOTAL_ROUNDS) {
+            setGameState('ended');
+        } else {
+            setRound(r => r + 1);
+            fetchRandomPoll();
+            setGameState('playing');
+        }
     };
 
     const handlePrediction = (index: number) => {
@@ -134,13 +142,12 @@ export function FlashPollWars() {
 
     return (
         <div className="w-full max-w-2xl">
-             <div className="flex justify-between items-center mb-4 text-white p-2 glass-card">
-                <div className="text-xl font-bold">Score: <span className="text-brand-gold">{score}</span></div>
-                {gameState === 'playing' && (
-                    <div className="flex items-center gap-2 text-xl font-bold text-accent-cyan">
-                        <Clock size={20}/> {roundTimeLeft}s
-                    </div>
-                )}
+             <div className="flex justify-between items-center mb-4 text-white p-3 glass-card">
+                <div className="text-lg font-bold">Score: <span className="text-brand-gold">{score}</span></div>
+                <div className="text-lg font-bold">Round: <span className="text-accent-cyan">{round} / {TOTAL_ROUNDS}</span></div>
+                 <div className="flex items-center gap-2 text-lg font-bold text-accent-cyan">
+                    <Clock size={20}/> {roundTimeLeft}s
+                </div>
             </div>
 
             {loading ? (
@@ -157,9 +164,9 @@ export function FlashPollWars() {
                             return (
                                 <div key={index}>
                                     <button 
-                                        className={`w-full p-4 rounded-full font-bold text-lg transition-all relative overflow-hidden btn-glass ${userPrediction !== null ? 'cursor-not-allowed' : ''} ${isPredicted ? 'ring-4 ring-accent-cyan' : ''}`}
+                                        className={`w-full p-4 rounded-full font-bold text-lg transition-all relative overflow-hidden btn-glass ${gameState !== 'playing' ? 'cursor-not-allowed' : ''} ${isPredicted ? 'ring-4 ring-accent-cyan' : ''}`}
                                         onClick={() => handlePrediction(index)}
-                                        disabled={userPrediction !== null}
+                                        disabled={gameState !== 'playing'}
                                     >
                                         <AnimatePresence>
                                         {gameState === 'results' && (
@@ -183,11 +190,13 @@ export function FlashPollWars() {
                      {gameState === 'results' && pollResults && (
                         <motion.div initial={{ opacity: 0, y:10 }} animate={{ opacity: 1, y:0}} className="text-center mt-6">
                             {pollResults.isCorrect ? (
-                                <p className="text-2xl font-bold text-green-400 flex items-center justify-center gap-2"><CheckCircle/> You got it right!</p>
+                                <p className="text-2xl font-bold text-green-400 flex items-center justify-center gap-2"><Trophy/> You predicted the winner!</p>
                             ) : (
                                 <p className="text-2xl font-bold text-red-500 flex items-center justify-center gap-2"><XCircle/> Not quite!</p>
                             )}
-                            <button className="btn-glass bg-accent-cyan text-black mt-4" onClick={nextRound}>Next Round</button>
+                            <button className="btn-glass bg-accent-cyan text-black mt-4" onClick={nextRound}>
+                                {round >= TOTAL_ROUNDS ? 'Finish Game' : 'Next Round'}
+                            </button>
                         </motion.div>
                     )}
                 </motion.div>

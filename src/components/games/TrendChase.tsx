@@ -4,23 +4,32 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { getFirestore, collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { app } from '@/utils/firebaseClient';
 import { generateFakePost } from '@/ai/flows/generate-fake-post-flow';
-import { Loader, CheckCircle, XCircle, Zap } from 'lucide-react';
+import { Loader, CheckCircle, XCircle, Zap, Clock } from 'lucide-react';
 
 const db = getFirestore(app);
 
-const GamePostCard = ({ post, onSelect, disabled }: { post: any, onSelect: () => void, disabled: boolean }) => (
-    <motion.div
-        whileHover={{ y: disabled ? 0 : -5 }}
-        className={`glass-card p-4 flex flex-col gap-2 h-64 overflow-hidden cursor-pointer ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
-        onClick={() => !disabled && onSelect()}
-    >
-        <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex-shrink-0"></div>
-            <span className="font-bold text-sm text-accent-cyan truncate">@{post.username}</span>
-        </div>
-        <p className="text-sm text-gray-300 line-clamp-6 flex-1">{post.content}</p>
-    </motion.div>
-);
+const GamePostCard = ({ post, onSelect, disabled, feedback, isReal }: { post: any, onSelect: () => void, disabled: boolean, feedback: 'correct' | 'incorrect' | null, isReal: boolean }) => {
+    let cardStyle = '';
+    if (disabled && feedback) {
+        cardStyle = isReal ? 'ring-4 ring-green-400' : 'opacity-30';
+    }
+
+    return (
+        <motion.div
+            whileHover={{ y: disabled ? 0 : -5 }}
+            className={`glass-card p-4 flex flex-col gap-2 h-64 overflow-hidden cursor-pointer transition-all duration-300 ${disabled ? 'cursor-not-allowed' : ''} ${cardStyle}`}
+            onClick={() => !disabled && onSelect()}
+        >
+            <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex-shrink-0">
+                    {post.avatar_url && <img src={post.avatar_url} alt={post.username} className="w-full h-full object-cover rounded-full" />}
+                </div>
+                <span className="font-bold text-sm text-accent-cyan truncate">@{post.username}</span>
+            </div>
+            <p className="text-sm text-gray-300 line-clamp-[7] flex-1">{post.content}</p>
+        </motion.div>
+    );
+};
 
 const GAME_DURATION = 60; // seconds per game
 const ROUND_DURATION = 8; // seconds per round
@@ -41,7 +50,7 @@ export function TrendChase() {
         setRoundTimeLeft(ROUND_DURATION);
         try {
             const postsRef = collection(db, "posts");
-            const q = query(postsRef, orderBy("createdAt", "desc"), limit(20));
+            const q = query(postsRef, orderBy("createdAt", "desc"), limit(50));
             const postsSnap = await getDocs(q);
             const posts = postsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
@@ -52,7 +61,9 @@ export function TrendChase() {
             }
 
             const realPost = posts[Math.floor(Math.random() * posts.length)];
-            const fakePostPromises = Array.from({ length: 3 }).map(() => generateFakePost({ theme: realPost.hashtags?.[0] || 'social media' }));
+            const fakePostThemes = ['tech', 'fashion', 'music', 'gaming', 'food'];
+            const randomTheme = realPost.hashtags?.[0] || fakePostThemes[Math.floor(Math.random() * fakePostThemes.length)];
+            const fakePostPromises = Array.from({ length: 3 }).map(() => generateFakePost({ theme: randomTheme }));
             const fakePostsData = await Promise.all(fakePostPromises);
 
             const allPosts = [
@@ -68,46 +79,12 @@ export function TrendChase() {
         }
     }, []);
 
-    useEffect(() => {
-        let gameTimer: NodeJS.Timeout;
-        let roundTimer: NodeJS.Timeout;
-
-        if (gameState === 'playing') {
-            fetchPostsForRound();
-            gameTimer = setInterval(() => {
-                setTimeLeft(t => {
-                    if (t <= 1) {
-                        clearInterval(gameTimer);
-                        clearInterval(roundTimer);
-                        setGameState('ended');
-                        return 0;
-                    }
-                    return t - 1;
-                });
-            }, 1000);
-
-            roundTimer = setInterval(() => {
-                setRoundTimeLeft(rt => {
-                    if (rt <= 1) {
-                        handleSelectPost(false); // Timeout counts as incorrect
-                        return ROUND_DURATION;
-                    }
-                    return rt - 1;
-                });
-            }, 1000);
-        }
-        return () => {
-            clearInterval(gameTimer);
-            clearInterval(roundTimer);
-        };
-    }, [gameState]);
-
     const handleSelectPost = (isSelectedReal: boolean) => {
         if (feedback) return;
 
         if (isSelectedReal) {
-            const timeBonus = roundTimeLeft * 10;
-            const streakBonus = streak * 50;
+            const timeBonus = Math.max(0, roundTimeLeft * 10);
+            const streakBonus = streak * 25;
             setScore(s => s + 100 + timeBonus + streakBonus);
             setFeedback('correct');
             setStreak(s => s + 1);
@@ -117,18 +94,54 @@ export function TrendChase() {
         }
 
         setTimeout(() => {
-            if (gameState === 'playing') {
+            if (gameState === 'playing' && timeLeft > 1) {
                 fetchPostsForRound();
+            } else if (gameState === 'playing') {
+                setGameState('ended');
             }
-        }, 1200);
+        }, 1500);
     };
-    
+
     const startGame = () => {
         setScore(0);
         setStreak(0);
         setTimeLeft(GAME_DURATION);
         setGameState('playing');
+        fetchPostsForRound();
     };
+
+    useEffect(() => {
+        if (gameState !== 'playing') return;
+
+        const gameTimer = setInterval(() => {
+            setTimeLeft(t => {
+                if (t <= 1) {
+                    clearInterval(gameTimer);
+                    setGameState('ended');
+                    return 0;
+                }
+                return t - 1;
+            });
+        }, 1000);
+
+        return () => clearInterval(gameTimer);
+    }, [gameState]);
+
+    useEffect(() => {
+        if (gameState !== 'playing' || loadingNext || feedback) return;
+
+        const roundTimer = setInterval(() => {
+            setRoundTimeLeft(rt => {
+                if (rt <= 1) {
+                    handleSelectPost(false); // Timeout counts as incorrect
+                    return ROUND_DURATION;
+                }
+                return rt - 1;
+            });
+        }, 1000);
+
+        return () => clearInterval(roundTimer);
+    }, [gameState, loadingNext, feedback]);
 
     if (gameState === 'idle') {
         return (
@@ -153,7 +166,7 @@ export function TrendChase() {
 
     return (
         <div className="w-full max-w-4xl">
-            <div className="flex justify-between items-center mb-4 text-white p-2 glass-card">
+            <div className="flex justify-between items-center mb-4 text-white p-3 glass-card">
                 <div className="text-xl font-bold">Score: <span className="text-brand-gold">{score}</span></div>
                 <div className="flex items-center gap-2 text-xl font-bold text-yellow-400">
                     <Zap size={20}/> Streak: {streak}x
@@ -161,12 +174,12 @@ export function TrendChase() {
                 <div className="text-xl font-bold">Time: <span className="text-accent-pink">{timeLeft}s</span></div>
             </div>
             <div className="w-full bg-gray-700 rounded-full h-2.5 mb-6">
-                <motion.div 
+                <motion.div
                     key={roundTimeLeft}
-                    className="bg-accent-cyan h-2.5 rounded-full" 
-                    initial={{ width: `${(roundTimeLeft / ROUND_DURATION) * 100}%`}}
-                    animate={{ width: `${((roundTimeLeft -1) / ROUND_DURATION) * 100}%`}}
-                    transition={{ duration: 1, ease: "linear" }}
+                    className="bg-accent-cyan h-2.5 rounded-full"
+                    initial={{ width: '100%' }}
+                    animate={{ width: '0%' }}
+                    transition={{ duration: ROUND_DURATION, ease: "linear" }}
                 />
             </div>
 
@@ -174,22 +187,14 @@ export function TrendChase() {
                 {loadingNext ? (
                      <div className="flex items-center justify-center h-64"><Loader className="animate-spin text-accent-cyan" size={48} /></div>
                 ) : (
-                    <AnimatePresence>
-                        <motion.div
-                            key={currentPosts[0]?.id || Math.random()}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.3 }}
-                            className="grid grid-cols-1 md:grid-cols-2 gap-6"
-                        >
-                            {currentPosts.map((post, index) => (
-                                <GamePostCard key={index} post={post} onSelect={() => handleSelectPost(post.isReal)} disabled={!!feedback} />
-                            ))}
-                        </motion.div>
-                    </AnimatePresence>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {currentPosts.map((post, index) => (
+                            <GamePostCard key={post.id || index} post={post} onSelect={() => handleSelectPost(post.isReal)} disabled={!!feedback} feedback={feedback} isReal={post.isReal} />
+                        ))}
+                    </div>
                 )}
                  {feedback && (
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, scale: 0.5}}
                         animate={{ opacity: 1, scale: 1}}
                         className="absolute inset-0 bg-black/50 rounded-2xl flex items-center justify-center pointer-events-none"
