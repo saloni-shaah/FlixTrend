@@ -1,4 +1,3 @@
-
 "use client";
 import React from 'react';
 import { motion } from 'framer-motion';
@@ -11,7 +10,7 @@ export function FlashPollWars() {
       className="w-full max-w-4xl glass-card p-8 text-center"
     >
       <h2 className="text-3xl font-headline text-accent-pink mb-4">Flash Poll Wars</h2>
-      <p className="text-gray-400 mb-8">Which side will win? Predict the outcome of popular polls and see if you can guess the crowd's vibe. Points for correct predictions!</p>
+      <p className="text-gray-400 mb-8">Predict the crowd. Users bet which poll option will win — fast prediction and social pressure make it addictive.</p>
       <div className="text-4xl animate-pulse">⚔️</div>
       <p className="mt-8 text-accent-cyan font-bold">Game UI and Logic Coming Soon!</p>
     </motion.div>
