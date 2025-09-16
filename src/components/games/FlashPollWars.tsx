@@ -1,9 +1,10 @@
+
 "use client";
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getFirestore, collection, query, where, orderBy, limit, getDocs, doc, onSnapshot } from 'firebase/firestore';
+import { getFirestore, collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { app } from '@/utils/firebaseClient';
-import { Loader, BarChart3, Clock, CheckCircle, XCircle, Trophy } from 'lucide-react';
+import { Loader, Trophy, XCircle, Clock } from 'lucide-react';
 
 const db = getFirestore(app);
 
@@ -27,7 +28,8 @@ export function FlashPollWars() {
         setRoundTimeLeft(ROUND_DURATION);
 
         const postsRef = collection(db, "posts");
-        // NOTE: This query requires a composite index in Firestore (type asc, createdAt desc)
+        // This query requires a composite index in Firestore (type asc, createdAt desc)
+        // or a more complex client-side random selection.
         const q = query(postsRef, where("type", "==", "poll"), orderBy("createdAt", "desc"), limit(50));
         const postsSnap = await getDocs(q);
         
@@ -72,7 +74,8 @@ export function FlashPollWars() {
         setPollResults(results);
 
         if (results.isCorrect) {
-             const rarity = totalVotes > 0 ? 1 - (voteCounts[winningIndex] / totalVotes) : 0;
+             const winnerPercentage = results.percentages[winningIndex] / 100;
+             const rarity = 1 - winnerPercentage;
              const points = 100 + Math.floor(rarity * 150); // Higher reward for predicting unpopular winners
              setScore(s => s + points);
         }
@@ -166,7 +169,7 @@ export function FlashPollWars() {
                                     <button 
                                         className={`w-full p-4 rounded-full font-bold text-lg transition-all relative overflow-hidden btn-glass ${gameState !== 'playing' ? 'cursor-not-allowed' : ''} ${isPredicted ? 'ring-4 ring-accent-cyan' : ''}`}
                                         onClick={() => handlePrediction(index)}
-                                        disabled={gameState !== 'playing'}
+                                        disabled={gameState !== 'playing' || userPrediction !== null}
                                     >
                                         <AnimatePresence>
                                         {gameState === 'results' && (
@@ -204,3 +207,5 @@ export function FlashPollWars() {
         </div>
     );
 }
+
+    

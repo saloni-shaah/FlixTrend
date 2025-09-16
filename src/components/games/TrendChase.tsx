@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -63,23 +64,27 @@ export function TrendChase() {
             const realPost = posts[Math.floor(Math.random() * posts.length)];
             const fakePostThemes = ['tech', 'fashion', 'music', 'gaming', 'food'];
             const randomTheme = realPost.hashtags?.[0] || fakePostThemes[Math.floor(Math.random() * fakePostThemes.length)];
+            
             const fakePostPromises = Array.from({ length: 3 }).map(() => generateFakePost({ theme: randomTheme }));
             const fakePostsData = await Promise.all(fakePostPromises);
 
             const allPosts = [
-                { ...realPost, isReal: true },
-                ...fakePostsData.map(fp => ({ ...fp, isReal: false }))
+                { ...realPost, isReal: true, avatar_url: realPost.avatar_url || `https://api.dicebear.com/8.x/bottts-neutral/svg?seed=${realPost.username}` },
+                ...fakePostsData.map(fp => ({ ...fp, isReal: false, avatar_url: `https://api.dicebear.com/8.x/bottts-neutral/svg?seed=${fp.username}` }))
             ];
 
             setCurrentPosts(allPosts.sort(() => Math.random() - 0.5));
         } catch (error) {
             console.error("Error fetching posts for round:", error);
+            // In case of AI error, end game gracefully
+            setGameState('ended');
+            alert("Oops! The AI is taking a break. Please try again later.");
         } finally {
             setLoadingNext(false);
         }
     }, []);
 
-    const handleSelectPost = (isSelectedReal: boolean) => {
+    const handleSelectPost = useCallback((isSelectedReal: boolean) => {
         if (feedback) return;
 
         if (isSelectedReal) {
@@ -100,7 +105,7 @@ export function TrendChase() {
                 setGameState('ended');
             }
         }, 1500);
-    };
+    }, [feedback, roundTimeLeft, streak, fetchPostsForRound, gameState, timeLeft]);
 
     const startGame = () => {
         setScore(0);
@@ -133,6 +138,7 @@ export function TrendChase() {
         const roundTimer = setInterval(() => {
             setRoundTimeLeft(rt => {
                 if (rt <= 1) {
+                    clearInterval(roundTimer);
                     handleSelectPost(false); // Timeout counts as incorrect
                     return ROUND_DURATION;
                 }
@@ -141,7 +147,7 @@ export function TrendChase() {
         }, 1000);
 
         return () => clearInterval(roundTimer);
-    }, [gameState, loadingNext, feedback]);
+    }, [gameState, loadingNext, feedback, handleSelectPost]);
 
     if (gameState === 'idle') {
         return (
@@ -193,16 +199,21 @@ export function TrendChase() {
                         ))}
                     </div>
                 )}
+                 <AnimatePresence>
                  {feedback && (
                     <motion.div
                         initial={{ opacity: 0, scale: 0.5}}
                         animate={{ opacity: 1, scale: 1}}
+                        exit={{ opacity: 0, scale: 0.5 }}
                         className="absolute inset-0 bg-black/50 rounded-2xl flex items-center justify-center pointer-events-none"
                     >
                         {feedback === 'correct' ? <CheckCircle size={96} className="text-green-400 drop-shadow-lg"/> : <XCircle size={96} className="text-red-500 drop-shadow-lg"/>}
                     </motion.div>
                  )}
+                 </AnimatePresence>
             </div>
         </div>
     );
 }
+
+    

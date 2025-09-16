@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
@@ -50,18 +51,25 @@ const initialQuest = {
 
 function QuestStage({ stage, index, onStageComplete }: { stage: any, index: number, onStageComplete: (stageIndex: number, submission: any) => void }) {
     const [submission, setSubmission] = useState('');
+    const [error, setError] = useState('');
 
     const handleSubmission = () => {
-        if (stage.type === 'riddle' && submission.toLowerCase().trim() === stage.answer) {
-            onStageComplete(index, submission);
-        } else if (stage.type === 'hunt' && submission.includes('flixtrend.app/post/')) { // Simple URL validation
-            onStageComplete(index, submission);
-        } else if (stage.type === 'creative') {
-             onStageComplete(index, submission); // For now, just accept any submission
-        } else if (stage.type === 'riddle') {
-            alert('Not quite, try again!');
-        } else {
-            alert('Invalid submission format.');
+        setError('');
+        if (stage.type === 'riddle') {
+            if (submission.toLowerCase().trim() === stage.answer) {
+                onStageComplete(index, submission);
+            } else {
+                setError('Not quite, try again!');
+                setTimeout(() => setError(''), 2000);
+            }
+        } else if (stage.type === 'hunt') {
+            // This is a simplified check for MVP
+            if (submission.includes('flixtrend.app/post/') || submission.includes('localhost:3000/post/')) {
+                onStageComplete(index, submission);
+            } else {
+                setError('That doesn\'t look like a valid post URL.');
+                 setTimeout(() => setError(''), 2000);
+            }
         }
     };
 
@@ -84,8 +92,8 @@ function QuestStage({ stage, index, onStageComplete }: { stage: any, index: numb
                     {!isLocked && !isCompleted && (
                         <div className="mt-4 flex gap-2">
                              {stage.type === 'creative' ? (
-                                <button className="btn-glass bg-accent-pink text-white w-full" onClick={() => alert('Opening post creator...')}>
-                                    Create Vibe
+                                <button className="btn-glass bg-accent-pink text-white w-full" onClick={() => alert('This will open the "Create Post" modal with a special quest flag.')}>
+                                    Create Your Vibe
                                 </button>
                              ) : (
                                 <>
@@ -94,13 +102,14 @@ function QuestStage({ stage, index, onStageComplete }: { stage: any, index: numb
                                         value={submission}
                                         onChange={(e) => setSubmission(e.target.value)}
                                         placeholder={stage.type === 'riddle' ? 'Your answer...' : 'Paste post URL...'}
-                                        className="input-glass w-full"
+                                        className={`input-glass w-full ${error ? 'border-red-500' : ''}`}
                                     />
                                     <button onClick={handleSubmission} className="btn-glass-icon w-12 h-12 bg-accent-cyan"><Send /></button>
                                 </>
                              )}
                         </div>
                     )}
+                     {error && <p className="text-red-400 text-xs mt-1 text-left">{error}</p>}
                      {isCompleted && (
                          <div className="mt-2 flex items-center gap-2 text-green-400 font-bold text-sm">
                             <Check /> Completed!
@@ -190,3 +199,5 @@ export function SquadQuests() {
         </motion.div>
     );
 }
+
+    
