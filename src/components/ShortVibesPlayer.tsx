@@ -159,7 +159,7 @@ export function ShortVibesPlayer({ shortVibes, onEndReached, hasMore }: { shortV
                         const shouldLoad = Math.abs(idx - activeShortIndex) <= 2;
 
                         return (
-                            <div key={short.id || idx} className="w-full h-full">
+                            <div key={`${short.id}-${idx}`} className="w-full h-full">
                                 <div className="relative w-full h-full flex items-center justify-center" onClick={handleVideoClick}>
                                     <video
                                         ref={el => { videoRefs.current[idx] = el; }}
