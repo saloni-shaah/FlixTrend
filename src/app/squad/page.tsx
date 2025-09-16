@@ -1,0 +1,923 @@
+
+"use client";
+import React, { useEffect, useState, useRef } from "react";
+import { auth } from "@/utils/firebaseClient";
+import { getFirestore, doc, getDoc, setDoc, collection, query, where, getCountFromServer, getDocs, onSnapshot, orderBy, updateDoc, writeBatch, deleteDoc } from "firebase/firestore";
+import { Cog, Palette, Lock, MessageCircle, LogOut, Camera, Star, Bell, Trash2, AtSign, Compass, MapPin, User, Tag, ShieldCheck, Music, Bookmark, Heart, Folder, Download } from "lucide-react";
+import { signOut, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { motion } from "framer-motion";
+import { PostCard } from "@/components/PostCard";
+import { FollowButton } from "@/components/FollowButton";
+import { getFunctions, httpsCallable } from "firebase/functions";
+import { FollowListModal } from "@/components/FollowListModal";
+import { getDownloadedPosts } from "@/utils/offline-db";
+
+const db = getFirestore();
+const functions = getFunctions();
+
+async function uploadToCloudinary(file: File, onProgress?: (percent: number) => void): Promise<string | null> {
+  const url = `https://api.cloudinary.com/v1_1/drrzvi2jp/upload`;
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", "flixtrend_unsigned");
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url);
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable && onProgress) {
+        onProgress(Math.round((event.loaded / event.total) * 100));
+      }
+    };
+    xhr.onload = () => {
+      if (xhr.responseText) {
+        const data = JSON.parse(xhr.responseText);
+        if (xhr.status === 200 && data.secure_url) {
+          resolve(data.secure_url);
+        } else {
+          reject(new Error(data.error?.message || "Upload failed"));
+        }
+      } else {
+        reject(new Error("Upload failed with empty response"));
+      }
+    };
+    xhr.onerror = () => reject(new Error("Upload failed"));
+    xhr.send(formData);
+  });
+}
+
+function CompleteProfileModal({ profile, onClose }: { profile: any, onClose: () => void }) {
+    const [form, setForm] = useState({
+        dob: profile.dob || "",
+        gender: profile.gender || "",
+        location: profile.location || "",
+        accountType: profile.accountType || "user",
+    });
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        setForm({ ...form, [e.target.name]: e.target.value });
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setError("");
+        try {
+            const user = auth.currentUser;
+            if (!user) throw new Error("Not logged in");
+            const docRef = doc(db, "users", user.uid);
+            await updateDoc(docRef, { ...form, profileComplete: true });
+            onClose();
+        } catch (err: any) {
+            setError(err.message);
+        }
+        setLoading(false);
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="glass-card p-6 w-full max-w-md relative flex flex-col"
+            >
+                <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white">&times;</button>
+                <h2 className="text-xl font-headline font-bold mb-4 text-accent-cyan">Complete Your Profile</h2>
+                <p className="text-sm text-gray-300 mb-4">Help others get to know you better by adding a few more details!</p>
+                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                    <input
+                        type="text" name="location" placeholder="Location (e.g., City, Country)"
+                        className="input-glass w-full" value={form.location} onChange={handleChange}
+                    />
+                    <input
+                        type="date" name="dob" placeholder="Date of Birth"
+                        className="input-glass w-full" value={form.dob} onChange={handleChange}
+                    />
+                    <select name="gender" className="input-glass w-full" value={form.gender} onChange={handleChange}>
+                        <option value="" disabled>Select Gender...</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                        <option value="non-binary">Non-binary</option>
+                        <option value="other">Other</option>
+                        <option value="prefer-not-to-say">Prefer not to say</option>
+                    </select>
+                    <select name="accountType" className="input-glass w-full" value={form.accountType} onChange={handleChange}>
+                        <option value="user">I'm a User</option>
+                        <option value="creator">I'm a Creator</option>
+                    </select>
+
+                    {error && <div className="text-red-400 text-center">{error}</div>}
+
+                    <button type="submit" className="btn-glass bg-accent-cyan text-black mt-4" disabled={loading}>
+                        {loading ? "Saving..." : "Save Details"}
+                    </button>
+                </form>
+            </motion.div>
+        </div>
+    );
+}
+
+function UserPlaylists({ userId }: { userId: string }) {
+    const [playlists, setPlaylists] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const q = query(collection(db, "playlists"), where("ownerId", "==", userId));
+        const unsub = onSnapshot(q, (snapshot) => {
+            const playlistsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            // Sort client-side
+            playlistsData.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
+            setPlaylists(playlistsData);
+            setLoading(false);
+        });
+        return () => unsub();
+    }, [userId]);
+
+    if (loading) return <div className="text-gray-400 text-center mt-16 animate-pulse">Loading playlists...</div>
+    
+    if (playlists.length === 0) {
+        return (
+            <div className="text-gray-400 text-center mt-16">
+                <div className="text-4xl mb-2"><Music /></div>
+                <div className="text-lg font-semibold">No playlists yet</div>
+                <div className="text-sm">Your created playlists will appear here.</div>
+            </div>
+        );
+    }
+    
+    return (
+      <div className="w-full max-w-xl flex flex-col gap-4">
+        {playlists.map(playlist => (
+          <div key={playlist.id} className="glass-card p-4 flex items-center gap-4">
+            <div className="w-16 h-16 rounded-lg bg-accent-purple/20 flex items-center justify-center">
+              <Music className="text-accent-purple" size={32} />
+            </div>
+            <div>
+              <h3 className="font-bold text-lg text-accent-cyan">{playlist.name}</h3>
+              <p className="text-sm text-gray-400">{playlist.songIds?.length || 0} songs</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+}
+
+function UserCollections({ userId }: { userId: string }) {
+    const [collections, setCollections] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [selectedCollection, setSelectedCollection] = useState<any | null>(null);
+
+    useEffect(() => {
+        const q = query(collection(db, "collections"), where("ownerId", "==", userId));
+        const unsub = onSnapshot(q, (snapshot) => {
+            const collectionsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            collectionsData.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
+            setCollections(collectionsData);
+            setLoading(false);
+        });
+        return () => unsub();
+    }, [userId]);
+
+    if (loading) return <div className="text-gray-400 text-center mt-16 animate-pulse">Loading collections...</div>;
+
+    if (selectedCollection) {
+        return <CollectionDetailView collection={selectedCollection} onBack={() => setSelectedCollection(null)} />
+    }
+
+    if (collections.length === 0) {
+        return (
+            <div className="text-gray-400 text-center mt-16">
+                <div className="text-4xl mb-2"><Bookmark /></div>
+                <div className="text-lg font-semibold">No collections yet</div>
+                <div className="text-sm">Save posts to a collection to see them here.</div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="w-full max-w-xl grid grid-cols-2 md:grid-cols-3 gap-4">
+            {collections.map(collectionItem => (
+                <div key={collectionItem.id} className="glass-card rounded-lg overflow-hidden cursor-pointer" onClick={() => setSelectedCollection(collectionItem)}>
+                    <div className="w-full aspect-square bg-accent-pink/20 flex items-center justify-center">
+                        <Folder className="text-accent-pink" size={48} />
+                    </div>
+                    <div className="p-3">
+                        <h3 className="font-bold text-accent-cyan truncate">{collectionItem.name}</h3>
+                        <p className="text-xs text-gray-400">{collectionItem.postIds?.length || 0} posts</p>
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+function CollectionDetailView({ collection, onBack }: { collection: any, onBack: () => void }) {
+    const [posts, setPosts] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchPosts = async () => {
+            if (!collection.postIds || collection.postIds.length === 0) {
+                setLoading(false);
+                return;
+            }
+            // Firestore 'in' queries are limited to 10 items. For a real app, pagination would be needed here.
+            const postsQuery = query(collection(db, "posts"), where("__name__", "in", collection.postIds.slice(0, 10)));
+            const postsSnap = await getDocs(postsQuery);
+            setPosts(postsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            setLoading(false);
+        };
+        fetchPosts();
+    }, [collection]);
+
+    return (
+        <div className="w-full max-w-xl flex flex-col gap-6">
+            <button onClick={onBack} className="btn-glass self-start">{"< Back to Collections"}</button>
+            <h2 className="text-2xl font-bold text-accent-cyan">{collection.name}</h2>
+            {loading && <p className="text-center text-gray-400">Loading posts...</p>}
+            {!loading && posts.length === 0 && <p className="text-center text-gray-400">This collection is empty.</p>}
+            {posts.map(post => <PostCard key={post.id} post={post} />)}
+        </div>
+    );
+}
+
+function UserDownloads() {
+    const [downloadedPosts, setDownloadedPosts] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        async function loadDownloads() {
+            setLoading(true);
+            const posts = await getDownloadedPosts();
+            setDownloadedPosts(posts);
+            setLoading(false);
+        }
+        loadDownloads();
+    }, []);
+
+    if (loading) return <div className="text-gray-400 text-center mt-16 animate-pulse">Loading downloads...</div>;
+
+    if (downloadedPosts.length === 0) {
+        return (
+            <div className="text-gray-400 text-center mt-16">
+                <div className="text-4xl mb-2"><Download /></div>
+                <div className="text-lg font-semibold">No downloaded posts</div>
+                <div className="text-sm">Download posts to view them offline.</div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="w-full max-w-xl flex flex-col gap-6">
+            {downloadedPosts.map(post => (
+                <PostCard key={post.id} post={post} />
+            ))}
+        </div>
+    );
+}
+
+export default function SquadPage() {
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [firebaseUser, setFirebaseUser] = useState<any>(null);
+  const [showEdit, setShowEdit] = useState(false);
+  const [postCount, setPostCount] = useState(0);
+  const [followers, setFollowers] = useState(0);
+  const [following, setFollowing] = useState(0);
+  const [showSettings, setShowSettings] = useState(false);
+  const [activeTab, setActiveTab] = useState("posts");
+  const [userPosts, setUserPosts] = useState<any[]>([]);
+  const [starredPosts, setStarredPosts] = useState<any[]>([]);
+  const [showFollowList, setShowFollowList] = useState<null | 'followers' | 'following'>(null);
+  const [showCompleteProfile, setShowCompleteProfile] = useState(false);
+
+
+  useEffect(() => {
+    const unsubAuth = auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        setFirebaseUser(user);
+        const userDocRef = doc(db, "users", user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (!userDocSnap.exists()) {
+          await setDoc(userDocRef, {
+            uid: user.uid,
+            name: user.displayName || "",
+            username: user.displayName ? user.displayName.replace(/\s+/g, "").toLowerCase() : "",
+            email: user.email || "",
+            avatar_url: `https://api.dicebear.com/8.x/bottts-neutral/svg?seed=${user.uid}`,
+            bio: "",
+            interests: "",
+            createdAt: new Date(),
+          });
+        } else {
+            const data = userDocSnap.data();
+            if (!data.profileComplete) {
+                setShowCompleteProfile(true);
+            }
+        }
+      } else {
+        setFirebaseUser(null);
+      }
+    });
+
+    return () => unsubAuth();
+  }, []);
+
+  useEffect(() => {
+    async function fetchProfileData() {
+        if (!firebaseUser) {
+            setLoading(false);
+            return;
+        }
+        setLoading(true);
+        const uid = firebaseUser.uid;
+
+        const docRef = doc(db, "users", uid);
+        const unsubProfile = onSnapshot(docRef, (docSnap) => {
+          setProfile(docSnap.exists() ? docSnap.data() : null);
+        });
+
+        const postsQuery = query(collection(db, "posts"), where("userId", "==", uid));
+        const postsSnapshot = await getDocs(postsQuery);
+        const userPostsData = postsSnapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() }))
+            .sort((a, b) => b.createdAt.toDate() - a.createdAt.toDate());
+        
+        setPostCount(userPostsData.length);
+        setUserPosts(userPostsData);
+        
+        setLoading(false);
+
+        return () => unsubProfile();
+    }
+    if (firebaseUser) fetchProfileData();
+  }, [firebaseUser]);
+
+  useEffect(() => {
+    if (!firebaseUser) return;
+    const uid = firebaseUser.uid;
+
+    const unsubFollowers = onSnapshot(collection(db, "users", uid, "followers"), snap => setFollowers(snap.size));
+    const unsubFollowing = onSnapshot(collection(db, "users", uid, "following"), snap => setFollowing(snap.size));
+    
+    const q = query(collection(db, "users", uid, "starredPosts"), orderBy("starredAt", "desc"));
+    const unsubStarred = onSnapshot(q, (snapshot) => {
+        setStarredPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
+    return () => {
+      unsubFollowers();
+      unsubFollowing();
+      unsubStarred();
+    };
+  }, [firebaseUser]);
+  
+  if (loading) {
+    return <div className="flex flex-col items-center justify-center text-accent-cyan">Loading profile...</div>;
+  }
+  if (!firebaseUser) {
+    return <div className="flex flex-col items-center justify-center text-red-400">Not logged in.</div>;
+  }
+  if (!profile) {
+    return <div className="flex flex-col items-center justify-center text-red-400">Could not load profile.</div>;
+  }
+  
+  const initials = profile.name?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || profile.username?.slice(0, 2).toUpperCase() || "U";
+  const isDeveloper = profile.email === 'next181489111@gmail.com';
+
+
+  return (
+    <div className="flex flex-col w-full pb-24">
+        {showFollowList && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" onClick={() => setShowFollowList(null)} />}
+        <button
+          className="fixed top-6 right-6 z-50 btn-glass-icon"
+          onClick={() => setShowSettings(true)}
+          aria-label="Settings"
+        >
+          <Cog />
+        </button>
+      {/* Banner */}
+      <div className="relative h-40 md:h-60 w-full rounded-2xl overflow-hidden mb-8 glass-card">
+        {profile.banner_url ? (
+          <img
+            src={profile.banner_url}
+            alt="banner"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        ) : (
+          <div className="absolute inset-0 w-full h-full bg-gradient-to-tr from-accent-pink/40 to-accent-cyan/40" />
+        )}
+      </div>
+      {/* Profile Card */}
+      <div className="mx-auto w-full max-w-2xl glass-card p-6 -mt-24 flex flex-col items-center text-center">
+        <div className="w-32 h-32 rounded-full bg-accent-cyan border-4 border-accent-pink shadow-fab-glow mb-4 overflow-hidden -mt-20">
+          {profile.avatar_url ? (
+            <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+          ) : (
+            <span className="text-5xl text-white flex items-center justify-center h-full w-full">{initials}</span>
+          )}
+        </div>
+        <div className="flex items-center justify-center gap-2">
+            <h2 className="text-2xl font-headline font-bold text-center">{profile.name}</h2>
+            {isDeveloper && (
+                <ShieldCheck className="w-6 h-6 text-accent-purple" title="FlixTrend Developer"/>
+            )}
+        </div>
+        <p className="text-accent-cyan font-semibold mb-3 text-center">@{profile.username || "username"}</p>
+        
+        {/* Stats */}
+        <div className="flex justify-center gap-8 my-2 w-full">
+          <div className="text-center">
+            <span className="font-bold text-lg text-accent-cyan">{postCount}</span>
+            <span className="text-xs text-gray-400 block">Posts</span>
+          </div>
+          <button className="text-center" onClick={() => setShowFollowList('followers')}>
+            <span className="font-bold text-lg text-accent-cyan">{followers}</span>
+            <span className="text-xs text-gray-400 block hover:underline">Followers</span>
+          </button>
+          <button className="text-center" onClick={() => setShowFollowList('following')}>
+            <span className="font-bold text-lg text-accent-cyan">{following}</span>
+            <span className="text-xs text-gray-400 block hover:underline">Following</span>
+          </button>
+        </div>
+
+        {/* Bio and Details */}
+        <div className="mt-4 w-full max-w-lg">
+            <p className="text-gray-400 text-center mb-4 text-sm">{profile.bio || "This user hasn't set a bio yet."}</p>
+            <div className="flex justify-center flex-wrap gap-x-4 gap-y-2 text-xs text-gray-500">
+                {profile.location && <span className="flex items-center gap-1.5"><MapPin size={12}/> {profile.location}</span>}
+                {profile.gender && <span className="flex items-center gap-1.5"><User size={12}/> {profile.gender}</span>}
+                {profile.interests && <span className="flex items-center gap-1.5"><Tag size={12}/> {profile.interests}</span>}
+            </div>
+        </div>
+
+        <button className="btn-glass mt-6" onClick={() => setShowEdit(true)}>Edit Profile</button>
+      </div>
+      {/* Tabs */}
+      <div className="flex justify-center gap-2 md:gap-4 my-8 flex-wrap">
+        <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "posts" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("posts")}>Posts</button>
+        <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "likes" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("likes")}>Likes</button>
+        <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "playlists" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("playlists")}>Playlists</button>
+        <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "collections" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("collections")}>Collections</button>
+        <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "downloads" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("downloads")}>Downloads</button>
+      </div>
+      {/* Tab Content */}
+      <div className="flex-1 flex flex-col items-center justify-center w-full">
+        {activeTab === "posts" && (
+          userPosts.length > 0 ? (
+            <div className="w-full max-w-xl flex flex-col gap-6">
+              {userPosts.map((post) => (
+                <PostCard key={post.id} post={post} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-gray-400 text-center mt-16">
+              <div className="text-4xl mb-2">🪐</div>
+              <div className="text-lg font-semibold">No posts yet</div>
+              <div className="text-sm">Your posts will appear here!</div>
+            </div>
+          )
+        )}
+        {activeTab === "likes" && (
+            starredPosts.length > 0 ? (
+                <div className="w-full max-w-xl flex flex-col gap-6">
+                    {starredPosts.map((post) => (
+                        <PostCard key={post.id} post={post} />
+                    ))}
+                </div>
+            ) : (
+                <div className="text-gray-400 text-center mt-16">
+                    <div className="text-4xl mb-2"><Heart /></div>
+                    <div className="text-lg font-semibold">No liked posts</div>
+                    <div className="text-sm">Your liked posts will appear here!</div>
+                </div>
+            )
+        )}
+        {activeTab === "playlists" && firebaseUser && (
+            <UserPlaylists userId={firebaseUser.uid} />
+        )}
+        {activeTab === "collections" && firebaseUser && (
+            <UserCollections userId={firebaseUser.uid} />
+        )}
+        {activeTab === "downloads" && (
+            <UserDownloads />
+        )}
+      </div>
+      {/* Discover Other Users */}
+      <div className="mt-16 w-full max-w-4xl mx-auto flex justify-center">
+        <Link href="/squad/explore">
+            <motion.button 
+                className="btn-glass bg-accent-pink/80 flex items-center gap-3 text-lg"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+            >
+                <Compass />
+                Explore Creators
+            </motion.button>
+        </Link>
+      </div>
+       {showCompleteProfile && profile && (
+        <CompleteProfileModal profile={profile} onClose={() => setShowCompleteProfile(false)} />
+       )}
+      {showEdit && (
+        <EditProfileModal profile={profile} onClose={() => setShowEdit(false)} />
+      )}
+      {showSettings && profile && firebaseUser && (
+        <SettingsModal profile={profile} firebaseUser={firebaseUser} onClose={() => setShowSettings(false)} />
+      )}
+      {showFollowList && firebaseUser && (
+        <FollowListModal 
+            userId={firebaseUser.uid} 
+            type={showFollowList} 
+            onClose={() => setShowFollowList(null)}
+            currentUser={firebaseUser}
+        />
+      )}
+    </div>
+  );
+}
+
+function EditProfileModal({ profile, onClose }: { profile: any; onClose: () => void }) {
+  const [form, setForm] = useState({
+    name: profile.name || "",
+    username: profile.username || "",
+    bio: profile.bio || "",
+    interests: profile.interests || "",
+    avatar_url: profile.avatar_url || "",
+    banner_url: profile.banner_url || "",
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [uploading, setUploading] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'avatar_url' | 'banner_url') => {
+    if (e.target.files && e.target.files[0]) {
+      setUploading(field);
+      setUploadProgress(0);
+      try {
+        const url = await uploadToCloudinary(e.target.files[0], (p) => setUploadProgress(p));
+        setForm((prev) => ({ ...prev, [field]: url || "" }));
+      } catch (err: any) {
+        setError(err.message);
+      }
+      setUploading(null);
+      setUploadProgress(null);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    setSuccess("");
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error("Not logged in");
+      const docRef = doc(db, "users", user.uid);
+      await setDoc(docRef, { ...form }, { merge: true }); // Upsert profile
+      setSuccess("Profile updated!");
+      setTimeout(onClose, 1000);
+    } catch (err: any) {
+      setError(err.message);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="glass-card p-6 w-full max-w-md relative max-h-[90vh] flex flex-col"
+      >
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white">&times;</button>
+        <h2 className="text-xl font-headline font-bold mb-4 text-accent-cyan">Edit Profile</h2>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4 overflow-y-auto pr-2">
+          {/* Avatar and Banner */}
+          <div className="relative h-24 mb-12">
+            <div className="h-full w-full rounded-lg bg-white/10 overflow-hidden">
+              {form.banner_url && <img src={form.banner_url} alt="Banner" className="w-full h-full object-cover"/>}
+            </div>
+            <button type="button" onClick={() => bannerInputRef.current?.click()} className="absolute bottom-1 right-1 btn-glass-icon w-8 h-8"><Camera size={16}/></button>
+            <input type="file" ref={bannerInputRef} onChange={(e) => handleFileUpload(e, 'banner_url')} className="hidden" accept="image/*" />
+
+            <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-24 h-24 rounded-full border-4 border-background bg-background">
+              <div className="w-full h-full rounded-full overflow-hidden">
+                {form.avatar_url && <img src={form.avatar_url} alt="Avatar" className="w-full h-full object-cover"/>}
+              </div>
+              <button type="button" onClick={() => avatarInputRef.current?.click()} className="absolute bottom-0 right-0 btn-glass-icon w-8 h-8"><Camera size={16}/></button>
+              <input type="file" ref={avatarInputRef} onChange={(e) => handleFileUpload(e, 'avatar_url')} className="hidden" accept="image/*" />
+            </div>
+          </div>
+          
+          {(uploading || uploadProgress !== null) && (
+            <div className="w-full bg-gray-700 rounded-full h-2.5">
+              <div className="bg-accent-cyan h-2.5 rounded-full" style={{width: `${uploadProgress || 0}%`}}></div>
+              <p className="text-xs text-center mt-1">Uploading {uploading?.replace('_url','')}...</p>
+            </div>
+          )}
+
+          <input
+            type="text" name="name" placeholder="Full Name" className="input-glass w-full"
+            value={form.name} onChange={handleChange} required />
+          <input
+            type="text" name="username" placeholder="Username" className="input-glass w-full"
+            value={form.username} onChange={handleChange} required />
+          <textarea
+            name="bio" placeholder="Bio" className="input-glass w-full rounded-2xl" rows={3}
+            value={form.bio} onChange={handleChange} />
+          <input
+            type="text" name="interests" placeholder="Interests (e.g., tech, music, art)" className="input-glass w-full"
+            value={form.interests} onChange={handleChange} />
+          
+          {error && <div className="text-red-400 text-center">{error}</div>}
+          {success && <div className="text-green-400 text-center">{success}</div>}
+          
+          <button
+            type="submit" className="btn-glass bg-accent-cyan text-black mt-4"
+            disabled={loading || !!uploading}>
+            {loading ? "Saving..." : !!uploading ? "Uploading..." : "Save Changes"}
+          </button>
+        </form>
+      </motion.div>
+    </div>
+  );
+}
+
+function SettingsModal({ profile, firebaseUser, onClose }: { profile: any; firebaseUser: any; onClose: () => void }) {
+  const [settings, setSettings] = useState({
+    darkMode: false,
+    accentColor: '#00F0FF',
+    dmPrivacy: 'everyone',
+    tagPrivacy: 'everyone',
+    pushNotifications: true,
+    emailNotifications: false,
+  });
+  const [isSaving, setIsSaving] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    // Load initial settings from profile
+    setSettings({
+        darkMode: localStorage.getItem('theme') === 'dark',
+        accentColor: profile.settings?.accentColor || '#00F0FF',
+        dmPrivacy: profile.settings?.dmPrivacy || 'everyone',
+        tagPrivacy: profile.settings?.tagPrivacy || 'everyone',
+        pushNotifications: profile.settings?.pushNotifications ?? true,
+        emailNotifications: profile.settings?.emailNotifications ?? false,
+    });
+
+    // Apply theme settings immediately
+    document.documentElement.classList.toggle('dark', localStorage.getItem('theme') === 'dark');
+    document.documentElement.style.setProperty('--accent-cyan', profile.settings?.accentColor || '#00F0FF');
+    document.documentElement.style.setProperty('--brand-gold', profile.settings?.accentColor || '#FFB400');
+  }, [profile]);
+  
+  const handleSettingChange = async (key: keyof typeof settings, value: any) => {
+    setIsSaving(true);
+    const newSettings = { ...settings, [key]: value };
+    setSettings(newSettings);
+
+    if (key === 'darkMode') {
+      document.documentElement.classList.toggle('dark', value);
+      localStorage.setItem('theme', value ? 'dark' : 'light');
+    }
+    if (key === 'accentColor') {
+      localStorage.setItem('accentColor', value);
+      document.documentElement.style.setProperty('--accent-cyan', value);
+      document.documentElement.style.setProperty('--brand-gold', value);
+    }
+    
+    // Save to Firestore
+    try {
+        const userDocRef = doc(db, "users", firebaseUser.uid);
+        await updateDoc(userDocRef, {
+            [`settings.${key}`]: value
+        });
+    } catch (error) {
+        console.error("Failed to save settings:", error);
+    } finally {
+        setIsSaving(false);
+    }
+  };
+  
+  const handleLogout = async () => {
+    await signOut(auth);
+    router.push("/login");
+  };
+
+  return (
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="glass-card p-6 w-full max-w-lg relative max-h-[90vh] flex flex-col"
+        >
+          <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white">&times;</button>
+          <h2 className="text-2xl font-headline font-bold mb-6 text-accent-cyan flex items-center gap-2"><Cog /> Settings</h2>
+          
+          <div className="flex-1 overflow-y-auto pr-2 flex flex-col gap-4">
+            <div className="bg-white/5 rounded-xl p-4">
+              <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan"><Palette /> Theme & UI</h3>
+              <div className="flex items-center justify-between py-2">
+                <span>Dark Mode</span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" checked={settings.darkMode} onChange={(e) => handleSettingChange('darkMode', e.target.checked)} className="sr-only peer" />
+                  <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-accent-cyan peer-checked:after:translate-x-full after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-cyan"></div>
+                </label>
+              </div>
+              <div className="flex items-center justify-between py-2">
+                  <span>Accent Color</span>
+                  <input type="color" value={settings.accentColor} onChange={(e) => handleSettingChange('accentColor', e.target.value)} className="w-10 h-10 bg-transparent border-none rounded-full cursor-pointer"/>
+              </div>
+            </div>
+            
+            <div className="bg-white/5 rounded-xl p-4">
+              <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan"><Lock /> Privacy & Security</h3>
+              <div className="flex items-center justify-between py-2">
+                <span><MessageCircle className="inline-block mr-2"/> Who can DM you?</span>
+                <select value={settings.dmPrivacy} onChange={(e) => handleSettingChange('dmPrivacy', e.target.value)} className="input-glass text-sm">
+                  <option value="everyone">Everyone</option>
+                  <option value="mutuals">Mutuals</option>
+                  <option value="none">No one</option>
+                </select>
+              </div>
+              <div className="flex items-center justify-between py-2">
+                <span><AtSign className="inline-block mr-2"/> Who can tag you?</span>
+                <select value={settings.tagPrivacy} onChange={(e) => handleSettingChange('tagPrivacy', e.target.value)} className="input-glass text-sm">
+                  <option value="everyone">Following</option>
+                  <option value="following">Following</option>
+                  <option value="none">No one</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="bg-white/5 rounded-xl p-4">
+              <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan"><Bell /> Notifications</h3>
+              <div className="flex items-center justify-between py-2">
+                <span>Push Notifications</span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" checked={settings.pushNotifications} onChange={(e) => handleSettingChange('pushNotifications', e.target.checked)} className="sr-only peer" />
+                  <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-accent-cyan peer-checked:after:translate-x-full after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-cyan"></div>
+                </label>
+              </div>
+              <div className="flex items-center justify-between py-2">
+                <span>Email Notifications</span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" checked={settings.emailNotifications} onChange={(e) => handleSettingChange('emailNotifications', e.target.checked)} className="sr-only peer" />
+                  <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-accent-cyan peer-checked:after:translate-x-full after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-cyan"></div>
+                </label>
+              </div>
+            </div>
+            
+            <div className="bg-white/5 rounded-xl p-4">
+              <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan">Account</h3>
+              <button className="btn-glass bg-red-500/20 text-red-400 hover:bg-red-500/40 hover:text-white w-full mt-4" onClick={() => setShowDeleteModal(true)}>
+                  <Trash2 className="inline-block mr-2" /> Delete Account
+              </button>
+            </div>
+
+            <button className="btn-glass bg-accent-pink/20 text-accent-pink hover:bg-accent-pink/40 hover:text-white w-full mt-4" onClick={handleLogout}>
+              <LogOut className="inline-block mr-2" /> Log Out
+            </button>
+          </div>
+        </motion.div>
+      </div>
+      {showDeleteModal && (
+        <DeleteAccountModal 
+            profile={profile}
+            onClose={() => setShowDeleteModal(false)}
+        />
+      )}
+    </>
+  );
+}
+
+function DeleteAccountModal({ profile, onClose }: { profile: any, onClose: () => void }) {
+    const [step, setStep] = useState(1);
+    const [confirmationText, setConfirmationText] = useState("");
+    const [credentials, setCredentials] = useState({ username: '', email: '', password: '' });
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
+    const router = useRouter();
+
+    const deleteAccountCallable = httpsCallable(functions, 'deleteUserAccount');
+
+    const handleCredentialsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setCredentials({ ...credentials, [e.target.name]: e.target.value });
+    };
+
+    const handleDelete = async () => {
+        setError("");
+        if (credentials.username.toLowerCase() !== profile.username.toLowerCase() || credentials.email.toLowerCase() !== profile.email.toLowerCase()) {
+            setError("Username or email does not match.");
+            return;
+        }
+
+        setLoading(true);
+        const user = auth.currentUser;
+        if (!user) {
+            setError("You are not logged in.");
+            setLoading(false);
+            return;
+        }
+
+        try {
+            // Re-authenticate user to confirm their identity
+            const credential = EmailAuthProvider.credential(user.email!, credentials.password);
+            await reauthenticateWithCredential(user, credential);
+            
+            // If re-authentication is successful, call the cloud function
+            await deleteAccountCallable();
+            
+            alert("Account deleted successfully.");
+            router.push('/signup'); // Redirect to signup page after deletion
+
+        } catch (err: any) {
+            console.error("Account deletion error:", err);
+            setError(err.code === 'auth/wrong-password' ? "Incorrect password." : "An error occurred. Please try again.");
+        } finally {
+            setLoading(false);
+        }
+    };
+    
+    const isStep2Valid = confirmationText === 'delete my account';
+    const isStep3Valid = credentials.username && credentials.email && credentials.password;
+
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-md">
+            <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="glass-card p-6 w-full max-w-lg relative flex flex-col gap-4"
+            >
+                <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white">&times;</button>
+                <h2 className="text-2xl font-headline font-bold text-red-500 flex items-center gap-2"><Trash2 /> Delete Account</h2>
+                
+                {error && <div className="p-3 bg-red-500/20 text-red-400 rounded-lg text-center">{error}</div>}
+
+                {step === 1 && (
+                    <div className="flex flex-col gap-4">
+                        <p className="font-bold text-lg text-center">Are you absolutely sure?</p>
+                        <p className="text-center text-gray-300">This action cannot be undone. This will permanently delete your account, posts, comments, chats, and all other associated data.</p>
+                        <div className="flex justify-end gap-4 mt-4">
+                            <button className="btn-glass" onClick={onClose}>Cancel</button>
+                            <button className="btn-glass bg-red-500/80 text-white" onClick={() => setStep(2)}>I understand, proceed</button>
+                        </div>
+                    </div>
+                )}
+
+                {step === 2 && (
+                    <div className="flex flex-col gap-4">
+                        <p>To confirm, please type "<strong className="text-accent-cyan">delete my account</strong>" in the box below.</p>
+                        <input 
+                            type="text" 
+                            className="input-glass w-full"
+                            value={confirmationText}
+                            onChange={(e) => setConfirmationText(e.target.value)}
+                        />
+                         <div className="flex justify-end gap-4 mt-4">
+                            <button className="btn-glass" onClick={() => setStep(1)}>Back</button>
+                            <button className="btn-glass bg-red-500/80 text-white" disabled={!isStep2Valid} onClick={() => setStep(3)}>Confirm & Proceed</button>
+                        </div>
+                    </div>
+                )}
+                
+                {step === 3 && (
+                    <div className="flex flex-col gap-4">
+                        <p>For your security, please re-enter your account details to finalize the deletion.</p>
+                        <input type="text" name="username" placeholder="Username" className="input-glass w-full" value={credentials.username} onChange={handleCredentialsChange} />
+                        <input type="email" name="email" placeholder="Email" className="input-glass w-full" value={credentials.email} onChange={handleCredentialsChange} />
+                        <input type="password" name="password" placeholder="Password" className="input-glass w-full" value={credentials.password} onChange={handleCredentialsChange} />
+                        <div className="flex justify-end gap-4 mt-4">
+                             <button className="btn-glass" onClick={() => setStep(2)}>Back</button>
+                             <button 
+                                className="btn-glass bg-red-900 text-white" 
+                                disabled={!isStep3Valid || loading}
+                                onClick={handleDelete}
+                            >
+                                {loading ? "Deleting..." : "Permanently Delete Account"}
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+            </motion.div>
+        </div>
+    )
+}
+
+    
