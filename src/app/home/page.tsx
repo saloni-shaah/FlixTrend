@@ -16,7 +16,6 @@ import { useRouter } from "next/navigation";
 
 const CreatePostModal = dynamic(() => import('./CreatePostModal'));
 const AddMusicModal = dynamic(() => import('@/components/MusicDiscovery').then(mod => mod.AddMusicModal));
-const AddGameModal = dynamic(() => import('@/components/GamesHub').then(mod => mod.AddGameModal));
 const FlashModal = dynamic(() => import('@/components/FlashModal').then(mod => mod.FlashModal));
 const NotificationPanel = dynamic(() => import('@/components/NotificationPanel').then(mod => mod.NotificationPanel));
 
@@ -69,7 +68,6 @@ export default function HomePage() {
   const [showPostModal, setShowPostModal] = useState(false);
   const [initialPostType, setInitialPostType] = useState<"text" | "media" | "poll" | "flash">("text");
   const [showMusicModal, setShowMusicModal] = useState(false);
-  const [showGameModal, setShowGameModal] = useState(false);
   const [posts, setPosts] = useState<any[]>([]);
   const [flashes, setFlashes] = useState<any[]>([]);
   const [selectedFlashUser, setSelectedFlashUser] = useState<any | null>(null);
@@ -319,12 +317,9 @@ export default function HomePage() {
       <AnimatePresence>
         {showPostModal && <CreatePostModal open={showPostModal} onClose={() => setShowPostModal(false)} initialType={initialPostType} />}
         {showMusicModal && <AddMusicModal onClose={() => setShowMusicModal(false)} />}
-        {showGameModal && <AddGameModal onClose={() => setShowGameModal(false)} />}
         {selectedFlashUser && <FlashModal userFlashes={selectedFlashUser} onClose={() => setSelectedFlashUser(null)} />}
         {showNotifications && <NotificationPanel onClose={() => setShowNotifications(false)} />}
       </AnimatePresence>
     </div>
   );
 }
-
-    
