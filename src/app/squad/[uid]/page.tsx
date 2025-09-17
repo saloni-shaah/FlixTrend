@@ -117,7 +117,7 @@ export default function UserProfilePage() {
                 <ShieldCheck className="w-6 h-6 text-accent-purple" title="FlixTrend Developer"/>
             )}
              {isPremium && (
-                <CheckCircle className="w-6 h-6 text-accent-cyan" title="Premium User"/>
+                <CheckCircle className="w-6 h-6 text-blue-500" title="Premium User"/>
             )}
         </div>
         <p className="text-accent-cyan font-semibold mb-3 text-center">@{profile.username || "username"}</p>
