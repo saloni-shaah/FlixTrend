@@ -1,7 +1,7 @@
 
 "use client";
-import React, { useState, useEffect } from "react";
-import { getFirestore, collection, query, orderBy, onSnapshot } from "firebase/firestore";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { getFirestore, collection, query, orderBy, onSnapshot, limit, startAfter, getDocs } from "firebase/firestore";
 import { app } from "@/utils/firebaseClient";
 import AdBanner from "@/components/AdBanner";
 import { VibeSpaceLoader } from "@/components/VibeSpaceLoader";
@@ -10,20 +10,84 @@ import Link from "next/link";
 import { FlixTrendLogo } from "@/components/FlixTrendLogo";
 
 const db = getFirestore(app);
+const POSTS_PER_PAGE = 2;
 
 export default function GuestPage() {
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [lastVisible, setLastVisible] = useState<any>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const feedEndRef = useRef<HTMLDivElement>(null);
+
+
+  const fetchPosts = useCallback(async () => {
+    setLoading(true);
+
+    const first = query(
+      collection(db, "posts"), 
+      orderBy("createdAt", "desc"), 
+      limit(POSTS_PER_PAGE)
+    );
+
+    const documentSnapshots = await getDocs(first);
+    
+    const firstBatch = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+
+    setPosts(firstBatch);
+    setLastVisible(lastDoc);
+    setLoading(false);
+    setHasMore(documentSnapshots.docs.length === POSTS_PER_PAGE);
+  }, []);
+  
+  const fetchMorePosts = useCallback(async () => {
+      if (!lastVisible || !hasMore || loadingMore) return;
+      setLoadingMore(true);
+
+      const next = query(
+          collection(db, "posts"),
+          orderBy("createdAt", "desc"),
+          startAfter(lastVisible),
+          limit(POSTS_PER_PAGE)
+      );
+
+      const documentSnapshots = await getDocs(next);
+      const nextBatch = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+
+      setPosts(prevPosts => [...prevPosts, ...nextBatch]);
+      setLastVisible(lastDoc);
+      setLoadingMore(false);
+      setHasMore(documentSnapshots.docs.length === POSTS_PER_PAGE);
+  }, [lastVisible, hasMore, loadingMore]);
+
 
   useEffect(() => {
-    setLoading(true);
-    const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
-    const unsub = onSnapshot(q, (snapshot) => {
-      setPosts(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-      setLoading(false);
-    });
-    return () => unsub();
-  }, []);
+    fetchPosts();
+  }, [fetchPosts]);
+
+   useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loading && !loadingMore) {
+          fetchMorePosts();
+        }
+      },
+      { threshold: 1.0 }
+    );
+
+    const currentRef = feedEndRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
+    }
+
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef);
+      }
+    };
+  }, [feedEndRef, fetchMorePosts, hasMore, loading, loadingMore]);
 
   return (
     <div className="flex flex-col w-full">
@@ -47,7 +111,7 @@ export default function GuestPage() {
         </div>
 
         <section className="flex-1 flex flex-col items-center">
-          {loading || posts.length === 0 ? (
+          {loading ? (
             <VibeSpaceLoader />
           ) : (
             <div className="w-full max-w-xl flex flex-col gap-6">
@@ -57,6 +121,20 @@ export default function GuestPage() {
                   {(index + 1) % 3 === 0 && <AdBanner key={`ad-${post.id}`} />}
                 </React.Fragment>
               ))}
+
+              <div ref={feedEndRef} className="h-10 w-full" />
+
+                {loadingMore && (
+                  <div className="flex justify-center my-4">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-cyan"></div>
+                  </div>
+                )}
+                
+                {!hasMore && (
+                  <div className="text-center text-gray-500 my-8">
+                    <p>You've reached the end! Sign up to see more.</p>
+                  </div>
+                )}
             </div>
           )}
         </section>
