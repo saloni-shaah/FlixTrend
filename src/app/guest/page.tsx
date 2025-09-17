@@ -8,6 +8,7 @@ import { VibeSpaceLoader } from "@/components/VibeSpaceLoader";
 import { GuestPostCard } from "@/components/GuestPostCard";
 import Link from "next/link";
 import { FlixTrendLogo } from "@/components/FlixTrendLogo";
+import { Search } from "lucide-react";
 
 const db = getFirestore(app);
 const POSTS_PER_PAGE = 2;
@@ -18,6 +19,7 @@ export default function GuestPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [lastVisible, setLastVisible] = useState<any>(null);
   const [hasMore, setHasMore] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
   const feedEndRef = useRef<HTMLDivElement>(null);
 
 
@@ -68,6 +70,8 @@ export default function GuestPage() {
   }, [fetchPosts]);
 
    useEffect(() => {
+    if (searchTerm) return; // Don't fetch more if searching
+
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && hasMore && !loading && !loadingMore) {
@@ -87,7 +91,17 @@ export default function GuestPage() {
         observer.unobserve(currentRef);
       }
     };
-  }, [feedEndRef, fetchMorePosts, hasMore, loading, loadingMore]);
+  }, [feedEndRef, fetchMorePosts, hasMore, loading, loadingMore, searchTerm]);
+
+  // Filtered posts for search
+  const filteredPosts = searchTerm.trim()
+    ? posts.filter(
+        (post) =>
+          (post.content && post.content.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (post.username && post.username.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (post.hashtags && post.hashtags.some((h: string) => h.toLowerCase().includes(searchTerm.toLowerCase())))
+      )
+    : posts;
 
   return (
     <div className="flex flex-col w-full">
@@ -104,33 +118,60 @@ export default function GuestPage() {
       </nav>
 
       {/* Main Content */}
-      <div className="w-full max-w-2xl mx-auto pt-20">
+      <div className="w-full max-w-2xl mx-auto pt-24">
         <div className="text-center mb-8 p-4 glass-card">
             <h1 className="text-3xl font-headline font-bold text-accent-cyan">Welcome to the VibeSpace</h1>
             <p className="text-gray-300 mt-2">You're viewing as a guest. <Link href="/login" className="text-accent-pink underline">Log in or sign up</Link> to join the conversation!</p>
         </div>
+
+        {/* Search Bar */}
+        <div className="flex justify-center items-center mb-6 w-full">
+            <div className="relative w-full max-w-2xl">
+              <input
+                type="text"
+                className="input-glass w-full pl-12 pr-4 py-3 text-lg font-body"
+                placeholder="Search posts..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                autoFocus={false}
+              />
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-brand-gold pointer-events-none">
+                <Search />
+              </span>
+              {searchTerm && (
+                <button
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-brand-gold text-xl"
+                  onClick={() => setSearchTerm("")}
+                  aria-label="Clear search"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+        </div>
+
 
         <section className="flex-1 flex flex-col items-center">
           {loading ? (
             <VibeSpaceLoader />
           ) : (
             <div className="w-full max-w-xl flex flex-col gap-6">
-              {posts.map((post, index) => (
+              {filteredPosts.map((post, index) => (
                 <React.Fragment key={post.id}>
                   <GuestPostCard post={post} />
                   {(index + 1) % 3 === 0 && <AdBanner key={`ad-${post.id}`} />}
                 </React.Fragment>
               ))}
 
-              <div ref={feedEndRef} className="h-10 w-full" />
+              {!searchTerm && <div ref={feedEndRef} className="h-10 w-full" />}
 
-                {loadingMore && (
+                {loadingMore && !searchTerm && (
                   <div className="flex justify-center my-4">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-cyan"></div>
                   </div>
                 )}
                 
-                {!hasMore && (
+                {!hasMore && !searchTerm && (
                   <div className="text-center text-gray-500 my-8">
                     <p>You've reached the end! Sign up to see more.</p>
                   </div>
