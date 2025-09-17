@@ -16,9 +16,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 const CreatePostModal = dynamic(() => import('./CreatePostModal'));
-const AddMusicModal = dynamic(() => import('@/components/MusicDiscovery').then(mod => mod.AddMusicModal));
-const FlashModal = dynamic(() => import('@/components/FlashModal').then(mod => mod.FlashModal));
-const NotificationPanel = dynamic(() => import('@/components/NotificationPanel').then(mod => mod.NotificationPanel));
+const AddMusicModal = dynamic(() => import('@/components/MusicDiscovery').then(mod => mod.AddMusicModal), { ssr: false });
+const FlashModal = dynamic(() => import('@/components/FlashModal').then(mod => mod.FlashModal), { ssr: false });
+const NotificationPanel = dynamic(() => import('@/components/NotificationPanel').then(mod => mod.NotificationPanel), { ssr: false });
 
 
 const db = getFirestore(app);
