@@ -10,7 +10,7 @@ export function AlmightyAIFab() {
 
   return (
     <>
-      <div className="fixed bottom-24 md:bottom-6 left-6 z-50">
+      <div className="fixed bottom-24 md:bottom-6 right-6 z-50">
         <motion.button
           onClick={() => setIsOpen(true)}
           className="w-16 h-16 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white shadow-fab-glow border border-glass-border"
