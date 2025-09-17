@@ -36,8 +36,7 @@ const merchantInfo = {
  *
  * @see {@link https://developers.google.com/pay/api/web/guides/test-and-deploy/integration-checklist}
  * @see {@link https://developers.google.com/pay/api/web/reference/request-objects}
- * @see {@link https://developers.google.com/pay/api/web/reference/request-objects#gateway}
- * @see {@link https://developers.google.com/pay/api/web/reference/request-objects#MerchantInfo}
+ * @see {@link https://razorpay.com/docs/payments/payment-methods/google-pay/web/standard-checkout/}
  */
 const baseGooglePayRequest = {
   apiVersion: 2,
@@ -51,11 +50,12 @@ const baseGooglePayRequest = {
       },
       tokenizationSpecification: {
         type: 'PAYMENT_GATEWAY',
-        // **ACTION REQUIRED**: Set the 'gateway' and 'gatewayMerchantId' to values
-        // provided by your payment processor (e.g., Stripe, Braintree, Razorpay).
+        // **ACTION REQUIRED**: This section is now configured for Razorpay.
+        // Set the 'gateway' to 'razorpay' and replace 'YOUR_RAZORPAY_KEY_ID'
+        // with the Key ID from your Razorpay Dashboard.
         parameters: {
-          gateway: 'example',
-          gatewayMerchantId: 'exampleGatewayMerchantId',
+          gateway: 'razorpay',
+          gatewayMerchantId: 'YOUR_RAZORPAY_KEY_ID', // Replace with your Razorpay Key ID
         },
       },
     },
@@ -215,17 +215,16 @@ function onGooglePaymentButtonClicked() {
       const paymentToken = res.paymentMethodData.tokenizationData.token;
       
       // **ACTION REQUIRED**: This is the most important step.
-      // You have a secure payment token. Now you need to send this `paymentToken`
-      // to your backend server. Your server will then use a library from your
-      // payment processor (like Stripe, Razorpay, etc.) to complete the charge.
+      // You now have a secure payment token from Google Pay that is ready for Razorpay.
+      // You need to send this `paymentToken` to your own backend server.
+      // Your server will then use Razorpay's server-side SDK to complete the charge.
       
-      // Example of what you would do:
-      // 1. Create a function, e.g., `processPayment(token)`
-      // 2. Inside that function, use `fetch()` to POST the token to your backend API endpoint.
-      //    e.g., fetch('/api/process-payment', { method: 'POST', body: JSON.stringify({ token: paymentToken }) })
-      // 3. Your backend receives the token, validates it, and charges the user via the payment processor's SDK.
+      // Example of what you would do on your server (e.g. in a Next.js API Route):
+      // 1. Create an API endpoint, e.g., `/api/process-payment`.
+      // 2. From the client, `fetch('/api/process-payment', { method: 'POST', body: JSON.stringify({ token: paymentToken, amount: 100 }) })`
+      // 3. Your backend receives the token, creates an order with Razorpay's SDK, and captures the payment.
       
-      console.log('TODO: Send this token to your backend for processing:', paymentToken);
+      console.log('TODO: Send this token to your backend for processing via Razorpay:', paymentToken);
       alert('Payment successful! (Note: This is a test. No real money was charged).');
 
     })
