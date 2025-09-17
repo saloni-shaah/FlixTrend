@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { auth } from "@/utils/firebaseClient";
 import { getFirestore, doc, getDoc, setDoc, collection, query, where, getCountFromServer, getDocs, onSnapshot, orderBy, updateDoc, writeBatch, deleteDoc } from "firebase/firestore";
-import { Cog, Palette, Lock, MessageCircle, LogOut, Camera, Star, Bell, Trash2, AtSign, Compass, MapPin, User, Tag, ShieldCheck, Music, Bookmark, Heart, Folder, Download } from "lucide-react";
+import { Cog, Palette, Lock, MessageCircle, LogOut, Camera, Star, Bell, Trash2, AtSign, Compass, MapPin, User, Tag, ShieldCheck, Music, Bookmark, Heart, Folder, Download, CheckCircle } from "lucide-react";
 import { signOut, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -387,6 +387,7 @@ export default function SquadPage() {
   
   const initials = profile.name?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || profile.username?.slice(0, 2).toUpperCase() || "U";
   const isDeveloper = profile.email === 'next181489111@gmail.com';
+  const isPremium = profile.isPremium && (!profile.premiumUntil || profile.premiumUntil.toDate() > new Date());
 
 
   return (
@@ -424,6 +425,9 @@ export default function SquadPage() {
             <h2 className="text-2xl font-headline font-bold text-center">{profile.name}</h2>
             {isDeveloper && (
                 <ShieldCheck className="w-6 h-6 text-accent-purple" title="FlixTrend Developer"/>
+            )}
+            {isPremium && (
+                <CheckCircle className="w-6 h-6 text-accent-cyan" title="Premium User"/>
             )}
         </div>
         <p className="text-accent-cyan font-semibold mb-3 text-center">@{profile.username || "username"}</p>
@@ -731,6 +735,15 @@ function SettingsModal({ profile, firebaseUser, onClose }: { profile: any; fireb
           
           <div className="flex-1 overflow-y-auto pr-2 flex flex-col gap-4">
             <div className="bg-white/5 rounded-xl p-4">
+                <Link href="/premium">
+                    <div className="w-full p-4 rounded-2xl bg-gradient-to-r from-accent-purple via-accent-pink to-brand-gold cursor-pointer mb-4">
+                        <h3 className="font-headline font-bold text-white">Upgrade to Premium</h3>
+                        <p className="text-xs text-white/80">Get a blue tick, an ad-free experience, and more!</p>
+                    </div>
+                </Link>
+            </div>
+
+            <div className="bg-white/5 rounded-xl p-4">
               <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan"><Palette /> Theme & UI</h3>
               <div className="flex items-center justify-between py-2">
                 <span>Dark Mode</span>
@@ -919,5 +932,3 @@ function DeleteAccountModal({ profile, onClose }: { profile: any, onClose: () =>
         </div>
     )
 }
-
-    
