@@ -1,5 +1,6 @@
 
 "use client";
+import "regenerator-runtime/runtime";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { getFirestore, collection, query, orderBy, onSnapshot, limit, startAfter, getDocs } from "firebase/firestore";
 import { app } from "@/utils/firebaseClient";

@@ -1,5 +1,6 @@
 
 "use client";
+import "regenerator-runtime/runtime";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import dynamic from 'next/dynamic';
 import { getFirestore, collection, query, orderBy, onSnapshot, getDoc, doc, limit, startAfter, getDocs, where } from "firebase/firestore";
