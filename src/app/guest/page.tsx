@@ -1,6 +1,5 @@
 
 "use client";
-import "regenerator-runtime/runtime";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { getFirestore, collection, query, orderBy, onSnapshot, limit, startAfter, getDocs } from "firebase/firestore";
 import { app } from "@/utils/firebaseClient";
@@ -9,8 +8,9 @@ import { VibeSpaceLoader } from "@/components/VibeSpaceLoader";
 import { GuestPostCard } from "@/components/GuestPostCard";
 import Link from "next/link";
 import { FlixTrendLogo } from "@/components/FlixTrendLogo";
-import { Search, Mic } from "lucide-react";
-import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
+import { Search, Bot } from "lucide-react";
+import { AlmightyChatModal } from "@/components/AlmightyChatModal";
+import { AnimatePresence } from "framer-motion";
 
 const db = getFirestore(app);
 const POSTS_PER_PAGE = 2;
@@ -22,30 +22,8 @@ export default function GuestPage() {
   const [lastVisible, setLastVisible] = useState<any>(null);
   const [hasMore, setHasMore] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [showChatModal, setShowChatModal] = useState(false);
   const feedEndRef = useRef<HTMLDivElement>(null);
-  
-  const {
-    transcript,
-    listening,
-    resetTranscript,
-    browserSupportsSpeechRecognition
-  } = useSpeechRecognition();
-
-  useEffect(() => {
-    if (transcript) {
-      setSearchTerm(transcript);
-    }
-  }, [transcript]);
-
-  const toggleListening = () => {
-    if (listening) {
-      SpeechRecognition.stopListening();
-    } else {
-      resetTranscript();
-      SpeechRecognition.startListening();
-    }
-  };
-
 
   const fetchPosts = useCallback(async () => {
     setLoading(true);
@@ -162,15 +140,13 @@ export default function GuestPage() {
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-brand-gold pointer-events-none">
                 <Search />
               </span>
-              {browserSupportsSpeechRecognition && (
-                <button
-                  onClick={toggleListening}
-                  className={`absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-full transition-colors ${listening ? 'bg-red-500/50 text-red-300 animate-pulse' : 'text-gray-400 hover:text-brand-gold'}`}
-                  aria-label="Voice search"
-                >
-                  <Mic size={20} />
-                </button>
-              )}
+              <button
+                onClick={() => setShowChatModal(true)}
+                className={'absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-full transition-colors text-gray-400 hover:text-brand-gold'}
+                aria-label="Almighty AI Chat"
+              >
+                <Bot size={20} />
+              </button>
             </div>
         </div>
 
@@ -204,6 +180,9 @@ export default function GuestPage() {
           )}
         </section>
       </div>
+       <AnimatePresence>
+        {showChatModal && <AlmightyChatModal onClose={() => setShowChatModal(false)} />}
+      </AnimatePresence>
     </div>
   );
 }

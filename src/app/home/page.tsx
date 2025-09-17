@@ -1,10 +1,9 @@
 
 "use client";
-import "regenerator-runtime/runtime";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import dynamic from 'next/dynamic';
 import { getFirestore, collection, query, orderBy, onSnapshot, getDoc, doc, limit, startAfter, getDocs, where } from "firebase/firestore";
-import { Plus, Bell, Search, Music, Gamepad2, PenSquare, Image as ImageIcon, AlignLeft, BarChart3, Sparkles, Mic } from "lucide-react";
+import { Plus, Bell, Search, Music, Bot } from "lucide-react";
 import { auth } from "@/utils/firebaseClient";
 import { useAppState } from "@/utils/AppStateContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -15,7 +14,9 @@ import { VibeSpaceLoader } from "@/components/VibeSpaceLoader";
 import AdBanner from "@/components/AdBanner";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
+import { AlignLeft, BarChart3, ImageIcon, Sparkles } from 'lucide-react';
+import { AlmightyChatModal } from "@/components/AlmightyChatModal";
+
 
 const CreatePostModal = dynamic(() => import('./CreatePostModal'));
 const AddMusicModal = dynamic(() => import('@/components/MusicDiscovery').then(mod => mod.AddMusicModal), { ssr: false });
@@ -101,6 +102,7 @@ export default function HomePage() {
   const [selectedFlashUser, setSelectedFlashUser] = useState<any | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showChatModal, setShowChatModal] = useState(false);
   const { setCallTarget, setIsCalling } = useAppState();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
@@ -111,29 +113,6 @@ export default function HomePage() {
   const router = useRouter();
   const POSTS_PER_PAGE = 5;
   const feedEndRef = useRef<HTMLDivElement>(null);
-  
-  const {
-    transcript,
-    listening,
-    resetTranscript,
-    browserSupportsSpeechRecognition
-  } = useSpeechRecognition();
-
-  useEffect(() => {
-    if (transcript) {
-      setSearchTerm(transcript);
-    }
-  }, [transcript]);
-
-  const toggleListening = () => {
-    if (listening) {
-      SpeechRecognition.stopListening();
-    } else {
-      resetTranscript();
-      SpeechRecognition.startListening();
-    }
-  };
-
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async user => {
@@ -289,15 +268,13 @@ export default function HomePage() {
           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-brand-gold pointer-events-none">
             <Search />
           </span>
-          {browserSupportsSpeechRecognition && (
-              <button
-                onClick={toggleListening}
-                className={`absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-full transition-colors ${listening ? 'bg-red-500/50 text-red-300 animate-pulse' : 'text-gray-400 hover:text-brand-gold'}`}
-                aria-label="Voice search"
-              >
-                <Mic size={20} />
-              </button>
-            )}
+          <button
+            onClick={() => setShowChatModal(true)}
+            className={'absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-full transition-colors text-gray-400 hover:text-brand-gold'}
+            aria-label="Almighty AI Chat"
+          >
+            <Bot size={20} />
+          </button>
         </div>
       </div>
       {/* Flashes/Stories Section */}
@@ -377,6 +354,7 @@ export default function HomePage() {
         {showMusicModal && <AddMusicModal onClose={() => setShowMusicModal(false)} />}
         {selectedFlashUser && <FlashModal userFlashes={selectedFlashUser} onClose={() => setSelectedFlashUser(null)} />}
         {showNotifications && <NotificationPanel onClose={() => setShowNotifications(false)} />}
+        {showChatModal && <AlmightyChatModal onClose={() => setShowChatModal(false)} />}
       </AnimatePresence>
     </div>
   );
