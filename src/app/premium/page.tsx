@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { FlixTrendLogo } from "@/components/FlixTrendLogo";
-import { Bot, CheckCircle, Diamond, ShieldCheck, Sparkles, UploadCloud, BarChart2, QrCode } from "lucide-react";
+import { CheckCircle, Diamond, ShieldCheck, Sparkles, UploadCloud, BarChart2, QrCode } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getFirestore, doc, updateDoc, Timestamp, collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "@/utils/firebaseClient";
@@ -12,7 +12,6 @@ import { useRouter } from "next/navigation";
 const premiumFeatures = [
     { icon: <CheckCircle className="text-accent-cyan"/>, text: "Verified Blue Tick on your profile" },
     { icon: <Diamond className="text-accent-pink"/>, text: "Ad-Free Experience across the app" },
-    { icon: <Bot className="text-accent-purple"/>, text: "Unlimited Almighty AI interactions" },
     { icon: <Sparkles className="text-brand-gold"/>, text: "Exclusive profile customization options" },
     { icon: <BarChart2 className="text-accent-green"/>, text: "Access to advanced profile analytics" },
     { icon: <UploadCloud className="text-white"/>, text: "Upload videos and photos in HD quality" },

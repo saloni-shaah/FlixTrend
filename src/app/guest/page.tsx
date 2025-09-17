@@ -10,15 +10,12 @@ import { GuestPostCard } from "@/components/GuestPostCard";
 import Link from "next/link";
 import { FlixTrendLogo } from "@/components/FlixTrendLogo";
 import { Search, Bot, Mic } from "lucide-react";
-import { AlmightyChatModal } from "@/components/AlmightyChatModal";
 import { AnimatePresence } from "framer-motion";
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 
 
 const db = getFirestore(app);
 const POSTS_PER_PAGE = 2;
-
-const CHAT_KEYWORDS = ['hi', 'hello', 'hey', 'yo', 'almighty', 'what', 'who', 'when', 'where', 'why', 'how'];
 
 export default function GuestPage() {
   const [posts, setPosts] = useState<any[]>([]);
@@ -27,8 +24,6 @@ export default function GuestPage() {
   const [lastVisible, setLastVisible] = useState<any>(null);
   const [hasMore, setHasMore] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [showChatModal, setShowChatModal] = useState(false);
-  const [initialChatMessage, setInitialChatMessage] = useState("");
   const feedEndRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -40,15 +35,7 @@ export default function GuestPage() {
 
   useEffect(() => {
     if (!listening && transcript) {
-      const lowerCaseTranscript = transcript.toLowerCase();
-      const isChatQuery = CHAT_KEYWORDS.some(keyword => lowerCaseTranscript.startsWith(keyword));
-      
-      if (isChatQuery) {
-        setInitialChatMessage(transcript);
-        setShowChatModal(true);
-      } else {
-        setSearchTerm(transcript);
-      }
+      setSearchTerm(transcript);
       resetTranscript();
     }
   }, [listening, transcript, resetTranscript]);
@@ -176,7 +163,7 @@ export default function GuestPage() {
               <input
                 type="text"
                 className="input-glass w-full pl-12 pr-24 py-3 text-lg font-body"
-                placeholder={listening ? "Listening..." : "Search posts or ask Almighty AI..."}
+                placeholder={listening ? "Listening..." : "Search posts..."}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 autoFocus={false}
@@ -192,13 +179,6 @@ export default function GuestPage() {
                     disabled={!browserSupportsSpeechRecognition}
                 >
                     <Mic size={20} />
-                </button>
-                <button
-                    onClick={() => { setInitialChatMessage(""); setShowChatModal(true); }}
-                    className={'p-1 rounded-full transition-colors text-gray-400 hover:text-brand-gold'}
-                    aria-label="Almighty AI Chat"
-                >
-                    <Bot size={20} />
                 </button>
               </div>
             </div>
@@ -234,9 +214,6 @@ export default function GuestPage() {
           )}
         </section>
       </div>
-       <AnimatePresence>
-        {showChatModal && <AlmightyChatModal onClose={() => setShowChatModal(false)} initialMessage={initialChatMessage}/>}
-      </AnimatePresence>
     </div>
   );
 }

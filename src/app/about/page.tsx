@@ -45,7 +45,6 @@ export default function AboutPage() {
           <div className="relative border-l-2 border-accent-purple/50 ml-6">
               <TimelineItem date="Concept" title="The Idea Was Born" desc="Frustrated with algorithm-driven feeds, the concept of a chronological, vibe-based social network was conceived." />
               <TimelineItem date="MVP" title="First Lines of Code" desc="The initial prototype was built using Next.js and Firebase, focusing on the core VibeSpace and authentication." />
-              <TimelineItem date="AI Integration" title="Introducing Almighty AI" desc="We integrated Google's Gemini to create Almighty AI, a smart assistant to help users with creativity and productivity." />
               <TimelineItem date="Security First" title="Voltix Security" desc="Development began on Voltix, our proprietary security layer, to ensure user data and privacy are protected from day one." />
               <TimelineItem date="Today" title="Web Preview & Beyond" desc="We're launching our web preview to gather feedback as we build our native mobile apps. The journey is just beginning!" />
           </div>
@@ -83,5 +82,3 @@ function TimelineItem({ date, title, desc }: { date: string, title: string, desc
     </motion.div>
   );
 }
-
-    
