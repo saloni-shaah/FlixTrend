@@ -140,7 +140,6 @@ export default function LandingPage() {
                 <FeatureCard icon={<Music />} title="Flashes" desc="Quick, fun, and expressive story-style posts that vanish." />
                 <FeatureCard icon={<Video />} title="Scope" desc="Dive into endless creativity, like shorts but smarter." />
                 <FeatureCard icon={<MessageSquare />} title="Signal" desc="Private, secure, and fast messaging for your circle." />
-                <FeatureCard icon={<Bot />} title="Almighty AI" desc="Your personal AI companion to learn, create, and connect." />
                 <FeatureCard icon={<ShieldCheck />} title="Voltix Security" desc="Proprietary ledger-based security providing top-layer encryption." />
             </div>
         </section>

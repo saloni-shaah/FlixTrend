@@ -8,7 +8,6 @@ import { Plus, Bell, Search, Music, Bot, Mic } from "lucide-react";
 import { auth } from "@/utils/firebaseClient";
 import { useAppState } from "@/utils/AppStateContext";
 import { motion, AnimatePresence } from "framer-motion";
-import { AlmightyLogo } from "@/components/AlmightyLogo";
 import { PostCard } from "@/components/PostCard";
 import { app } from "@/utils/firebaseClient";
 import { VibeSpaceLoader } from "@/components/VibeSpaceLoader";
@@ -16,7 +15,6 @@ import AdBanner from "@/components/AdBanner";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AlignLeft, BarChart3, ImageIcon, Sparkles } from 'lucide-react';
-import { AlmightyChatModal } from "@/components/AlmightyChatModal";
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 
 
@@ -106,8 +104,6 @@ export default function HomePage() {
   const [selectedFlashUser, setSelectedFlashUser] = useState<any | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showNotifications, setShowNotifications] = useState(false);
-  const [showChatModal, setShowChatModal] = useState(false);
-  const [initialChatMessage, setInitialChatMessage] = useState("");
   const { setCallTarget, setIsCalling } = useAppState();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
@@ -128,15 +124,7 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!listening && transcript) {
-      const lowerCaseTranscript = transcript.toLowerCase();
-      const isChatQuery = CHAT_KEYWORDS.some(keyword => lowerCaseTranscript.startsWith(keyword));
-      
-      if (isChatQuery) {
-        setInitialChatMessage(transcript);
-        setShowChatModal(true);
-      } else {
-        setSearchTerm(transcript);
-      }
+      setSearchTerm(transcript);
       resetTranscript();
     }
   }, [listening, transcript, resetTranscript]);
@@ -296,7 +284,7 @@ export default function HomePage() {
           <input
             type="text"
             className="input-glass w-full pl-12 pr-24 py-3 text-lg font-body"
-            placeholder={listening ? "Listening..." : "Search posts or ask Almighty AI..."}
+            placeholder={listening ? "Listening..." : "Search posts..."}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             autoFocus={false}
@@ -311,13 +299,6 @@ export default function HomePage() {
                 aria-label="Voice search"
             >
                 <Mic size={20} />
-            </button>
-            <button
-                onClick={() => { setInitialChatMessage(""); setShowChatModal(true); }}
-                className={'p-1 rounded-full transition-colors text-gray-400 hover:text-brand-gold'}
-                aria-label="Almighty AI Chat"
-            >
-                <Bot size={20} />
             </button>
           </div>
         </div>
@@ -399,7 +380,6 @@ export default function HomePage() {
         {showMusicModal && <AddMusicModal onClose={() => setShowMusicModal(false)} />}
         {selectedFlashUser && <FlashModal userFlashes={selectedFlashUser} onClose={() => setSelectedFlashUser(null)} />}
         {showNotifications && <NotificationPanel onClose={() => setShowNotifications(false)} />}
-        {showChatModal && <AlmightyChatModal onClose={() => setShowChatModal(false)} initialMessage={initialChatMessage} />}
       </AnimatePresence>
     </div>
   );

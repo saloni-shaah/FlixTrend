@@ -45,7 +45,7 @@ export default function PrivacyPolicyPage() {
             <section className="mb-8">
                 <h2 className="text-2xl font-headline font-bold text-accent-pink mb-3">2. How We Use Your Data</h2>
                  <ul className="list-disc list-inside space-y-2 text-gray-300">
-                    <li>To let you sign up, log in, and use features like VibeSpace, Flashes, Scope, Signal, and Almighty AI.</li>
+                    <li>To let you sign up, log in, and use features like VibeSpace, Flashes, Scope, and Signal.</li>
                     <li>To keep FlixTrend safe with Voltix Security (ledger-based protection + encryption).</li>
                     <li>To improve app performance, fix bugs, and roll out new features.</li>
                     <li>To personalize your feed based on your selected interests (not creepy tracking).</li>
@@ -64,7 +64,7 @@ export default function PrivacyPolicyPage() {
             <section className="mb-8">
                 <h2 className="text-2xl font-headline font-bold text-accent-pink mb-3">4. Security</h2>
                 <p className="text-gray-300">
-                    Your data is protected with Voltix Security, our proprietary ledger-based encryption system. Messages in Signal are end-to-end encrypted. Almighty AI runs in a privacy-first mode—your chats are not used to profile you.
+                    Your data is protected with Voltix Security, our proprietary ledger-based encryption system. Messages in Signal are end-to-end encrypted.
                 </p>
             </section>
             
