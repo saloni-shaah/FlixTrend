@@ -1,9 +1,10 @@
 
 "use client";
+import "regenerator-runtime/runtime";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import dynamic from 'next/dynamic';
 import { getFirestore, collection, query, orderBy, onSnapshot, getDoc, doc, limit, startAfter, getDocs, where } from "firebase/firestore";
-import { Plus, Bell, Search, Music, Bot } from "lucide-react";
+import { Plus, Bell, Search, Music, Bot, Mic } from "lucide-react";
 import { auth } from "@/utils/firebaseClient";
 import { useAppState } from "@/utils/AppStateContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -16,15 +17,18 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AlignLeft, BarChart3, ImageIcon, Sparkles } from 'lucide-react';
 import { AlmightyChatModal } from "@/components/AlmightyChatModal";
+import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 
 
-const CreatePostModal = dynamic(() => import('./CreatePostModal'));
+const CreatePostModal = dynamic(() => import('./CreatePostModal'), { ssr: false });
 const AddMusicModal = dynamic(() => import('@/components/MusicDiscovery').then(mod => mod.AddMusicModal), { ssr: false });
 const FlashModal = dynamic(() => import('@/components/FlashModal').then(mod => mod.FlashModal), { ssr: false });
 const NotificationPanel = dynamic(() => import('@/components/NotificationPanel').then(mod => mod.NotificationPanel), { ssr: false });
 
 
 const db = getFirestore(app);
+
+const CHAT_KEYWORDS = ['hi', 'hello', 'hey', 'yo', 'almighty', 'what', 'who', 'when', 'where', 'why', 'how'];
 
 function CreatePostPrompt({ onPromptClick, isPremium }: { onPromptClick: (type: "text" | "media" | "poll") => void; isPremium: boolean }) {
   const [userProfile, setUserProfile] = useState<any>(null);
@@ -103,6 +107,7 @@ export default function HomePage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showNotifications, setShowNotifications] = useState(false);
   const [showChatModal, setShowChatModal] = useState(false);
+  const [initialChatMessage, setInitialChatMessage] = useState("");
   const { setCallTarget, setIsCalling } = useAppState();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
@@ -113,6 +118,28 @@ export default function HomePage() {
   const router = useRouter();
   const POSTS_PER_PAGE = 5;
   const feedEndRef = useRef<HTMLDivElement>(null);
+  
+  const {
+    transcript,
+    listening,
+    resetTranscript,
+    browserSupportsSpeechRecognition
+  } = useSpeechRecognition();
+
+  useEffect(() => {
+    if (!listening && transcript) {
+      const lowerCaseTranscript = transcript.toLowerCase();
+      const isChatQuery = CHAT_KEYWORDS.some(keyword => lowerCaseTranscript.startsWith(keyword));
+      
+      if (isChatQuery) {
+        setInitialChatMessage(transcript);
+        setShowChatModal(true);
+      } else {
+        setSearchTerm(transcript);
+      }
+      resetTranscript();
+    }
+  }, [listening, transcript, resetTranscript]);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async user => {
@@ -217,6 +244,15 @@ export default function HomePage() {
     setInitialPostType(type);
     setShowPostModal(true);
   };
+  
+  const handleVoiceSearch = () => {
+    if (listening) {
+      SpeechRecognition.stopListening();
+    } else {
+      resetTranscript();
+      SpeechRecognition.startListening();
+    }
+  };
 
   // Group flashes by user
   const groupedFlashes = flashes.reduce((acc, flash) => {
@@ -247,7 +283,7 @@ export default function HomePage() {
   const isPremium = userProfile?.isPremium && (!userProfile.premiumUntil || userProfile.premiumUntil.toDate() > new Date());
 
 
-  if (!currentUser) {
+  if (!currentUser || !browserSupportsSpeechRecognition) {
     return <VibeSpaceLoader />;
   }
 
@@ -259,8 +295,8 @@ export default function HomePage() {
         <div className="relative w-full max-w-2xl">
           <input
             type="text"
-            className="input-glass w-full pl-12 pr-12 py-3 text-lg font-body"
-            placeholder="Search posts or users..."
+            className="input-glass w-full pl-12 pr-24 py-3 text-lg font-body"
+            placeholder={listening ? "Listening..." : "Search posts or ask Almighty AI..."}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             autoFocus={false}
@@ -268,13 +304,22 @@ export default function HomePage() {
           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-brand-gold pointer-events-none">
             <Search />
           </span>
-          <button
-            onClick={() => setShowChatModal(true)}
-            className={'absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-full transition-colors text-gray-400 hover:text-brand-gold'}
-            aria-label="Almighty AI Chat"
-          >
-            <Bot size={20} />
-          </button>
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+            <button
+                onClick={handleVoiceSearch}
+                className={`p-1 rounded-full transition-colors text-gray-400 hover:text-brand-gold ${listening ? 'animate-pulse bg-red-500/50' : ''}`}
+                aria-label="Voice search"
+            >
+                <Mic size={20} />
+            </button>
+            <button
+                onClick={() => { setInitialChatMessage(""); setShowChatModal(true); }}
+                className={'p-1 rounded-full transition-colors text-gray-400 hover:text-brand-gold'}
+                aria-label="Almighty AI Chat"
+            >
+                <Bot size={20} />
+            </button>
+          </div>
         </div>
       </div>
       {/* Flashes/Stories Section */}
@@ -354,7 +399,7 @@ export default function HomePage() {
         {showMusicModal && <AddMusicModal onClose={() => setShowMusicModal(false)} />}
         {selectedFlashUser && <FlashModal userFlashes={selectedFlashUser} onClose={() => setSelectedFlashUser(null)} />}
         {showNotifications && <NotificationPanel onClose={() => setShowNotifications(false)} />}
-        {showChatModal && <AlmightyChatModal onClose={() => setShowChatModal(false)} />}
+        {showChatModal && <AlmightyChatModal onClose={() => setShowChatModal(false)} initialMessage={initialChatMessage} />}
       </AnimatePresence>
     </div>
   );

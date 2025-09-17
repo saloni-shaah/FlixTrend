@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -7,7 +8,7 @@ import { auth, db } from '@/utils/firebaseClient';
 import { doc, getDoc } from 'firebase/firestore';
 import { AlmightyLogo } from './AlmightyLogo';
 
-export function AlmightyChatModal({ onClose }: { onClose: () => void }) {
+export function AlmightyChatModal({ onClose, initialMessage }: { onClose: () => void; initialMessage?: string; }) {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
@@ -31,25 +32,26 @@ export function AlmightyChatModal({ onClose }: { onClose: () => void }) {
     }, []);
 
     useEffect(() => {
+        if (initialMessage && currentUser) {
+             const userMessage: ChatMessage = {
+                role: 'user',
+                parts: [{ text: initialMessage }],
+            };
+            setMessages([userMessage]);
+            setInput('');
+            setLoading(true);
+            triggerAlmightyChat([userMessage]);
+        }
+    }, [initialMessage, currentUser]);
+
+    useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, loading]);
-
-    const handleSend = async (e?: React.FormEvent) => {
-        if (e) e.preventDefault();
-        if (!input.trim() || !currentUser) return;
-
-        const userMessage: ChatMessage = {
-            role: 'user',
-            parts: [{ text: input }],
-        };
-
-        setMessages(prev => [...prev, userMessage]);
-        setInput('');
-        setLoading(true);
-
-        try {
+    
+    const triggerAlmightyChat = async (currentMessages: ChatMessage[]) => {
+         try {
             const response = await almightyChat({
-                history: [...messages, userMessage],
+                history: currentMessages,
                 userId: currentUser.uid,
                 displayName: currentUser.displayName,
             });
@@ -80,6 +82,22 @@ export function AlmightyChatModal({ onClose }: { onClose: () => void }) {
         } finally {
             setLoading(false);
         }
+    }
+
+    const handleSend = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+        if (!input.trim() || !currentUser) return;
+
+        const userMessage: ChatMessage = {
+            role: 'user',
+            parts: [{ text: input }],
+        };
+        
+        const newMessages = [...messages, userMessage];
+        setMessages(newMessages);
+        setInput('');
+        setLoading(true);
+        triggerAlmightyChat(newMessages);
     };
 
     return (
