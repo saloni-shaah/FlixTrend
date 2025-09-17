@@ -6,10 +6,56 @@ import { getFirestore, doc, getDoc, collection, query, where, getDocs, onSnapsho
 import { auth, app } from "@/utils/firebaseClient";
 import { PostCard } from "@/components/PostCard";
 import { FollowButton } from "@/components/FollowButton";
-import { Star, MapPin, User, Tag, ShieldCheck, Heart, CheckCircle } from "lucide-react";
+import { Star, MapPin, User, Tag, ShieldCheck, Heart, CheckCircle, Award, Mic } from "lucide-react";
 import { FollowListModal } from "@/components/FollowListModal";
 
 const db = getFirestore(app);
+
+// Helper to get all users and their follower counts
+const getAllUsersWithFollowerCounts = async () => {
+    const usersSnap = await getDocs(collection(db, "users"));
+    const users = usersSnap.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
+
+    const followerCounts = await Promise.all(users.map(async user => {
+        const followersSnap = await getDocs(collection(db, "users", user.uid, "followers"));
+        return { ...user, followerCount: followersSnap.size };
+    }));
+    
+    return followerCounts;
+}
+
+function ProfileBadge({ profile, allUsers }: { profile: any, allUsers: any[] }) {
+    if (!profile) return null;
+
+    const isCreator = profile.accountType === 'creator';
+    
+    const sortedUsers = [...allUsers].sort((a, b) => b.followerCount - a.followerCount);
+    const userRank = sortedUsers.findIndex(u => u.uid === profile.uid);
+
+    let rankBadge = null;
+    if (userRank === 0) {
+        rankBadge = { text: "#1 in the World", color: "bg-yellow-400 text-black", icon: <Award /> };
+    } else if (userRank === 1) {
+        rankBadge = { text: "#2 in the World", color: "bg-gray-400 text-black", icon: <Award /> };
+    } else if (userRank === 2) {
+        rankBadge = { text: "#3 in the World", color: "bg-yellow-600 text-white", icon: <Award /> };
+    }
+    
+    return (
+        <div className="flex items-center justify-center gap-2 mt-2 flex-wrap">
+            {isCreator && (
+                <div className="flex items-center gap-1.5 text-xs font-bold px-2 py-1 rounded-full bg-purple-500/20 text-purple-300">
+                    <Mic size={14}/> Creator
+                </div>
+            )}
+            {rankBadge && (
+                <div className={`flex items-center gap-1.5 text-xs font-bold px-2 py-1 rounded-full ${rankBadge.color}`}>
+                    {rankBadge.icon} {rankBadge.text}
+                </div>
+            )}
+        </div>
+    )
+}
 
 export default function UserProfilePage() {
   const params = useParams();
@@ -24,11 +70,15 @@ export default function UserProfilePage() {
   const [starredPosts, setStarredPosts] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("posts");
   const [showFollowList, setShowFollowList] = useState<null | 'followers' | 'following'>(null);
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+
 
   useEffect(() => {
     const unsub = auth.onAuthStateChanged((user) => {
       setFirebaseUser(user);
     });
+    // Fetch all users once for ranking
+    getAllUsersWithFollowerCounts().then(setAllUsers);
     return () => unsub();
   }, []);
 
@@ -120,10 +170,12 @@ export default function UserProfilePage() {
                 <CheckCircle className="w-6 h-6 text-blue-500" title="Premium User"/>
             )}
         </div>
-        <p className="text-accent-cyan font-semibold mb-3 text-center">@{profile.username || "username"}</p>
+        <p className="text-accent-cyan font-semibold mb-1 text-center">@{profile.username || "username"}</p>
         
+        <ProfileBadge profile={profile} allUsers={allUsers} />
+
         {/* Stats */}
-        <div className="flex justify-center gap-8 my-2 w-full">
+        <div className="flex justify-center gap-8 my-4 w-full">
           <div className="text-center">
             <span className="font-bold text-lg text-accent-cyan">{postCount}</span>
             <span className="text-xs text-gray-400 block">Posts</span>
