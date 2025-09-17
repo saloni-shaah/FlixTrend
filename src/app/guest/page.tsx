@@ -8,7 +8,8 @@ import { VibeSpaceLoader } from "@/components/VibeSpaceLoader";
 import { GuestPostCard } from "@/components/GuestPostCard";
 import Link from "next/link";
 import { FlixTrendLogo } from "@/components/FlixTrendLogo";
-import { Search } from "lucide-react";
+import { Search, Mic } from "lucide-react";
+import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 
 const db = getFirestore(app);
 const POSTS_PER_PAGE = 2;
@@ -21,6 +22,28 @@ export default function GuestPage() {
   const [hasMore, setHasMore] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const feedEndRef = useRef<HTMLDivElement>(null);
+  
+  const {
+    transcript,
+    listening,
+    resetTranscript,
+    browserSupportsSpeechRecognition
+  } = useSpeechRecognition();
+
+  useEffect(() => {
+    if (transcript) {
+      setSearchTerm(transcript);
+    }
+  }, [transcript]);
+
+  const toggleListening = () => {
+    if (listening) {
+      SpeechRecognition.stopListening();
+    } else {
+      resetTranscript();
+      SpeechRecognition.startListening();
+    }
+  };
 
 
   const fetchPosts = useCallback(async () => {
@@ -129,7 +152,7 @@ export default function GuestPage() {
             <div className="relative w-full max-w-2xl">
               <input
                 type="text"
-                className="input-glass w-full pl-12 pr-4 py-3 text-lg font-body"
+                className="input-glass w-full pl-12 pr-12 py-3 text-lg font-body"
                 placeholder="Search posts..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -138,13 +161,13 @@ export default function GuestPage() {
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-brand-gold pointer-events-none">
                 <Search />
               </span>
-              {searchTerm && (
+              {browserSupportsSpeechRecognition && (
                 <button
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-brand-gold text-xl"
-                  onClick={() => setSearchTerm("")}
-                  aria-label="Clear search"
+                  onClick={toggleListening}
+                  className={`absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-full transition-colors ${listening ? 'bg-red-500/50 text-red-300 animate-pulse' : 'text-gray-400 hover:text-brand-gold'}`}
+                  aria-label="Voice search"
                 >
-                  ×
+                  <Mic size={20} />
                 </button>
               )}
             </div>

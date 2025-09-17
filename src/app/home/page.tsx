@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import dynamic from 'next/dynamic';
 import { getFirestore, collection, query, orderBy, onSnapshot, getDoc, doc, limit, startAfter, getDocs, where } from "firebase/firestore";
-import { Plus, Bell, Search, Music, Gamepad2, PenSquare, Image as ImageIcon, AlignLeft, BarChart3, Sparkles } from "lucide-react";
+import { Plus, Bell, Search, Music, Gamepad2, PenSquare, Image as ImageIcon, AlignLeft, BarChart3, Sparkles, Mic } from "lucide-react";
 import { auth } from "@/utils/firebaseClient";
 import { useAppState } from "@/utils/AppStateContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -14,6 +14,7 @@ import { VibeSpaceLoader } from "@/components/VibeSpaceLoader";
 import AdBanner from "@/components/AdBanner";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 
 const CreatePostModal = dynamic(() => import('./CreatePostModal'));
 const AddMusicModal = dynamic(() => import('@/components/MusicDiscovery').then(mod => mod.AddMusicModal), { ssr: false });
@@ -109,6 +110,28 @@ export default function HomePage() {
   const router = useRouter();
   const POSTS_PER_PAGE = 5;
   const feedEndRef = useRef<HTMLDivElement>(null);
+  
+  const {
+    transcript,
+    listening,
+    resetTranscript,
+    browserSupportsSpeechRecognition
+  } = useSpeechRecognition();
+
+  useEffect(() => {
+    if (transcript) {
+      setSearchTerm(transcript);
+    }
+  }, [transcript]);
+
+  const toggleListening = () => {
+    if (listening) {
+      SpeechRecognition.stopListening();
+    } else {
+      resetTranscript();
+      SpeechRecognition.startListening();
+    }
+  };
 
 
   useEffect(() => {
@@ -256,7 +279,7 @@ export default function HomePage() {
         <div className="relative w-full max-w-2xl">
           <input
             type="text"
-            className="input-glass w-full pl-12 pr-4 py-3 text-lg font-body"
+            className="input-glass w-full pl-12 pr-12 py-3 text-lg font-body"
             placeholder="Search posts or users..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -265,15 +288,15 @@ export default function HomePage() {
           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-brand-gold pointer-events-none">
             <Search />
           </span>
-          {searchTerm && (
-            <button
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-brand-gold text-xl"
-              onClick={() => setSearchTerm("")}
-              aria-label="Clear search"
-            >
-              ×
-            </button>
-          )}
+          {browserSupportsSpeechRecognition && (
+              <button
+                onClick={toggleListening}
+                className={`absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-full transition-colors ${listening ? 'bg-red-500/50 text-red-300 animate-pulse' : 'text-gray-400 hover:text-brand-gold'}`}
+                aria-label="Voice search"
+              >
+                <Mic size={20} />
+              </button>
+            )}
         </div>
       </div>
       {/* Flashes/Stories Section */}
