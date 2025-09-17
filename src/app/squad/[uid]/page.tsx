@@ -6,7 +6,7 @@ import { getFirestore, doc, getDoc, collection, query, where, getDocs, onSnapsho
 import { auth, app } from "@/utils/firebaseClient";
 import { PostCard } from "@/components/PostCard";
 import { FollowButton } from "@/components/FollowButton";
-import { Star, MapPin, User, Tag, ShieldCheck, Heart } from "lucide-react";
+import { Star, MapPin, User, Tag, ShieldCheck, Heart, CheckCircle } from "lucide-react";
 import { FollowListModal } from "@/components/FollowListModal";
 
 const db = getFirestore(app);
@@ -85,6 +85,7 @@ export default function UserProfilePage() {
   
   const initials = profile.name?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || profile.username?.slice(0, 2).toUpperCase() || "U";
   const isDeveloper = profile.email === 'next181489111@gmail.com';
+  const isPremium = profile.isPremium && (!profile.premiumUntil || profile.premiumUntil.toDate() > new Date());
   
   return (
     <div className="flex flex-col w-full pb-24">
@@ -114,6 +115,9 @@ export default function UserProfilePage() {
             <h2 className="text-2xl font-headline font-bold text-center">{profile.name}</h2>
             {isDeveloper && (
                 <ShieldCheck className="w-6 h-6 text-accent-purple" title="FlixTrend Developer"/>
+            )}
+             {isPremium && (
+                <CheckCircle className="w-6 h-6 text-accent-cyan" title="Premium User"/>
             )}
         </div>
         <p className="text-accent-cyan font-semibold mb-3 text-center">@{profile.username || "username"}</p>
@@ -200,5 +204,3 @@ export default function UserProfilePage() {
     </div>
   );
 }
-
-    

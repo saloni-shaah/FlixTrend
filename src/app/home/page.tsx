@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import dynamic from 'next/dynamic';
 import { getFirestore, collection, query, orderBy, onSnapshot, getDoc, doc, limit, startAfter, getDocs, where } from "firebase/firestore";
-import { Plus, Bell, Search, Music, Gamepad2, PenSquare, Image as ImageIcon, AlignLeft, BarChart3 } from "lucide-react";
+import { Plus, Bell, Search, Music, Gamepad2, PenSquare, Image as ImageIcon, AlignLeft, BarChart3, Sparkles } from "lucide-react";
 import { auth } from "@/utils/firebaseClient";
 import { useAppState } from "@/utils/AppStateContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -13,6 +13,7 @@ import { app } from "@/utils/firebaseClient";
 import { VibeSpaceLoader } from "@/components/VibeSpaceLoader";
 import AdBanner from "@/components/AdBanner";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 const CreatePostModal = dynamic(() => import('./CreatePostModal'));
 const AddMusicModal = dynamic(() => import('@/components/MusicDiscovery').then(mod => mod.AddMusicModal));
@@ -22,7 +23,7 @@ const NotificationPanel = dynamic(() => import('@/components/NotificationPanel')
 
 const db = getFirestore(app);
 
-function CreatePostPrompt({ onPromptClick }: { onPromptClick: (type: "text" | "media" | "poll") => void }) {
+function CreatePostPrompt({ onPromptClick, isPremium }: { onPromptClick: (type: "text" | "media" | "poll") => void; isPremium: boolean }) {
   const [userProfile, setUserProfile] = useState<any>(null);
 
   useEffect(() => {
@@ -38,29 +39,54 @@ function CreatePostPrompt({ onPromptClick }: { onPromptClick: (type: "text" | "m
   }, []);
 
   return (
-    <div className="glass-card p-4 w-full max-w-xl mb-6">
-      <div className="flex items-center gap-3">
-        <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center font-bold text-lg overflow-hidden shrink-0">
-          {userProfile?.avatar_url ? (
-            <img src={userProfile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
-          ) : (
-            <span className="text-white">{userProfile?.name?.[0] || 'U'}</span>
-          )}
+      <div className="w-full max-w-xl mb-6">
+        <div className="glass-card p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center font-bold text-lg overflow-hidden shrink-0">
+              {userProfile?.avatar_url ? (
+                <img src={userProfile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-white">{userProfile?.name?.[0] || 'U'}</span>
+              )}
+            </div>
+            <div 
+              className="flex-1 input-glass text-left text-gray-400 cursor-pointer"
+              onClick={() => onPromptClick('text')}
+            >
+              drop something bro
+            </div>
+          </div>
+          <div className="flex justify-around items-center mt-4 pt-3 border-t border-glass-border">
+              <button onClick={() => onPromptClick('text')} className="flex items-center gap-2 text-gray-300 hover:text-accent-cyan"><AlignLeft/> Text</button>
+              <button onClick={() => onPromptClick('media')} className="flex items-center gap-2 text-gray-300 hover:text-accent-cyan"><ImageIcon/> Media</button>
+              <button onClick={() => onPromptClick('poll')} className="flex items-center gap-2 text-gray-300 hover:text-accent-cyan"><BarChart3/> Poll</button>
+          </div>
         </div>
-        <div 
-          className="flex-1 input-glass text-left text-gray-400 cursor-pointer"
-          onClick={() => onPromptClick('text')}
-        >
-          drop something bro
-        </div>
+        {!isPremium && <PremiumUpgradeBanner />}
       </div>
-      <div className="flex justify-around items-center mt-4 pt-3 border-t border-glass-border">
-          <button onClick={() => onPromptClick('text')} className="flex items-center gap-2 text-gray-300 hover:text-accent-cyan"><AlignLeft/> Text</button>
-          <button onClick={() => onPromptClick('media')} className="flex items-center gap-2 text-gray-300 hover:text-accent-cyan"><ImageIcon/> Media</button>
-          <button onClick={() => onPromptClick('poll')} className="flex items-center gap-2 text-gray-300 hover:text-accent-cyan"><BarChart3/> Poll</button>
-      </div>
-    </div>
   );
+}
+
+function PremiumUpgradeBanner() {
+    return (
+        <Link href="/premium">
+            <motion.div 
+                className="mt-4 p-4 rounded-2xl bg-gradient-to-r from-accent-purple via-accent-pink to-brand-gold cursor-pointer"
+                whileHover={{ scale: 1.02 }}
+            >
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                         <Sparkles className="text-white" />
+                        <div>
+                            <h4 className="font-headline font-bold text-white">Go Premium!</h4>
+                            <p className="text-xs text-white/80">Unlock blue tick, an ad-free experience & more.</p>
+                        </div>
+                    </div>
+                    <span className="px-4 py-2 rounded-full bg-white/20 text-white font-bold text-sm">Upgrade</span>
+                </div>
+            </motion.div>
+        </Link>
+    )
 }
 
 
@@ -75,6 +101,7 @@ export default function HomePage() {
   const [showNotifications, setShowNotifications] = useState(false);
   const { setCallTarget, setIsCalling } = useAppState();
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [lastVisible, setLastVisible] = useState<any>(null);
@@ -85,9 +112,13 @@ export default function HomePage() {
 
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(user => {
+    const unsubscribe = auth.onAuthStateChanged(async user => {
       if (user) {
         setCurrentUser(user);
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        if (userDoc.exists()) {
+          setUserProfile(userDoc.data());
+        }
       } else {
         router.replace('/login'); 
       }
@@ -209,6 +240,9 @@ export default function HomePage() {
           (post.hashtags && post.hashtags.some((h: string) => h.toLowerCase().includes(searchTerm.toLowerCase())))
       )
     : posts;
+    
+  const isPremium = userProfile?.isPremium && (!userProfile.premiumUntil || userProfile.premiumUntil.toDate() > new Date());
+
 
   if (!currentUser) {
     return <VibeSpaceLoader />;
@@ -276,11 +310,11 @@ export default function HomePage() {
           <VibeSpaceLoader />
         ) : (
           <div className="w-full max-w-xl flex flex-col gap-6">
-            <CreatePostPrompt onPromptClick={handleCreatePost} />
+            <CreatePostPrompt onPromptClick={handleCreatePost} isPremium={isPremium} />
             {filteredPosts.map((post, index) => (
               <React.Fragment key={post.id}>
                 <PostCard post={post} />
-                {(index + 1) % 5 === 0 && <AdBanner key={`ad-${post.id}`} />}
+                {(index + 1) % 5 === 0 && !isPremium && <AdBanner key={`ad-${post.id}`} />}
               </React.Fragment>
             ))}
             
