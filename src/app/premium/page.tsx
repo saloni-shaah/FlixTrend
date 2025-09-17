@@ -34,7 +34,7 @@ function PaymentStep({ onPaymentComplete }: { onPaymentComplete: (transactionId:
             <div className="flex flex-col items-center gap-4">
                 {/* 
                   1. ACTION REQUIRED: Upload your QR code image to the `public/` folder.
-                  Then, change `/placeholder-qr.png` to the path of your image, e.g., `/my-upi-qr.png`.
+                  Then, change `/placehoth of your image, e.g., `/my-upi-qr.png`.
                 */}
                 <div className="p-4 bg-white rounded-lg">
                    <img src="/placeholder-qr.png" alt="Your UPI QR Code" width={192} height={192} />
@@ -79,7 +79,7 @@ function ThankYouStep() {
             </div>
             <h3 className="text-2xl font-bold text-green-400 mb-4">Verification Submitted!</h3>
             <p className="text-gray-300">
-                Thank you! Your premium access will be activated within 24 hours after we confirm your payment. You can now close this page.
+                Thank you! Your premium access will be activated within 6 hours after we confirm your payment. You can now close this page.
             </p>
         </motion.div>
     )
