@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AlignLeft, BarChart3, ImageIcon, Sparkles } from 'lucide-react';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
+import { AlmightyAIFab } from "@/components/AlmightyAIFab";
 
 
 const CreatePostModal = dynamic(() => import('./CreatePostModal'), { ssr: false });
@@ -124,8 +125,8 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!listening && transcript) {
-      setSearchTerm(transcript);
-      resetTranscript();
+        setSearchTerm(transcript);
+        resetTranscript();
     }
   }, [listening, transcript, resetTranscript]);
 
@@ -374,6 +375,8 @@ export default function HomePage() {
           <Bell className="text-xl" />
         </button>
       </div>
+
+      <AlmightyAIFab />
 
       <AnimatePresence>
         {showPostModal && <CreatePostModal open={showPostModal} onClose={() => setShowPostModal(false)} initialType={initialPostType} />}
