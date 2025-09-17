@@ -33,16 +33,16 @@ function PaymentStep({ onPaymentComplete }: { onPaymentComplete: (transactionId:
             <p className="text-gray-400 mb-4">Scan the QR code with your UPI app or pay to the UPI ID below.</p>
             <div className="flex flex-col items-center gap-4">
                 {/* 
-                  1. REPLACE THIS: Upload your QR code image to the `public/` folder.
+                  1. ACTION REQUIRED: Upload your QR code image to the `public/` folder.
                   Then, change `/placeholder-qr.png` to the path of your image, e.g., `/my-upi-qr.png`.
                 */}
                 <div className="p-4 bg-white rounded-lg">
                    <img src="/placeholder-qr.png" alt="Your UPI QR Code" width={192} height={192} />
                 </div>
                 {/* 
-                  2. REPLACE THIS: Change 'your-upi-id@okhdfcbank' to your actual UPI ID.
+                  2. UPI ID has been updated below.
                 */}
-                <p className="font-bold text-lg text-white">your-upi-id@okhdfcbank</p>
+                <p className="font-bold text-lg text-white">7319758411-2@ybl</p>
             </div>
             
              <h3 className="text-xl font-bold text-accent-cyan mt-8 mb-4">Step 2: Submit Transaction ID</h3>
