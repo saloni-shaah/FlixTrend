@@ -15,8 +15,6 @@ import { CaptionClash } from './games/CaptionClash';
 import { VibePuzzle } from './games/VibePuzzle';
 import { EmojiDecode } from './games/EmojiDecode';
 import { AIRoastBattle } from './games/AIRoastBattle';
-import { DailyAlmightyChallenge } from './games/DailyAlmightyChallenge';
-import { AIVsYou } from './games/AIVsYou';
 
 const gameCategories = [
     {
@@ -55,12 +53,10 @@ const gameCategories = [
         ]
     },
     {
-        title: "Future-Forward / Almighty AI Twist",
+        title: "Future-Forward / AI Twist",
         icon: <Bot className="text-accent-purple"/>,
         games: [
-            { id: 'ai-roast-battle', name: "AI Roast Battle", description: "Almighty throws a funny roast at you; you reply with your roast. Friends vote winner.", component: AIRoastBattle },
-            { id: 'daily-almighty-challenge', name: "Daily Almighty Challenge", description: "Almighty gives you a quiz, riddle, or creative prompt. Completing it earns you badges.", component: DailyAlmightyChallenge },
-            { id: 'ai-vs-you', name: "AI vs You", description: "A mini trivia duel between Almighty and the user.", component: AIVsYou },
+            { id: 'ai-roast-battle', name: "AI Roast Battle", description: "A funny roast at you; you reply with your roast. Friends vote winner.", component: AIRoastBattle },
         ]
     }
 ];
