@@ -6,7 +6,7 @@ import { getFirestore, doc, getDoc, collection, query, where, getDocs, onSnapsho
 import { auth, app } from "@/utils/firebaseClient";
 import { PostCard } from "@/components/PostCard";
 import { FollowButton } from "@/components/FollowButton";
-import { Star, MapPin, User, Tag, ShieldCheck, Heart, CheckCircle, Award, Mic } from "lucide-react";
+import { Star, MapPin, User, Tag, ShieldCheck, Heart, CheckCircle, Award, Mic, Crown, Zap, Rocket } from "lucide-react";
 import { FollowListModal } from "@/components/FollowListModal";
 
 const db = getFirestore(app);
@@ -34,22 +34,22 @@ function ProfileBadge({ profile, allUsers }: { profile: any, allUsers: any[] }) 
 
     let rankBadge = null;
     if (userRank === 0) {
-        rankBadge = { text: "#1 in the World", color: "bg-yellow-400 text-black", icon: <Award /> };
+        rankBadge = { text: "Global Icon", color: "bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-500 text-black shadow-lg", icon: <Crown size={14} /> };
     } else if (userRank === 1) {
-        rankBadge = { text: "#2 in the World", color: "bg-gray-400 text-black", icon: <Award /> };
+        rankBadge = { text: "Trendsetter", color: "bg-gradient-to-r from-gray-400 to-gray-200 text-black shadow-md", icon: <Zap size={14} /> };
     } else if (userRank === 2) {
-        rankBadge = { text: "#3 in the World", color: "bg-yellow-600 text-white", icon: <Award /> };
+        rankBadge = { text: "Rising Star", color: "bg-gradient-to-r from-yellow-600 to-amber-400 text-white shadow-md", icon: <Rocket size={14} /> };
     }
     
     return (
         <div className="flex items-center justify-center gap-2 mt-2 flex-wrap">
             {isCreator && (
-                <div className="flex items-center gap-1.5 text-xs font-bold px-2 py-1 rounded-full bg-purple-500/20 text-purple-300">
-                    <Mic size={14}/> Creator
+                <div className="flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-gradient-to-r from-accent-purple to-accent-pink text-white shadow-md">
+                    <Mic size={14}/> Vibe Creator
                 </div>
             )}
             {rankBadge && (
-                <div className={`flex items-center gap-1.5 text-xs font-bold px-2 py-1 rounded-full ${rankBadge.color}`}>
+                <div className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full ${rankBadge.color}`}>
                     {rankBadge.icon} {rankBadge.text}
                 </div>
             )}
