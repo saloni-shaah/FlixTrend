@@ -26,7 +26,6 @@ const AlmightyChatInputSchema = z.object({
 
 const prompt = ai.definePrompt({
   name: 'almightyChatPrompt',
-  models: ['googleai/gemini-pro'],
   input: {
     schema: z.object({
       systemPrompt: z.string(),
@@ -54,10 +53,18 @@ const almightyChatFlow = ai.defineFlow(
   async (input) => {
     const systemPrompt = SYSTEM_PROMPTS[input.personality as keyof typeof SYSTEM_PROMPTS] || SYSTEM_PROMPTS['vibe-check'];
     
-    const { output } = await prompt({
-        systemPrompt: systemPrompt,
-        history: input.history,
-        prompt: input.prompt,
+    const { output } = await ai.generate({
+        model: 'googleai/gemini-pro',
+        prompt: {
+            system: systemPrompt,
+            messages: [
+                ...input.history.map(m => ({ role: m.role, content: [{ text: m.content[0].text! }] })),
+                { role: 'user', content: [{ text: input.prompt }] }
+            ],
+        },
+        config: {
+            temperature: 0.8,
+        },
     });
 
     return output!;
