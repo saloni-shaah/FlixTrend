@@ -360,6 +360,22 @@ function GroupInfoPanel({ group, currentUser, mutuals, onClose, onGroupUpdate }:
     )
 }
 
+function timeSince(date: Date) {
+    if (!date) return "";
+    const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+    let interval = seconds / 31536000;
+    if (interval > 1) return Math.floor(interval) + " years ago";
+    interval = seconds / 2592000;
+    if (interval > 1) return Math.floor(interval) + " months ago";
+    interval = seconds / 86400;
+    if (interval > 1) return Math.floor(interval) + " days ago";
+    interval = seconds / 3600;
+    if (interval > 1) return Math.floor(interval) + " hours ago";
+    interval = seconds / 60;
+    if (interval > 1) return Math.floor(interval) + " minutes ago";
+    return "just now";
+}
+
 function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
   const [chats, setChats] = useState<any[]>([]);
   const [joinableGroups, setJoinableGroups] = useState<any[]>([]);
@@ -375,6 +391,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showMenu, setShowMenu] = useState<string | null>(null);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
+  const [onlineStatus, setOnlineStatus] = useState<any>(null);
 
   useEffect(() => {
     if (!firebaseUser) return;
@@ -423,6 +440,25 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
     };
 
   }, [firebaseUser]);
+
+   useEffect(() => {
+    if (!selectedChat || selectedChat.isGroup) {
+      setOnlineStatus(null);
+      return;
+    }
+
+    const unsub = onSnapshot(doc(db, 'users', selectedChat.uid), (doc) => {
+      const data = doc.data();
+      if (data) {
+        setOnlineStatus({
+          status: data.status,
+          lastSeen: data.lastSeen?.toDate(),
+        });
+      }
+    });
+
+    return () => unsub();
+  }, [selectedChat]);
 
 
   const handleSelectChat = async (chat: any) => {
@@ -676,7 +712,13 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                         </div>
                         <button className="flex-1 text-left" disabled={!selectedChat.isGroup} onClick={() => setShowGroupInfo(true)}>
                             <h3 className="font-bold text-white">{selectedChat.name}</h3>
-                            <p className="text-xs text-green-400">{selectedChat.isGroup ? `${selectedChat.members.length} members` : 'Online'}</p>
+                             {onlineStatus?.status === 'online' ? (
+                                <p className="text-xs text-green-400">Online</p>
+                            ) : onlineStatus?.lastSeen ? (
+                                <p className="text-xs text-gray-400">Last seen {timeSince(onlineStatus.lastSeen)}</p>
+                            ) : (
+                               <p className="text-xs text-gray-400">{selectedChat.isGroup ? `${selectedChat.members.length} members` : 'Offline'}</p>
+                            )}
                         </button>
                         <div className="flex items-center gap-2">
                            {!selectedChat.isGroup && <button onClick={() => handleCall('video')} className="p-2 rounded-full hover:bg-accent-cyan/10"><Video size={20}/></button>}
@@ -684,7 +726,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                         </div>
                     </div>
                     
-                    <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-1">
+                     <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-1">
                         {messages.map(msg => {
                             const senderInfo = selectedChat.isGroup ?
                                 (selectedChat.groupType === 'simple' ? selectedChat.memberInfo?.[msg.sender] : null)
@@ -698,7 +740,8 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
 
                              return (
                              <div key={msg.id} className={`group flex w-full items-end gap-2 ${msg.sender === firebaseUser.uid ? "justify-end" : msg.sender === 'system' ? 'justify-center' : "justify-start"}`}>
-                                <div className={`flex items-end gap-2 max-w-[80%] md:max-w-[70%] ${msg.sender === firebaseUser.uid ? 'flex-row-reverse' : 'flex-row'}`}>
+                               <div className={`flex items-end gap-2 max-w-[80%] md:max-w-[70%]`}>
+                                  <div className={`flex flex-col ${msg.sender === firebaseUser.uid ? 'items-end' : 'items-start'}`}>
                                     <div className={`relative px-4 py-2 rounded-2xl ${msg.sender === firebaseUser.uid ? "bg-accent-cyan text-black rounded-br-none" : msg.sender === 'system' ? "bg-gray-800 text-gray-400 text-xs italic" : "bg-gray-700 text-white rounded-bl-none"}`}>
                                         {msg.sender !== firebaseUser.uid && msg.sender !== 'system' && (
                                             <div className="font-bold text-accent-pink text-sm">{displayName}</div>
@@ -721,7 +764,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                                             </div>
                                         )}
                                     </div>
-                                    <div className={`relative hidden group-hover:flex items-center gap-1 ${msg.sender === firebaseUser.uid ? "flex-row-reverse" : ""}`}>
+                                    <div className={`relative hidden group-hover:flex items-center gap-1 mt-1 ${msg.sender === firebaseUser.uid ? "flex-row-reverse" : ""}`}>
                                     {msg.sender !== 'system' && 
                                         <div className="relative">
                                         <button onClick={() => setShowEmojiPicker(showEmojiPicker === msg.id ? null : msg.id)} className="p-1 rounded-full bg-gray-600 hover:bg-gray-500"><Smile size={16}/></button>
@@ -743,6 +786,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                                     }
                                     {msg.sender === firebaseUser.uid && <button onClick={() => handleDeleteMessage(msg.id)} className="p-1 rounded-full bg-gray-600 hover:bg-red-500"><Trash2 size={16}/></button>}
                                     </div>
+                                  </div>
                                 </div>
                             </div>
                              )
