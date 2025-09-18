@@ -1,7 +1,7 @@
 
 "use client";
 import React, { createContext, useState, useContext, ReactNode, useEffect, useRef } from 'react';
-import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp, Unsubscribe } from 'firebase/firestore';
+import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp, Unsubscribe, updateDoc } from 'firebase/firestore';
 import { auth, app } from './firebaseClient';
 import { CallScreen } from '@/components/CallScreen';
 import { requestForToken } from './firebaseMessaging';
@@ -49,23 +49,47 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Effect for handling push notification setup
+  // Effect for handling user presence and push notifications
   useEffect(() => {
+    let callUnsubscribe: Unsubscribe | null = null;
+    let callDocUnsubscribe: Unsubscribe | null = null;
+
     const handleToken = async (user: any) => {
         try {
             const token = await requestForToken();
             if (token && user) {
-                console.log('FCM Token:', token);
                 const userDocRef = doc(db, 'users', user.uid);
-                await setDoc(userDocRef, { fcmToken: token, lastLogin: serverTimestamp() }, { merge: true });
+                await setDoc(userDocRef, { fcmToken: token }, { merge: true });
             }
         } catch (error) {
             console.error('Error getting FCM token:', error);
         }
     };
     
-    let callUnsubscribe: Unsubscribe | null = null;
-    let callDocUnsubscribe: Unsubscribe | null = null;
+    const managePresence = (user: any) => {
+        if (!user) return;
+        const userDocRef = doc(db, 'users', user.uid);
+
+        const onlineData = { status: 'online', lastSeen: serverTimestamp() };
+        const offlineData = { status: 'offline', lastSeen: serverTimestamp() };
+        
+        updateDoc(userDocRef, onlineData);
+
+        const onVisibilityChange = () => {
+             if (document.visibilityState === 'hidden') {
+                updateDoc(userDocRef, offlineData);
+            } else {
+                updateDoc(userDocRef, onlineData);
+            }
+        }
+        
+        window.addEventListener('visibilitychange', onVisibilityChange);
+        window.addEventListener('beforeunload', () => updateDoc(userDocRef, offlineData));
+
+        return () => {
+             window.removeEventListener('visibilitychange', onVisibilityChange);
+        }
+    }
 
     const authUnsubscribe = auth.onAuthStateChanged(user => {
       if (callUnsubscribe) callUnsubscribe();
@@ -73,6 +97,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       
       if (user) {
         handleToken(user);
+        managePresence(user);
+        
         const userDocRef = doc(db, 'users', user.uid);
         callUnsubscribe = onSnapshot(userDocRef, (snap) => {
           const data = snap.data();
