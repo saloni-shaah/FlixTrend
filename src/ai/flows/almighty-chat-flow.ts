@@ -24,26 +24,6 @@ const AlmightyChatInputSchema = z.object({
   prompt: z.string().describe('The user\'s latest message.'),
 });
 
-const prompt = ai.definePrompt({
-  name: 'almightyChatPrompt',
-  input: {
-    schema: z.object({
-      systemPrompt: z.string(),
-      history: z.array(z.custom<Message>()),
-      prompt: z.string(),
-    }),
-  },
-  output: { format: 'text' },
-  system: `{{systemPrompt}}`,
-  messages: [
-      "{{#each history}}{{role}}: {{content}}\n{{/each}}",
-      "user: {{prompt}}"
-  ],
-  config: {
-    temperature: 0.8,
-  },
-});
-
 const almightyChatFlow = ai.defineFlow(
   {
     name: 'almightyChatFlow',
@@ -58,7 +38,7 @@ const almightyChatFlow = ai.defineFlow(
         prompt: {
             system: systemPrompt,
             messages: [
-                ...input.history.map(m => ({ role: m.role, content: [{ text: m.content[0].text! }] })),
+                ...input.history,
                 { role: 'user', content: [{ text: input.prompt }] }
             ],
         },
@@ -67,7 +47,7 @@ const almightyChatFlow = ai.defineFlow(
         },
     });
 
-    return output!;
+    return output?.text ?? "Sorry, I had a glitch. Can you repeat that?";
   }
 );
 
