@@ -12,7 +12,7 @@ const premiumFeatures = [
     { icon: <CheckCircle className="text-accent-cyan"/>, text: "Verified Blue Tick on your profile" },
     { icon: <Diamond className="text-accent-pink"/>, text: "Ad-Free Experience across the app" },
     { icon: <Sparkles className="text-brand-gold"/>, text: "Exclusive profile customization options" },
-    { icon: <Bot className="text-accent-purple"/>, text: "Unlimited access to Almighty AI" },
+    { icon: <Bot className="text-accent-purple"/>, text: "Early access to new features" },
     { icon: <ShieldCheck className="text-accent-cyan"/>, text: "Premium badge on your profile" },
 ];
 
@@ -33,7 +33,7 @@ function RewardsSection() {
             <div className="text-center bg-green-500/10 p-4 rounded-xl">
                 <CheckCircle className="mx-auto text-green-400 mb-2" size={32}/>
                 <h4 className="font-bold text-green-400">Ad Watched!</h4>
-                <p className="text-xs text-gray-300">You've earned 5 free chats with Almighty AI.</p>
+                <p className="text-xs text-gray-300">You've earned some rewards!</p>
             </div>
         )
     }
@@ -44,7 +44,7 @@ function RewardsSection() {
             disabled={rewardStatus === 'loading'}
             className="w-full px-8 py-3 rounded-full bg-accent-green text-black font-bold text-lg shadow-lg hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-wait"
         >
-            {rewardStatus === 'loading' ? "Loading Ad..." : "Watch Ad for 5 AI Chats"}
+            {rewardStatus === 'loading' ? "Loading Ad..." : "Watch Ad for Rewards"}
         </button>
     )
 }
@@ -93,7 +93,7 @@ export default function PremiumPage() {
                  <div className="text-center">
                     <CheckCircle className="mx-auto text-green-400 mb-4" size={48}/>
                     <h1 className="text-3xl font-headline font-bold text-green-400 mb-2">You are a Premium Member!</h1>
-                    <p className="text-gray-300">You have unlimited access to all features, including Almighty AI.</p>
+                    <p className="text-gray-300">You have unlimited access to all features.</p>
                 </div>
             ) : (
                 <>
@@ -102,7 +102,7 @@ export default function PremiumPage() {
                     </div>
                     <h1 className="text-4xl font-headline font-bold text-accent-cyan mb-4">Go Premium</h1>
                     <p className="text-gray-300 mb-8">
-                        Elevate your experience or watch a quick ad to try out Almighty AI.
+                        Elevate your experience or watch a quick ad for rewards.
                     </p>
 
                     <div className="bg-black/20 p-6 rounded-2xl mb-8 text-left">

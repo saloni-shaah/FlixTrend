@@ -16,7 +16,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AlignLeft, BarChart3, ImageIcon, Sparkles } from 'lucide-react';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
-import { AlmightyAIFab } from "@/components/AlmightyAIFab";
 
 
 const CreatePostModal = dynamic(() => import('./CreatePostModal'), { ssr: false });
