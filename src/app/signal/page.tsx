@@ -681,7 +681,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                         </div>
                     </div>
                     
-                    <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-1">
+                    <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-1">
                         {messages.map(msg => {
                             const senderInfo = selectedChat.isGroup ?
                                 (selectedChat.groupType === 'simple' ? selectedChat.memberInfo?.[msg.sender] : null)
@@ -702,7 +702,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                                     {msg.type === 'image' && <img src={msg.mediaUrl} alt={msg.text || "image"} className="rounded-lg max-w-xs" />}
                                     {msg.type === 'video' && <video src={msg.mediaUrl} controls className="rounded-lg max-w-xs" />}
                                     {msg.type === 'audio' && <audio src={msg.mediaUrl} controls />}
-                                    {msg.text && <p className="mt-1">{msg.text}</p>}
+                                    {msg.text && <p className="mt-1 break-words">{msg.text}</p>}
                                     {msg.sender !== 'system' && <div className="text-xs mt-1 text-right opacity-70">
                                         {msg.createdAt?.toDate?.().toLocaleTimeString() || ""}
                                     </div>}
