@@ -662,7 +662,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                     <div className="text-gray-400 text-center p-8">No contacts or groups yet. Follow some users to start chatting!</div>
                 ) : (
                     chats.map((chat) => (
-                        <button key={chat.id} className={`w-full flex items-center gap-4 px-4 py-3 text-left hover:bg-accent-cyan/10 transition-colors duration-200 ${selectedChat?.id === chat.id ? "bg-accent-cyan/20" : ""}`} onClick={() => handleSelectChat(chat)}>
+                        <button key={chat.isGroup ? chat.id : `dm-${chat.id}`} className={`w-full flex items-center gap-4 px-4 py-3 text-left hover:bg-accent-cyan/10 transition-colors duration-200 ${selectedChat?.id === chat.id ? "bg-accent-cyan/20" : ""}`} onClick={() => handleSelectChat(chat)}>
                             <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-xl overflow-hidden shrink-0">
                                 {chat.isGroup ? 
                                     (chat.groupType === 'anonymous' ? <Shield/> : chat.groupType === 'pseudonymous' ? <EyeOff/> : <Users/>) :
