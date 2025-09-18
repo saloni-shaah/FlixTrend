@@ -1,3 +1,4 @@
+
 "use client";
 import React from "react";
 import Link from "next/link";
@@ -49,7 +50,7 @@ export default function TermsOfServicePage() {
             </section>
 
             <section className="mb-8">
-                <h2 className="text-2xl font-headline font-bold text-accent-pink mb-3">3. Almighty AI Usage</h2>
+                <h2 className="text-2xl font-headline font-bold text-accent-pink mb-3">3. AI Usage</h2>
                 <p className="text-gray-400 mb-4">Our AI assistant is powerful, but:</p>
                 <ul className="list-disc list-inside space-y-2 text-gray-300">
                     <li>It’s not a human—sometimes it may make mistakes.</li>
@@ -105,3 +106,4 @@ export default function TermsOfServicePage() {
     </div>
   );
 }
+
