@@ -376,8 +376,6 @@ export default function HomePage() {
         </button>
       </div>
 
-      <AlmightyAIFab />
-
       <AnimatePresence>
         {showPostModal && <CreatePostModal open={showPostModal} onClose={() => setShowPostModal(false)} initialType={initialPostType} />}
         {showMusicModal && <AddMusicModal onClose={() => setShowMusicModal(false)} />}
