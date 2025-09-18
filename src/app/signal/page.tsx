@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp, where, writeBatch, getDocs, updateDoc, deleteDoc, arrayUnion, arrayRemove } from "firebase/firestore";
 import { auth, db } from "@/utils/firebaseClient";
-import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, Smile, Trash2, Users, CheckSquare, Square, MoreVertical, UserPlus, UserX, Edit } from "lucide-react";
+import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, Smile, Trash2, Users, CheckSquare, Square, MoreVertical, UserPlus, UserX, Edit, Shield, EyeOff } from "lucide-react";
 import { useAppState } from "@/utils/AppStateContext";
 import { createCall } from "@/utils/callService";
 import { motion, AnimatePresence } from "framer-motion";
@@ -38,9 +38,26 @@ async function uploadToCloudinary(file: File, onProgress?: (percent: number) => 
   });
 }
 
+const anonymousNames = ["VibeSeeker", "MemeLord", "EchoRider", "SynthWave", "PixelPioneer", "StarSailor", "DreamCaster"];
+const generateAnonymousName = (userId: string, chatId: string) => {
+    // Simple hash function to get a somewhat consistent but random-looking name
+    const hash = (str: string) => {
+        let h = 0;
+        for (let i = 0; i < str.length; i++) {
+            h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
+        }
+        return h;
+    };
+    const nameIndex = Math.abs(hash(userId + chatId)) % anonymousNames.length;
+    const num = Math.abs(hash(chatId + userId)) % 900 + 100; // 3-digit number
+    return `${anonymousNames[nameIndex]}${num}`;
+};
+
+
 function CreateGroupModal({ mutuals, currentUser, onClose, onGroupCreated }: { mutuals: any[], currentUser: any, onClose: () => void, onGroupCreated: (group:any) => void }) {
     const [selectedUids, setSelectedUids] = useState<string[]>([]);
     const [groupName, setGroupName] = useState('');
+    const [groupType, setGroupType] = useState<'simple' | 'anonymous' | 'pseudonymous'>('simple');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -51,8 +68,8 @@ function CreateGroupModal({ mutuals, currentUser, onClose, onGroupCreated }: { m
     };
 
     const handleCreateGroup = async () => {
-        if (selectedUids.length < 1) {
-            setError("You must select at least one other member.");
+        if (selectedUids.length < 1 && groupType !== 'anonymous') {
+            setError("You must select at least one other member for this group type.");
             return;
         }
         if (!groupName.trim()) {
@@ -63,7 +80,7 @@ function CreateGroupModal({ mutuals, currentUser, onClose, onGroupCreated }: { m
         setError('');
 
         try {
-            const memberUids = [...selectedUids, currentUser.uid];
+            const memberUids = [...new Set([...selectedUids, currentUser.uid])];
             const memberProfiles = await Promise.all(
                 memberUids.map(async uid => {
                     const userDoc = await getDoc(doc(db, "users", uid));
@@ -73,6 +90,13 @@ function CreateGroupModal({ mutuals, currentUser, onClose, onGroupCreated }: { m
 
             const validMembers = memberProfiles.filter(Boolean);
 
+            let pseudonyms: any = {};
+            if (groupType === 'pseudonymous') {
+                validMembers.forEach(member => {
+                    pseudonyms[member!.uid] = generateAnonymousName(member!.uid, groupName); // Use group name as part of seed
+                });
+            }
+
             const groupDocRef = await addDoc(collection(db, "groups"), {
                 name: groupName,
                 members: memberUids,
@@ -81,6 +105,8 @@ function CreateGroupModal({ mutuals, currentUser, onClose, onGroupCreated }: { m
                 createdAt: serverTimestamp(),
                 createdBy: currentUser.uid,
                 isGroup: true,
+                groupType: groupType,
+                pseudonyms: groupType === 'pseudonymous' ? pseudonyms : {},
             });
             
             const groupData = (await getDoc(groupDocRef)).data();
@@ -120,21 +146,36 @@ function CreateGroupModal({ mutuals, currentUser, onClose, onGroupCreated }: { m
                     onChange={e => setGroupName(e.target.value)}
                 />
 
-                <h3 className="font-bold mb-2 text-accent-cyan">Select Members</h3>
-                <div className="flex-1 overflow-y-auto mb-4 border-y border-accent-cyan/10">
-                    {mutuals.map(user => (
-                        <div key={user.uid} className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent-cyan/10 cursor-pointer" onClick={() => handleToggleUser(user.uid)}>
-                            {selectedUids.includes(user.uid) ? <CheckSquare className="text-accent-cyan"/> : <Square className="text-gray-500"/>}
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-lg overflow-hidden shrink-0">
-                                {user.avatar_url ? <img src={user.avatar_url} alt={user.name || user.username} className="w-full h-full object-cover"/> : getInitials(user)}
-                            </div>
-                            <div>
-                                <div className="font-bold">{user.name || user.username}</div>
-                                <div className="text-xs text-gray-400">@{user.username}</div>
-                            </div>
-                        </div>
-                    ))}
+                <div className="flex gap-2 mb-4">
+                    <button onClick={() => setGroupType('simple')} className={`flex-1 btn-glass text-xs ${groupType === 'simple' ? 'bg-accent-cyan text-black' : ''}`}>Simple</button>
+                    <button onClick={() => setGroupType('pseudonymous')} className={`flex-1 btn-glass text-xs ${groupType === 'pseudonymous' ? 'bg-accent-cyan text-black' : ''}`}>Pseudonymous</button>
+                    <button onClick={() => setGroupType('anonymous')} className={`flex-1 btn-glass text-xs ${groupType === 'anonymous' ? 'bg-accent-cyan text-black' : ''}`}>Anonymous</button>
                 </div>
+                 <p className="text-xs text-gray-400 mb-4 -mt-2 text-center">
+                    {groupType === 'simple' && 'Standard group chat with your mutuals.'}
+                    {groupType === 'pseudonymous' && 'Members are known, but names are hidden behind pseudonyms.'}
+                    {groupType === 'anonymous' && 'Publicly joinable group where all members are anonymous.'}
+                </p>
+
+
+                {groupType !== 'anonymous' && <>
+                    <h3 className="font-bold mb-2 text-accent-cyan">Select Members</h3>
+                    <div className="flex-1 overflow-y-auto mb-4 border-y border-accent-cyan/10 max-h-60">
+                        {mutuals.map(user => (
+                            <div key={user.uid} className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent-cyan/10 cursor-pointer" onClick={() => handleToggleUser(user.uid)}>
+                                {selectedUids.includes(user.uid) ? <CheckSquare className="text-accent-cyan"/> : <Square className="text-gray-500"/>}
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-lg overflow-hidden shrink-0">
+                                    {user.avatar_url ? <img src={user.avatar_url} alt={user.name || user.username} className="w-full h-full object-cover"/> : getInitials(user)}
+                                </div>
+                                <div>
+                                    <div className="font-bold">{user.name || user.username}</div>
+                                    <div className="text-xs text-gray-400">@{user.username}</div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </>}
+
 
                 {error && <p className="text-red-400 text-center mb-2">{error}</p>}
                 
@@ -163,17 +204,27 @@ function GroupInfoPanel({ group, currentUser, mutuals, onClose, onGroupUpdate }:
     const handleAddMember = async (userToAdd: any) => {
         const groupRef = doc(db, "groups", group.id);
         const updatedMemberInfo = { ...group.memberInfo, [userToAdd.uid]: { name: userToAdd.name, avatar_url: userToAdd.avatar_url, username: userToAdd.username } };
-        await updateDoc(groupRef, {
+        
+        let updateData: any = {
             members: arrayUnion(userToAdd.uid),
             memberInfo: updatedMemberInfo
-        });
+        };
+        
+        if(group.groupType === 'pseudonymous'){
+            updateData.pseudonyms = {
+                ...group.pseudonyms,
+                [userToAdd.uid]: generateAnonymousName(userToAdd.uid, group.id)
+            }
+        }
+        
+        await updateDoc(groupRef, updateData);
         await addDoc(collection(db, "chats", group.id, "messages"), {
                 text: `${userToAdd.name} was added to the group.`,
                 sender: 'system',
                 createdAt: serverTimestamp(),
                 readBy: [currentUser.uid]
             });
-        onGroupUpdate({ ...group, members: [...group.members, userToAdd.uid], memberInfo: updatedMemberInfo });
+        onGroupUpdate({ ...group, members: [...group.members, userToAdd.uid], memberInfo: updatedMemberInfo, pseudonyms: updateData.pseudonyms || group.pseudonyms });
     };
 
     const handleRemoveMember = async (uidToRemove: string) => {
@@ -182,10 +233,19 @@ function GroupInfoPanel({ group, currentUser, mutuals, onClose, onGroupUpdate }:
         const memberName = group.memberInfo[uidToRemove]?.name || 'A user';
         const updatedMemberInfo = { ...group.memberInfo };
         delete updatedMemberInfo[uidToRemove];
-        await updateDoc(groupRef, {
+        
+        const updateData: any = {
             members: arrayRemove(uidToRemove),
             memberInfo: updatedMemberInfo,
-        });
+        };
+
+        if(group.groupType === 'pseudonymous'){
+            const updatedPseudonyms = { ...group.pseudonyms };
+            delete updatedPseudonyms[uidToRemove];
+            updateData.pseudonyms = updatedPseudonyms;
+        }
+        
+        await updateDoc(groupRef, updateData);
 
         await addDoc(collection(db, "chats", group.id, "messages"), {
                 text: `${memberName} was removed from the group.`,
@@ -193,7 +253,7 @@ function GroupInfoPanel({ group, currentUser, mutuals, onClose, onGroupUpdate }:
                 createdAt: serverTimestamp(),
                 readBy: [currentUser.uid]
             });
-         onGroupUpdate({ ...group, members: group.members.filter((m:string) => m !== uidToRemove), memberInfo: updatedMemberInfo });
+         onGroupUpdate({ ...group, members: group.members.filter((m:string) => m !== uidToRemove), memberInfo: updatedMemberInfo, pseudonyms: updateData.pseudonyms || group.pseudonyms });
     };
     
     const getInitials = (user: any) => user?.name?.[0] || user?.username?.[0] || "U";
@@ -218,7 +278,9 @@ function GroupInfoPanel({ group, currentUser, mutuals, onClose, onGroupUpdate }:
             
             <div className="flex-1 overflow-y-auto p-4">
                 <div className="flex flex-col items-center text-center mb-6">
-                    <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-5xl mb-4"><Users /></div>
+                    <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-5xl mb-4">
+                        {group.groupType === 'anonymous' ? <Shield/> : group.groupType === 'pseudonymous' ? <EyeOff/> : <Users />}
+                    </div>
                     {isEditing ? (
                         <input type="text" value={groupName} onChange={e => setGroupName(e.target.value)} className="input-glass text-xl font-bold text-center w-full"/>
                     ) : (
@@ -247,14 +309,17 @@ function GroupInfoPanel({ group, currentUser, mutuals, onClose, onGroupUpdate }:
                         {group.members.map((uid: string) => {
                             const member = memberInfo[uid];
                             if (!member) return null;
+                            const displayName = group.groupType === 'pseudonymous' ? group.pseudonyms?.[uid] || 'Anon' : member.name;
+                            const displayUsername = group.groupType === 'pseudonymous' ? '???' : member.username;
+                            
                             return (
                                 <div key={uid} className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent-cyan/10">
                                     <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-lg overflow-hidden shrink-0">
                                         {member.avatar_url ? <img src={member.avatar_url} alt={member.name} className="w-full h-full object-cover"/> : getInitials(member)}
                                     </div>
                                     <div>
-                                        <p className="font-bold">{member.name}</p>
-                                        <p className="text-xs text-gray-400">@{member.username}</p>
+                                        <p className="font-bold">{displayName}</p>
+                                        <p className="text-xs text-gray-400">@{displayUsername}</p>
                                     </div>
                                     {isAdmin && uid !== currentUser.uid && (
                                         <button onClick={() => handleRemoveMember(uid)} className="ml-auto p-2 rounded-full hover:bg-red-500/20 text-red-400"><UserX size={16}/></button>
@@ -265,7 +330,7 @@ function GroupInfoPanel({ group, currentUser, mutuals, onClose, onGroupUpdate }:
                     </div>
                 </div>
 
-                {isAdmin && (
+                {isAdmin && group.groupType !== 'anonymous' && (
                     <div>
                         <button onClick={() => setIsAdding(!isAdding)} className="w-full btn-glass flex items-center justify-center gap-2">
                             <UserPlus size={16}/> {isAdding ? "Cancel" : "Add Members"}
@@ -297,6 +362,7 @@ function GroupInfoPanel({ group, currentUser, mutuals, onClose, onGroupUpdate }:
 
 function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
   const [chats, setChats] = useState<any[]>([]);
+  const [joinableGroups, setJoinableGroups] = useState<any[]>([]);
   const [selectedChat, setSelectedChat] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
@@ -313,8 +379,11 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
   useEffect(() => {
     if (!firebaseUser) return;
 
-    // Fetch 1-on-1 chats (mutuals)
-    const fetchMutuals = async () => {
+    // Fetch user's chats (groups and mutuals)
+    const qChats = query(collection(db, "groups"), where("members", "array-contains", firebaseUser.uid));
+    const unsubChats = onSnapshot(qChats, async (groupsSnap) => {
+        const groupChats = groupsSnap.docs.map(doc => ({ id: doc.id, ...doc.data(), isGroup: true, uid: doc.id }));
+        
         const followingRef = collection(db, "users", firebaseUser.uid, "following");
         const followersRef = collection(db, "users", firebaseUser.uid, "followers");
         const [followingSnap, followersSnap] = await Promise.all([getDocs(followingRef), getDocs(followersRef)]);
@@ -329,23 +398,26 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
             return userDoc.exists() ? { uid, ...userDoc.data(), isGroup: false, id: uid } : null;
           })
         );
-        return mutualProfiles.filter(Boolean) as any[];
-    };
-    
-    // Listener for group chats
-    const groupsQuery = query(collection(db, "groups"), where("members", "array-contains", firebaseUser.uid));
-    const unsubGroups = onSnapshot(groupsQuery, async (groupsSnap) => {
-        const groupChats = groupsSnap.docs.map(doc => ({ id: doc.id, ...doc.data(), isGroup: true, uid: doc.id }));
-        const oneOnOneChats = await fetchMutuals();
         
-        // Combine and remove duplicates, prioritizing group chats if ID is same as a user UID somehow
-        const allChats = [...groupChats, ...oneOnOneChats];
-        const uniqueChats = allChats.filter((v,i,a)=>a.findIndex(t=>(t.id === v.id))===i);
+        const oneOnOneChats = mutualProfiles.filter(Boolean) as any[];
+        const allChats = [...groupChats, ...oneOnOneChats].filter((v,i,a)=>a.findIndex(t=>(t.id === v.id))===i);
+        
+        allChats.sort((a,b) => (b.lastMessageAt?.toDate() || b.createdAt?.toDate() || 0) - (a.lastMessageAt?.toDate() || a.createdAt?.toDate() || 0));
 
-        setChats(uniqueChats);
+        setChats(allChats);
     });
 
-    return () => unsubGroups();
+    // Fetch joinable anonymous groups
+    const qJoinable = query(collection(db, "groups"), where("groupType", "==", "anonymous"), where("members", "not-in", [[firebaseUser.uid]]));
+    const unsubJoinable = onSnapshot(qJoinable, (snap) => {
+        setJoinableGroups(snap.docs.map(doc => ({ id: doc.id, ...doc.data(), isGroup: true })));
+    });
+
+
+    return () => {
+        unsubChats();
+        unsubJoinable();
+    };
 
   }, [firebaseUser]);
 
@@ -419,6 +491,16 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
     } else {
         messageData.text = newMessage;
     }
+    
+    if(selectedChat.groupType === 'anonymous' || selectedChat.groupType === 'pseudonymous'){
+        // In anonymous/pseudonymous groups, we don't send the real user info with the message
+    } else {
+        messageData.senderInfo = {
+            name: firebaseUser.name,
+            avatar_url: firebaseUser.avatar_url
+        }
+    }
+
 
     await addDoc(collection(db, "chats", chatId, "messages"), messageData);
     setNewMessage("");
@@ -509,6 +591,16 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
     });
   };
   
+  const handleJoinAnonymousGroup = async (group: any) => {
+    if (!firebaseUser) return;
+    const groupRef = doc(db, "groups", group.id);
+    await updateDoc(groupRef, {
+        members: arrayUnion(firebaseUser.uid)
+    });
+    // This will trigger the main chat listener to move it to the top list
+    handleSelectChat(group); 
+  };
+  
   const getInitials = (user: any) => user?.name?.[0] || user?.username?.[0] || "U";
   
   const defaultReactions = ["👍", "❤️", "😂", "😢", "😮", "🙏"];
@@ -534,7 +626,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                         <button key={chat.id} className={`w-full flex items-center gap-4 px-4 py-3 text-left hover:bg-accent-cyan/10 transition-colors duration-200 ${selectedChat?.id === chat.id ? "bg-accent-cyan/20" : ""}`} onClick={() => handleSelectChat(chat)}>
                             <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-xl overflow-hidden shrink-0">
                                 {chat.isGroup ? 
-                                    <Users/> :
+                                    (chat.groupType === 'anonymous' ? <Shield/> : chat.groupType === 'pseudonymous' ? <EyeOff/> : <Users/>) :
                                     (chat.avatar_url ? <img src={chat.avatar_url} alt="avatar" className="w-full h-full object-cover"/> : getInitials(chat))
                                 }
                             </div>
@@ -550,6 +642,21 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                         </button>
                     ))
                 )}
+                {joinableGroups.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-accent-cyan/10">
+                         <h3 className="px-4 text-sm font-bold text-gray-400 mb-2">Join Anonymous Groups</h3>
+                         {joinableGroups.map(group => (
+                             <button key={group.id} className="w-full flex items-center gap-4 px-4 py-3 text-left hover:bg-accent-cyan/10 transition-colors" onClick={() => handleJoinAnonymousGroup(group)}>
+                                <div className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center shrink-0"><Shield/></div>
+                                 <div className="flex-1 overflow-hidden">
+                                     <span className="font-bold text-white block truncate">{group.name}</span>
+                                     <span className="text-xs text-green-400 block">{group.members.length} members</span>
+                                 </div>
+                                 <span className="text-sm font-bold text-accent-cyan">Join</span>
+                             </button>
+                         ))}
+                    </div>
+                )}
             </div>
         </div>
 
@@ -559,7 +666,10 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                     <div className="flex items-center gap-3 p-3 border-b border-accent-cyan/10 bg-black/60 shadow-md shrink-0">
                         {isMobile && <button onClick={() => setSelectedChat(null)} className="p-2 rounded-full hover:bg-accent-cyan/10"><ArrowLeft size={20}/></button>}
                         <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-lg overflow-hidden shrink-0">
-                           {selectedChat.isGroup ? <Users/> : (selectedChat.avatar_url ? <img src={selectedChat.avatar_url} alt="avatar" className="w-full h-full object-cover"/> : getInitials(selectedChat))}
+                           {selectedChat.isGroup ? 
+                                (selectedChat.groupType === 'anonymous' ? <Shield/> : selectedChat.groupType === 'pseudonymous' ? <EyeOff/> : <Users/>) :
+                                (selectedChat.avatar_url ? <img src={selectedChat.avatar_url} alt="avatar" className="w-full h-full object-cover"/> : getInitials(selectedChat))
+                           }
                         </div>
                         <button className="flex-1 text-left" disabled={!selectedChat.isGroup} onClick={() => setShowGroupInfo(true)}>
                             <h3 className="font-bold text-white">{selectedChat.name}</h3>
@@ -572,9 +682,23 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                     </div>
                     
                     <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-1">
-                        {messages.map(msg => (
+                        {messages.map(msg => {
+                            const senderInfo = selectedChat.isGroup ?
+                                (selectedChat.groupType === 'simple' ? selectedChat.memberInfo?.[msg.sender] : null)
+                                : selectedChat;
+                            
+                            const displayName = selectedChat.groupType === 'anonymous' ? generateAnonymousName(msg.sender, selectedChat.id) : 
+                                                selectedChat.groupType === 'pseudonymous' ? selectedChat.pseudonyms?.[msg.sender] || 'Anon' : 
+                                                senderInfo?.name || "User";
+                            
+                            const avatarUrl = selectedChat.groupType === 'simple' ? senderInfo?.avatar_url : null;
+
+                             return (
                              <div key={msg.id} className={`group flex items-end gap-2 max-w-[80%] ${msg.sender === firebaseUser.uid ? "self-end flex-row-reverse" : msg.sender === 'system' ? 'self-center' : "self-start"}`}>
                                 <div className={`relative px-4 py-2 rounded-2xl ${msg.sender === firebaseUser.uid ? "bg-accent-cyan text-black rounded-br-none" : msg.sender === 'system' ? "bg-gray-800 text-gray-400 text-xs italic" : "bg-gray-700 text-white rounded-bl-none"}`}>
+                                    {msg.sender !== firebaseUser.uid && msg.sender !== 'system' && (
+                                        <div className="font-bold text-accent-pink text-sm">{displayName}</div>
+                                    )}
                                     {msg.type === 'image' && <img src={msg.mediaUrl} alt={msg.text || "image"} className="rounded-lg max-w-xs" />}
                                     {msg.type === 'video' && <video src={msg.mediaUrl} controls className="rounded-lg max-w-xs" />}
                                     {msg.type === 'audio' && <audio src={msg.mediaUrl} controls />}
@@ -616,7 +740,8 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                                    {msg.sender === firebaseUser.uid && <button onClick={() => handleDeleteMessage(msg.id)} className="p-1 rounded-full bg-gray-600 hover:bg-red-500"><Trash2 size={16}/></button>}
                                 </div>
                             </div>
-                        ))}
+                             )
+                        })}
                          <div ref={messagesEndRef} />
                     </div>
 
@@ -690,5 +815,3 @@ export default function SignalPage() {
   }
   return <ClientOnlySignalPage firebaseUser={firebaseUser} />;
 }
-
-    
