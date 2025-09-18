@@ -697,50 +697,52 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                             const avatarUrl = selectedChat.groupType === 'simple' ? senderInfo?.avatar_url : null;
 
                              return (
-                             <div key={msg.id} className={`group flex items-end gap-2 max-w-[80%] md:max-w-[70%] ${msg.sender === firebaseUser.uid ? "self-end flex-row-reverse" : msg.sender === 'system' ? 'self-center' : "self-start"}`}>
-                                <div className={`relative px-4 py-2 rounded-2xl ${msg.sender === firebaseUser.uid ? "bg-accent-cyan text-black rounded-br-none" : msg.sender === 'system' ? "bg-gray-800 text-gray-400 text-xs italic" : "bg-gray-700 text-white rounded-bl-none"}`}>
-                                    {msg.sender !== firebaseUser.uid && msg.sender !== 'system' && (
-                                        <div className="font-bold text-accent-pink text-sm">{displayName}</div>
-                                    )}
-                                    {msg.type === 'image' && <img src={msg.mediaUrl} alt={msg.text || "image"} className="rounded-lg max-w-xs" />}
-                                    {msg.type === 'video' && <video src={msg.mediaUrl} controls className="rounded-lg max-w-xs" />}
-                                    {msg.type === 'audio' && <audio src={msg.mediaUrl} controls />}
-                                    {msg.text && <p className="mt-1 break-words">{msg.text}</p>}
-                                    {msg.sender !== 'system' && <div className="text-xs mt-1 text-right opacity-70">
-                                        {msg.createdAt?.toDate?.().toLocaleTimeString() || ""}
-                                    </div>}
-                                    {msg.reactions && Object.keys(msg.reactions).length > 0 && (
-                                        <div className="absolute -bottom-4 -right-1 flex gap-1">
-                                            {Object.entries(msg.reactions).map(([emoji, uids]: [string, any]) => (
-                                                <div key={emoji} className="bg-gray-600 px-1.5 py-0.5 rounded-full text-xs flex items-center gap-1">
-                                                    <span>{emoji}</span>
-                                                    <span className="font-bold text-xs">{Array.isArray(uids) ? uids.length : 0}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                                <div className={`relative hidden group-hover:flex items-center gap-1 ${msg.sender === firebaseUser.uid ? "flex-row-reverse" : ""}`}>
-                                   {msg.sender !== 'system' && 
-                                    <div className="relative">
-                                       <button onClick={() => setShowEmojiPicker(showEmojiPicker === msg.id ? null : msg.id)} className="p-1 rounded-full bg-gray-600 hover:bg-gray-500"><Smile size={16}/></button>
-                                        <AnimatePresence>
-                                        {showEmojiPicker === msg.id && (
-                                            <motion.div 
-                                                initial={{ opacity: 0, y: 10 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={{ opacity: 0, y: 10 }}
-                                                className="absolute z-10 -top-10 bg-gray-800 rounded-full p-2 flex gap-1 shadow-lg"
-                                            >
-                                                {defaultReactions.map(emoji => (
-                                                    <button key={emoji} onClick={() => handleReact(msg.id, emoji)} className="text-xl hover:scale-125 transition-transform">{emoji}</button>
-                                                ))}
-                                            </motion.div>
+                             <div key={msg.id} className={`group flex w-full items-end gap-2 ${msg.sender === firebaseUser.uid ? "justify-end" : msg.sender === 'system' ? 'justify-center' : "justify-start"}`}>
+                                <div className={`flex items-end gap-2 max-w-[80%] md:max-w-[70%] ${msg.sender === firebaseUser.uid ? 'flex-row-reverse' : 'flex-row'}`}>
+                                    <div className={`relative px-4 py-2 rounded-2xl ${msg.sender === firebaseUser.uid ? "bg-accent-cyan text-black rounded-br-none" : msg.sender === 'system' ? "bg-gray-800 text-gray-400 text-xs italic" : "bg-gray-700 text-white rounded-bl-none"}`}>
+                                        {msg.sender !== firebaseUser.uid && msg.sender !== 'system' && (
+                                            <div className="font-bold text-accent-pink text-sm">{displayName}</div>
                                         )}
-                                        </AnimatePresence>
+                                        {msg.type === 'image' && <img src={msg.mediaUrl} alt={msg.text || "image"} className="rounded-lg max-w-xs" />}
+                                        {msg.type === 'video' && <video src={msg.mediaUrl} controls className="rounded-lg max-w-xs" />}
+                                        {msg.type === 'audio' && <audio src={msg.mediaUrl} controls />}
+                                        {msg.text && <p className="mt-1 break-words">{msg.text}</p>}
+                                        {msg.sender !== 'system' && <div className="text-xs mt-1 text-right opacity-70">
+                                            {msg.createdAt?.toDate?.().toLocaleTimeString() || ""}
+                                        </div>}
+                                        {msg.reactions && Object.keys(msg.reactions).length > 0 && (
+                                            <div className="absolute -bottom-4 -right-1 flex gap-1">
+                                                {Object.entries(msg.reactions).map(([emoji, uids]: [string, any]) => (
+                                                    <div key={emoji} className="bg-gray-600 px-1.5 py-0.5 rounded-full text-xs flex items-center gap-1">
+                                                        <span>{emoji}</span>
+                                                        <span className="font-bold text-xs">{Array.isArray(uids) ? uids.length : 0}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
-                                   }
-                                   {msg.sender === firebaseUser.uid && <button onClick={() => handleDeleteMessage(msg.id)} className="p-1 rounded-full bg-gray-600 hover:bg-red-500"><Trash2 size={16}/></button>}
+                                    <div className={`relative hidden group-hover:flex items-center gap-1 ${msg.sender === firebaseUser.uid ? "flex-row-reverse" : ""}`}>
+                                    {msg.sender !== 'system' && 
+                                        <div className="relative">
+                                        <button onClick={() => setShowEmojiPicker(showEmojiPicker === msg.id ? null : msg.id)} className="p-1 rounded-full bg-gray-600 hover:bg-gray-500"><Smile size={16}/></button>
+                                            <AnimatePresence>
+                                            {showEmojiPicker === msg.id && (
+                                                <motion.div 
+                                                    initial={{ opacity: 0, y: 10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, y: 10 }}
+                                                    className="absolute z-10 -top-10 bg-gray-800 rounded-full p-2 flex gap-1 shadow-lg"
+                                                >
+                                                    {defaultReactions.map(emoji => (
+                                                        <button key={emoji} onClick={() => handleReact(msg.id, emoji)} className="text-xl hover:scale-125 transition-transform">{emoji}</button>
+                                                    ))}
+                                                </motion.div>
+                                            )}
+                                            </AnimatePresence>
+                                        </div>
+                                    }
+                                    {msg.sender === firebaseUser.uid && <button onClick={() => handleDeleteMessage(msg.id)} className="p-1 rounded-full bg-gray-600 hover:bg-red-500"><Trash2 size={16}/></button>}
+                                    </div>
                                 </div>
                             </div>
                              )
