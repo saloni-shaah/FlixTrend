@@ -408,9 +408,11 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
     });
 
     // Fetch joinable anonymous groups
-    const qJoinable = query(collection(db, "groups"), where("groupType", "==", "anonymous"), where("members", "not-in", [[firebaseUser.uid]]));
+    const qJoinable = query(collection(db, "groups"), where("groupType", "==", "anonymous"));
     const unsubJoinable = onSnapshot(qJoinable, (snap) => {
-        setJoinableGroups(snap.docs.map(doc => ({ id: doc.id, ...doc.data(), isGroup: true })));
+        const allAnonGroups = snap.docs.map(doc => ({ id: doc.id, ...doc.data(), isGroup: true }));
+        const nonMemberGroups = allAnonGroups.filter(g => !g.members.includes(firebaseUser.uid));
+        setJoinableGroups(nonMemberGroups);
     });
 
 
