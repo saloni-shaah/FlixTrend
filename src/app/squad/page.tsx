@@ -786,8 +786,8 @@ function SettingsModal({ profile, firebaseUser, onClose }: { profile: any; fireb
             <div className="bg-white/5 rounded-xl p-4">
                 <Link href="/premium">
                     <div className="w-full p-4 rounded-2xl bg-gradient-to-r from-accent-purple via-accent-pink to-brand-gold cursor-pointer mb-4">
-                        <h3 className="font-headline font-bold text-white">Upgrade to Premium</h3>
-                        <p className="text-xs text-white/80">Get a blue tick, an ad-free experience, and more!</p>
+                        <h3 className="font-headline font-bold text-white">Manage Premium</h3>
+                        <p className="text-xs text-white/80">Upgrade or manage your subscription.</p>
                     </div>
                 </Link>
             </div>

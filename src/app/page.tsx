@@ -140,6 +140,7 @@ export default function LandingPage() {
                 <FeatureCard icon={<Music />} title="Flashes" desc="Quick, fun, and expressive story-style posts that vanish." />
                 <FeatureCard icon={<Video />} title="Scope" desc="Dive into endless creativity, like shorts but smarter." />
                 <FeatureCard icon={<MessageSquare />} title="Signal" desc="Private, secure, and fast messaging for your circle." />
+                 <FeatureCard icon={<Bot />} title="Almighty AI" desc="Your creative sidekick for brainstorming, homework, and more." />
                 <FeatureCard icon={<ShieldCheck />} title="Voltix Security" desc="Proprietary ledger-based security providing top-layer encryption." />
             </div>
         </section>
@@ -176,7 +177,7 @@ export default function LandingPage() {
             <div className="flex justify-center gap-4 flex-wrap">
                  <Link href="/about" className="text-lg font-semibold hover:text-accent-pink transition-colors">Our Dev Story</Link>
                  <span className="text-gray-600">|</span>
-                 <Link href="#" className="text-lg font-semibold hover:text-accent-pink transition-colors">FlixTrend News</Link>
+                 <Link href="/premium" className="text-lg font-semibold hover:text-accent-pink transition-colors">Premium</Link>
                  <span className="text-gray-600">|</span>
                  <Link href="#" className="text-lg font-semibold hover:text-accent-pink transition-colors">We're Hiring</Link>
                  <span className="text-gray-600">|</span>
