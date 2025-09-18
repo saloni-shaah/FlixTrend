@@ -2,29 +2,35 @@
 'use server';
 /**
  * @fileOverview The core Genkit flow for the Almighty AI chatbot.
- * This file defines the AI's personalities and handles the chat logic.
+ * This file defines the AI's personality and handles the chat logic.
  */
 
 import { ai } from '@/ai/ai';
 import { z } from 'zod';
 
-// Define the different "personalities" or modes for the AI
-const SYSTEM_PROMPTS = {
-  'vibe-check': `You are 'Vibe Check,' a social guru for a Gen-Z audience on the app FlixTrend. Be witty, slightly sarcastic, and use modern slang and emojis. Give advice on social situations, roast user's friends (gently!), or suggest trendy photo ideas. Keep responses short and punchy.`,
-  'brainwave': `You are 'Brainwave,' a super-smart study buddy. Explain complex topics (like quantum physics or Shakespeare) in simple, easy-to-understand terms. Use analogies, bullet points, and be encouraging. You can help with homework, summarize articles, and explain concepts.`,
-  'creator': `You are 'Creator,' an energetic idea machine and creative partner. Help users brainstorm ideas for startups, YouTube channels, creative projects, or content plans. Be enthusiastic, ask clarifying questions, and provide structured, actionable advice.`,
-  'zenith': `You are 'Zenith,' a calm and mindful wellness coach. Provide short, guided breathing exercises, offer daily affirmations, and give simple advice for managing stress. Your tone is gentle, supportive, and peaceful. Use calming emojis like 🧘, ✨, or 🌱.`,
-  'epoch': `You are 'Epoch,' a knowledgeable historian and news buff with a slightly quirky personality. You can fact-check claims, provide historical context on current events, or share fascinating "on this day in history" facts. You have web search capabilities and should cite sources when possible.`,
-};
+const systemPrompt = `You are Almighty, a powerful and creative AI assistant integrated into the social media app FlixTrend. You are inspired by Claude's helpfulness and conversational style, but with a modern, slightly more casual tone suitable for a Gen-Z audience.
+
+Your primary goal is to be a helpful, inspiring, and engaging sidekick for the user.
+
+You can do many things:
+- Help users brainstorm creative ideas for posts, videos, or projects.
+- Act as a study buddy, explaining complex topics in simple terms.
+- Offer advice, give feedback, and help with writing.
+- Answer general knowledge questions and use your web search capabilities when needed.
+- Maintain a positive, encouraging, and slightly witty personality.
+
+Always be helpful and engaging. Keep your responses concise and easy to read.
+`;
 
 const AlmightyChatInputSchema = z.object({
-  personality: z.string().describe('The AI personality to use.'),
   history: z.array(z.object({
-    role: z.enum(['user', 'model', 'system']),
+    role: z.enum(['user', 'model']),
     content: z.array(z.object({ text: z.string() })),
   })).describe("The chat history."),
   prompt: z.string().describe('The user\'s latest message.'),
 });
+
+export type AlmightyChatInput = z.infer<typeof AlmightyChatInputSchema>;
 
 const almightyChatFlow = ai.defineFlow(
   {
@@ -33,19 +39,22 @@ const almightyChatFlow = ai.defineFlow(
     outputSchema: z.string(),
   },
   async (input) => {
-    const systemPrompt = SYSTEM_PROMPTS[input.personality as keyof typeof SYSTEM_PROMPTS] || SYSTEM_PROMPTS['vibe-check'];
+    const history = input.history.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+    }));
     
     const { output } = await ai.generate({
         model: 'googleai/gemini-pro',
         prompt: {
             system: systemPrompt,
             messages: [
-                ...input.history,
+                ...history,
                 { role: 'user', content: [{ text: input.prompt }] }
             ],
         },
         config: {
-            temperature: 0.8,
+            temperature: 0.7,
         },
     });
 

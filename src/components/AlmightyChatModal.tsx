@@ -7,21 +7,12 @@ import { Send, X, Bot, User, Brain, Heart, Palette, TrendingUp, Sparkles } from 
 import { almightyChat } from "@/ai/flows/almighty-chat-flow";
 import { AlmightyLogo } from "./AlmightyLogo";
 
-const aiModels = [
-    { id: 'vibe-check', name: 'Vibe Check', icon: <TrendingUp/>, color: 'text-accent-pink' },
-    { id: 'brainwave', name: 'Brainwave', icon: <Brain/>, color: 'text-accent-cyan' },
-    { id: 'creator', name: 'Creator', icon: <Palette/>, color: 'text-accent-purple' },
-    { id: 'zenith', name: 'Zenith', icon: <Heart/>, color: 'text-accent-green' },
-    { id: 'epoch', name: 'Epoch', icon: <Sparkles/>, color: 'text-brand-gold' },
-];
-
 export function AlmightyChatModal({ onClose }: { onClose: () => void }) {
   const [messages, setMessages] = useState<{ role: 'user' | 'model' | 'system', content: { text: string }[] }[]>([
-      { role: 'system', content: [{ text: "Hey! I'm Almighty, your creative sidekick. What's the vibe? You can switch my personality at the top."}]}
+      { role: 'system', content: [{ text: "Hey! I'm Almighty, your creative sidekick. What can I help you with today?"}]}
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [activeModel, setActiveModel] = useState(aiModels[0].id);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -40,10 +31,14 @@ export function AlmightyChatModal({ onClose }: { onClose: () => void }) {
 
     try {
       // Filter out system messages from history before sending to the flow
-      const chatHistory = messages.filter(m => m.role !== 'system');
+      const chatHistory = messages
+        .filter(m => m.role !== 'system')
+        .map(m => ({
+            role: m.role,
+            content: m.content
+        })) as { role: 'user' | 'model', content: { text: string }[] }[];
       
       const response = await almightyChat({
-        personality: activeModel,
         history: chatHistory,
         prompt: input
       });
@@ -78,17 +73,6 @@ export function AlmightyChatModal({ onClose }: { onClose: () => void }) {
                 <button onClick={onClose} className="p-2 rounded-full hover:bg-white/10"><X size={20} /></button>
             </header>
             
-            <div className="p-4 border-b border-glass-border shrink-0">
-                <div className="flex justify-center items-center gap-2 overflow-x-auto">
-                    {aiModels.map(model => (
-                        <button key={model.id} onClick={() => setActiveModel(model.id)} className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all ${activeModel === model.id ? `${model.color.replace('text-', 'bg-')} bg-opacity-20 ${model.color}` : 'bg-transparent text-gray-400 hover:bg-white/5'}`}>
-                            {model.icon}
-                            {model.name}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
                 {messages.map((msg, index) => (
                     <div key={index} className={`flex items-start gap-3 max-w-[85%] ${msg.role === 'user' ? 'self-end flex-row-reverse' : 'self-start'}`}>
