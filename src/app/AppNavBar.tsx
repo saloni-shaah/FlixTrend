@@ -139,7 +139,7 @@ export default function AppNavBar() {
         window.addEventListener('offline', goOffline);
 
         // Initial check
-        if (!navigator.onLine) {
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
             goOffline();
         }
 
