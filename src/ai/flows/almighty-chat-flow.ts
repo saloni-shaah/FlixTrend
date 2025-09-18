@@ -19,16 +19,23 @@ const SYSTEM_PROMPTS = {
 };
 
 const AlmightyChatInputSchema = z.object({
-  model: z.string().describe('The AI model/personality to use.'),
+  personality: z.string().describe('The AI personality to use.'),
   history: z.array(z.custom<Message>()).describe("The chat history."),
   prompt: z.string().describe('The user\'s latest message.'),
 });
 
 const prompt = ai.definePrompt({
   name: 'almightyChatPrompt',
-  input: { schema: AlmightyChatInputSchema },
+  models: [ai.model('gemini-pro')],
+  input: {
+    schema: z.object({
+      systemPrompt: z.string(),
+      history: z.array(z.custom<Message>()),
+      prompt: z.string(),
+    }),
+  },
   output: { format: 'text' },
-  system: `{{model}}`, // This will be dynamically populated
+  system: `{{systemPrompt}}`,
   messages: [
       "{{#each history}}{{role}}: {{content}}\n{{/each}}",
       "user: {{prompt}}"
@@ -45,11 +52,12 @@ const almightyChatFlow = ai.defineFlow(
     outputSchema: z.string(),
   },
   async (input) => {
-    const systemPrompt = SYSTEM_PROMPTS[input.model as keyof typeof SYSTEM_PROMPTS] || SYSTEM_PROMPTS['vibe-check'];
-
+    const systemPrompt = SYSTEM_PROMPTS[input.personality as keyof typeof SYSTEM_PROMPTS] || SYSTEM_PROMPTS['vibe-check'];
+    
     const { output } = await prompt({
-        ...input,
-        model: systemPrompt // Override the model name with the full system prompt
+        systemPrompt: systemPrompt,
+        history: input.history,
+        prompt: input.prompt,
     });
 
     return output!;

@@ -40,7 +40,7 @@ export function AlmightyChatModal({ onClose }: { onClose: () => void }) {
 
     try {
       const response = await almightyChat({
-        model: activeModel,
+        personality: activeModel,
         history: messages.map(m => ({ role: m.role, content: m.text })),
         prompt: input
       });
