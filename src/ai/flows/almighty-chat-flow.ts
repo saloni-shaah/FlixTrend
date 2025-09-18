@@ -22,12 +22,21 @@ You can do many things:
 Always be helpful and engaging. Keep your responses concise and easy to read.
 `;
 
+// Defines the structure for a single message part.
+const MessagePartSchema = z.object({
+  text: z.string(),
+});
+
+// Defines the structure for a full message (role + content).
+const MessageSchema = z.object({
+  role: z.enum(['user', 'model']),
+  content: z.array(MessagePartSchema),
+});
+
+// Defines the input for the chat flow.
 const AlmightyChatInputSchema = z.object({
-  history: z.array(z.object({
-    role: z.enum(['user', 'model']),
-    content: z.array(z.object({ text: z.string() })),
-  })).describe("The chat history."),
-  prompt: z.string().describe('The user\'s latest message.'),
+  history: z.array(MessageSchema).describe("The chat history."),
+  prompt: z.string().describe("The user's latest message."),
 });
 
 export type AlmightyChatInput = z.infer<typeof AlmightyChatInputSchema>;
@@ -39,19 +48,17 @@ const almightyChatFlow = ai.defineFlow(
     outputSchema: z.string(),
   },
   async (input) => {
-    const history = input.history.map(msg => ({
-        role: msg.role,
-        content: msg.content,
-    }));
+    // Correctly constructs the full message history, including the latest user prompt.
+    const messages = [
+      ...input.history,
+      { role: 'user' as const, content: [{ text: input.prompt }] },
+    ];
     
     const { output } = await ai.generate({
         model: 'googleai/gemini-pro',
         prompt: {
             system: systemPrompt,
-            messages: [
-                ...history,
-                { role: 'user', content: [{ text: input.prompt }] }
-            ],
+            messages: messages, // Pass the correctly structured array.
         },
         config: {
             temperature: 0.7,
