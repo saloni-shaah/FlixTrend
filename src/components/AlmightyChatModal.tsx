@@ -16,8 +16,8 @@ const aiModels = [
 ];
 
 export function AlmightyChatModal({ onClose }: { onClose: () => void }) {
-  const [messages, setMessages] = useState<{ role: 'user' | 'model' | 'system', text: string }[]>([
-      { role: 'system', text: "Hey! I'm Almighty, your creative sidekick. What's the vibe? You can switch my personality at the top."}
+  const [messages, setMessages] = useState<{ role: 'user' | 'model' | 'system', content: { text: string }[] }[]>([
+      { role: 'system', content: [{ text: "Hey! I'm Almighty, your creative sidekick. What's the vibe? You can switch my personality at the top."}]}
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -33,24 +33,27 @@ export function AlmightyChatModal({ onClose }: { onClose: () => void }) {
   const handleSend = async () => {
     if (!input.trim()) return;
 
-    const userMessage = { role: 'user' as const, text: input };
+    const userMessage = { role: 'user' as const, content: [{ text: input }] };
     setMessages(prev => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
 
     try {
+      // Filter out system messages from history before sending to the flow
+      const chatHistory = messages.filter(m => m.role !== 'system');
+      
       const response = await almightyChat({
         personality: activeModel,
-        history: messages.map(m => ({ role: m.role, content: m.text })),
+        history: chatHistory,
         prompt: input
       });
       
-      const modelMessage = { role: 'model' as const, text: response };
+      const modelMessage = { role: 'model' as const, content: [{ text: response }] };
       setMessages(prev => [...prev, modelMessage]);
 
     } catch (error) {
       console.error("AI chat error:", error);
-      const errorMessage = { role: 'system' as const, text: "Oops! Something went wrong. The AI might be taking a quick nap." };
+      const errorMessage = { role: 'system' as const, content: [{ text: "Oops! Something went wrong. The AI might be taking a quick nap." }] };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
@@ -93,7 +96,7 @@ export function AlmightyChatModal({ onClose }: { onClose: () => void }) {
                             {msg.role === 'user' ? <User size={16}/> : <Bot size={16}/>}
                         </div>
                         <div className={`px-4 py-2 rounded-2xl font-body ${msg.role === 'user' ? 'bg-accent-pink/20 rounded-br-none' : msg.role === 'model' ? 'bg-accent-purple/20 rounded-bl-none' : 'bg-gray-700 text-center self-center w-full'}`}>
-                            {msg.text}
+                            {msg.content[0].text}
                         </div>
                     </div>
                 ))}
