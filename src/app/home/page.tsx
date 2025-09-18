@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AlignLeft, BarChart3, ImageIcon, Sparkles } from 'lucide-react';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
+import { AlmightyLogo } from "@/components/ui/logo";
 
 
 const CreatePostModal = dynamic(() => import('./CreatePostModal'), { ssr: false });
@@ -373,6 +374,20 @@ export default function HomePage() {
         >
           <Bell className="text-xl" />
         </button>
+      </div>
+
+       {/* Bottom Right AI FAB */}
+      <div className="fixed bottom-24 right-4 z-30">
+        <Link href="/almighty">
+            <motion.button 
+                className="btn-glass-icon w-16 h-16 bg-gradient-to-tr from-accent-purple to-accent-cyan flex items-center justify-center shadow-fab-glow"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+                title="Ask Almighty AI"
+            >
+                <AlmightyLogo className="w-8 h-8" />
+            </motion.button>
+        </Link>
       </div>
 
       <AnimatePresence>
