@@ -26,7 +26,7 @@ const AlmightyChatInputSchema = z.object({
 
 const prompt = ai.definePrompt({
   name: 'almightyChatPrompt',
-  models: [ai.model('gemini-pro')],
+  models: ['googleai/gemini-pro'],
   input: {
     schema: z.object({
       systemPrompt: z.string(),
