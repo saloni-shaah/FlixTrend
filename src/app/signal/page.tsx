@@ -411,6 +411,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
     const qJoinable = query(collection(db, "groups"), where("groupType", "==", "anonymous"));
     const unsubJoinable = onSnapshot(qJoinable, (snap) => {
         const allAnonGroups = snap.docs.map(doc => ({ id: doc.id, ...doc.data(), isGroup: true }));
+        // Client-side filter to avoid needing a composite index
         const nonMemberGroups = allAnonGroups.filter(g => !g.members.includes(firebaseUser.uid));
         setJoinableGroups(nonMemberGroups);
     });
@@ -683,7 +684,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                         </div>
                     </div>
                     
-                    <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-1">
+                    <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-1">
                         {messages.map(msg => {
                             const senderInfo = selectedChat.isGroup ?
                                 (selectedChat.groupType === 'simple' ? selectedChat.memberInfo?.[msg.sender] : null)
@@ -696,7 +697,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                             const avatarUrl = selectedChat.groupType === 'simple' ? senderInfo?.avatar_url : null;
 
                              return (
-                             <div key={msg.id} className={`group flex items-end gap-2 max-w-[80%] ${msg.sender === firebaseUser.uid ? "self-end flex-row-reverse" : msg.sender === 'system' ? 'self-center' : "self-start"}`}>
+                             <div key={msg.id} className={`group flex items-end gap-2 max-w-[80%] md:max-w-[70%] ${msg.sender === firebaseUser.uid ? "self-end flex-row-reverse" : msg.sender === 'system' ? 'self-center' : "self-start"}`}>
                                 <div className={`relative px-4 py-2 rounded-2xl ${msg.sender === firebaseUser.uid ? "bg-accent-cyan text-black rounded-br-none" : msg.sender === 'system' ? "bg-gray-800 text-gray-400 text-xs italic" : "bg-gray-700 text-white rounded-bl-none"}`}>
                                     {msg.sender !== firebaseUser.uid && msg.sender !== 'system' && (
                                         <div className="font-bold text-accent-pink text-sm">{displayName}</div>
@@ -747,15 +748,15 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                          <div ref={messagesEndRef} />
                     </div>
 
-                    <form onSubmit={handleSend} className="flex items-center gap-2 p-4 border-t border-accent-cyan/10 bg-black/60 shrink-0">
-                         <div className="relative group">
-                            <button type="button" onClick={() => fileInputRef.current?.click()} className="p-3 rounded-full hover:bg-accent-cyan/20 transition-colors">
-                                <Paperclip size={20}/>
-                            </button>
-                         </div>
+                    <form onSubmit={handleSend} className="flex items-center gap-2 p-2 border-t border-accent-cyan/10 bg-black/60 shrink-0">
+                         <button type="button" onClick={() => fileInputRef.current?.click()} className="p-3 rounded-full hover:bg-accent-cyan/20 transition-colors">
+                            <Paperclip size={20}/>
+                         </button>
                          <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*,video/*,audio/*" />
                         <input type="text" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Type a message..." className="flex-1 bg-gray-700 rounded-full px-4 py-2 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-accent-cyan"/>
-                        <button type="submit" className="p-3 rounded-full bg-accent-cyan text-black" disabled={!newMessage.trim()}><Send size={20}/></button>
+                        <button type="submit" className="p-3 rounded-full bg-accent-cyan text-black" disabled={!newMessage.trim() && !fileInputRef.current?.files?.length}>
+                            <Send size={20}/>
+                        </button>
                     </form>
                     
                     {selectedChat.isGroup && showGroupInfo && (
