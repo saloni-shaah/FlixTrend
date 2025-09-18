@@ -19,9 +19,9 @@ import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognitio
 
 
 const CreatePostModal = dynamic(() => import('./CreatePostModal'), { ssr: false });
-const AddMusicModal = dynamic(() => import('@/components/MusicDiscovery').then(mod => mod.AddMusicModal), { ssr: false });
-const FlashModal = dynamic(() => import('@/components/FlashModal').then(mod => mod.FlashModal), { ssr: false });
-const NotificationPanel = dynamic(() => import('@/components/NotificationPanel').then(mod => mod.NotificationPanel), { ssr: false });
+const AddMusicModal = dynamic(() => import('@/components/MusicDiscovery'), { ssr: false });
+const FlashModal = dynamic(() => import('@/components/FlashModal'), { ssr: false });
+const NotificationPanel = dynamic(() => import('@/components/NotificationPanel'), { ssr: false });
 
 
 const db = getFirestore(app);
