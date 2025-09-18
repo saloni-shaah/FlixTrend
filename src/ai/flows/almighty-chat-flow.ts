@@ -48,7 +48,6 @@ const almightyChatFlow = ai.defineFlow(
     outputSchema: z.string(),
   },
   async (input) => {
-    // Correctly constructs the full message history, including the latest user prompt.
     const messages = [
       ...input.history,
       { role: 'user' as const, content: [{ text: input.prompt }] },
@@ -58,7 +57,7 @@ const almightyChatFlow = ai.defineFlow(
         model: 'googleai/gemini-pro',
         prompt: {
             system: systemPrompt,
-            messages: messages, // Pass the correctly structured array.
+            messages: messages,
         },
         config: {
             temperature: 0.7,
