@@ -7,7 +7,6 @@
 
 import { ai } from '@/ai/ai';
 import { z } from 'zod';
-import { Message } from 'genkit';
 
 // Define the different "personalities" or modes for the AI
 const SYSTEM_PROMPTS = {
@@ -20,7 +19,10 @@ const SYSTEM_PROMPTS = {
 
 const AlmightyChatInputSchema = z.object({
   personality: z.string().describe('The AI personality to use.'),
-  history: z.array(z.custom<Message>()).describe("The chat history."),
+  history: z.array(z.object({
+    role: z.enum(['user', 'model', 'system']),
+    content: z.array(z.object({ text: z.string() })),
+  })).describe("The chat history."),
   prompt: z.string().describe('The user\'s latest message.'),
 });
 
@@ -33,18 +35,12 @@ const almightyChatFlow = ai.defineFlow(
   async (input) => {
     const systemPrompt = SYSTEM_PROMPTS[input.personality as keyof typeof SYSTEM_PROMPTS] || SYSTEM_PROMPTS['vibe-check'];
     
-    // Correctly format the messages for the AI
-    const messages = input.history.map(msg => ({
-        role: msg.role,
-        content: [{ text: msg.content as string }] // Ensure content is in the correct format
-    }));
-    
     const { output } = await ai.generate({
         model: 'googleai/gemini-pro',
         prompt: {
             system: systemPrompt,
             messages: [
-                ...messages,
+                ...input.history,
                 { role: 'user', content: [{ text: input.prompt }] }
             ],
         },
