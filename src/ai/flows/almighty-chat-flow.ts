@@ -33,12 +33,18 @@ const almightyChatFlow = ai.defineFlow(
   async (input) => {
     const systemPrompt = SYSTEM_PROMPTS[input.personality as keyof typeof SYSTEM_PROMPTS] || SYSTEM_PROMPTS['vibe-check'];
     
+    // Correctly format the messages for the AI
+    const messages = input.history.map(msg => ({
+        role: msg.role,
+        content: [{ text: msg.content as string }] // Ensure content is in the correct format
+    }));
+    
     const { output } = await ai.generate({
         model: 'googleai/gemini-pro',
         prompt: {
             system: systemPrompt,
             messages: [
-                ...input.history,
+                ...messages,
                 { role: 'user', content: [{ text: input.prompt }] }
             ],
         },
