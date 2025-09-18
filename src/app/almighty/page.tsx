@@ -1,6 +1,6 @@
 "use client";
 
-import { Chat } from "@/components/chat/chat";
+import { Chat } from "../../../almighty/src/components/chat/chat";
 
 export default function AlmightyPage() {
   return (
