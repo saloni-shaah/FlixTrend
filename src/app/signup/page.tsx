@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { auth, app } from "@/utils/firebaseClient";
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } from "firebase/auth";
 import { getFirestore, doc, setDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -43,10 +43,14 @@ export default function SignupPage() {
     setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, form.email, form.password);
+      
+      // Send verification email
+      await sendEmailVerification(userCredential.user);
+
       await updateProfile(userCredential.user, {
         displayName: form.name,
-        // The phone number can't be directly added here, it needs verification flow post-signup
       });
+
       // Store user profile in Firestore
       await setDoc(doc(db, "users", userCredential.user.uid), {
         uid: userCredential.user.uid,
@@ -60,10 +64,10 @@ export default function SignupPage() {
         accountType: form.accountType,
         avatar_url: `https://api.dicebear.com/8.x/bottts-neutral/svg?seed=${form.username}`,
         created_at: new Date().toISOString(),
-        profileComplete: false, // Mark as incomplete to trigger verification flow
+        profileComplete: false, 
       });
-      setSuccess("Signup successful! Redirecting to home...");
-      router.push("/home");
+      setSuccess("Signup successful! Please check your email to verify your account. Redirecting...");
+      setTimeout(() => router.push("/home"), 3000);
     } catch (err: any) {
       setError(err.message);
     }
