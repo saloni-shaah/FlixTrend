@@ -3,10 +3,12 @@
 import React, { useEffect, useState, useRef } from "react";
 import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp, where, writeBatch, getDocs, updateDoc, deleteDoc, arrayUnion, arrayRemove } from "firebase/firestore";
 import { auth, db } from "@/utils/firebaseClient";
-import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, Smile, Trash2, Users, CheckSquare, Square, MoreVertical, UserPlus, UserX, Edit, Shield, EyeOff, LogOut, UploadCloud } from "lucide-react";
+import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, Smile, Trash2, Users, CheckSquare, Square, MoreVertical, UserPlus, UserX, Edit, Shield, EyeOff, LogOut, UploadCloud, Languages, UserCircle, Cake, MapPin, AtSign } from "lucide-react";
 import { useAppState } from "@/utils/AppStateContext";
 import { createCall } from "@/utils/callService";
 import { motion, AnimatePresence } from "framer-motion";
+import { translateText } from "@/ai/flows/translate-text-flow";
+
 
 async function uploadToCloudinary(file: File, onProgress?: (percent: number) => void): Promise<string | null> {
   const url = `https://api.cloudinary.com/v1_1/drrzvi2jp/upload`;
@@ -418,6 +420,55 @@ function GroupInfoPanel({ group, currentUser, mutuals, onClose, onGroupUpdate, o
     )
 }
 
+function UserInfoPanel({ user, onClose }: { user: any, onClose: () => void }) {
+    if (!user) return null;
+    return (
+        <AnimatePresence>
+            <motion.div
+                initial={{ x: "100%" }}
+                animate={{ x: 0 }}
+                exit={{ x: "100%" }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                className="absolute top-0 right-0 z-20 w-full md:w-2/5 md:min-w-[380px] h-full bg-black/80 backdrop-blur-lg border-l border-accent-cyan/20 flex flex-col"
+            >
+                <div className="p-4 border-b border-accent-cyan/10 flex items-center justify-between shrink-0">
+                    <h2 className="text-xl font-headline font-bold text-accent-cyan">Profile Info</h2>
+                    <button onClick={onClose} className="p-2 rounded-full hover:bg-accent-cyan/10"><X size={20} /></button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-4">
+                    <div className="flex flex-col items-center text-center mb-6">
+                        <div className="w-32 h-32 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-5xl mb-4 overflow-hidden">
+                            {user.avatar_url ? <img src={user.avatar_url} alt={user.name} className="w-full h-full object-cover" /> : <UserCircle />}
+                        </div>
+                        <h3 className="text-2xl font-bold text-white">{user.name}</h3>
+                        <p className="text-accent-cyan font-semibold mb-1 text-center">@{user.username}</p>
+                    </div>
+
+                    <div className="flex flex-col gap-3 text-sm">
+                         <div className="glass-card p-3 rounded-lg">
+                            <h4 className="text-xs text-gray-400 mb-1">Bio</h4>
+                            <p className="text-white">{user.bio || 'No bio provided.'}</p>
+                        </div>
+                         <div className="glass-card p-3 rounded-lg">
+                            <h4 className="text-xs text-gray-400 mb-1 flex items-center gap-2"><MapPin size={14}/> Location</h4>
+                            <p className="text-white">{user.location || 'Not specified'}</p>
+                        </div>
+                         <div className="glass-card p-3 rounded-lg">
+                            <h4 className="text-xs text-gray-400 mb-1 flex items-center gap-2"><Cake size={14}/> Date of Birth</h4>
+                            <p className="text-white">{user.dob || 'Not specified'}</p>
+                        </div>
+                         <div className="glass-card p-3 rounded-lg">
+                            <h4 className="text-xs text-gray-400 mb-1 flex items-center gap-2"><User size={14}/> Gender</h4>
+                            <p className="text-white capitalize">{user.gender || 'Not specified'}</p>
+                        </div>
+                    </div>
+                </div>
+            </motion.div>
+        </AnimatePresence>
+    )
+}
+
 function timeSince(date: Date) {
     if (!date) return "";
     const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
@@ -448,7 +499,13 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
+  const [showUserInfo, setShowUserInfo] = useState(false);
   const [onlineStatus, setOnlineStatus] = useState<any>(null);
+  const [translations, setTranslations] = useState<{[messageId: string]: string}>({});
+  const [showLanguageSelector, setShowLanguageSelector] = useState<string | null>(null);
+  const [isTranslating, setIsTranslating] = useState<string | null>(null);
+
+  const supportedLanguages = ["English", "Hindi", "Arabic", "Spanish", "French", "German", "Bengali", "Tamil"];
 
   useEffect(() => {
     if (!firebaseUser) return;
@@ -521,7 +578,9 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
   const handleSelectChat = async (chat: any) => {
     setSelectedChat(chat);
     setShowGroupInfo(false);
+    setShowUserInfo(false);
     setShowEmojiPicker(null);
+    setTranslations({});
     const chatId = chat.isGroup ? chat.id : getChatId(firebaseUser.uid, chat.uid);
     const q = query(
         collection(db, "chats", chatId, "messages"),
@@ -641,6 +700,21 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
     }
     setShowEmojiPicker(null);
   };
+  
+    const handleTranslate = async (messageId: string, text: string, targetLanguage: string) => {
+        if (!text) return;
+        setIsTranslating(messageId);
+        setShowLanguageSelector(null);
+        try {
+            const translatedText = await translateText({ text, targetLanguage });
+            setTranslations(prev => ({ ...prev, [messageId]: translatedText }));
+        } catch (error) {
+            console.error("Translation error:", error);
+            setTranslations(prev => ({ ...prev, [messageId]: "Translation failed." }));
+        } finally {
+            setIsTranslating(null);
+        }
+    };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -791,7 +865,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                                 (selectedChat.avatar_url ? <img src={selectedChat.avatar_url} alt="avatar" className="w-full h-full object-cover"/> : getInitials(selectedChat))
                            }
                         </div>
-                        <button className="flex-1 text-left" disabled={!selectedChat.isGroup} onClick={() => setShowGroupInfo(true)}>
+                        <button className="flex-1 text-left" disabled={selectedChat.groupType === 'anonymous' || selectedChat.groupType === 'pseudonymous'} onClick={() => selectedChat.isGroup ? setShowGroupInfo(true) : setShowUserInfo(true)}>
                             <h3 className="font-bold text-white">{selectedChat.name || selectedChat.username}</h3>
                              {onlineStatus?.status === 'online' ? (
                                 <p className="text-xs text-green-400">Online</p>
@@ -831,6 +905,9 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                                         {msg.type === 'video' && <video src={msg.mediaUrl} controls className="rounded-lg max-w-xs" />}
                                         {msg.type === 'audio' && <audio src={msg.mediaUrl} controls />}
                                         {msg.text && <p className="mt-1 break-words">{msg.text}</p>}
+                                        
+                                        {translations[msg.id] && <p className="mt-2 pt-2 border-t border-gray-500/50 text-gray-300 italic">{translations[msg.id]}</p>}
+                                        
                                         {msg.sender !== 'system' && <div className="text-xs mt-1 text-right opacity-70">
                                             {msg.createdAt?.toDate?.().toLocaleTimeString() || ""}
                                         </div>}
@@ -847,23 +924,43 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                                     </div>
                                     <div className={`relative hidden group-hover:flex items-center gap-1 mt-1 ${msg.sender === firebaseUser.uid ? "flex-row-reverse" : ""}`}>
                                     {msg.sender !== 'system' && 
-                                        <div className="relative">
-                                        <button onClick={() => setShowEmojiPicker(showEmojiPicker === msg.id ? null : msg.id)} className="p-1 rounded-full bg-gray-600 hover:bg-gray-500"><Smile size={16}/></button>
-                                            <AnimatePresence>
-                                            {showEmojiPicker === msg.id && (
-                                                <motion.div 
-                                                    initial={{ opacity: 0, y: 10 }}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                    exit={{ opacity: 0, y: 10 }}
-                                                    className="absolute z-10 -top-10 bg-gray-800 rounded-full p-2 flex gap-1 shadow-lg"
-                                                >
-                                                    {defaultReactions.map(emoji => (
-                                                        <button key={emoji} onClick={() => handleReact(msg.id, emoji)} className="text-xl hover:scale-125 transition-transform">{emoji}</button>
-                                                    ))}
-                                                </motion.div>
-                                            )}
-                                            </AnimatePresence>
-                                        </div>
+                                        <>
+                                            <div className="relative">
+                                            <button onClick={() => setShowEmojiPicker(showEmojiPicker === msg.id ? null : msg.id)} className="p-1 rounded-full bg-gray-600 hover:bg-gray-500"><Smile size={16}/></button>
+                                                <AnimatePresence>
+                                                {showEmojiPicker === msg.id && (
+                                                    <motion.div 
+                                                        initial={{ opacity: 0, y: 10 }}
+                                                        animate={{ opacity: 1, y: 0 }}
+                                                        exit={{ opacity: 0, y: 10 }}
+                                                        className="absolute z-10 -top-10 bg-gray-800 rounded-full p-2 flex gap-1 shadow-lg"
+                                                    >
+                                                        {defaultReactions.map(emoji => (
+                                                            <button key={emoji} onClick={() => handleReact(msg.id, emoji)} className="text-xl hover:scale-125 transition-transform">{emoji}</button>
+                                                        ))}
+                                                    </motion.div>
+                                                )}
+                                                </AnimatePresence>
+                                            </div>
+                                            
+                                            <div className="relative">
+                                                <button onClick={() => setShowLanguageSelector(showLanguageSelector === msg.id ? null : msg.id)} className="p-1 rounded-full bg-gray-600 hover:bg-gray-500"><Languages size={16}/></button>
+                                                <AnimatePresence>
+                                                {showLanguageSelector === msg.id && (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
+                                                        className="absolute z-10 bottom-full mb-1 bg-gray-800 rounded-lg p-1 flex flex-col shadow-lg w-28"
+                                                    >
+                                                        {supportedLanguages.map(lang => (
+                                                            <button key={lang} onClick={() => handleTranslate(msg.id, msg.text, lang)} className="text-sm text-left px-2 py-1 hover:bg-accent-cyan/10 rounded">
+                                                                {isTranslating === msg.id ? "Translating..." : lang}
+                                                            </button>
+                                                        ))}
+                                                    </motion.div>
+                                                )}
+                                                </AnimatePresence>
+                                            </div>
+                                        </>
                                     }
                                     {msg.sender === firebaseUser.uid && <button onClick={() => handleDeleteMessage(msg.id)} className="p-1 rounded-full bg-gray-600 hover:bg-red-500"><Trash2 size={16}/></button>}
                                     </div>
@@ -895,6 +992,12 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                             onGroupUpdate={(updatedGroup) => setSelectedChat(updatedGroup)}
                             onGroupDeleted={handleDeleteGroup}
                             onLeaveGroup={handleLeaveGroup}
+                        />
+                    )}
+                     {!selectedChat.isGroup && showUserInfo && (
+                        <UserInfoPanel
+                            user={selectedChat}
+                            onClose={() => setShowUserInfo(false)}
                         />
                     )}
                 </>
