@@ -26,6 +26,7 @@ interface AppState {
   setCallTarget: (target: any | null) => void;
   activeCall: Call | null;
   closeCall: () => void;
+  pc: RTCPeerConnection | null;
   activeSong: Song | null;
   isPlaying: boolean;
   playSong: (song: Song, queue?: Song[], index?: number) => void;
@@ -38,10 +39,20 @@ interface AppState {
 
 const AppStateContext = createContext<AppState | undefined>(undefined);
 
+const servers = {
+  iceServers: [
+    {
+      urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'],
+    },
+  ],
+  iceCandidatePoolSize: 10,
+};
+
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const [isCalling, setIsCalling] = useState(false);
   const [callTarget, setCallTarget] = useState<any | null>(null);
   const [activeCall, setActiveCall] = useState<Call | null>(null);
+  const [pc, setPc] = useState<RTCPeerConnection | null>(null);
   
   const [activeSong, setActiveSong] = useState<Song | null>(null);
   const [songQueue, setSongQueue] = useState<Song[]>([]);
@@ -53,6 +64,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let callUnsubscribe: Unsubscribe | null = null;
     let callDocUnsubscribe: Unsubscribe | null = null;
+    let peerConnection: RTCPeerConnection | null = null;
 
     const handleToken = async (user: any) => {
         try {
@@ -105,22 +117,32 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           const currentCallId = data?.currentCallId;
           
           if (callDocUnsubscribe) callDocUnsubscribe();
+          if(peerConnection) peerConnection.close();
 
           if (currentCallId) {
+            peerConnection = new RTCPeerConnection(servers);
+            setPc(peerConnection);
+            
             const callDocRef = doc(db, 'calls', currentCallId);
             callDocUnsubscribe = onSnapshot(callDocRef, (callSnap) => {
               if (callSnap.exists()) {
                 setActiveCall({ id: callSnap.id, ...callSnap.data() });
               } else {
                 setActiveCall(null);
+                if (peerConnection) peerConnection.close();
+                setPc(null);
               }
             });
           } else {
             setActiveCall(null);
+            if (peerConnection) peerConnection.close();
+            setPc(null);
           }
         });
       } else {
         setActiveCall(null);
+        if (peerConnection) peerConnection.close();
+        setPc(null);
       }
     });
 
@@ -128,6 +150,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         authUnsubscribe();
         if (callUnsubscribe) callUnsubscribe();
         if (callDocUnsubscribe) callDocUnsubscribe();
+        if(pc) pc.close();
     };
   }, []);
   
@@ -191,6 +214,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   };
 
   const closeCall = () => {
+    if(pc) {
+      pc.close();
+    }
+    setPc(null);
     setActiveCall(null);
   };
 
@@ -201,6 +228,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setCallTarget,
     activeCall,
     closeCall,
+    pc,
     activeSong,
     isPlaying,
     playSong,

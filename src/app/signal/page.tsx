@@ -750,22 +750,9 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
       return;
     };
     
-    if (type === 'video') {
-      await createCall(firebaseUser, selectedChat);
-    } else {
-      alert(`Starting voice call with ${selectedChat.name}... (Feature coming soon!)`);
-    }
+    await createCall(firebaseUser, selectedChat);
 
-    const notifRef = collection(db, "notifications", selectedChat.uid, "user_notifications");
-    await addDoc(notifRef, {
-      type: 'missed_call',
-      callType: type,
-      fromUserId: firebaseUser.uid,
-      fromUsername: firebaseUser.displayName,
-      fromAvatarUrl: firebaseUser.photoURL,
-      createdAt: serverTimestamp(),
-      read: false,
-    });
+    // This notification logic will be replaced by the Cloud Function
   };
   
   const handleJoinAnonymousGroup = async (group: any) => {

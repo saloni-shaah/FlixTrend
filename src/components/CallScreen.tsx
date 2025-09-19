@@ -10,110 +10,55 @@ import { useAppState } from '@/utils/AppStateContext';
 
 const db = getFirestore(app);
 
-const servers = {
-  iceServers: [
-    {
-      urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'],
-    },
-  ],
-  iceCandidatePoolSize: 10,
-};
-
 export function CallScreen({ call }: { call: any }) {
-  const [pc, setPc] = useState<RTCPeerConnection | null>(null);
+  const { pc, closeCall } = useAppState();
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
-  const { closeCall } = useAppState();
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
 
   const currentUser = auth.currentUser;
-  const isCaller = currentUser?.uid === call.callerId;
   const isCallee = currentUser?.uid === call.calleeId;
   const hasAnswered = !!call.answer;
 
   useEffect(() => {
-    const peerConnection = new RTCPeerConnection(servers);
-    setPc(peerConnection);
-
     const startStreams = async () => {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       setLocalStream(stream);
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
       }
-
+      
       const remote = new MediaStream();
       setRemoteStream(remote);
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = remote;
       }
 
-      stream.getTracks().forEach((track) => {
-        peerConnection.addTrack(track, stream);
-      });
-
-      peerConnection.ontrack = (event) => {
-        event.streams[0].getTracks().forEach((track) => {
-          remote.addTrack(track);
-        });
-      };
+      if (pc) {
+          stream.getTracks().forEach((track) => {
+            pc.addTrack(track, stream);
+          });
+          
+          pc.ontrack = (event) => {
+            event.streams[0].getTracks().forEach((track) => {
+              remote.addTrack(track);
+            });
+          };
+      }
     };
 
     startStreams();
 
     return () => {
-      peerConnection.close();
       if (localStream) {
         localStream.getTracks().forEach(track => track.stop());
       }
     };
-  }, []);
-
-  // Firestore signaling logic
-  useEffect(() => {
-    if (!pc || !currentUser) return;
-
-    const callDocRef = doc(db, 'calls', call.id);
-    const answerCandidates = collection(callDocRef, 'answerCandidates');
-    const offerCandidates = collection(callDocRef, 'offerCandidates');
-
-    pc.onicecandidate = (event) => {
-      if (event.candidate) {
-        const candidatesCollection = isCaller ? offerCandidates : answerCandidates;
-        addDoc(candidatesCollection, event.candidate.toJSON());
-      }
-    };
-
-    // Listen for remote answer
-    if (isCaller && !hasAnswered) {
-      const unsubscribe = onSnapshot(callDocRef, (snapshot) => {
-        const data = snapshot.data();
-        if (data?.answer && pc.currentRemoteDescription?.type !== 'answer') {
-          const answerDescription = new RTCSessionDescription(data.answer);
-          pc.setRemoteDescription(answerDescription);
-        }
-      });
-      return unsubscribe;
-    }
-    
-    // Listen for ICE candidates
-    const candidatesCollection = isCaller ? answerCandidates : offerCandidates;
-    const unsubscribeCandidates = onSnapshot(candidatesCollection, (snapshot) => {
-      snapshot.docChanges().forEach((change) => {
-        if (change.type === 'added') {
-          const candidate = new RTCIceCandidate(change.doc.data());
-          pc.addIceCandidate(candidate);
-        }
-      });
-    });
-
-    return () => unsubscribeCandidates();
-
-  }, [pc, call.id, isCaller, hasAnswered, currentUser]);
+  }, [pc]);
 
   const handleAnswerCall = async () => {
     if (pc) {
