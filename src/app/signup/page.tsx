@@ -20,6 +20,7 @@ export default function SignupPage() {
     dob: "",
     gender: "",
     location: "",
+    phoneNumber: "",
     accountType: "user",
   });
   const [error, setError] = useState("");
@@ -44,6 +45,7 @@ export default function SignupPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, form.email, form.password);
       await updateProfile(userCredential.user, {
         displayName: form.name,
+        // The phone number can't be directly added here, it needs verification flow post-signup
       });
       // Store user profile in Firestore
       await setDoc(doc(db, "users", userCredential.user.uid), {
@@ -54,10 +56,11 @@ export default function SignupPage() {
         dob: form.dob,
         gender: form.gender,
         location: form.location,
+        phoneNumber: form.phoneNumber, // Storing it, but it's unverified
         accountType: form.accountType,
         avatar_url: `https://api.dicebear.com/8.x/bottts-neutral/svg?seed=${form.username}`,
         created_at: new Date().toISOString(),
-        profileComplete: true, // Mark as complete since they filled new fields
+        profileComplete: false, // Mark as incomplete to trigger verification flow
       });
       setSuccess("Signup successful! Redirecting to home...");
       router.push("/home");
@@ -89,6 +92,10 @@ export default function SignupPage() {
             <input
               type="email" name="email" placeholder="Email"
               className="input-glass w-full md:col-span-2" value={form.email} onChange={handleChange} required
+            />
+             <input
+              type="tel" name="phoneNumber" placeholder="Phone Number (e.g. +91...)"
+              className="input-glass w-full md:col-span-2" value={form.phoneNumber} onChange={handleChange} required
             />
             <input
               type="password" name="password" placeholder="Password"

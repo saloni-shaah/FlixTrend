@@ -454,7 +454,7 @@ function UserInfoPanel({ user, onClose }: { user: any, onClose: () => void }) {
                             <p className="text-white">{user.bio || 'No bio provided.'}</p>
                         </div>
                         <div className="glass-card p-3 rounded-lg">
-                            <h4 className="text-xs text-gray-400 mb-1 flex items-center gap-2"><AtSign size={14}/> Phone</h4>
+                            <h4 className="text-xs text-gray-400 mb-1 flex items-center gap-2"><Phone size={14}/> Phone</h4>
                             <p className="text-white">{user.phoneNumber || 'Not specified'}</p>
                         </div>
                          <div className="glass-card p-3 rounded-lg">
