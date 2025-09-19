@@ -40,7 +40,7 @@ async function uploadToCloudinary(file: File, onProgress?: (percent: number) => 
   });
 }
 
-const anonymousNames = ["VibeSeeker", "MemeLord", "EchoRider", "SynthWave", "PixelPioneer", "StarSailor", "DreamCaster"];
+const anonymousNames = ["Ram", "Shyam", "Sita", "Mohan", "Krishna", "Radha", "Anchal", "Anaya", "Advik", "Diya", "Rohan", "Priya", "Arjun", "Saanvi", "Kabir"];
 const generateAnonymousName = (userId: string, chatId: string) => {
     // Simple hash function to get a somewhat consistent but random-looking name
     const hash = (str: string) => {
@@ -131,13 +131,15 @@ function CreateGroupModal({ mutuals, currentUser, onClose, onGroupCreated }: { m
             });
             
             const groupData = (await getDoc(groupDocRef)).data();
-
-            await addDoc(collection(db, "chats", groupDocRef.id, "messages"), {
-                text: `${currentUser.displayName} created the group "${groupName}"`,
-                sender: 'system',
-                createdAt: serverTimestamp(),
-                readBy: [currentUser.uid]
-            });
+            
+            if (groupType === 'simple') {
+                await addDoc(collection(db, "chats", groupDocRef.id, "messages"), {
+                    text: `${currentUser.displayName} created the group "${groupName}"`,
+                    sender: 'system',
+                    createdAt: serverTimestamp(),
+                    readBy: [currentUser.uid]
+                });
+            }
             
             onGroupCreated({ id: groupDocRef.id, ...groupData });
             onClose();
@@ -370,7 +372,10 @@ function GroupInfoPanel({ group, currentUser, mutuals, onClose, onGroupUpdate, o
                             return (
                                 <div key={uid} className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent-cyan/10">
                                     <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-lg overflow-hidden shrink-0">
-                                        {member.avatar_url ? <img src={member.avatar_url} alt={member.name} className="w-full h-full object-cover"/> : getInitials(member)}
+                                        {group.groupType === 'simple' && member.avatar_url ? <img src={member.avatar_url} alt={member.name} className="w-full h-full object-cover"/> : 
+                                         group.groupType === 'pseudonymous' ? <EyeOff size={20}/> : 
+                                         group.groupType === 'anonymous' ? <Shield size={20} /> :
+                                         getInitials(member)}
                                     </div>
                                     <div>
                                         <p className="font-bold">{displayName}</p>
@@ -770,29 +775,58 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
   const handleLeaveGroup = async (groupId: string) => {
     if (!firebaseUser) return;
     const groupRef = doc(db, 'groups', groupId);
-    const updateData = {
+    const groupSnap = await getDoc(groupRef);
+    if (!groupSnap.exists()) return;
+
+    const groupData = groupSnap.data();
+    const remainingMembers = groupData.members.filter((uid:string) => uid !== firebaseUser.uid);
+    
+    const batch = writeBatch(db);
+
+    const updateData: any = {
         members: arrayRemove(firebaseUser.uid),
-        admins: arrayRemove(firebaseUser.uid),
         [`memberInfo.${firebaseUser.uid}`]: deleteField(),
-        [`pseudonyms.${firebaseUser.uid}`]: deleteField()
     };
-    await updateDoc(groupRef, updateData);
-     await addDoc(collection(db, "chats", groupId, "messages"), {
+
+    if (groupData.admins?.includes(firebaseUser.uid)) {
+        updateData.admins = arrayRemove(firebaseUser.uid);
+        // If the leaving user is the last admin, assign a new admin
+        if (updateData.admins.length === 0 && remainingMembers.length > 0) {
+            updateData.admins = [remainingMembers[0]];
+        }
+    }
+    
+    if (groupData.pseudonyms?.[firebaseUser.uid]) {
+        updateData[`pseudonyms.${firebaseUser.uid}`] = deleteField();
+    }
+    
+    batch.update(groupRef, updateData);
+
+    // Add a system message about the user leaving
+    const messageRef = doc(collection(db, "chats", groupId, "messages"));
+    batch.set(messageRef, {
         text: `${firebaseUser.displayName} left the group.`,
         sender: 'system',
         createdAt: serverTimestamp(),
         readBy: []
     });
+    
+    await batch.commit();
     setSelectedChat(null);
   };
   
   const handleDeleteGroup = async (groupId: string) => {
       // This is a simplified deletion. A production app would use a Cloud Function
       // to recursively delete the chat messages subcollection.
+      const chatMessagesRef = collection(db, 'chats', groupId, 'messages');
+      const messagesSnap = await getDocs(chatMessagesRef);
+      const batch = writeBatch(db);
+      messagesSnap.forEach(doc => batch.delete(doc.ref));
+      await batch.commit();
+
       const groupRef = doc(db, 'groups', groupId);
       await deleteDoc(groupRef);
-      // We also need to delete the chat document, which might be large.
-      // This is best handled by a Cloud Function trigger on group deletion.
+      
       setSelectedChat(null);
   }
   
@@ -866,7 +900,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                                 (selectedChat.avatar_url ? <img src={selectedChat.avatar_url} alt="avatar" className="w-full h-full object-cover"/> : getInitials(selectedChat))
                            }
                         </div>
-                        <button className="flex-1 text-left" disabled={selectedChat.groupType === 'anonymous' || selectedChat.groupType === 'pseudonymous'} onClick={() => selectedChat.isGroup ? setShowGroupInfo(true) : setShowUserInfo(true)}>
+                        <button className="flex-1 text-left" disabled={selectedChat.groupType === 'anonymous'} onClick={() => selectedChat.isGroup ? setShowGroupInfo(true) : setShowUserInfo(true)}>
                             <h3 className="font-bold text-white">{selectedChat.name || selectedChat.username}</h3>
                              {onlineStatus?.status === 'online' ? (
                                 <p className="text-xs text-green-400">Online</p>
@@ -892,9 +926,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                                                 selectedChat.groupType === 'pseudonymous' ? selectedChat.pseudonyms?.[msg.sender] || 'Anon' : 
                                                 senderInfo?.name || "User";
                             
-                            const avatarUrl = selectedChat.groupType === 'simple' ? senderInfo?.avatar_url : null;
-
-                             return (
+                            return (
                              <div key={msg.id} className={`group flex w-full items-end gap-2 ${msg.sender === firebaseUser.uid ? "justify-end" : msg.sender === 'system' ? 'justify-center' : "justify-start"}`}>
                                <div className={`flex items-end gap-2 max-w-[80%] md:max-w-[70%]`}>
                                   <div className={`flex flex-col ${msg.sender === firebaseUser.uid ? 'items-end' : 'items-start'}`}>
