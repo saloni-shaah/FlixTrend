@@ -2,10 +2,10 @@
 "use client";
 import React, { useEffect, useState, useRef } from "react";
 import { auth } from "@/utils/firebaseClient";
-import { getFirestore, doc, getDoc, setDoc, collection, query, where, getCountFromServer, getDocs, onSnapshot, orderBy, updateDoc, writeBatch, deleteDoc } from "firebase/firestore";
-import { Cog, Palette, Lock, MessageCircle, LogOut, Camera, Star, Bell, Trash2, AtSign, Compass, MapPin, User, Tag, ShieldCheck, Music, Bookmark, Heart, Folder, Download, CheckCircle, Award, Mic, Crown, Zap, Rocket } from "lucide-react";
+import { getFirestore, doc, getDoc, setDoc, collection, query, where, getCountFromServer, getDocs, onSnapshot, orderBy, updateDoc, writeBatch, deleteDoc, arrayUnion, arrayRemove } from "firebase/firestore";
+import { Cog, Palette, Lock, MessageCircle, LogOut, Camera, Star, Bell, Trash2, AtSign, Compass, MapPin, User, Tag, ShieldCheck, Music, Bookmark, Heart, Folder, Download, CheckCircle, Award, Mic, Crown, Zap, Rocket, Search, Pin } from "lucide-react";
 import { signOut, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { PostCard } from "@/components/PostCard";
@@ -334,71 +334,97 @@ export default function SquadPage() {
   const [followers, setFollowers] = useState(0);
   const [following, setFollowing] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
-  const [activeTab, setActiveTab] = useState("posts");
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'posts');
   const [userPosts, setUserPosts] = useState<any[]>([]);
   const [starredPosts, setStarredPosts] = useState<any[]>([]);
   const [showFollowList, setShowFollowList] = useState<null | 'followers' | 'following'>(null);
   const [showCompleteProfile, setShowCompleteProfile] = useState(false);
   const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const router = useRouter();
+
+
+  const handleSearch = async (term: string) => {
+      setSearchTerm(term);
+      if (term.trim() === '') {
+          setIsSearching(false);
+          setSearchResults([]);
+          return;
+      }
+      setIsSearching(true);
+      const userQuery = query(collection(db, 'users'), where('username', '>=', term.toLowerCase()), where('username', '<=', term.toLowerCase() + '\uf8ff'));
+      const groupQuery = query(collection(db, 'groups'), where('name', '>=', term), where('name', '<=', term + '\uf8ff'));
+      
+      const [userSnap, groupSnap] = await Promise.all([getDocs(userQuery), getDocs(groupQuery)]);
+      
+      const users = userSnap.docs.map(doc => ({ ...doc.data(), id: doc.id, type: 'user' }));
+      const groups = groupSnap.docs.map(doc => ({ ...doc.data(), id: doc.id, type: 'group' }));
+      
+      setSearchResults([...users, ...groups]);
+  };
+  
+  const handleSelectChat = (item: any) => {
+      // This is a placeholder. In a real app, you would navigate to the chat.
+      alert(`Navigating to chat with ${item.name || item.username}`);
+      setSearchTerm('');
+      setIsSearching(false);
+  }
 
   useEffect(() => {
     const unsubAuth = auth.onAuthStateChanged(async (user) => {
       if (user) {
         setFirebaseUser(user);
         const userDocRef = doc(db, "users", user.uid);
-        const userDocSnap = await getDoc(userDocRef);
-        if (!userDocSnap.exists()) {
-          await setDoc(userDocRef, {
-            uid: user.uid,
-            name: user.displayName || "",
-            username: user.displayName ? user.displayName.replace(/\s+/g, "").toLowerCase() : "",
-            email: user.email || "",
-            avatar_url: `https://api.dicebear.com/8.x/bottts-neutral/svg?seed=${user.uid}`,
-            bio: "",
-            interests: "",
-            createdAt: new Date(),
-          });
-        } else {
-            const data = userDocSnap.data();
-            if (!data.profileComplete) {
-                setShowCompleteProfile(true);
+        const unsubProfile = onSnapshot(userDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                setProfile({ uid: docSnap.id, ...data });
+                 if (!data.profileComplete) {
+                    setShowCompleteProfile(true);
+                }
+            } else {
+                 // Create profile if it doesn't exist
+                setDoc(userDocRef, {
+                    uid: user.uid,
+                    name: user.displayName || "",
+                    username: user.displayName ? user.displayName.replace(/\s+/g, "").toLowerCase() : `user${user.uid.substring(0,5)}`,
+                    email: user.email || "",
+                    avatar_url: `https://api.dicebear.com/8.x/bottts-neutral/svg?seed=${user.uid}`,
+                    bio: "",
+                    interests: "",
+                    createdAt: new Date(),
+                }).then(() => setShowCompleteProfile(true));
             }
-        }
-         getAllUsersWithFollowerCounts().then(setAllUsers);
+        });
+        
+        getAllUsersWithFollowerCounts().then(setAllUsers);
+        setLoading(false);
+        return () => unsubProfile();
       } else {
         setFirebaseUser(null);
+        router.replace('/login');
       }
     });
 
     return () => unsubAuth();
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     async function fetchProfileData() {
-        if (!firebaseUser) {
-            setLoading(false);
-            return;
-        }
-        setLoading(true);
+        if (!firebaseUser) return;
+        
         const uid = firebaseUser.uid;
 
-        const docRef = doc(db, "users", uid);
-        const unsubProfile = onSnapshot(docRef, (docSnap) => {
-          setProfile(docSnap.exists() ? { uid, ...docSnap.data() } : null);
+        const postsQuery = query(collection(db, "posts"), where("userId", "==", uid), orderBy("createdAt", "desc"));
+        const unsubPosts = onSnapshot(postsQuery, (snapshot) => {
+            setUserPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            setPostCount(snapshot.size);
         });
-
-        const postsQuery = query(collection(db, "posts"), where("userId", "==", uid));
-        const postsSnapshot = await getDocs(postsQuery);
-        const userPostsData = postsSnapshot.docs
-            .map(doc => ({ id: doc.id, ...doc.data() }))
-            .sort((a, b) => b.createdAt.toDate() - a.createdAt.toDate());
         
-        setPostCount(userPostsData.length);
-        setUserPosts(userPostsData);
-        
-        setLoading(false);
-
-        return () => unsubProfile();
+        return () => unsubPosts();
     }
     if (firebaseUser) fetchProfileData();
   }, [firebaseUser]);
@@ -423,13 +449,10 @@ export default function SquadPage() {
   }, [firebaseUser]);
   
   if (loading) {
-    return <div className="flex flex-col items-center justify-center text-accent-cyan">Loading profile...</div>;
+    return <div className="flex flex-col min-h-screen items-center justify-center text-accent-cyan">Loading profile...</div>;
   }
-  if (!firebaseUser) {
-    return <div className="flex flex-col items-center justify-center text-red-400">Not logged in.</div>;
-  }
-  if (!profile) {
-    return <div className="flex flex-col items-center justify-center text-red-400">Could not load profile.</div>;
+  if (!firebaseUser || !profile) {
+    return <div className="flex flex-col items-center justify-center text-red-400">Not logged in or profile not found.</div>;
   }
   
   const initials = profile.name?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || profile.username?.slice(0, 2).toUpperCase() || "U";
@@ -509,6 +532,39 @@ export default function SquadPage() {
 
         <button className="btn-glass mt-6" onClick={() => setShowEdit(true)}>Edit Profile</button>
       </div>
+
+       <div className="w-full max-w-2xl mx-auto my-8 relative">
+        <div className="relative">
+            <input
+                type="text"
+                className="input-glass w-full pl-10"
+                placeholder="Search users or groups..."
+                value={searchTerm}
+                onChange={(e) => handleSearch(e.target.value)}
+            />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+        </div>
+        {isSearching && (
+            <div className="absolute top-full mt-2 w-full glass-card max-h-80 overflow-y-auto z-30 p-2">
+                {searchResults.length > 0 ? (
+                    searchResults.map(item => (
+                        <div key={item.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent-cyan/10 cursor-pointer" onClick={() => handleSelectChat(item)}>
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-lg overflow-hidden shrink-0">
+                                {item.avatar_url ? <img src={item.avatar_url} alt={item.name} className="w-full h-full object-cover" /> : (item.type === 'group' ? <Users/> : 'U')}
+                            </div>
+                            <div>
+                                <div className="font-bold">{item.name || item.username}</div>
+                                <div className="text-xs text-gray-400">{item.type === 'user' ? `@${item.username}` : `${item.members?.length || 0} members`}</div>
+                            </div>
+                        </div>
+                    ))
+                ) : (
+                    <div className="p-4 text-center text-gray-400">No results found.</div>
+                )}
+            </div>
+        )}
+      </div>
+
       {/* Tabs */}
       <div className="flex justify-center gap-2 md:gap-4 my-8 flex-wrap">
         <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "posts" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("posts")}>Posts</button>
@@ -545,7 +601,7 @@ export default function SquadPage() {
                 <div className="text-gray-400 text-center mt-16">
                     <div className="text-4xl mb-2"><Heart /></div>
                     <div className="text-lg font-semibold">No liked posts</div>
-                    <div className="text-sm">Your liked posts will appear here!</div>
+                    <div className="text-sm">Your liked posts will appear here.</div>
                 </div>
             )
         )}
