@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp, where, writeBatch, getDocs, updateDoc, deleteDoc, arrayUnion, arrayRemove } from "firebase/firestore";
 import { auth, db } from "@/utils/firebaseClient";
-import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, Smile, Trash2, Users, CheckSquare, Square, MoreVertical, UserPlus, UserX, Edit, Shield, EyeOff } from "lucide-react";
+import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, Smile, Trash2, Users, CheckSquare, Square, MoreVertical, UserPlus, UserX, Edit, Shield, EyeOff, LogOut, UploadCloud } from "lucide-react";
 import { useAppState } from "@/utils/AppStateContext";
 import { createCall } from "@/utils/callService";
 import { motion, AnimatePresence } from "framer-motion";
@@ -57,6 +57,9 @@ const generateAnonymousName = (userId: string, chatId: string) => {
 function CreateGroupModal({ mutuals, currentUser, onClose, onGroupCreated }: { mutuals: any[], currentUser: any, onClose: () => void, onGroupCreated: (group:any) => void }) {
     const [selectedUids, setSelectedUids] = useState<string[]>([]);
     const [groupName, setGroupName] = useState('');
+    const [groupBio, setGroupBio] = useState('');
+    const [groupPictureFile, setGroupPictureFile] = useState<File | null>(null);
+    const [groupPicturePreview, setGroupPicturePreview] = useState<string | null>(null);
     const [groupType, setGroupType] = useState<'simple' | 'anonymous' | 'pseudonymous'>('simple');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -65,6 +68,14 @@ function CreateGroupModal({ mutuals, currentUser, onClose, onGroupCreated }: { m
         setSelectedUids(prev => 
             prev.includes(uid) ? prev.filter(id => id !== uid) : [...prev, uid]
         );
+    };
+    
+    const handlePictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            setGroupPictureFile(file);
+            setGroupPicturePreview(URL.createObjectURL(file));
+        }
     };
 
     const handleCreateGroup = async () => {
@@ -80,6 +91,12 @@ function CreateGroupModal({ mutuals, currentUser, onClose, onGroupCreated }: { m
         setError('');
 
         try {
+            let groupPictureUrl = `https://api.dicebear.com/8.x/identicon/svg?seed=${groupName}`;
+            if(groupPictureFile){
+                const url = await uploadToCloudinary(groupPictureFile);
+                if(url) groupPictureUrl = url;
+            }
+
             const memberUids = [...new Set([...selectedUids, currentUser.uid])];
             const memberProfiles = await Promise.all(
                 memberUids.map(async uid => {
@@ -99,6 +116,8 @@ function CreateGroupModal({ mutuals, currentUser, onClose, onGroupCreated }: { m
 
             const groupDocRef = await addDoc(collection(db, "groups"), {
                 name: groupName,
+                bio: groupBio,
+                avatar_url: groupPictureUrl,
                 members: memberUids,
                 memberInfo: validMembers.reduce((acc, user) => ({ ...acc, [user!.uid]: { name: user!.name, avatar_url: user!.avatar_url, username: user!.username } }), {}),
                 admins: [currentUser.uid],
@@ -138,13 +157,22 @@ function CreateGroupModal({ mutuals, currentUser, onClose, onGroupCreated }: { m
                 <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white">&times;</button>
                 <h2 className="text-xl font-headline font-bold mb-4 text-accent-cyan">Create a New Group</h2>
                 
-                <input
-                    type="text"
-                    placeholder="Group Name"
-                    className="input-glass w-full mb-4"
-                    value={groupName}
-                    onChange={e => setGroupName(e.target.value)}
-                />
+                <div className="flex items-center gap-4 mb-4">
+                    <div className="w-24 h-24 rounded-full bg-black/20 flex items-center justify-center cursor-pointer relative overflow-hidden shrink-0">
+                        <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handlePictureChange} accept="image/*"/>
+                        {groupPicturePreview ? <img src={groupPicturePreview} alt="group" className="w-full h-full object-cover"/> : <UploadCloud className="text-gray-400"/>}
+                    </div>
+                    <div className="w-full flex flex-col gap-2">
+                        <input
+                            type="text"
+                            placeholder="Group Name"
+                            className="input-glass w-full"
+                            value={groupName}
+                            onChange={e => setGroupName(e.target.value)}
+                        />
+                        <textarea placeholder="Group Bio (optional)" value={groupBio} onChange={(e) => setGroupBio(e.target.value)} className="input-glass w-full text-sm" rows={2}/>
+                    </div>
+                </div>
 
                 <div className="flex gap-2 mb-4">
                     <button onClick={() => setGroupType('simple')} className={`flex-1 btn-glass text-xs ${groupType === 'simple' ? 'bg-accent-cyan text-black' : ''}`}>Simple</button>
@@ -187,11 +215,13 @@ function CreateGroupModal({ mutuals, currentUser, onClose, onGroupCreated }: { m
     );
 }
 
-function GroupInfoPanel({ group, currentUser, mutuals, onClose, onGroupUpdate }: { group: any, currentUser: any, mutuals: any[], onClose: () => void, onGroupUpdate: (updatedGroup:any)=>void }) {
+function GroupInfoPanel({ group, currentUser, mutuals, onClose, onGroupUpdate, onGroupDeleted, onLeaveGroup }: { group: any, currentUser: any, mutuals: any[], onClose: () => void, onGroupUpdate: (updatedGroup:any)=>void, onGroupDeleted: (groupId:string) => void, onLeaveGroup: (groupId: string) => void }) {
     const [isEditing, setIsEditing] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
     const [groupName, setGroupName] = useState(group.name);
     const [groupBio, setGroupBio] = useState(group.bio || "");
+    const [showMenu, setShowMenu] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
     const isAdmin = group.admins?.includes(currentUser.uid);
 
     const handleUpdateInfo = async () => {
@@ -255,6 +285,26 @@ function GroupInfoPanel({ group, currentUser, mutuals, onClose, onGroupUpdate }:
             });
          onGroupUpdate({ ...group, members: group.members.filter((m:string) => m !== uidToRemove), memberInfo: updatedMemberInfo, pseudonyms: updateData.pseudonyms || group.pseudonyms });
     };
+
+    const handleLeave = async () => {
+        if (!window.confirm("Are you sure you want to leave this group?")) return;
+        onLeaveGroup(group.id);
+    };
+
+    const handleDelete = async () => {
+        if (!window.confirm("Are you sure you want to PERMANENTLY DELETE this group? This cannot be undone.")) return;
+        onGroupDeleted(group.id);
+    };
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setShowMenu(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
     
     const getInitials = (user: any) => user?.name?.[0] || user?.username?.[0] || "U";
     
@@ -273,13 +323,25 @@ function GroupInfoPanel({ group, currentUser, mutuals, onClose, onGroupUpdate }:
         >
             <div className="p-4 border-b border-accent-cyan/10 flex items-center justify-between shrink-0">
                 <h2 className="text-xl font-headline font-bold text-accent-cyan">Group Info</h2>
-                <button onClick={onClose} className="p-2 rounded-full hover:bg-accent-cyan/10"><X size={20}/></button>
+                 <div className="flex items-center gap-2">
+                    <div className="relative" ref={menuRef}>
+                        <button onClick={() => setShowMenu(v => !v)} className="p-2 rounded-full hover:bg-accent-cyan/10"><MoreVertical size={20}/></button>
+                        {showMenu && (
+                            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="absolute top-full right-0 mt-2 w-48 bg-gray-800 border border-accent-cyan/20 rounded-lg shadow-lg z-10">
+                                {isAdmin && <button onClick={() => { setIsEditing(true); setShowMenu(false); }} className="w-full text-left px-4 py-2 hover:bg-accent-cyan/10 flex items-center gap-2"><Edit size={16}/> Edit Info</button>}
+                                <button onClick={handleLeave} className="w-full text-left px-4 py-2 hover:bg-accent-pink/10 text-accent-pink flex items-center gap-2"><LogOut size={16}/> Leave Group</button>
+                                {isAdmin && <button onClick={handleDelete} className="w-full text-left px-4 py-2 hover:bg-red-500/20 text-red-500 flex items-center gap-2"><Trash2 size={16}/> Delete Group</button>}
+                            </motion.div>
+                        )}
+                    </div>
+                    <button onClick={onClose} className="p-2 rounded-full hover:bg-accent-cyan/10"><X size={20}/></button>
+                </div>
             </div>
             
             <div className="flex-1 overflow-y-auto p-4">
                 <div className="flex flex-col items-center text-center mb-6">
-                    <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-5xl mb-4">
-                        {group.groupType === 'anonymous' ? <Shield/> : group.groupType === 'pseudonymous' ? <EyeOff/> : <Users />}
+                    <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-5xl mb-4 overflow-hidden">
+                       {group.avatar_url ? <img src={group.avatar_url} alt={group.name} className="w-full h-full object-cover"/> : <Users/>}
                     </div>
                     {isEditing ? (
                         <input type="text" value={groupName} onChange={e => setGroupName(e.target.value)} className="input-glass text-xl font-bold text-center w-full"/>
@@ -291,15 +353,11 @@ function GroupInfoPanel({ group, currentUser, mutuals, onClose, onGroupUpdate }:
                     ) : (
                         <p className="text-sm text-gray-400 mt-1">{group.bio || "No bio set."}</p>
                     )}
-                    {isAdmin && (
-                        isEditing ? (
-                            <div className="flex gap-2 mt-2">
-                                <button onClick={handleUpdateInfo} className="text-xs px-2 py-1 rounded bg-green-500/80 text-white">Save</button>
-                                <button onClick={() => setIsEditing(false)} className="text-xs px-2 py-1 rounded bg-gray-500/80 text-white">Cancel</button>
-                            </div>
-                        ) : (
-                             <button onClick={() => setIsEditing(true)} className="p-2 rounded-full hover:bg-accent-cyan/10 mt-1"><Edit size={16}/></button>
-                        )
+                    {isAdmin && isEditing && (
+                        <div className="flex gap-2 mt-2">
+                            <button onClick={handleUpdateInfo} className="text-xs px-2 py-1 rounded bg-green-500/80 text-white">Save</button>
+                            <button onClick={() => setIsEditing(false)} className="text-xs px-2 py-1 rounded bg-gray-500/80 text-white">Cancel</button>
+                        </div>
                     )}
                 </div>
 
@@ -389,7 +447,6 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
   const isMobile = useMediaQuery("(max-width: 767px)");
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
-  const [showMenu, setShowMenu] = useState<string | null>(null);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
   const [onlineStatus, setOnlineStatus] = useState<any>(null);
 
@@ -399,7 +456,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
     // Fetch user's chats (groups and mutuals)
     const qChats = query(collection(db, "groups"), where("members", "array-contains", firebaseUser.uid));
     const unsubChats = onSnapshot(qChats, async (groupsSnap) => {
-        const groupChats = groupsSnap.docs.map(doc => ({ id: doc.id, ...doc.data(), isGroup: true, uid: doc.id }));
+        const groupChats = groupsSnap.docs.map(doc => ({ id: doc.id, ...doc.data(), isGroup: true }));
         
         const followingRef = collection(db, "users", firebaseUser.uid, "following");
         const followersRef = collection(db, "users", firebaseUser.uid, "followers");
@@ -463,7 +520,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
 
   const handleSelectChat = async (chat: any) => {
     setSelectedChat(chat);
-    setShowMenu(null);
+    setShowGroupInfo(false);
     setShowEmojiPicker(null);
     const chatId = chat.isGroup ? chat.id : getChatId(firebaseUser.uid, chat.uid);
     const q = query(
@@ -639,6 +696,30 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
     // This will trigger the main chat listener to move it to the top list
     handleSelectChat(group); 
   };
+
+  const handleLeaveGroup = async (groupId: string) => {
+    if (!firebaseUser) return;
+    const groupRef = doc(db, 'groups', groupId);
+    await updateDoc(groupRef, {
+        members: arrayRemove(firebaseUser.uid),
+        admins: arrayRemove(firebaseUser.uid)
+    });
+     await addDoc(collection(db, "chats", groupId, "messages"), {
+        text: `${firebaseUser.displayName} left the group.`,
+        sender: 'system',
+        createdAt: serverTimestamp(),
+        readBy: []
+    });
+    setSelectedChat(null);
+  };
+  
+  const handleDeleteGroup = async (groupId: string) => {
+      // For MVP, we just delete the group doc. A production app would need a Cloud Function
+      // to recursively delete the chat subcollection.
+      const groupRef = doc(db, 'groups', groupId);
+      await deleteDoc(groupRef);
+      setSelectedChat(null);
+  }
   
   const getInitials = (user: any) => user?.name?.[0] || user?.username?.[0] || "U";
   
@@ -665,7 +746,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                         <button key={chat.id} className={`w-full flex items-center gap-4 px-4 py-3 text-left hover:bg-accent-cyan/10 transition-colors duration-200 ${selectedChat?.id === chat.id ? "bg-accent-cyan/20" : ""}`} onClick={() => handleSelectChat(chat)}>
                             <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-xl overflow-hidden shrink-0">
                                 {chat.isGroup ? 
-                                    (chat.groupType === 'anonymous' ? <Shield/> : chat.groupType === 'pseudonymous' ? <EyeOff/> : <Users/>) :
+                                    (chat.avatar_url ? <img src={chat.avatar_url} alt={chat.name} className="w-full h-full object-cover"/> : (chat.groupType === 'anonymous' ? <Shield/> : chat.groupType === 'pseudonymous' ? <EyeOff/> : <Users/>)) :
                                     (chat.avatar_url ? <img src={chat.avatar_url} alt="avatar" className="w-full h-full object-cover"/> : getInitials(chat))
                                 }
                             </div>
@@ -704,14 +785,14 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                 <>
                     <div className="flex items-center gap-3 p-3 border-b border-accent-cyan/10 bg-black/60 shadow-md shrink-0">
                         {isMobile && <button onClick={() => setSelectedChat(null)} className="p-2 rounded-full hover:bg-accent-cyan/10"><ArrowLeft size={20}/></button>}
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-lg overflow-hidden shrink-0">
+                         <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-lg overflow-hidden shrink-0">
                            {selectedChat.isGroup ? 
-                                (selectedChat.groupType === 'anonymous' ? <Shield/> : selectedChat.groupType === 'pseudonymous' ? <EyeOff/> : <Users/>) :
+                                (selectedChat.avatar_url ? <img src={selectedChat.avatar_url} alt={selectedChat.name} className="w-full h-full object-cover"/> : (selectedChat.groupType === 'anonymous' ? <Shield/> : selectedChat.groupType === 'pseudonymous' ? <EyeOff/> : <Users/>)) :
                                 (selectedChat.avatar_url ? <img src={selectedChat.avatar_url} alt="avatar" className="w-full h-full object-cover"/> : getInitials(selectedChat))
                            }
                         </div>
                         <button className="flex-1 text-left" disabled={!selectedChat.isGroup} onClick={() => setShowGroupInfo(true)}>
-                            <h3 className="font-bold text-white">{selectedChat.name}</h3>
+                            <h3 className="font-bold text-white">{selectedChat.name || selectedChat.username}</h3>
                              {onlineStatus?.status === 'online' ? (
                                 <p className="text-xs text-green-400">Online</p>
                             ) : onlineStatus?.lastSeen ? (
@@ -812,6 +893,8 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                             mutuals={chats.filter(c => !c.isGroup)}
                             onClose={() => setShowGroupInfo(false)}
                             onGroupUpdate={(updatedGroup) => setSelectedChat(updatedGroup)}
+                            onGroupDeleted={handleDeleteGroup}
+                            onLeaveGroup={handleLeaveGroup}
                         />
                     )}
                 </>
@@ -844,7 +927,7 @@ export default function SignalPage() {
             name: user.displayName || "",
             username: user.displayName ? user.displayName.replace(/\s+/g, "").toLowerCase() : `user${user.uid.substring(0,5)}`,
             email: user.email || "",
-            avatar_url: user.photoURL || `https://api.dicebear.com/8.x/bottts-neutral/svg?seed=${user.uid}`,
+            avatar_url: `https://api.dicebear.com/8.x/bottts-neutral/svg?seed=${user.uid}`,
             bio: "",
             interests: "",
             createdAt: new Date(),
@@ -864,5 +947,3 @@ export default function SignalPage() {
   }
   return <ClientOnlySignalPage firebaseUser={firebaseUser} />;
 }
-
-    
