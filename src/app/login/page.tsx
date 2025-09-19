@@ -17,12 +17,26 @@ function ForgotPasswordModal({ onClose }: { onClose: () => void }) {
     e.preventDefault();
     setError("");
     setSuccess("");
+
+    if (!email) {
+      setError("Please enter your email address.");
+      return;
+    }
+
     setLoading(true);
     try {
+      // Firebase handles the link generation and sending via its backend.
+      // The user will receive an email with a link to reset their password.
       await sendPasswordResetEmail(auth, email);
-      setSuccess("Password reset email sent! Please check your inbox.");
+      setSuccess("Password reset email sent! Please check your inbox (and spam folder).");
     } catch (err: any) {
-      setError(err.message);
+      // Provide more user-friendly error messages
+      if (err.code === 'auth/user-not-found') {
+        setError("No account found with that email address.");
+      } else {
+        setError("Failed to send reset email. Please try again.");
+      }
+      console.error("Password Reset Error:", err);
     }
     setLoading(false);
   };
