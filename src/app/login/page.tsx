@@ -1,16 +1,75 @@
+
 "use client";
 import React, { useState } from "react";
 import Link from "next/link";
 import { auth } from "@/utils/firebaseClient";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+
+function ForgotPasswordModal({ onClose }: { onClose: () => void }) {
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    setLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, email);
+      setSuccess("Password reset email sent! Please check your inbox.");
+    } catch (err: any) {
+      setError(err.message);
+    }
+    setLoading(false);
+  };
+  
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+        <motion.form 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            onSubmit={handleSubmit}
+            className="glass-card p-8 w-full max-w-md flex flex-col gap-4"
+            onClick={e => e.stopPropagation()}
+        >
+            <h2 className="text-2xl font-headline font-bold text-accent-cyan mb-2 text-center">Reset Password</h2>
+            <p className="text-gray-400 text-center text-sm mb-4">Enter your email to receive a password reset link.</p>
+            <input
+                type="email"
+                placeholder="Email"
+                className="input-glass w-full"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                required
+            />
+            {error && <div className="text-red-400 text-center animate-bounce mt-2">{error}</div>}
+            {success && <div className="text-accent-cyan text-center mt-2">{success}</div>}
+            <button
+              type="submit"
+              className="btn-glass mt-4 bg-accent-cyan/80 text-black"
+              disabled={loading}
+            >
+              {loading ? "Sending..." : "Send Reset Link"}
+            </button>
+            <button type="button" className="text-center text-sm text-gray-400 mt-2 hover:underline" onClick={onClose}>
+                Back to Login
+            </button>
+        </motion.form>
+    </div>
+  )
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -55,6 +114,15 @@ export default function LoginPage() {
             required
           />
         </div>
+        <div className="text-right -mt-2">
+            <button 
+                type="button" 
+                onClick={() => setShowForgotPassword(true)}
+                className="text-xs text-accent-cyan hover:underline"
+            >
+                Forgot Password?
+            </button>
+        </div>
         {error && <div className="text-red-400 text-center animate-bounce mt-2">{error}</div>}
         <button
           type="submit"
@@ -68,6 +136,7 @@ export default function LoginPage() {
           <Link href="/signup" className="text-accent-cyan hover:underline">Sign up</Link>
         </div>
       </motion.form>
+      {showForgotPassword && <ForgotPasswordModal onClose={() => setShowForgotPassword(false)} />}
     </div>
   );
 }
