@@ -1,3 +1,5 @@
+
+'use server';
 /**
  * @fileoverview This file initializes and configures the Genkit AI plugin.
  * It is a central place to manage AI-related configurations for the application.
@@ -14,6 +16,8 @@ export const ai = genkit({
       // Make sure this environment variable is set in your deployment environment.
     }),
   ],
+  // Set a default model for all generate calls.
+  model: 'googleai/gemini-2.5-flash',
   // Log all AI-related activity to the console for debugging and monitoring.
   logSinks: [console.log],
   // Enable tracing to monitor the performance and behavior of AI flows in production.
