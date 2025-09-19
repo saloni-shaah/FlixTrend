@@ -131,7 +131,7 @@ function CreateGroupModal({ mutuals, currentUser, onClose, onGroupCreated }: { m
             });
             
             const groupData = (await getDoc(groupDocRef)).data();
-            
+
             if (groupType === 'simple') {
                 await addDoc(collection(db, "chats", groupDocRef.id, "messages"), {
                     text: `${currentUser.displayName} created the group "${groupName}"`,
@@ -449,6 +449,10 @@ function UserInfoPanel({ user, onClose }: { user: any, onClose: () => void }) {
                          <div className="glass-card p-3 rounded-lg">
                             <h4 className="text-xs text-gray-400 mb-1">Bio</h4>
                             <p className="text-white">{user.bio || 'No bio provided.'}</p>
+                        </div>
+                        <div className="glass-card p-3 rounded-lg">
+                            <h4 className="text-xs text-gray-400 mb-1 flex items-center gap-2"><AtSign size={14}/> Phone</h4>
+                            <p className="text-white">{user.phoneNumber || 'Not specified'}</p>
                         </div>
                          <div className="glass-card p-3 rounded-lg">
                             <h4 className="text-xs text-gray-400 mb-1 flex items-center gap-2"><MapPin size={14}/> Location</h4>
