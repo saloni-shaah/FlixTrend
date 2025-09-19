@@ -3,18 +3,20 @@
 
 import { getFirestore, doc, setDoc, collection, addDoc, updateDoc, onSnapshot, deleteDoc, writeBatch, getDoc, FieldValue, serverTimestamp, getDocs } from 'firebase/firestore';
 import { app } from './firebaseClient';
+import { useAppState } from '@/utils/AppStateContext';
 
 const db = getFirestore(app);
 
 // Function for the caller to initiate a call
 export async function createCall(caller: any, callee: any) {
+  const { pc } = useAppState.getState();
+  if (!pc) {
+      console.error("PeerConnection not initialized!");
+      return;
+  }
+  
   const callDocRef = doc(collection(db, 'calls'));
   
-  // Set up the peer connection
-  const pc = new RTCPeerConnection({
-    iceServers: [{ urls: 'stun:stun1.l.google.com:19302' }]
-  });
-
   // Get local media
   const localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
   localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
@@ -43,6 +45,7 @@ export async function createCall(caller: any, callee: any) {
     callerName: caller.displayName || caller.email,
     calleeId: callee.uid,
     calleeName: callee.name || callee.username,
+    createdAt: serverTimestamp(),
   });
 
   // Update user documents with the current call ID

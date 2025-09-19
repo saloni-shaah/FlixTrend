@@ -1,3 +1,4 @@
+
 /**
  * Import function triggers from their respective submodules:
  *
@@ -161,3 +162,55 @@ exports.deleteUserAccount = functions.https.onCall(async (data, context) => {
     );
   }
 });
+
+
+/**
+ * Cloud Function to send a push notification for an incoming call.
+ */
+exports.sendCallNotification = functions.firestore
+  .document('calls/{callId}')
+  .onCreate(async (snapshot, context) => {
+    const callData = snapshot.data();
+    if (!callData) {
+      console.log('No data associated with the call event.');
+      return;
+    }
+
+    const { calleeId, callerName } = callData;
+
+    // Get the callee's user document to find their FCM token
+    const userDocRef = admin.firestore().collection('users').doc(calleeId);
+    const userDoc = await userDocRef.get();
+
+    if (!userDoc.exists) {
+      console.log(`User document not found for calleeId: ${calleeId}`);
+      return;
+    }
+
+    const userData = userDoc.data();
+    const fcmToken = userData?.fcmToken;
+
+    if (!fcmToken) {
+      console.log(`FCM token not found for calleeId: ${calleeId}`);
+      return;
+    }
+
+    // Construct the notification message payload for the call
+    const payload = {
+      notification: {
+        title: 'Incoming Call',
+        body: `${callerName || 'Someone'} is calling you on FlixTrend!`,
+        icon: '/icon-192x192.png',
+        click_action: 'https://flixtrendmvp-a2002.web.app/signal', // Or a specific call URL
+      },
+    };
+
+    // Send the notification using the FCM token
+    try {
+      const response = await admin.messaging().sendToDevice(fcmToken, payload);
+      console.log('Successfully sent call notification:', response);
+    } catch (error) {
+      console.error('Error sending call notification:', error);
+    }
+  });
+
