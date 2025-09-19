@@ -3,8 +3,8 @@
 import React, { useEffect, useState, useRef } from "react";
 import { auth } from "@/utils/firebaseClient";
 import { getFirestore, doc, getDoc, setDoc, collection, query, where, getCountFromServer, getDocs, onSnapshot, orderBy, updateDoc, writeBatch, deleteDoc, arrayUnion, arrayRemove } from "firebase/firestore";
-import { Cog, Palette, Lock, MessageCircle, LogOut, Camera, Star, Bell, Trash2, AtSign, Compass, MapPin, User, Tag, ShieldCheck, Music, Bookmark, Heart, Folder, Download, CheckCircle, Award, Mic, Crown, Zap, Rocket, Search, Pin, Phone } from "lucide-react";
-import { signOut, EmailAuthProvider, reauthenticateWithCredential, RecaptchaVerifier, signInWithPhoneNumber, PhoneAuthProvider, linkWithCredential, AuthCredential } from "firebase/auth";
+import { Cog, Palette, Lock, MessageCircle, LogOut, Camera, Star, Bell, Trash2, AtSign, Compass, MapPin, User, Tag, ShieldCheck, Music, Bookmark, Heart, Folder, Download, CheckCircle, Award, Mic, Crown, Zap, Rocket, Search, Pin, Phone, Mail } from "lucide-react";
+import { signOut, EmailAuthProvider, reauthenticateWithCredential, RecaptchaVerifier, signInWithPhoneNumber, PhoneAuthProvider, linkWithCredential, AuthCredential, sendEmailVerification } from "firebase/auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -867,6 +867,7 @@ function SettingsModal({ profile, firebaseUser, onClose }: { profile: any; fireb
   });
   const [isSaving, setIsSaving] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [resendStatus, setResendStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
   const router = useRouter();
 
   useEffect(() => {
@@ -913,6 +914,20 @@ function SettingsModal({ profile, firebaseUser, onClose }: { profile: any; fireb
         setIsSaving(false);
     }
   };
+
+  const handleResendVerification = async () => {
+    if (firebaseUser) {
+        setResendStatus('sending');
+        try {
+            await sendEmailVerification(firebaseUser);
+            setResendStatus('sent');
+            setTimeout(() => setResendStatus('idle'), 3000);
+        } catch (error) {
+            console.error("Error resending verification email:", error);
+            setResendStatus('idle');
+        }
+    }
+  };
   
   const handleLogout = async () => {
     await signOut(auth);
@@ -957,6 +972,23 @@ function SettingsModal({ profile, firebaseUser, onClose }: { profile: any; fireb
             
             <div className="bg-white/5 rounded-xl p-4">
               <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan"><Lock /> Privacy & Security</h3>
+                {firebaseUser?.emailVerified ? (
+                    <div className="flex items-center justify-between py-2 text-green-400">
+                        <span className="flex items-center gap-2"><Mail /> Email Verified</span>
+                        <CheckCircle />
+                    </div>
+                ) : (
+                    <div className="flex items-center justify-between py-2">
+                        <span className="flex items-center gap-2 text-yellow-400"><Mail /> Email not verified</span>
+                        <button 
+                            className="btn-glass text-xs"
+                            onClick={handleResendVerification}
+                            disabled={resendStatus !== 'idle'}
+                        >
+                            {resendStatus === 'sending' ? 'Sending...' : resendStatus === 'sent' ? 'Sent!' : 'Resend Email'}
+                        </button>
+                    </div>
+                )}
               <div className="flex items-center justify-between py-2">
                 <span><MessageCircle className="inline-block mr-2"/> Who can DM you?</span>
                 <select value={settings.dmPrivacy} onChange={(e) => handleSettingChange('dmPrivacy', e.target.value)} className="input-glass text-sm">
