@@ -248,12 +248,14 @@ function GroupInfoPanel({ group, currentUser, mutuals, onClose, onGroupUpdate, o
         }
         
         await updateDoc(groupRef, updateData);
-        await addDoc(collection(db, "chats", group.id, "messages"), {
-                text: `${userToAdd.name} was added to the group.`,
-                sender: 'system',
-                createdAt: serverTimestamp(),
-                readBy: [currentUser.uid]
-            });
+        if (group.groupType === 'simple') {
+            await addDoc(collection(db, "chats", group.id, "messages"), {
+                    text: `${userToAdd.name} was added to the group.`,
+                    sender: 'system',
+                    createdAt: serverTimestamp(),
+                    readBy: [currentUser.uid]
+                });
+        }
         
         const updatedGroupDoc = await getDoc(groupRef);
         onGroupUpdate({ id: updatedGroupDoc.id, ...updatedGroupDoc.data() });
@@ -275,12 +277,14 @@ function GroupInfoPanel({ group, currentUser, mutuals, onClose, onGroupUpdate, o
         
         await updateDoc(groupRef, updateData);
 
-        await addDoc(collection(db, "chats", group.id, "messages"), {
-                text: `${memberName} was removed from the group.`,
-                sender: 'system',
-                createdAt: serverTimestamp(),
-                readBy: [currentUser.uid]
-            });
+        if (group.groupType === 'simple') {
+            await addDoc(collection(db, "chats", group.id, "messages"), {
+                    text: `${memberName} was removed from the group.`,
+                    sender: 'system',
+                    createdAt: serverTimestamp(),
+                    readBy: [currentUser.uid]
+                });
+        }
          const updatedGroupDoc = await getDoc(groupRef);
          onGroupUpdate({ id: updatedGroupDoc.id, ...updatedGroupDoc.data() });
     };
@@ -291,7 +295,6 @@ function GroupInfoPanel({ group, currentUser, mutuals, onClose, onGroupUpdate, o
     };
 
     const handleDelete = async () => {
-        if (!window.confirm("Are you sure you want to PERMANENTLY DELETE this group? This cannot be undone.")) return;
         onGroupDeleted(group.id);
     };
 
@@ -806,32 +809,40 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
     
     batch.update(groupRef, updateData);
 
-    // Add a system message about the user leaving
-    const messageRef = doc(collection(db, "chats", groupId, "messages"));
-    batch.set(messageRef, {
-        text: `${firebaseUser.displayName} left the group.`,
-        sender: 'system',
-        createdAt: serverTimestamp(),
-        readBy: []
-    });
+    // Add a system message about the user leaving, only for simple groups
+    if (groupData.groupType === 'simple') {
+        const messageRef = doc(collection(db, "chats", groupId, "messages"));
+        batch.set(messageRef, {
+            text: `${firebaseUser.displayName} left the group.`,
+            sender: 'system',
+            createdAt: serverTimestamp(),
+            readBy: []
+        });
+    }
     
     await batch.commit();
     setSelectedChat(null);
   };
   
   const handleDeleteGroup = async (groupId: string) => {
-      // This is a simplified deletion. A production app would use a Cloud Function
-      // to recursively delete the chat messages subcollection.
-      const chatMessagesRef = collection(db, 'chats', groupId, 'messages');
-      const messagesSnap = await getDocs(chatMessagesRef);
-      const batch = writeBatch(db);
-      messagesSnap.forEach(doc => batch.delete(doc.ref));
-      await batch.commit();
+      if (!window.confirm("Are you sure you want to PERMANENTLY DELETE this group and all its messages? This cannot be undone.")) return;
 
-      const groupRef = doc(db, 'groups', groupId);
-      await deleteDoc(groupRef);
-      
-      setSelectedChat(null);
+      try {
+        const chatMessagesRef = collection(db, 'chats', groupId, 'messages');
+        const messagesSnap = await getDocs(chatMessagesRef);
+        const batch = writeBatch(db);
+        messagesSnap.forEach(doc => batch.delete(doc.ref));
+        
+        const groupRef = doc(db, 'groups', groupId);
+        batch.delete(groupRef);
+        
+        await batch.commit();
+        
+        setSelectedChat(null);
+      } catch (error) {
+        console.error("Error deleting group:", error);
+        alert("Failed to delete group.");
+      }
   }
   
   const getInitials = (user: any) => user?.name?.[0] || user?.username?.[0] || "U";
@@ -856,7 +867,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                     <div className="text-gray-400 text-center p-8">No contacts or groups yet. Follow some users to start chatting!</div>
                 ) : (
                     chats.map((chat) => (
-                        <button key={chat.isGroup ? chat.id : chat.uid} className={`w-full flex items-center gap-4 px-4 py-3 text-left hover:bg-accent-cyan/10 transition-colors duration-200 ${selectedChat?.id === (chat.isGroup ? chat.id : chat.uid) ? "bg-accent-cyan/20" : ""}`} onClick={() => handleSelectChat(chat)}>
+                        <button key={chat.isGroup ? chat.id : `dm-${chat.uid}`} className={`w-full flex items-center gap-4 px-4 py-3 text-left hover:bg-accent-cyan/10 transition-colors duration-200 ${selectedChat?.id === (chat.isGroup ? chat.id : chat.uid) ? "bg-accent-cyan/20" : ""}`} onClick={() => handleSelectChat(chat)}>
                             <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-xl overflow-hidden shrink-0">
                                 {chat.isGroup ? 
                                     (chat.avatar_url ? <img src={chat.avatar_url} alt={chat.name} className="w-full h-full object-cover"/> : (chat.groupType === 'anonymous' ? <Shield/> : chat.groupType === 'pseudonymous' ? <EyeOff/> : <Users/>)) :
