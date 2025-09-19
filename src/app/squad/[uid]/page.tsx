@@ -98,9 +98,10 @@ export default function UserProfilePage() {
       const postsQuery = query(collection(db, "posts"), where("userId", "==", uid));
       const userPostsSnap = await getDocs(postsQuery);
       setPostCount(userPostsSnap.size);
+      // Sort posts by creation date client-side
       const postsData = userPostsSnap.docs
         .map(doc => ({ id: doc.id, ...doc.data() }))
-        .sort((a, b) => b.createdAt.toDate() - a.createdAt.toDate());
+        .sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
       setUserPosts(postsData);
       
       setLoading(false);
@@ -255,4 +256,5 @@ export default function UserProfilePage() {
       )}
     </div>
   );
-}
+
+    
