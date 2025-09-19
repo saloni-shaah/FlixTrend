@@ -1,9 +1,9 @@
 
 "use client";
 import React, { useEffect, useState, useRef } from "react";
-import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp, where, writeBatch, getDocs, updateDoc, deleteDoc, arrayUnion, arrayRemove } from "firebase/firestore";
+import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp, where, writeBatch, getDocs, updateDoc, deleteDoc, arrayUnion, arrayRemove, deleteField } from "firebase/firestore";
 import { auth, db } from "@/utils/firebaseClient";
-import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, Smile, Trash2, Users, CheckSquare, Square, MoreVertical, UserPlus, UserX, Edit, Shield, EyeOff, LogOut, UploadCloud, Languages, UserCircle, Cake, MapPin, AtSign } from "lucide-react";
+import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, Smile, Trash2, Users, CheckSquare, Square, MoreVertical, UserPlus, UserX, Edit, Shield, EyeOff, LogOut, UploadCloud, Languages, UserCircle, Cake, MapPin, AtSign, User } from "lucide-react";
 import { useAppState } from "@/utils/AppStateContext";
 import { createCall } from "@/utils/callService";
 import { motion, AnimatePresence } from "framer-motion";
@@ -235,18 +235,14 @@ function GroupInfoPanel({ group, currentUser, mutuals, onClose, onGroupUpdate, o
 
     const handleAddMember = async (userToAdd: any) => {
         const groupRef = doc(db, "groups", group.id);
-        const updatedMemberInfo = { ...group.memberInfo, [userToAdd.uid]: { name: userToAdd.name, avatar_url: userToAdd.avatar_url, username: userToAdd.username } };
         
         let updateData: any = {
             members: arrayUnion(userToAdd.uid),
-            memberInfo: updatedMemberInfo
+            [`memberInfo.${userToAdd.uid}`]: { name: userToAdd.name, avatar_url: userToAdd.avatar_url, username: userToAdd.username }
         };
         
         if(group.groupType === 'pseudonymous'){
-            updateData.pseudonyms = {
-                ...group.pseudonyms,
-                [userToAdd.uid]: generateAnonymousName(userToAdd.uid, group.id)
-            }
+            updateData[`pseudonyms.${userToAdd.uid}`] = generateAnonymousName(userToAdd.uid, group.id);
         }
         
         await updateDoc(groupRef, updateData);
@@ -256,25 +252,23 @@ function GroupInfoPanel({ group, currentUser, mutuals, onClose, onGroupUpdate, o
                 createdAt: serverTimestamp(),
                 readBy: [currentUser.uid]
             });
-        onGroupUpdate({ ...group, members: [...group.members, userToAdd.uid], memberInfo: updatedMemberInfo, pseudonyms: updateData.pseudonyms || group.pseudonyms });
+        
+        const updatedGroupDoc = await getDoc(groupRef);
+        onGroupUpdate({ id: updatedGroupDoc.id, ...updatedGroupDoc.data() });
     };
 
     const handleRemoveMember = async (uidToRemove: string) => {
         if (!window.confirm("Are you sure you want to remove this member?")) return;
         const groupRef = doc(db, "groups", group.id);
         const memberName = group.memberInfo[uidToRemove]?.name || 'A user';
-        const updatedMemberInfo = { ...group.memberInfo };
-        delete updatedMemberInfo[uidToRemove];
-        
+
         const updateData: any = {
             members: arrayRemove(uidToRemove),
-            memberInfo: updatedMemberInfo,
+            [`memberInfo.${uidToRemove}`]: deleteField(),
         };
 
         if(group.groupType === 'pseudonymous'){
-            const updatedPseudonyms = { ...group.pseudonyms };
-            delete updatedPseudonyms[uidToRemove];
-            updateData.pseudonyms = updatedPseudonyms;
+             updateData[`pseudonyms.${uidToRemove}`] = deleteField();
         }
         
         await updateDoc(groupRef, updateData);
@@ -285,7 +279,8 @@ function GroupInfoPanel({ group, currentUser, mutuals, onClose, onGroupUpdate, o
                 createdAt: serverTimestamp(),
                 readBy: [currentUser.uid]
             });
-         onGroupUpdate({ ...group, members: group.members.filter((m:string) => m !== uidToRemove), memberInfo: updatedMemberInfo, pseudonyms: updateData.pseudonyms || group.pseudonyms });
+         const updatedGroupDoc = await getDoc(groupRef);
+         onGroupUpdate({ id: updatedGroupDoc.id, ...updatedGroupDoc.data() });
     };
 
     const handleLeave = async () => {
@@ -526,7 +521,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
         const mutualProfiles = await Promise.all(
           mutualUids.map(async (uid) => {
             const userDoc = await getDoc(doc(db, "users", uid));
-            return userDoc.exists() ? { uid, ...userDoc.data(), isGroup: false, id: `dm-${uid}` } : null;
+            return userDoc.exists() ? { uid, ...userDoc.data(), isGroup: false, id: uid } : null;
           })
         );
         
@@ -765,19 +760,23 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
     if (!firebaseUser) return;
     const groupRef = doc(db, "groups", group.id);
     await updateDoc(groupRef, {
-        members: arrayUnion(firebaseUser.uid)
+        members: arrayUnion(firebaseUser.uid),
+        [`memberInfo.${firebaseUser.uid}`]: { name: firebaseUser.name, avatar_url: firebaseUser.avatar_url, username: firebaseUser.username }
     });
     // This will trigger the main chat listener to move it to the top list
-    handleSelectChat(group); 
+    handleSelectChat({ ...group, members: [...group.members, firebaseUser.uid] }); 
   };
 
   const handleLeaveGroup = async (groupId: string) => {
     if (!firebaseUser) return;
     const groupRef = doc(db, 'groups', groupId);
-    await updateDoc(groupRef, {
+    const updateData = {
         members: arrayRemove(firebaseUser.uid),
-        admins: arrayRemove(firebaseUser.uid)
-    });
+        admins: arrayRemove(firebaseUser.uid),
+        [`memberInfo.${firebaseUser.uid}`]: deleteField(),
+        [`pseudonyms.${firebaseUser.uid}`]: deleteField()
+    };
+    await updateDoc(groupRef, updateData);
      await addDoc(collection(db, "chats", groupId, "messages"), {
         text: `${firebaseUser.displayName} left the group.`,
         sender: 'system',
@@ -788,10 +787,12 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
   };
   
   const handleDeleteGroup = async (groupId: string) => {
-      // For MVP, we just delete the group doc. A production app would need a Cloud Function
-      // to recursively delete the chat subcollection.
+      // This is a simplified deletion. A production app would use a Cloud Function
+      // to recursively delete the chat messages subcollection.
       const groupRef = doc(db, 'groups', groupId);
       await deleteDoc(groupRef);
+      // We also need to delete the chat document, which might be large.
+      // This is best handled by a Cloud Function trigger on group deletion.
       setSelectedChat(null);
   }
   
@@ -817,7 +818,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                     <div className="text-gray-400 text-center p-8">No contacts or groups yet. Follow some users to start chatting!</div>
                 ) : (
                     chats.map((chat) => (
-                        <button key={chat.id} className={`w-full flex items-center gap-4 px-4 py-3 text-left hover:bg-accent-cyan/10 transition-colors duration-200 ${selectedChat?.id === chat.id ? "bg-accent-cyan/20" : ""}`} onClick={() => handleSelectChat(chat)}>
+                        <button key={chat.isGroup ? chat.id : chat.uid} className={`w-full flex items-center gap-4 px-4 py-3 text-left hover:bg-accent-cyan/10 transition-colors duration-200 ${selectedChat?.id === (chat.isGroup ? chat.id : chat.uid) ? "bg-accent-cyan/20" : ""}`} onClick={() => handleSelectChat(chat)}>
                             <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-xl overflow-hidden shrink-0">
                                 {chat.isGroup ? 
                                     (chat.avatar_url ? <img src={chat.avatar_url} alt={chat.name} className="w-full h-full object-cover"/> : (chat.groupType === 'anonymous' ? <Shield/> : chat.groupType === 'pseudonymous' ? <EyeOff/> : <Users/>)) :
