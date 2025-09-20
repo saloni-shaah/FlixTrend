@@ -159,28 +159,27 @@ export default function GuestPage() {
 
         {/* Search Bar */}
         <div className="flex justify-center items-center mb-6 w-full">
-            <div className="relative w-full max-w-2xl">
-              <input
+            <div className="input-glass w-full flex items-center px-4">
+              <button
+                  onClick={handleVoiceSearch}
+                  className={`p-1 rounded-full transition-colors text-gray-400 hover:text-brand-gold ${listening ? 'animate-pulse bg-red-500/50' : ''}`}
+                  aria-label="Voice search"
+                  disabled={!browserSupportsSpeechRecognition}
+              >
+                  <Mic size={20} />
+              </button>
+              <div className="w-px h-6 bg-glass-border mx-3"></div>
+               <input
                 type="text"
-                className="input-glass w-full pl-12 pr-24 py-3 text-lg font-body"
+                className="flex-1 bg-transparent py-3 text-lg font-body focus:outline-none"
                 placeholder={listening ? "Listening..." : "Search posts..."}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 autoFocus={false}
               />
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-brand-gold pointer-events-none">
+              <button className="p-2 rounded-full text-brand-gold hover:bg-brand-gold/10">
                 <Search />
-              </span>
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                 <button
-                    onClick={handleVoiceSearch}
-                    className={`p-1 rounded-full transition-colors text-gray-400 hover:text-brand-gold ${listening ? 'animate-pulse bg-red-500/50' : ''}`}
-                    aria-label="Voice search"
-                    disabled={!browserSupportsSpeechRecognition}
-                >
-                    <Mic size={20} />
-                </button>
-              </div>
+              </button>
             </div>
         </div>
 
@@ -217,3 +216,5 @@ export default function GuestPage() {
     </div>
   );
 }
+
+    
