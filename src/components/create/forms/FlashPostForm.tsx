@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, UploadCloud, Music as MusicIcon, MapPin, Smile } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { getFirestore, collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { getFirestore, collection, onSnapshot, query, orderBy, getDoc, doc } from 'firebase/firestore';
 import { app } from '@/utils/firebaseClient';
 
 const db = getFirestore(app);
@@ -17,12 +17,24 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
+        // Pre-fetch song if songId is provided
+        if (data.songId && !data.song) {
+            const fetchSong = async () => {
+                const songDoc = await getDoc(doc(db, "songs", data.songId));
+                if (songDoc.exists()) {
+                    const songData = songDoc.data();
+                    handleSelectSong({ id: songDoc.id, ...songData });
+                }
+            };
+            fetchSong();
+        }
+
         const q = query(collection(db, "songs"), orderBy("createdAt", "desc"));
         const unsub = onSnapshot(q, (snapshot) => {
             setAppSongs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         });
         return () => unsub();
-    }, []);
+    }, [data.songId]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -52,7 +64,6 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
             album: song.album,
             albumArt: song.albumArtUrl,
             preview_url: song.audioUrl,
-            // For now, let's simplify and not include snippet selection here
             snippetStart: 0,
             snippetEnd: 15,
         } });
