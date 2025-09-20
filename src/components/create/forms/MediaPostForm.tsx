@@ -42,6 +42,8 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
         }
     }
 
+    const hasVideo = mediaFiles.some(f => f.type.startsWith('video/'));
+
     return (
         <div className="flex flex-col gap-4">
             <input type="text" name="title" placeholder="Title" className="input-glass text-lg" value={data.title || ''} onChange={handleTextChange} />
@@ -87,7 +89,7 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
                 <input type="text" name="mood" className="w-full rounded-xl p-3 pl-10 bg-black/20 text-white border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink" placeholder="How are you feeling?" value={data.mood || ''} onChange={handleTextChange} />
             </div>
             
-            {mediaFiles.length > 0 && mediaFiles.some(f => f.type.startsWith('video/')) && (
+            {hasVideo && (
                  <div>
                     <label className="text-sm font-bold text-accent-cyan">Custom Thumbnail (Optional)</label>
                     <input type="file" name="thumbnail" accept="image/*" onChange={handleThumbnailChange} className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent-pink/20 file:text-accent-pink hover:file:bg-accent-pink/40 mt-2"/>
