@@ -47,12 +47,12 @@ function CreatePostPrompt({ isPremium }: { isPremium: boolean }) {
 
   return (
       <div className="w-full max-w-xl mb-6">
-        <div className="glass-card p-4 text-center">
+        <button className="glass-card p-4 text-center w-full" onClick={() => router.push('/create')}>
           <h3 className="font-bold text-lg">Flix Your Fit by dropping a post</h3>
-          <Link href="/create" className="text-accent-cyan hover:underline text-sm">
+          <span className="text-accent-cyan hover:underline text-sm">
             click here to make a post
-          </Link>
-        </div>
+          </span>
+        </button>
         {!isPremium && <PremiumUpgradeBanner />}
       </div>
   );
