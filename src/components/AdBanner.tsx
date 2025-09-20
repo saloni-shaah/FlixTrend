@@ -24,7 +24,7 @@ const AdBanner = () => {
     }, []);
 
     return (
-        <div className="w-full glass-card p-4 text-center my-4">
+        <div className="w-full min-w-[250px] glass-card p-4 text-center my-4">
             <ins className="adsbygoogle"
                 style={{ display: 'block' }}
                 data-ad-client="ca-pub-4402800926226975"
