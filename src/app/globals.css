@@ -115,6 +115,11 @@ body {
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
 }
 
+/* Heptagon clip-path */
+.heptagon-clip {
+  clip-path: polygon(50% 0%, 95% 25%, 100% 75%, 75% 100%, 25% 100%, 0% 75%, 5% 25%);
+}
+
 /* Liquid Glass Button Style */
 .btn-glass {
   background: rgba(255, 255, 255, 0.1);

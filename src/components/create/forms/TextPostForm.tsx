@@ -44,7 +44,7 @@ export function TextPostForm({ data, onDataChange }: { data: any, onDataChange: 
         <div className="flex flex-col gap-4">
             <textarea
                 name="content"
-                className={`input-glass w-full rounded-2xl min-h-[200px] text-2xl p-4 text-center flex items-center justify-center ${data.fontStyle || 'font-body'}`}
+                className={`input-glass w-full min-h-[250px] text-2xl p-6 text-center flex items-center justify-center heptagon-clip ${data.fontStyle || 'font-body'}`}
                 placeholder="What's on your mind?"
                 value={data.content || ''}
                 onChange={handleTextChange}
@@ -52,7 +52,8 @@ export function TextPostForm({ data, onDataChange }: { data: any, onDataChange: 
                     backgroundColor: data.backgroundColor || 'transparent',
                     backgroundImage: bgImage ? `url(${bgImage})` : 'none',
                     backgroundSize: 'cover',
-                    backgroundPosition: 'center'
+                    backgroundPosition: 'center',
+                    borderRadius: '0', // clip-path works best without border-radius
                 }}
             />
             
