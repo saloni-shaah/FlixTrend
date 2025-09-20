@@ -93,12 +93,32 @@ function CreatePostPageContent() {
                             {totalSteps === 3 && <span>AI Check</span>}
                             <span>Publish</span>
                         </div>
-                        <div className="w-full h-2 bg-black/20 rounded-full mt-1">
-                            <motion.div 
-                                className="h-2 bg-gradient-to-r from-accent-pink to-accent-cyan rounded-full"
-                                animate={{ width: `${(currentStepLogic / totalSteps) * 100}%` }}
-                                transition={{ duration: 0.5, ease: 'easeInOut' }}
-                            />
+                        <div className="relative w-full h-4 mt-1">
+                            <svg width="100%" height="100%" viewBox="0 0 200 10" preserveAspectRatio="none" className="absolute top-0 left-0">
+                                <defs>
+                                    <clipPath id="heptagonClip">
+                                        <path d="M0,5 L20,0 L90,2 L150,0 L200,5 L160,10 L80,9 L30,10 Z" />
+                                    </clipPath>
+                                </defs>
+                                <g clipPath="url(#heptagonClip)">
+                                    <rect x="0" y="0" width="200" height="10" className="text-black/20" fill="currentColor" />
+                                    <motion.div
+                                        className="h-full bg-gradient-to-r from-accent-pink to-accent-cyan"
+                                        style={{ height: '10px' }} // SVG height
+                                        initial={{ width: '0%' }}
+                                        animate={{ width: `${(currentStepLogic / totalSteps) * 100}%` }}
+                                        transition={{ duration: 0.5, ease: 'easeInOut' }}
+                                    >
+                                        <rect x="0" y="0" width="200" height="10" fill="url(#paint0_linear_7_9)" />
+                                    </motion.div>
+                                </g>
+                                <defs>
+                                    <linearGradient id="paint0_linear_7_9" x1="0" y1="5" x2="200" y2="5" gradientUnits="userSpaceOnUse">
+                                    <stop stopColor="#FF6B6B"/>
+                                    <stop offset="1" stopColor="#00F0FF"/>
+                                    </linearGradient>
+                                </defs>
+                            </svg>
                         </div>
                     </div>
 
