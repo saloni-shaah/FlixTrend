@@ -6,6 +6,8 @@ import { ImagePlus, Video, X, UploadCloud } from 'lucide-react';
 export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange: (data: any) => void }) {
     const [mediaFiles, setMediaFiles] = useState<File[]>(data.mediaFiles || []);
     const [mediaPreviews, setMediaPreviews] = useState<string[]>(data.mediaPreviews || []);
+    const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(data.thumbnailPreview || null);
+
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -29,6 +31,14 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
     const handleTextChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         onDataChange({ ...data, [e.target.name]: e.target.value });
     };
+    
+    const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            setThumbnailPreview(URL.createObjectURL(file));
+            onDataChange({ ...data, thumbnailFile: file, thumbnailPreview: URL.createObjectURL(file) });
+        }
+    }
 
     return (
         <div className="flex flex-col gap-4">
@@ -64,12 +74,13 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
                 )}
             </div>
 
-            <h3 className="font-bold text-accent-cyan mt-2">Video Details (Optional)</h3>
-            <input type="text" name="title" placeholder="Video Title" className="input-glass" value={data.title || ''} onChange={handleTextChange} />
-            <textarea name="description" placeholder="Video Description" className="input-glass rounded-2xl" value={data.description || ''} onChange={handleTextChange} />
+            <h3 className="font-bold text-accent-cyan mt-2">Details (Optional)</h3>
+            <input type="text" name="title" placeholder="Title" className="input-glass" value={data.title || ''} onChange={handleTextChange} />
+            <textarea name="description" placeholder="Description" className="input-glass rounded-2xl" value={data.description || ''} onChange={handleTextChange} />
             
             <label className="text-sm font-bold text-accent-cyan mt-2">Upload Custom Thumbnail</label>
-            <input type="file" name="thumbnail" accept="image/*" className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent-pink/20 file:text-accent-pink hover:file:bg-accent-pink/40"/>
+            <input type="file" name="thumbnail" accept="image/*" onChange={handleThumbnailChange} className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent-pink/20 file:text-accent-pink hover:file:bg-accent-pink/40"/>
+            {thumbnailPreview && <img src={thumbnailPreview} alt="thumbnail" className="w-32 h-auto rounded-lg mt-2" />}
 
         </div>
     );
