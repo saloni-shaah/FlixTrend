@@ -1,7 +1,7 @@
 
 "use client";
 import React, { useState, useRef } from 'react';
-import { ImagePlus, Video, X, UploadCloud, ChevronDown } from 'lucide-react';
+import { ChevronDown, UploadCloud, X, MapPin, Smile } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange: (data: any) => void }) {
@@ -78,7 +78,24 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
                 )}
             </div>
             
-            <div className="mt-2">
+            <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                <input type="text" name="location" className="w-full rounded-xl p-3 pl-10 bg-black/20 text-white border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink" placeholder="Add location..." value={data.location || ''} onChange={handleTextChange} />
+            </div>
+             <div className="relative">
+                <Smile className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                <input type="text" name="mood" className="w-full rounded-xl p-3 pl-10 bg-black/20 text-white border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink" placeholder="How are you feeling?" value={data.mood || ''} onChange={handleTextChange} />
+            </div>
+            
+            {mediaFiles.length > 0 && mediaFiles.some(f => f.type.startsWith('video/')) && (
+                 <div>
+                    <label className="text-sm font-bold text-accent-cyan">Custom Thumbnail (Optional)</label>
+                    <input type="file" name="thumbnail" accept="image/*" onChange={handleThumbnailChange} className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent-pink/20 file:text-accent-pink hover:file:bg-accent-pink/40 mt-2"/>
+                    {thumbnailPreview && <img src={thumbnailPreview} alt="thumbnail" className="w-32 h-auto rounded-lg mt-2" />}
+                </div>
+            )}
+            
+             <div className="mt-2">
                 <button type="button" className="text-sm font-bold text-accent-cyan flex items-center gap-1" onClick={() => setShowDescription(!showDescription)}>
                     Read Description <ChevronDown className={`transition-transform ${showDescription ? 'rotate-180' : ''}`} size={16} />
                 </button>
@@ -90,14 +107,6 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
                     <textarea name="description" placeholder="Add a detailed description..." className="input-glass rounded-2xl w-full mt-2" value={data.description || ''} onChange={handleTextChange} />
                 </motion.div>
             </div>
-            
-            {mediaFiles.length > 0 && mediaFiles.some(f => f.type.startsWith('video/')) && (
-                 <div>
-                    <label className="text-sm font-bold text-accent-cyan">Custom Thumbnail (Optional)</label>
-                    <input type="file" name="thumbnail" accept="image/*" onChange={handleThumbnailChange} className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent-pink/20 file:text-accent-pink hover:file:bg-accent-pink/40 mt-2"/>
-                    {thumbnailPreview && <img src={thumbnailPreview} alt="thumbnail" className="w-32 h-auto rounded-lg mt-2" />}
-                </div>
-            )}
 
         </div>
     );

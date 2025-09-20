@@ -1,26 +1,25 @@
 
 "use client";
 import React, { useState, Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlignLeft, Image as ImageIcon, BarChart3, Radio, ArrowRight, ArrowLeft } from 'lucide-react';
+import { AlignLeft, Image as ImageIcon, BarChart3, Radio, Zap, ArrowRight, ArrowLeft } from 'lucide-react';
 import Step1 from '@/components/create/Step1';
 import Step2 from '@/components/create/Step2';
 import Step3 from '@/components/create/Step3';
 
 function CreatePostPageContent() {
     const searchParams = useSearchParams();
-    const router = useRouter();
     const [step, setStep] = useState(1);
-    const initialType = searchParams.get('type') as 'text' | 'media' | 'poll' | 'live' || 'text';
-    const [postType, setPostType] = useState<'text' | 'media' | 'poll' | 'live'>(initialType);
+    const initialType = searchParams.get('type') as 'text' | 'media' | 'poll' | 'flash' | 'live' || 'text';
+    const [postType, setPostType] = useState<'text' | 'media' | 'poll' | 'flash' | 'live'>(initialType);
     const [postData, setPostData] = useState({ postType: initialType });
 
     const handleNext = (data: any) => {
         setPostData(prev => ({ ...prev, ...data }));
         
-        // Skip step 2 if the post is not media type
-        if (postType !== 'media' && step === 1) {
+        const nonMediaTypes = ['text', 'poll', 'live', 'flash'];
+        if (nonMediaTypes.includes(postType) && step === 1) {
             setStep(3);
         } else {
             setStep(s => s + 1);
@@ -28,15 +27,15 @@ function CreatePostPageContent() {
     };
 
     const handleBack = () => {
-         // Skip step 2 if the post is not media type
-        if (postType !== 'media' && step === 3) {
+        const nonMediaTypes = ['text', 'poll', 'live', 'flash'];
+        if (nonMediaTypes.includes(postType) && step === 3) {
             setStep(1);
         } else {
             setStep(s => s - 1);
         }
     };
     
-    const handleTypeChange = (type: 'text' | 'media' | 'poll' | 'live') => {
+    const handleTypeChange = (type: 'text' | 'media' | 'poll' | 'flash' | 'live') => {
         setPostType(type);
         setPostData({ postType: type });
         setStep(1);
@@ -48,31 +47,29 @@ function CreatePostPageContent() {
         <Step3 key="step3" onBack={handleBack} postData={postData} />,
     ];
     
-    const totalSteps = postType === 'media' ? 3 : 2;
+    const totalSteps = ['text', 'poll', 'live', 'flash'].includes(postType) ? 2 : 3;
     const currentStepLogic = step === 3 && totalSteps === 2 ? 2 : step;
-
 
     return (
         <div className="w-full max-w-4xl mx-auto flex flex-col items-center p-4 min-h-screen">
             <h1 className="text-3xl font-headline font-bold text-accent-cyan mb-8">Create Your Vibe</h1>
 
             {/* Post Type Selector */}
-            <div className="flex gap-2 mb-8 p-2 rounded-full glass-card">
-                <button onClick={() => handleTypeChange('text')} className={`relative px-4 py-2 rounded-full font-bold text-sm md:text-base flex items-center justify-center gap-2 transition-colors ${postType === 'text' ? 'text-black' : 'bg-transparent text-gray-300'}`}>
-                    {postType === 'text' && <motion.div layoutId="activeCreateTab" className="absolute inset-0 bg-accent-cyan rounded-full z-0" />}
-                    <span className="relative z-10 flex items-center gap-2"><AlignLeft />Text</span>
+            <div className="flex flex-col md:flex-row gap-4 mb-8 w-full md:w-auto">
+                <button onClick={() => handleTypeChange('text')} className={`w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'text' ? 'bg-accent-cyan text-black' : 'bg-transparent text-gray-300'}`}>
+                    <AlignLeft />Text Post
                 </button>
-                <button onClick={() => handleTypeChange('media')} className={`relative px-4 py-2 rounded-full font-bold text-sm md:text-base flex items-center justify-center gap-2 transition-colors ${postType === 'media' ? 'text-black' : 'bg-transparent text-gray-300'}`}>
-                    {postType === 'media' && <motion.div layoutId="activeCreateTab" className="absolute inset-0 bg-accent-cyan rounded-full z-0" />}
-                    <span className="relative z-10 flex items-center gap-2"><ImageIcon />Media</span>
+                 <button onClick={() => handleTypeChange('flash')} className={`w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'flash' ? 'bg-accent-cyan text-black' : 'bg-transparent text-gray-300'}`}>
+                    <Zap />Flash
                 </button>
-                <button onClick={() => handleTypeChange('poll')} className={`relative px-4 py-2 rounded-full font-bold text-sm md:text-base flex items-center justify-center gap-2 transition-colors ${postType === 'poll' ? 'text-black' : 'bg-transparent text-gray-300'}`}>
-                    {postType === 'poll' && <motion.div layoutId="activeCreateTab" className="absolute inset-0 bg-accent-cyan rounded-full z-0" />}
-                    <span className="relative z-10 flex items-center gap-2"><BarChart3 />Poll</span>
+                <button onClick={() => handleTypeChange('media')} className={`w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'media' ? 'bg-accent-cyan text-black' : 'bg-transparent text-gray-300'}`}>
+                    <ImageIcon />Media
                 </button>
-                 <button onClick={() => handleTypeChange('live')} className={`relative px-4 py-2 rounded-full font-bold text-sm md:text-base flex items-center justify-center gap-2 transition-colors ${postType === 'live' ? 'text-black' : 'bg-transparent text-red-400'}`}>
-                    {postType === 'live' && <motion.div layoutId="activeCreateTab" className="absolute inset-0 bg-red-500 rounded-full z-0" />}
-                    <span className="relative z-10 flex items-center gap-2"><Radio />Live</span>
+                <button onClick={() => handleTypeChange('live')} className={`w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'live' ? 'bg-red-500 text-black' : 'bg-transparent text-red-400'}`}>
+                    <Radio />Live
+                </button>
+                <button onClick={() => handleTypeChange('poll')} className={`w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'poll' ? 'bg-accent-cyan text-black' : 'bg-transparent text-gray-300'}`}>
+                   <BarChart3 />Poll
                 </button>
             </div>
             

@@ -45,34 +45,13 @@ function CreatePostPrompt({ isPremium }: { isPremium: boolean }) {
     return () => unsub();
   }, []);
 
-  const handlePromptClick = (type: string) => {
-      router.push(`/create?type=${type}`);
-  }
-
   return (
       <div className="w-full max-w-xl mb-6">
-        <div className="glass-card p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center font-bold text-lg overflow-hidden shrink-0">
-              {userProfile?.avatar_url ? (
-                <img src={userProfile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-white">{userProfile?.name?.[0] || 'U'}</span>
-              )}
-            </div>
-            <div 
-              className="flex-1 input-glass text-left text-gray-400 cursor-pointer"
-              onClick={() => handlePromptClick('text')}
-            >
-              drop something bro
-            </div>
-          </div>
-          <div className="flex justify-around items-center mt-4 pt-3 border-t border-glass-border">
-              <button onClick={() => handlePromptClick('text')} className="flex items-center gap-2 text-gray-300 hover:text-accent-cyan"><AlignLeft/> Text</button>
-              <button onClick={() => handlePromptClick('media')} className="flex items-center gap-2 text-gray-300 hover:text-accent-cyan"><ImageIcon/> Media</button>
-              <button onClick={() => handlePromptClick('poll')} className="flex items-center gap-2 text-gray-300 hover:text-accent-cyan"><BarChart3/> Poll</button>
-              <button onClick={() => handlePromptClick('live')} className="flex items-center gap-2 text-red-500 hover:text-red-400"><Radio className="animate-pulse"/> Live</button>
-          </div>
+        <div className="glass-card p-4 text-center">
+          <h3 className="font-bold text-lg">Flix Your Fit by dropping a post</h3>
+          <Link href="/create" className="text-accent-cyan hover:underline text-sm">
+            click here to make a post
+          </Link>
         </div>
         {!isPremium && <PremiumUpgradeBanner />}
       </div>
@@ -410,4 +389,3 @@ export default function HomePage() {
     </div>
   );
 }
-

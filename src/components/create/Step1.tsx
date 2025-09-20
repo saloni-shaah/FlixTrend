@@ -1,11 +1,13 @@
+
 "use client";
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, ImagePlus, Type, List, Radio } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { TextPostForm } from './forms/TextPostForm';
 import { MediaPostForm } from './forms/MediaPostForm';
 import { PollPostForm } from './forms/PollPostForm';
 import { LivePostForm } from './forms/LivePostForm';
+import { FlashPostForm } from './forms/FlashPostForm';
 
 export default function Step1({ onNext, postType, postData }: { onNext: (data: any) => void; postType: string; postData: any }) {
     const [formData, setFormData] = useState(postData);
@@ -20,6 +22,8 @@ export default function Step1({ onNext, postType, postData }: { onNext: (data: a
                 return <TextPostForm data={formData} onDataChange={handleDataChange} />;
             case 'media':
                 return <MediaPostForm data={formData} onDataChange={handleDataChange} />;
+            case 'flash':
+                return <FlashPostForm data={formData} onDataChange={handleDataChange} />;
             case 'poll':
                 return <PollPostForm data={formData} onDataChange={handleDataChange} />;
             case 'live':

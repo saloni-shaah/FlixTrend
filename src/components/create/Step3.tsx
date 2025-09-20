@@ -84,17 +84,21 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                 publishAt = serverTimestamp();
             }
 
-            const finalPostData = {
+            const collectionName = postData.postType === 'flash' ? 'flashes' : 'posts';
+
+            const finalPostData: any = {
                 // Common fields
                 userId: user.uid,
                 displayName: userData.name || user.displayName,
                 username: userData.username,
                 avatar_url: userData.avatar_url,
                 type: postData.postType,
-                content: postData.caption || postData.content || postData.question || postData.title,
+                content: postData.content || postData.caption || postData.question || postData.title,
                 hashtags: (postData.caption?.match(/#\w+/g) || []).map((h:string) => h.replace('#', '')),
                 createdAt: serverTimestamp(),
                 publishAt: publishAt,
+                location: postData.location,
+                mood: postData.mood,
 
                 // Type-specific fields
                 ...(postData.postType === 'text' && {
@@ -107,8 +111,13 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                     description: postData.description,
                     thumbnailUrl: finalThumbnailUrl,
                 }),
+                ...(postData.postType === 'flash' && {
+                    mediaUrl: finalMediaUrls[0], // Flash has only one media
+                    song: postData.song,
+                    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // Expires in 24 hours
+                }),
                 ...(postData.postType === 'poll' && {
-                    pollOptions: postData.options.map((opt:any) => opt.text), // Simplified for now
+                    pollOptions: postData.options.map((opt:any) => opt.text),
                 }),
                  ...(postData.postType === 'live' && {
                     // Live specific fields, if any
@@ -116,7 +125,7 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
             };
             
             // 3. Save to Firestore
-            await addDoc(collection(db, 'posts'), finalPostData);
+            await addDoc(collection(db, collectionName), finalPostData);
             
             // 4. Redirect on success
             router.push('/home');
@@ -129,6 +138,7 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
         }
     };
 
+    const shouldShowScheduling = postData.postType !== 'flash' && postData.postType !== 'live';
 
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -144,43 +154,45 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                     <p>FlixTrend may remove posts that violate these guidelines to keep the community safe.</p>
                 </div>
 
-                <div className="mt-6">
-                    <div className="flex items-center justify-between">
-                        <h4 className="font-bold text-accent-cyan mb-2">Scheduling</h4>
-                         <label className="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" checked={isScheduling} onChange={(e) => setIsScheduling(e.target.checked)} className="sr-only peer" />
-                            <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-accent-cyan peer-checked:after:translate-x-full after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-cyan"></div>
-                        </label>
-                    </div>
+                {shouldShowScheduling && (
+                    <div className="mt-6">
+                        <div className="flex items-center justify-between">
+                            <h4 className="font-bold text-accent-cyan mb-2">Scheduling</h4>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" checked={isScheduling} onChange={(e) => setIsScheduling(e.target.checked)} className="sr-only peer" />
+                                <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-accent-cyan peer-checked:after:translate-x-full after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-cyan"></div>
+                            </label>
+                        </div>
 
-                    {isScheduling && (
-                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="flex flex-col md:flex-row gap-4 mt-4">
-                             <Popover>
-                                <PopoverTrigger asChild>
-                                <button className="btn-glass flex-1 justify-start text-left font-normal">
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {scheduleDate ? scheduleDate.toLocaleDateString() : <span>Pick a date</span>}
-                                </button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0 glass-card">
-                                <Calendar
-                                    mode="single"
-                                    selected={scheduleDate}
-                                    onSelect={setScheduleDate}
-                                    initialFocus
-                                    disabled={(date) => date < new Date(new Date().setDate(new Date().getDate() - 1))}
+                        {isScheduling && (
+                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="flex flex-col md:flex-row gap-4 mt-4">
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                    <button className="btn-glass flex-1 justify-start text-left font-normal">
+                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                        {scheduleDate ? scheduleDate.toLocaleDateString() : <span>Pick a date</span>}
+                                    </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0 glass-card">
+                                    <Calendar
+                                        mode="single"
+                                        selected={scheduleDate}
+                                        onSelect={setScheduleDate}
+                                        initialFocus
+                                        disabled={(date) => date < new Date(new Date().setDate(new Date().getDate() - 1))}
+                                    />
+                                    </PopoverContent>
+                                </Popover>
+                                <input 
+                                    type="time"
+                                    value={scheduleTime}
+                                    onChange={(e) => setScheduleTime(e.target.value)}
+                                    className="input-glass"
                                 />
-                                </PopoverContent>
-                            </Popover>
-                            <input 
-                                type="time"
-                                value={scheduleTime}
-                                onChange={(e) => setScheduleTime(e.target.value)}
-                                className="input-glass"
-                            />
-                        </motion.div>
-                    )}
-                </div>
+                            </motion.div>
+                        )}
+                    </div>
+                )}
 
             </div>
              <div className="flex justify-between mt-8">
