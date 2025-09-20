@@ -296,14 +296,14 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
   const MediaGrid = ({ mediaUrls, thumbnailUrl }: { mediaUrls: string[]; thumbnailUrl?: string }) => {
     if (!mediaUrls || mediaUrls.length === 0) return null;
 
-    const renderMedia = (url: string, isVideo: boolean) => (
+    const renderMedia = (url: string, isVideo: boolean, isSingle: boolean) => (
         <div className="relative group w-full h-full">
             {isVideo ? (
-                <video src={url} poster={thumbnailUrl} className="w-full h-full object-cover" controls/>
+                <OptimizedVideo src={url} thumbnailUrl={thumbnailUrl} className="w-full h-full object-cover" />
             ) : (
                 <OptimizedImage src={url} alt="media" className="w-full h-full object-cover" />
             )}
-            <Watermark isAnimated={isVideo} />
+            <Watermark isAnimated={isVideo || isSingle} />
         </div>
     );
     
@@ -312,7 +312,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
         const isVideo = url.includes('.mp4') || url.includes('.webm') || url.includes('.ogg');
         return (
             <div className="w-full rounded-xl overflow-hidden mt-2 relative">
-                {renderMedia(url, !!isVideo)}
+                {renderMedia(url, !!isVideo, true)}
             </div>
         );
     }
@@ -323,7 +323,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
                  const isVideo = url.includes('.mp4') || url.includes('.webm') || url.includes('.ogg');
                 return (
                     <div key={index} className="relative aspect-square">
-                        {renderMedia(url, !!isVideo)}
+                        {renderMedia(url, !!isVideo, false)}
                         {index === 3 && mediaUrls.length > 4 && (
                             <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                                 <span className="text-white text-2xl font-bold">+{mediaUrls.length - 4}</span>
@@ -545,6 +545,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
                     alt={post.content || 'Full screen image'}
                     className="w-full h-full object-contain"
                 />
+                 <Watermark isAnimated={true} />
             </motion.div>
         </div>
     )}
