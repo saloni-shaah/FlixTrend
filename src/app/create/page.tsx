@@ -3,7 +3,7 @@
 import React, { useState, Suspense, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlignLeft, Image as ImageIcon, BarChart3, Radio, Zap, ArrowRight, ArrowLeft } from 'lucide-react';
+import { AlignLeft, Image as ImageIcon, BarChart3, Radio, Zap } from 'lucide-react';
 import Step1 from '@/components/create/Step1';
 import Step2 from '@/components/create/Step2';
 import Step3 from '@/components/create/Step3';
@@ -65,24 +65,25 @@ function CreatePostPageContent() {
         <div className="w-full max-w-4xl mx-auto flex flex-col items-center p-4 min-h-screen">
             <h1 className="text-3xl font-headline font-bold text-accent-cyan mb-8">Create Your Vibe</h1>
 
-            {/* Post Type Selector */}
-            <div className="flex flex-col md:flex-row gap-4 mb-8 w-full md:w-auto">
-                 <button onClick={() => handleTypeChange('text')} className={`w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'text' ? 'bg-accent-cyan text-black' : 'bg-transparent text-gray-300'}`}>
-                    <AlignLeft />Text Post
-                </button>
-                 <button onClick={() => handleTypeChange('flash')} className={`w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'flash' ? 'bg-accent-cyan text-black' : 'bg-transparent text-gray-300'}`}>
-                    <Zap />Flash
-                </button>
-                <button onClick={() => handleTypeChange('media')} className={`w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'media' ? 'bg-accent-cyan text-black' : 'bg-transparent text-gray-300'}`}>
-                    <ImageIcon />Media
-                </button>
-                <button onClick={() => handleTypeChange('live')} className={`w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'live' ? 'bg-red-500 text-black' : 'bg-transparent text-red-400'}`}>
-                    <Radio />Live
-                </button>
-                <button onClick={() => handleTypeChange('poll')} className={`w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'poll' ? 'bg-accent-cyan text-black' : 'bg-transparent text-gray-300'}`}>
-                   <BarChart3 />Poll
-                </button>
-            </div>
+            {!typeSelected && (
+                 <div className="flex flex-col md:flex-row gap-4 mb-8 w-full md:w-auto">
+                     <button onClick={() => handleTypeChange('text')} className={`w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'text' ? 'bg-accent-cyan text-black' : 'bg-transparent text-gray-300'}`}>
+                        <AlignLeft />Text Post
+                    </button>
+                     <button onClick={() => handleTypeChange('flash')} className={`w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'flash' ? 'bg-accent-cyan text-black' : 'bg-transparent text-gray-300'}`}>
+                        <Zap />Flash
+                    </button>
+                    <button onClick={() => handleTypeChange('media')} className={`w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'media' ? 'bg-accent-cyan text-black' : 'bg-transparent text-gray-300'}`}>
+                        <ImageIcon />Media
+                    </button>
+                    <button onClick={() => handleTypeChange('live')} className={`w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'live' ? 'bg-red-500 text-black' : 'bg-transparent text-red-400'}`}>
+                        <Radio />Live
+                    </button>
+                    <button onClick={() => handleTypeChange('poll')} className={`w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'poll' ? 'bg-accent-cyan text-black' : 'bg-transparent text-gray-300'}`}>
+                       <BarChart3 />Poll
+                    </button>
+                </div>
+            )}
             
             {typeSelected && postType && (
                 <>
@@ -93,31 +94,29 @@ function CreatePostPageContent() {
                             {totalSteps === 3 && <span>AI Check</span>}
                             <span>Publish</span>
                         </div>
-                        <div className="relative w-full h-4 mt-1">
+                         <div className="relative w-full h-4 mt-1">
                             <svg width="100%" height="100%" viewBox="0 0 200 10" preserveAspectRatio="none" className="absolute top-0 left-0">
                                 <defs>
                                     <clipPath id="heptagonClip">
                                         <path d="M0,5 L20,0 L90,2 L150,0 L200,5 L160,10 L80,9 L30,10 Z" />
                                     </clipPath>
+                                    <linearGradient id="paint0_linear_7_9" x1="0" y1="5" x2="200" y2="5" gradientUnits="userSpaceOnUse">
+                                        <stop stopColor="var(--accent-pink)"/>
+                                        <stop offset="1" stopColor="var(--accent-cyan)"/>
+                                    </linearGradient>
                                 </defs>
                                 <g clipPath="url(#heptagonClip)">
                                     <rect x="0" y="0" width="200" height="10" className="text-black/20" fill="currentColor" />
-                                    <motion.div
-                                        className="h-full bg-gradient-to-r from-accent-pink to-accent-cyan"
-                                        style={{ height: '10px' }} // SVG height
-                                        initial={{ width: '0%' }}
-                                        animate={{ width: `${(currentStepLogic / totalSteps) * 100}%` }}
+                                    <motion.rect
+                                        x="0"
+                                        y="0"
+                                        height="10"
+                                        fill="url(#paint0_linear_7_9)"
+                                        initial={{ width: 0 }}
+                                        animate={{ width: (currentStepLogic / totalSteps) * 200 }}
                                         transition={{ duration: 0.5, ease: 'easeInOut' }}
-                                    >
-                                        <rect x="0" y="0" width="200" height="10" fill="url(#paint0_linear_7_9)" />
-                                    </motion.div>
+                                    />
                                 </g>
-                                <defs>
-                                    <linearGradient id="paint0_linear_7_9" x1="0" y1="5" x2="200" y2="5" gradientUnits="userSpaceOnUse">
-                                    <stop stopColor="#FF6B6B"/>
-                                    <stop offset="1" stopColor="#00F0FF"/>
-                                    </linearGradient>
-                                </defs>
                             </svg>
                         </div>
                     </div>
