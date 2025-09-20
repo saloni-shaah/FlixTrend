@@ -27,13 +27,16 @@ export default function Step2({ onNext, onBack, postData }: { onNext: (data: any
             
             try {
                 let thumbnailDataUri: string | undefined = undefined;
-                if (postData.postType === 'media' && postData.thumbnailFile) {
-                    thumbnailDataUri = await fileToDataUri(postData.thumbnailFile);
+                // Use thumbnailFile for media posts or the first mediaFile for flashes
+                const fileToModerate = postData.thumbnailFile || (postData.mediaFiles && postData.mediaFiles[0]);
+
+                if (fileToModerate) {
+                    thumbnailDataUri = await fileToDataUri(fileToModerate);
                 }
 
                 const textToModerate = [postData.caption, postData.title, postData.description, postData.question, postData.content].filter(Boolean).join('\n');
 
-                // If there's no text and no image, it's safe to proceed (e.g., an empty text post)
+                // If there's no text and no image, it's safe to proceed (e.g., an empty text post is allowed)
                 if (!textToModerate && !thumbnailDataUri) {
                     setStatus('safe');
                     setReason('Content looks good!');
