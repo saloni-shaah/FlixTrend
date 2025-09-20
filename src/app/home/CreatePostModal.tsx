@@ -72,6 +72,7 @@ export default function CreatePostModal({ open, onClose, initialType = 'text', o
 
   const [songSnippet, setSongSnippet] = useState([0, 15]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [songDuration, setSongDuration] = useState(0);
 
 
   useEffect(() => {
@@ -491,25 +492,27 @@ export default function CreatePostModal({ open, onClose, initialType = 'text', o
                       <div className="font-bold text-accent-cyan text-base">{selectedSong.title}</div>
                       <div className="text-xs text-gray-400 mb-1">{selectedSong.artist}</div>
                     </div>
-                    <button type="button" className="ml-auto px-2 py-1 rounded bg-red-200 text-red-700 text-xs font-bold" onClick={() => setSelectedSong(null)}>Remove</button>
+                    <button type="button" className="ml-auto px-2 py-1 rounded bg-red-200 text-red-700 text-xs font-bold" onClick={() => { setSelectedSong(null); setSongDuration(0); }}>Remove</button>
                   </div>
-                  <div className="mt-4">
-                    <label className="text-xs font-bold text-white">Select 15s Snippet:</label>
-                    <input 
-                      type="range"
-                      min="0"
-                      max={audioRef.current ? Math.floor(audioRef.current.duration) - 15 : 85}
-                      value={songSnippet[0]}
-                      onChange={(e) => setSongSnippet([parseInt(e.target.value), parseInt(e.target.value) + 15])}
-                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-                    />
-                    <div className="flex justify-between text-xs text-gray-400 mt-1">
-                      <span>{songSnippet[0]}s</span>
-                      <span>{songSnippet[1]}s</span>
+                  {songDuration > 15 && (
+                    <div className="mt-4">
+                      <label className="text-xs font-bold text-white">Select 15s Snippet:</label>
+                      <input 
+                        type="range"
+                        min="0"
+                        max={Math.floor(songDuration) - 15}
+                        value={songSnippet[0]}
+                        onChange={(e) => setSongSnippet([parseInt(e.target.value), parseInt(e.target.value) + 15])}
+                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+                      />
+                      <div className="flex justify-between text-xs text-gray-400 mt-1">
+                        <span>{songSnippet[0]}s</span>
+                        <span>{songSnippet[1]}s</span>
+                      </div>
+                      <button type="button" onClick={handlePlaySnippet} className="text-xs text-accent-cyan mt-1">Preview Snippet</button>
                     </div>
-                    <button type="button" onClick={handlePlaySnippet} className="text-xs text-accent-cyan mt-1">Preview Snippet</button>
-                  </div>
-                   <audio ref={audioRef} preload="metadata"></audio>
+                  )}
+                   <audio ref={audioRef} onLoadedMetadata={(e) => setSongDuration(e.currentTarget.duration)} preload="metadata"></audio>
                 </div>
               )}
             </>
