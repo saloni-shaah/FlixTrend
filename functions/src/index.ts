@@ -200,7 +200,7 @@ exports.sendCallNotification = functions.firestore
       notification: {
         title: 'Incoming Call',
         body: `${callerName || 'Someone'} is calling you on FlixTrend!`,
-        icon: '/icon-192x192.png',
+        icon: '/icon-192x192.png', // Or a specific call URL
         click_action: 'https://flixtrendmvp-a2002.web.app/signal', // Or a specific call URL
       },
     };
@@ -243,13 +243,27 @@ exports.deletePost = functions.https.onCall(async (data, context) => {
     // Using a recursive delete utility for subcollections
     // This is a more robust way to handle subcollection deletion
     const deleteSubcollection = async (collectionRef: admin.firestore.CollectionReference) => {
-      const snapshot = await collectionRef.get();
-      if (snapshot.empty) {
-        return;
+      try {
+        const snapshot = await collectionRef.limit(500).get(); // Process in batches of 500
+        if (snapshot.empty) {
+          return;
+        }
+        const batch = db.batch();
+        snapshot.docs.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+        // Recurse to delete remaining documents if any
+        if (snapshot.size === 500) {
+            await deleteSubcollection(collectionRef);
+        }
+      } catch (error) {
+        // If the subcollection doesn't exist, we can safely ignore the error.
+        if ((error as any).code === 'NOT_FOUND' || (error as any).code === 5) {
+             console.log(`Subcollection not found, skipping: ${collectionRef.path}`);
+             return;
+        }
+        // For other errors, re-throw
+        throw error;
       }
-      const batch = db.batch();
-      snapshot.docs.forEach(doc => batch.delete(doc.ref));
-      await batch.commit();
     };
     
     await deleteSubcollection(postRef.collection('comments'));
