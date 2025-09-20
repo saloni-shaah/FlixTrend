@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useState } from 'react';
 import { X, Image as ImageIcon, Plus } from 'lucide-react';
@@ -42,8 +41,9 @@ export function PollPostForm({ data, onDataChange }: { data: any, onDataChange: 
     const handlePollTypeChange = (type: 'text' | 'image') => {
         setPollType(type);
         // Reset options when changing type
-        updateOptions([{ text: '' }, { text: '' }]);
-        onDataChange({ ...data, pollType: type });
+        const newOptions = [{ text: '' }, { text: '' }];
+        setOptions(newOptions);
+        onDataChange({ ...data, pollType: type, options: newOptions });
     }
 
     return (
