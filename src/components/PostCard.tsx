@@ -9,6 +9,7 @@ import { auth, app } from '@/utils/firebaseClient';
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ShareModal } from './ShareModal';
+import { SignalShareModal } from './SignalShareModal';
 import { AddToCollectionModal } from './AddToCollectionModal';
 import { OptimizedImage } from './OptimizedImage';
 import { OptimizedVideo } from './OptimizedVideo';
@@ -42,6 +43,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
   const [showEdit, setShowEdit] = React.useState(false);
   const [editContent, setEditContent] = React.useState(post.content || "");
   const [showShareModal, setShowShareModal] = React.useState(false);
+  const [showSignalShare, setShowSignalShare] = React.useState(false);
   const [showCollectionModal, setShowCollectionModal] = React.useState(false);
   const [isSaved, setIsSaved] = React.useState(false);
   const [isDownloaded, setIsDownloaded] = React.useState(false);
@@ -466,7 +468,8 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
                 <ActionButtons />
             </div>
             {showComments && <CommentModal postId={post.id} postAuthorId={post.userId} onClose={() => setShowComments(false)} post={post} />}
-            {showShareModal && <ShareModal url={`${window.location.origin}/post/${post.id}`} title={post.content} onClose={() => setShowShareModal(false)} />}
+            {showShareModal && <ShareModal url={`${window.location.origin}/post/${post.id}`} title={post.content} onSignalShare={() => { setShowShareModal(false); setShowSignalShare(true); }} onClose={() => setShowShareModal(false)} />}
+            {showSignalShare && <SignalShareModal post={post} onClose={() => setShowSignalShare(false)}/>}
         </div>
     );
   }
@@ -520,9 +523,11 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
         <ShareModal 
             url={`${window.location.origin}/post/${post.id}`}
             title={post.content}
+            onSignalShare={() => { setShowShareModal(false); setShowSignalShare(true); }}
             onClose={() => setShowShareModal(false)}
         />
       )}
+      {showSignalShare && <SignalShareModal post={post} onClose={() => setShowSignalShare(false)} />}
       {showCollectionModal && (
         <AddToCollectionModal 
             post={post}
@@ -723,5 +728,3 @@ function CommentForm({ postId, postAuthorId, parentId, onCommentPosted, isReply 
     </form>
   )
 }
-
-    
