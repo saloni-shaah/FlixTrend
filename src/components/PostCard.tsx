@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from 'react';
@@ -17,6 +16,7 @@ import { FlixTrendLogo } from './FlixTrendLogo';
 import { trackInteraction } from '@/vibe-engine/interactionTracker';
 import { savePostForOffline, isPostDownloaded, removeDownloadedPost } from '@/utils/offline-db';
 import { getFunctions, httpsCallable } from 'firebase/functions';
+import { CheckCircle, Award, Mic, Crown, Zap, Rocket, Search, Pin, Phone, Mail, Folder } from "lucide-react";
 
 const db = getFirestore(app);
 const functions = getFunctions(app);
