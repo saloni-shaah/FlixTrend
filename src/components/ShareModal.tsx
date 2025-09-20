@@ -27,13 +27,6 @@ export function ShareModal({ url, title, onClose }: { url: string; title?: strin
     }
   };
 
-  useEffect(() => {
-    // Automatically trigger native share if available
-    if(canShare){
-        handleNativeShare();
-    }
-  }, [canShare]);
-
   const handleCopy = () => {
     navigator.clipboard.writeText(url);
     setCopied(true);
