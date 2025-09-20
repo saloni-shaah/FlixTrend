@@ -13,10 +13,11 @@ function CreatePostPageContent() {
     const router = useRouter();
 
     const initialType = searchParams.get('type') as 'text' | 'media' | 'poll' | 'flash' | 'live' || undefined;
-    
+    const initialSongId = searchParams.get('songId');
+
     const [step, setStep] = useState(1);
     const [postType, setPostType] = useState<'text' | 'media' | 'poll' | 'flash' | 'live' | undefined>(initialType);
-    const [postData, setPostData] = useState({ postType: initialType });
+    const [postData, setPostData] = useState({ postType: initialType, songId: initialSongId });
     const [typeSelected, setTypeSelected] = useState(!!initialType);
 
     useEffect(() => {
@@ -46,11 +47,11 @@ function CreatePostPageContent() {
     
     const handleTypeChange = (type: 'text' | 'media' | 'poll' | 'flash' | 'live') => {
         setPostType(type);
-        setPostData({ postType: type });
+        setPostData({ postType: type, songId: initialSongId });
         setStep(1);
         setTypeSelected(true);
         // Update URL without reloading page
-        router.push(`/create?type=${type}`, { scroll: false });
+        router.push(`/create?type=${type}${initialSongId ? `&songId=${initialSongId}`: ''}`, { scroll: false });
     };
 
     const steps = postType ? [

@@ -4,7 +4,7 @@
 import React from 'react';
 import { getFirestore, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, deleteDoc, updateDoc, doc as fsDoc, setDoc, getDoc, doc, runTransaction } from "firebase/firestore";
 import { FaPlay, FaRegComment, FaExclamationTriangle, FaVolumeMute, FaUserSlash, FaLink, FaEllipsisV, FaMusic } from "react-icons/fa";
-import { Repeat2, Star, Share, MessageCircle, Bookmark, MapPin, Smile, Download, X } from "lucide-react";
+import { Repeat2, Star, Share, MessageCircle, Bookmark, MapPin, Smile, Download, X, Music } from "lucide-react";
 import { auth, app } from '@/utils/firebaseClient';
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -195,6 +195,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
                 username: userData.username,
                 avatar_url: userData.avatar_url,
                 createdAt: serverTimestamp(),
+                publishAt: serverTimestamp(),
             });
             
             // Mark that this user has relayed this post
@@ -404,9 +405,9 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
                         <div className="font-bold text-brand-gold text-base line-clamp-1">{contentPost.song.name}</div>
                         <div className="text-xs text-muted-foreground mb-1 line-clamp-1">{contentPost.song.artists.join(", ")}</div>
                     </div>
-                    <button onClick={toggleSong} className="p-3 rounded-full bg-brand-gold text-background shadow-lg hover:scale-110 transition-transform">
-                        <FaMusic />
-                    </button>
+                     <Link href={`/create?type=flash&songId=${contentPost.song.id}`} className="p-2 rounded-full bg-accent-pink/20 text-accent-pink hover:bg-accent-pink/40 hover:text-white transition-colors">
+                        <Music size={20} />
+                    </Link>
                 </div>
             )}
         </>
