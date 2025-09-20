@@ -4,7 +4,7 @@
 import React from 'react';
 import { getFirestore, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, deleteDoc, updateDoc, doc as fsDoc, setDoc, getDoc, doc, runTransaction } from "firebase/firestore";
 import { FaPlay, FaRegComment, FaExclamationTriangle, FaVolumeMute, FaUserSlash, FaLink, FaEllipsisV, FaMusic } from "react-icons/fa";
-import { Repeat2, Star, Share, MessageCircle, Bookmark, MapPin, Smile, Download, X, Music } from "lucide-react";
+import { Repeat2, Star, Share, MessageCircle, Bookmark, MapPin, Smile, Download, X } from "lucide-react";
 import { auth, app } from '@/utils/firebaseClient';
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -406,7 +406,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
                         <div className="text-xs text-muted-foreground mb-1 line-clamp-1">{contentPost.song.artists.join(", ")}</div>
                     </div>
                      <Link href={`/create?type=flash&songId=${contentPost.song.id}`} className="p-2 rounded-full bg-accent-pink/20 text-accent-pink hover:bg-accent-pink/40 hover:text-white transition-colors">
-                        <Music size={20} />
+                        <FaMusic /> <span className="ml-2 font-bold text-xs">Use this sound</span>
                     </Link>
                 </div>
             )}
@@ -426,7 +426,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
           <button className={`flex items-center gap-1.5 font-bold transition-all ${isStarred ? "text-yellow-400" : isShortVibe ? "text-white hover:text-yellow-300" : "text-lg text-muted-foreground hover:text-yellow-400"}`} onClick={handleStar}>
             <Star size={isShortVibe ? 32 : 20} fill={isStarred ? "currentColor" : "none"} /> <span className="text-sm">{starCount}</span>
           </button>
-          <button className={`flex items-center gap-1.5 font-bold transition-all ${isShortVibe ? 'flex-col text-white' : 'text-lg text-muted-foreground hover:text-accent-cyan'}`} onClick={() => setShowShareModal(true)}>
+          <button className={`flex items-center gap-1.5 font-bold transition-all ${isShortVibe ? 'flex-col text-white' : 'text-lg text-muted-foreground hover:text-accent-cyan'}`} onClick={(e) => { e.stopPropagation(); setShowShareModal(true); }}>
             <Share size={isShortVibe ? 32 : 20} />
           </button>
         </div>
@@ -723,3 +723,5 @@ function CommentForm({ postId, postAuthorId, parentId, onCommentPosted, isReply 
     </form>
   )
 }
+
+    
