@@ -91,11 +91,13 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
                 </motion.div>
             </div>
             
-            <div>
-                <label className="text-sm font-bold text-accent-cyan">Custom Thumbnail (Optional)</label>
-                <input type="file" name="thumbnail" accept="image/*" onChange={handleThumbnailChange} className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent-pink/20 file:text-accent-pink hover:file:bg-accent-pink/40 mt-2"/>
-                {thumbnailPreview && <img src={thumbnailPreview} alt="thumbnail" className="w-32 h-auto rounded-lg mt-2" />}
-            </div>
+            {mediaFiles.length > 0 && mediaFiles.some(f => f.type.startsWith('video/')) && (
+                 <div>
+                    <label className="text-sm font-bold text-accent-cyan">Custom Thumbnail (Optional)</label>
+                    <input type="file" name="thumbnail" accept="image/*" onChange={handleThumbnailChange} className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent-pink/20 file:text-accent-pink hover:file:bg-accent-pink/40 mt-2"/>
+                    {thumbnailPreview && <img src={thumbnailPreview} alt="thumbnail" className="w-32 h-auto rounded-lg mt-2" />}
+                </div>
+            )}
 
         </div>
     );
