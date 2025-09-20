@@ -272,28 +272,27 @@ export default function HomePage() {
       <div className="w-full max-w-2xl mx-auto">
       {/* Centered, prominent search bar */}
       <div className="flex justify-center items-center mb-6 w-full">
-        <div className="relative w-full max-w-2xl">
-          <input
-            type="text"
-            className="input-glass w-full pl-12 pr-24 py-3 text-lg font-body"
-            placeholder={listening ? "Listening..." : "Search posts..."}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            autoFocus={false}
-          />
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-brand-gold pointer-events-none">
-            <Search />
-          </span>
-          <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
-            <button
-                onClick={handleVoiceSearch}
-                className={`p-1 rounded-full transition-colors text-gray-400 hover:text-brand-gold ${listening ? 'animate-pulse bg-red-500/50' : ''}`}
-                aria-label="Voice search"
-            >
-                <Mic size={20} />
-            </button>
+        <div className="input-glass w-full flex items-center px-4">
+              <button
+                  onClick={handleVoiceSearch}
+                  className={`p-1 rounded-full transition-colors text-gray-400 hover:text-brand-gold ${listening ? 'animate-pulse bg-red-500/50' : ''}`}
+                  aria-label="Voice search"
+              >
+                  <Mic size={20} />
+              </button>
+              <div className="w-px h-6 bg-glass-border mx-3"></div>
+              <input
+                type="text"
+                className="flex-1 bg-transparent py-3 text-lg font-body focus:outline-none"
+                placeholder={listening ? "Listening..." : "Search posts..."}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                autoFocus={false}
+              />
+              <button className="p-2 rounded-full text-brand-gold hover:bg-brand-gold/10">
+                <Search />
+              </button>
           </div>
-        </div>
       </div>
       {/* Flashes/Stories Section */}
       <section className="mb-6 glass-card p-4">
@@ -389,3 +388,5 @@ export default function HomePage() {
     </div>
   );
 }
+
+    
