@@ -4,7 +4,7 @@ import React, { useRef, useState, useEffect } from "react";
 import { getFirestore, collection, addDoc, serverTimestamp, getDoc, doc, query, onSnapshot, orderBy } from "firebase/firestore";
 import { auth, app } from "@/utils/firebaseClient";
 import { useRouter } from "next/navigation";
-import { MapPin, Smile, UploadCloud, X, Camera, Zap, Radio } from "lucide-react";
+import { MapPin, Smile, UploadCloud, X, Camera, Zap, Radio, ImagePlus } from "lucide-react";
 
 const db = getFirestore(app);
 
@@ -43,8 +43,8 @@ const backgroundColors = [
   '#a0c4ff', '#bdb2ff', '#ffc6ff', '#fffffc', '#f1f1f1', '#e0e0e0'
 ];
 
-export default function CreatePostModal({ open, onClose, initialType = 'text' }: { open: boolean; onClose: () => void; initialType?: "text" | "media" | "poll" | "flash" | "camera" | "live" }) {
-  const [type, setType] = useState<"text" | "media" | "poll" | "flash" | "camera" | "live">(initialType);
+export default function CreatePostModal({ open, onClose, initialType = 'text', onGoLive }: { open: boolean; onClose: () => void; initialType?: "text" | "media" | "poll" | "flash" | "live", onGoLive: (title: string) => void; }) {
+  const [type, setType] = useState<"text" | "media" | "poll" | "flash" | "live">(initialType);
   const [content, setContent] = useState("");
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
@@ -68,24 +68,26 @@ export default function CreatePostModal({ open, onClose, initialType = 'text' }:
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [showCamera, setShowCamera] = useState(false);
+
+  const [songSnippet, setSongSnippet] = useState([0, 15]);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
 
   useEffect(() => {
     setType(initialType);
-    if (initialType === 'camera' && open) {
-        startCamera();
-    } else {
-        stopCamera();
-    }
   }, [initialType, open]);
 
   useEffect(() => {
-    if (type !== 'camera') {
+    if (type !== 'media' && type !== 'flash') {
         stopCamera();
+        setShowCamera(false);
     }
   }, [type]);
 
   const startCamera = async () => {
     try {
+        setShowCamera(true);
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
         setCameraStream(stream);
         if (videoRef.current) {
@@ -102,7 +104,30 @@ export default function CreatePostModal({ open, onClose, initialType = 'text' }:
           cameraStream.getTracks().forEach(track => track.stop());
           setCameraStream(null);
       }
+      setShowCamera(false);
   };
+  
+    useEffect(() => {
+        if (selectedSong && audioRef.current) {
+            const audio = audioRef.current;
+            const handleTimeUpdate = () => {
+                if (audio.currentTime >= songSnippet[1]) {
+                    audio.pause();
+                    audio.currentTime = songSnippet[0];
+                }
+            };
+            audio.addEventListener('timeupdate', handleTimeUpdate);
+            return () => audio.removeEventListener('timeupdate', handleTimeUpdate);
+        }
+    }, [selectedSong, songSnippet]);
+
+    const handlePlaySnippet = () => {
+        if (audioRef.current) {
+            audioRef.current.currentTime = songSnippet[0];
+            audioRef.current.play();
+        }
+    };
+
 
   const handleCapture = () => {
     if (videoRef.current && canvasRef.current) {
@@ -118,7 +143,7 @@ export default function CreatePostModal({ open, onClose, initialType = 'text' }:
                 const file = new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
                 setMediaFiles(prev => [...prev, file]);
                 setMediaUrls(prev => [...prev, URL.createObjectURL(file)]);
-                setType('media'); // Switch back to media view to show preview
+                stopCamera();
             }
         }, 'image/jpeg');
     }
@@ -132,13 +157,11 @@ export default function CreatePostModal({ open, onClose, initialType = 'text' }:
     return () => unsub();
   }, []);
 
-  // Fetch location when modal opens
   useEffect(() => {
     if (open && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(async (position) => {
         const { latitude, longitude } = position.coords;
         try {
-          // Using a free reverse geocoding API. In a production app, you might want a more robust, keyed service.
           const response = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`);
           const data = await response.json();
           if (data.city && data.countryName) {
@@ -184,6 +207,14 @@ export default function CreatePostModal({ open, onClose, initialType = 'text' }:
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (type === 'live') {
+        if (!content.trim()) {
+            setError("Please give your live stream a title.");
+            return;
+        }
+        onGoLive(content);
+        return;
+    }
     setError("");
     setLoading(true);
     setUploadProgress(null);
@@ -222,6 +253,8 @@ export default function CreatePostModal({ open, onClose, initialType = 'text' }:
         album: selectedSong.album,
         albumArt: selectedSong.albumArtUrl,
         preview_url: selectedSong.audioUrl,
+        snippetStart: songSnippet[0],
+        snippetEnd: songSnippet[1],
       } : null;
 
       const postData: any = {
@@ -229,7 +262,7 @@ export default function CreatePostModal({ open, onClose, initialType = 'text' }:
         displayName: profileData.name || user.displayName,
         username: profileData.username,
         avatar_url: profileData.avatar_url,
-        type: type === 'camera' ? 'media' : type,
+        type: type,
         content: content,
         mediaUrl: uploadedMediaUrls.length > 0 ? (type === 'flash' ? uploadedMediaUrls[0] : uploadedMediaUrls) : null,
         thumbnailUrl: uploadedThumbnailUrl,
@@ -239,8 +272,8 @@ export default function CreatePostModal({ open, onClose, initialType = 'text' }:
         backgroundColor: type === 'text' ? backgroundColor : null,
         pollOptions: type === "poll" ? pollOptions.filter((opt) => opt.trim()) : null,
         createdAt: serverTimestamp(),
-        publishAt: serverTimestamp(), // Removed schedule date for simplicity
-        song: type === "flash" ? songData : null, // Only save song for flashes
+        publishAt: serverTimestamp(),
+        song: type === "flash" ? songData : null,
       };
 
       if (type === "flash") {
@@ -254,20 +287,6 @@ export default function CreatePostModal({ open, onClose, initialType = 'text' }:
         await addDoc(collectionRef, postData);
       }
       
-      // Reset form
-      setContent("");
-      setMediaUrls([]);
-      setMediaFiles([]);
-      setPollOptions(["", ""]);
-      setUploadProgress(null);
-      setHashtags("");
-      setLocation("");
-      setMood("");
-      setBackgroundColor("#ffffff");
-      setThumbnailFile(null);
-      setThumbnailUrl(null);
-      setSelectedSong(null);
-      setShowSongPicker(false);
       onClose();
     } catch (err: any) {
       setError(err.message);
@@ -276,9 +295,7 @@ export default function CreatePostModal({ open, onClose, initialType = 'text' }:
   };
   
   const handleGoLive = () => {
-      // Placeholder for now
-      alert("Going Live! (UI/Logic to be built)");
-      onClose();
+      onGoLive(content);
   }
 
   const handleModalClose = () => {
@@ -296,7 +313,6 @@ export default function CreatePostModal({ open, onClose, initialType = 'text' }:
         <div className="flex gap-2 mb-4 flex-wrap">
           <button onClick={() => setType("text")} className={`px-3 py-1 rounded-full font-bold ${type === "text" ? "bg-accent-cyan text-primary" : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"}`}>Text</button>
           <button onClick={() => setType("media")} className={`px-3 py-1 rounded-full font-bold ${type === "media" ? "bg-accent-cyan text-primary" : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"}`}>Media</button>
-          <button onClick={() => { setType("camera"); startCamera(); }} className={`px-3 py-1 rounded-full font-bold ${type === "camera" ? "bg-accent-cyan text-primary" : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"}`}>Camera</button>
           <button onClick={() => setType("flash")} className={`px-3 py-1 rounded-full font-bold ${type === "flash" ? "bg-accent-cyan text-primary" : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"}`}>Flash</button>
           <button onClick={() => setType("poll")} className={`px-3 py-1 rounded-full font-bold ${type === "poll" ? "bg-accent-cyan text-primary" : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"}`}>Poll</button>
           <button onClick={() => setType("live")} className={`px-3 py-1 rounded-full font-bold ${type === "live" ? "bg-accent-cyan text-primary" : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"}`}>Live</button>
@@ -319,21 +335,15 @@ export default function CreatePostModal({ open, onClose, initialType = 'text' }:
               </div>
             </div>
           )}
-          {(type === "media" || type === "flash") && (
+          {(type === "media" || type === "flash") && !showCamera && (
             <>
               <textarea className="w-full rounded-xl p-3 bg-gray-100 dark:bg-black/40 text-gray-800 dark:text-white border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink" placeholder={type === 'flash' ? "Add a caption..." : "Say something..."} value={content} onChange={e => setContent(e.target.value)} />
               
-               <div 
-                    className="w-full p-6 border-2 border-dashed border-accent-cyan/50 rounded-xl flex flex-col items-center justify-center text-center cursor-pointer hover:bg-accent-cyan/10"
-                    onClick={() => fileInputRef.current?.click()}
-                >
-                    <UploadCloud className="text-accent-cyan" size={40} />
-                    <p className="mt-2 text-sm text-gray-400">
-                        Drag & drop files or <span className="font-bold text-accent-cyan">browse</span>
-                    </p>
-                    <p className="text-xs text-gray-500">Supports images and videos</p>
+                <div className="grid grid-cols-2 gap-2">
+                    <button type="button" className="btn-glass flex items-center justify-center gap-2" onClick={() => fileInputRef.current?.click()}><ImagePlus/> Gallery</button>
+                    <button type="button" className="btn-glass flex items-center justify-center gap-2" onClick={startCamera}><Camera/> Camera</button>
                 </div>
-
+                
                 <input 
                     type="file" 
                     accept="image/*,video/*" 
@@ -369,7 +379,7 @@ export default function CreatePostModal({ open, onClose, initialType = 'text' }:
             </>
           )}
 
-          {type === 'camera' && (
+          {showCamera && (
             <div className="flex flex-col items-center gap-4">
                 <div className="w-full aspect-video bg-black rounded-lg overflow-hidden">
                     {cameraStream ? (
@@ -383,6 +393,7 @@ export default function CreatePostModal({ open, onClose, initialType = 'text' }:
                 <button type="button" className="btn-glass bg-accent-pink text-white w-20 h-20 rounded-full flex items-center justify-center" onClick={handleCapture} disabled={!cameraStream}>
                     <Zap size={32} />
                 </button>
+                 <button type="button" className="text-sm text-gray-400" onClick={stopCamera}>Back to upload</button>
                 <canvas ref={canvasRef} className="hidden"></canvas>
             </div>
           )}
@@ -455,6 +466,7 @@ export default function CreatePostModal({ open, onClose, initialType = 'text' }:
                         <div key={song.id} className={`flex items-center gap-3 p-2 rounded cursor-pointer hover:bg-accent-cyan/10`}
                           onClick={() => {
                             setSelectedSong(song);
+                            if (audioRef.current) audioRef.current.src = song.audioUrl;
                             setShowSongPicker(false);
                           }}>
                           <img src={song.albumArtUrl} alt="album" className="w-10 h-10 rounded" />
@@ -472,13 +484,32 @@ export default function CreatePostModal({ open, onClose, initialType = 'text' }:
               )}
 
               {selectedSong && (
-                <div className="mb-2 p-3 rounded-xl bg-accent-cyan/10 flex items-center gap-4">
-                  <img src={selectedSong.albumArtUrl} alt="album" className="w-12 h-12 rounded" />
-                  <div>
-                    <div className="font-bold text-accent-cyan text-base">{selectedSong.title}</div>
-                    <div className="text-xs text-gray-400 mb-1">{selectedSong.artist}</div>
+                <div className="mb-2 p-3 rounded-xl bg-accent-cyan/10">
+                  <div className="flex items-center gap-4">
+                    <img src={selectedSong.albumArtUrl} alt="album" className="w-12 h-12 rounded" />
+                    <div>
+                      <div className="font-bold text-accent-cyan text-base">{selectedSong.title}</div>
+                      <div className="text-xs text-gray-400 mb-1">{selectedSong.artist}</div>
+                    </div>
+                    <button type="button" className="ml-auto px-2 py-1 rounded bg-red-200 text-red-700 text-xs font-bold" onClick={() => setSelectedSong(null)}>Remove</button>
                   </div>
-                  <button type="button" className="ml-auto px-2 py-1 rounded bg-red-200 text-red-700 text-xs font-bold" onClick={() => setSelectedSong(null)}>Remove</button>
+                  <div className="mt-4">
+                    <label className="text-xs font-bold text-white">Select 15s Snippet:</label>
+                    <input 
+                      type="range"
+                      min="0"
+                      max={audioRef.current ? Math.floor(audioRef.current.duration) - 15 : 85}
+                      value={songSnippet[0]}
+                      onChange={(e) => setSongSnippet([parseInt(e.target.value), parseInt(e.target.value) + 15])}
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+                    />
+                    <div className="flex justify-between text-xs text-gray-400 mt-1">
+                      <span>{songSnippet[0]}s</span>
+                      <span>{songSnippet[1]}s</span>
+                    </div>
+                    <button type="button" onClick={handlePlaySnippet} className="text-xs text-accent-cyan mt-1">Preview Snippet</button>
+                  </div>
+                   <audio ref={audioRef} preload="metadata"></audio>
                 </div>
               )}
             </>

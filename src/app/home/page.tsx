@@ -17,6 +17,7 @@ import Link from "next/link";
 import { AlignLeft, BarChart3, ImageIcon, Sparkles } from 'lucide-react';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import { AlmightyLogo } from "@/components/ui/logo";
+import { LiveStream } from "@/components/LiveStream";
 
 
 const CreatePostModal = dynamic(() => import('./CreatePostModal'), { ssr: false });
@@ -29,7 +30,7 @@ const db = getFirestore(app);
 
 const CHAT_KEYWORDS = ['hi', 'hello', 'hey', 'yo', 'almighty', 'what', 'who', 'when', 'where', 'why', 'how'];
 
-function CreatePostPrompt({ onPromptClick, isPremium }: { onPromptClick: (type: "text" | "media" | "poll" | "camera" | "live") => void; isPremium: boolean }) {
+function CreatePostPrompt({ onPromptClick, isPremium }: { onPromptClick: (type: "text" | "media" | "poll" | "live") => void; isPremium: boolean }) {
   const [userProfile, setUserProfile] = useState<any>(null);
 
   useEffect(() => {
@@ -65,7 +66,6 @@ function CreatePostPrompt({ onPromptClick, isPremium }: { onPromptClick: (type: 
           <div className="flex justify-around items-center mt-4 pt-3 border-t border-glass-border">
               <button onClick={() => onPromptClick('text')} className="flex items-center gap-2 text-gray-300 hover:text-accent-cyan"><AlignLeft/> Text</button>
               <button onClick={() => onPromptClick('media')} className="flex items-center gap-2 text-gray-300 hover:text-accent-cyan"><ImageIcon/> Media</button>
-              <button onClick={() => onPromptClick('camera')} className="flex items-center gap-2 text-gray-300 hover:text-accent-cyan"><Camera/> Camera</button>
               <button onClick={() => onPromptClick('poll')} className="flex items-center gap-2 text-gray-300 hover:text-accent-cyan"><BarChart3/> Poll</button>
               <button onClick={() => onPromptClick('live')} className="flex items-center gap-2 text-red-500 hover:text-red-400"><Radio className="animate-pulse"/> Live</button>
           </div>
@@ -100,7 +100,7 @@ function PremiumUpgradeBanner() {
 
 export default function HomePage() {
   const [showPostModal, setShowPostModal] = useState(false);
-  const [initialPostType, setInitialPostType] = useState<"text" | "media" | "poll" | "flash" | "camera" | "live">("text");
+  const [initialPostType, setInitialPostType] = useState<"text" | "media" | "poll" | "flash" | "live">("text");
   const [showMusicModal, setShowMusicModal] = useState(false);
   const [posts, setPosts] = useState<any[]>([]);
   const [flashes, setFlashes] = useState<any[]>([]);
@@ -114,6 +114,8 @@ export default function HomePage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [lastVisible, setLastVisible] = useState<any>(null);
   const [hasMore, setHasMore] = useState(true);
+  const [isLive, setIsLive] = useState(false);
+  const [liveStreamTitle, setLiveStreamTitle] = useState('');
   const router = useRouter();
   const POSTS_PER_PAGE = 5;
   const feedEndRef = useRef<HTMLDivElement>(null);
@@ -231,11 +233,17 @@ export default function HomePage() {
     return () => unsub();
   }, [currentUser]);
 
-  const handleCreatePost = (type: "text" | "media" | "poll" | "flash" | "camera" | "live") => {
+  const handleCreatePost = (type: "text" | "media" | "poll" | "flash" | "live") => {
     setInitialPostType(type);
     setShowPostModal(true);
   };
   
+  const handleGoLive = (title: string) => {
+      setLiveStreamTitle(title);
+      setIsLive(true);
+      setShowPostModal(false);
+  }
+
   const handleVoiceSearch = () => {
     if (listening) {
       SpeechRecognition.stopListening();
@@ -276,6 +284,10 @@ export default function HomePage() {
 
   if (!currentUser || !browserSupportsSpeechRecognition) {
     return <VibeSpaceLoader />;
+  }
+
+   if (isLive) {
+    return <LiveStream title={liveStreamTitle} onStreamEnd={() => setIsLive(false)} />;
   }
 
   return (
@@ -393,7 +405,7 @@ export default function HomePage() {
       </div>
 
       <AnimatePresence>
-        {showPostModal && <CreatePostModal open={showPostModal} onClose={() => setShowPostModal(false)} initialType={initialPostType} />}
+        {showPostModal && <CreatePostModal open={showPostModal} onClose={() => setShowPostModal(false)} initialType={initialPostType} onGoLive={handleGoLive} />}
         {showMusicModal && <AddMusicModal onClose={() => setShowMusicModal(false)} />}
         {selectedFlashUser && <FlashModal userFlashes={selectedFlashUser} onClose={() => setSelectedFlashUser(null)} />}
         {showNotifications && <NotificationPanel onClose={() => setShowNotifications(false)} />}
