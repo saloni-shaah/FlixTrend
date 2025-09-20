@@ -5,7 +5,7 @@ import React from 'react';
 import { getFirestore, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, deleteDoc, updateDoc, doc as fsDoc, setDoc, getDoc, doc, runTransaction } from "firebase/firestore";
 import { FaPlay, FaRegComment, FaExclamationTriangle, FaVolumeMute, FaUserSlash, FaLink, FaEllipsisV, FaMusic } from "react-icons/fa";
 import { Repeat2, Star, Share, MessageCircle, Bookmark, MapPin, Smile, Download } from "lucide-react";
-import { auth, app } from "@/utils/firebaseClient";
+import { auth, app } from '@/utils/firebaseClient';
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ShareModal } from './ShareModal';
@@ -437,7 +437,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
   if (isShortVibe) {
     return (
         <div className="absolute inset-0 w-full h-full p-4 flex justify-between items-end pointer-events-none bg-gradient-to-t from-black/60 via-black/20 to-transparent">
-            <div className="flex flex-col gap-2 max-w-[calc(100%-80px)] self-end pointer-events-auto">
+            <div className="flex flex-col gap-2 max-w-[calc(100%-80px)] self-end pointer-events-auto mb-20">
                 <div className="flex items-center gap-2">
                     <Link href={`/squad/${post.userId}`} className="flex items-center gap-2 group cursor-pointer">
                         <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green flex items-center justify-center font-bold text-lg overflow-hidden border-2 border-accent-green group-hover:scale-105 transition-transform">
@@ -453,7 +453,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
                     </div>
                  )}
             </div>
-            <div className="flex flex-col gap-4 self-end mb-4 pointer-events-auto">
+            <div className="flex flex-col gap-4 self-end mb-20 pointer-events-auto">
                 <ActionButtons />
             </div>
             {showComments && <CommentModal postId={post.id} postAuthorId={post.userId} onClose={() => setShowComments(false)} post={post} />}
