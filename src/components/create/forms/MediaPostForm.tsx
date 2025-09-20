@@ -1,12 +1,14 @@
 
 "use client";
 import React, { useState, useRef } from 'react';
-import { ImagePlus, Video, X, UploadCloud } from 'lucide-react';
+import { ImagePlus, Video, X, UploadCloud, ChevronDown } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange: (data: any) => void }) {
     const [mediaFiles, setMediaFiles] = useState<File[]>(data.mediaFiles || []);
     const [mediaPreviews, setMediaPreviews] = useState<string[]>(data.mediaPreviews || []);
     const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(data.thumbnailPreview || null);
+    const [showDescription, setShowDescription] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -42,17 +44,19 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
 
     return (
         <div className="flex flex-col gap-4">
+            <input type="text" name="title" placeholder="Title" className="input-glass text-lg" value={data.title || ''} onChange={handleTextChange} />
+            
             <textarea
                 name="caption"
                 className="input-glass w-full rounded-2xl min-h-[100px]"
-                placeholder="Add a caption, hashtags, and mention friends..."
+                placeholder="Add a caption, #hashtags, and mention @friends..."
                 value={data.caption || ''}
                 onChange={handleTextChange}
             />
 
             <div className="p-4 border-2 border-dashed border-accent-cyan/30 rounded-2xl text-center">
                 <button type="button" className="btn-glass flex items-center justify-center gap-2 mx-auto" onClick={() => fileInputRef.current?.click()}>
-                    <UploadCloud /> Upload from Gallery
+                    <UploadCloud /> Upload Media
                 </button>
                 <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" multiple accept="image/*,video/*" />
 
@@ -73,14 +77,25 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
                     </div>
                 )}
             </div>
-
-            <h3 className="font-bold text-accent-cyan mt-2">Details (Optional)</h3>
-            <input type="text" name="title" placeholder="Title" className="input-glass" value={data.title || ''} onChange={handleTextChange} />
-            <textarea name="description" placeholder="Description" className="input-glass rounded-2xl" value={data.description || ''} onChange={handleTextChange} />
             
-            <label className="text-sm font-bold text-accent-cyan mt-2">Upload Custom Thumbnail</label>
-            <input type="file" name="thumbnail" accept="image/*" onChange={handleThumbnailChange} className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent-pink/20 file:text-accent-pink hover:file:bg-accent-pink/40"/>
-            {thumbnailPreview && <img src={thumbnailPreview} alt="thumbnail" className="w-32 h-auto rounded-lg mt-2" />}
+            <div className="mt-2">
+                <button type="button" className="text-sm font-bold text-accent-cyan flex items-center gap-1" onClick={() => setShowDescription(!showDescription)}>
+                    Read Description <ChevronDown className={`transition-transform ${showDescription ? 'rotate-180' : ''}`} size={16} />
+                </button>
+                <motion.div
+                    initial={false}
+                    animate={{ height: showDescription ? 'auto' : 0, opacity: showDescription ? 1 : 0 }}
+                    className="overflow-hidden"
+                >
+                    <textarea name="description" placeholder="Add a detailed description..." className="input-glass rounded-2xl w-full mt-2" value={data.description || ''} onChange={handleTextChange} />
+                </motion.div>
+            </div>
+            
+            <div>
+                <label className="text-sm font-bold text-accent-cyan">Custom Thumbnail (Optional)</label>
+                <input type="file" name="thumbnail" accept="image/*" onChange={handleThumbnailChange} className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent-pink/20 file:text-accent-pink hover:file:bg-accent-pink/40 mt-2"/>
+                {thumbnailPreview && <img src={thumbnailPreview} alt="thumbnail" className="w-32 h-auto rounded-lg mt-2" />}
+            </div>
 
         </div>
     );
