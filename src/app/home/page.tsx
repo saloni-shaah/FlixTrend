@@ -3,7 +3,7 @@
 import "regenerator-runtime/runtime";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import dynamic from 'next/dynamic';
-import { getFirestore, collection, query, orderBy, onSnapshot, getDoc, doc, limit, startAfter, getDocs, where } from "firebase/firestore";
+import { getFirestore, collection, query, orderBy, onSnapshot, getDoc, doc, limit, startAfter, getDocs, where, Timestamp } from "firebase/firestore";
 import { Plus, Bell, Search, Music, Bot, Mic, Camera, Radio } from "lucide-react";
 import { auth } from "@/utils/firebaseClient";
 import { useAppState } from "@/utils/AppStateContext";
@@ -157,8 +157,9 @@ export default function HomePage() {
     setLoading(true);
 
     const first = query(
-      collection(db, "posts"), 
-      orderBy("createdAt", "desc"), 
+      collection(db, "posts"),
+      where("publishAt", "<=", Timestamp.now()),
+      orderBy("publishAt", "desc"), 
       limit(POSTS_PER_PAGE)
     );
 
@@ -179,7 +180,8 @@ export default function HomePage() {
 
       const next = query(
           collection(db, "posts"),
-          orderBy("createdAt", "desc"),
+          where("publishAt", "<=", Timestamp.now()),
+          orderBy("publishAt", "desc"),
           startAfter(lastVisible),
           limit(POSTS_PER_PAGE)
       );
@@ -408,3 +410,4 @@ export default function HomePage() {
     </div>
   );
 }
+
