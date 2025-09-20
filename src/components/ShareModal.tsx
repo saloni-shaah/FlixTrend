@@ -2,30 +2,13 @@
 "use client";
 
 import React, { useEffect } from 'react';
-import { Copy, X } from 'lucide-react';
+import { Copy, X, MessageSquare } from 'lucide-react';
 import { FaWhatsapp, FaTwitter, FaTelegramPlane } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 
-export function ShareModal({ url, title, onClose }: { url: string; title?: string; onClose: () => void }) {
+export function ShareModal({ url, title, onSignalShare, onClose }: { url: string; title?: string; onSignalShare: () => void; onClose: () => void }) {
   const [copied, setCopied] = React.useState(false);
   const shareText = title ? `Check out this vibe on FlixTrend: ${title}` : "Check out this vibe on FlixTrend!";
-
-  const canShare = typeof navigator !== 'undefined' && !!navigator.share;
-
-  const handleNativeShare = async () => {
-    if (canShare) {
-      try {
-        await navigator.share({
-          title: 'FlixTrend Vibe',
-          text: shareText,
-          url: url,
-        });
-        onClose(); // Close modal after successful native share
-      } catch (error) {
-        console.error('Error using Web Share API:', error);
-      }
-    }
-  };
 
   const handleCopy = () => {
     navigator.clipboard.writeText(url);
@@ -39,8 +22,6 @@ export function ShareModal({ url, title, onClose }: { url: string; title?: strin
     { name: 'Telegram', icon: <FaTelegramPlane />, url: `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(shareText)}` },
   ]
 
-  // If the browser supports native share, we show a minimal UI or just trigger it.
-  // For this implementation, we'll show the fallback if the auto-trigger fails or isn't possible.
   return (
     <div className="fixed inset-0 z-[101] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <motion.div
@@ -54,6 +35,13 @@ export function ShareModal({ url, title, onClose }: { url: string; title?: strin
           <X size={24} />
         </button>
         <h3 className="text-xl font-headline font-bold mb-4 text-brand-gold">Share Vibe</h3>
+
+        <button 
+            className="w-full btn-glass bg-accent-purple/20 text-accent-purple font-bold flex items-center justify-center gap-3 mb-4"
+            onClick={onSignalShare}
+        >
+            <MessageSquare /> Share in Signal
+        </button>
         
         <div className="flex justify-around items-center my-4">
             {socialShares.map(social => (
