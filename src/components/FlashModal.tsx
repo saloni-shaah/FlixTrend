@@ -16,6 +16,7 @@ export function FlashModal({ userFlashes, onClose }: { userFlashes: any; onClose
   const [currentIndex, setCurrentIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const goToNext = () => setCurrentIndex(i => (i + 1) % userFlashes.flashes.length);
@@ -27,6 +28,21 @@ export function FlashModal({ userFlashes, onClose }: { userFlashes: any; onClose
     setProgress(0);
     
     if (timerRef.current) clearInterval(timerRef.current);
+    if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+    }
+
+    const duration = isVideo ? (videoRef.current?.duration || 15) : (flash.song?.snippetEnd ? (flash.song.snippetEnd - flash.song.snippetStart) : 15);
+    
+    if (flash.song && flash.song.preview_url) {
+        const audio = new Audio(flash.song.preview_url);
+        audioRef.current = audio;
+        audio.currentTime = flash.song.snippetStart || 0;
+        audio.play().catch(e => console.error("Audio play failed", e));
+        
+        audio.addEventListener('ended', goToNext);
+    }
     
     if (!isVideo) {
       timerRef.current = setInterval(() => {
@@ -35,13 +51,17 @@ export function FlashModal({ userFlashes, onClose }: { userFlashes: any; onClose
             goToNext();
             return 0;
           }
-          return p + (100 / 50); // 5 seconds duration
+          return p + (100 / (duration * 10)); // duration in seconds
         });
       }, 100);
     }
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
+      if (audioRef.current) {
+          audioRef.current.pause();
+          audioRef.current.removeEventListener('ended', goToNext);
+      }
     };
   }, [currentIndex, userFlashes]);
 
