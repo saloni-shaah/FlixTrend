@@ -4,7 +4,7 @@ import "regenerator-runtime/runtime";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import dynamic from 'next/dynamic';
 import { getFirestore, collection, query, orderBy, onSnapshot, getDoc, doc, limit, startAfter, getDocs, where, Timestamp } from "firebase/firestore";
-import { Plus, Bell, Search, Music, Bot, Mic, Camera, Radio } from "lucide-react";
+import { Plus, Bell, Search, Music, Bot, Mic, Camera, Radio, Video } from "lucide-react";
 import { auth } from "@/utils/firebaseClient";
 import { useAppState } from "@/utils/AppStateContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -18,6 +18,7 @@ import { AlignLeft, BarChart3, ImageIcon, Sparkles } from 'lucide-react';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import { AlmightyLogo } from "@/components/ui/logo";
 import { LiveStream } from "@/components/LiveStream";
+import { ShortsPlayer } from "@/components/ShortsPlayer";
 
 
 const AddMusicModal = dynamic(() => import('@/components/MusicDiscovery'), { ssr: false });
@@ -97,6 +98,7 @@ export default function HomePage() {
   const [hasMore, setHasMore] = useState(true);
   const [isLive, setIsLive] = useState(false);
   const [liveStreamTitle, setLiveStreamTitle] = useState('');
+  const [showShortsPlayer, setShowShortsPlayer] = useState(false);
   const router = useRouter();
   const POSTS_PER_PAGE = 5;
   const feedEndRef = useRef<HTMLDivElement>(null);
@@ -259,6 +261,10 @@ export default function HomePage() {
   const isPremium = userProfile?.isPremium && (!userProfile.premiumUntil || userProfile.premiumUntil.toDate() > new Date());
 
 
+  if (showShortsPlayer) {
+    return <ShortsPlayer onClose={() => setShowShortsPlayer(false)} />;
+  }
+
   if (!currentUser || !browserSupportsSpeechRecognition) {
     return <VibeSpaceLoader />;
   }
@@ -322,6 +328,21 @@ export default function HomePage() {
           ))}
         </div>
       </section>
+
+      {/* Shorts Player Button */}
+      <section className="mb-6">
+        <button
+          onClick={() => setShowShortsPlayer(true)}
+          className="w-full glass-card p-4 flex items-center justify-center gap-4 hover:border-accent-pink transition-colors"
+        >
+          <Video className="text-accent-pink" size={32} />
+          <div className="text-left">
+            <h3 className="font-headline text-xl font-bold">Watch Shorts</h3>
+            <p className="text-sm text-gray-400">Tap to dive into a full-screen video feed</p>
+          </div>
+        </button>
+      </section>
+
       {/* Feed Section */}
       <section className="flex-1 flex flex-col items-center mt-4">
         {loading ? (
@@ -389,4 +410,3 @@ export default function HomePage() {
   );
 }
 
-    
