@@ -20,8 +20,12 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 const db = getFirestore(app);
 const functions = getFunctions(app);
 
-const Watermark = () => (
-    <div className="absolute bottom-2 right-2 flex items-center gap-1.5 bg-black/40 text-white py-1 px-2 rounded-full text-xs pointer-events-none z-10">
+const Watermark = ({ isAnimated = false }: { isAnimated?: boolean }) => (
+    <div
+      className={`absolute flex items-center gap-1.5 bg-black/40 text-white py-1 px-2 rounded-full text-xs pointer-events-none z-10 ${
+        isAnimated ? 'animate-[float-watermark_10s_ease-in-out_infinite]' : 'bottom-2 right-2'
+      }`}
+    >
         <FlixTrendLogo size={16} />
         <span className="font-bold">FlixTrend</span>
     </div>
@@ -118,7 +122,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
     isPostDownloaded(post.id).then(setIsDownloaded);
     
     return () => unsubscribes.forEach(unsub => unsub());
-  }, [post.id, currentUser, post.type, post.pollOptions]);
+  }, [post.id, currentUser, post.type, post.pollOptions, isSaved]);
 
   const handleStar = async () => {
     if (!currentUser) return;
@@ -291,7 +295,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
             ) : (
                 <OptimizedImage src={url} alt="media" className="w-full h-full object-cover" />
             )}
-            <Watermark />
+            <Watermark isAnimated={isVideo} />
         </div>
     );
     
