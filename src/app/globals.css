@@ -107,37 +107,36 @@ body {
 }
 
 @keyframes float-watermark {
-    0% {
-        bottom: 1rem;
-        right: 1rem;
-        opacity: 0.6;
-        transform: translate(0, 0);
-    }
-    25% {
-        bottom: 1.5rem;
-        right: 1rem;
-        opacity: 0.8;
-        transform: translate(-5px, 5px);
-    }
-    50% {
-        bottom: 1rem;
-        right: 1.5rem;
-        opacity: 0.6;
-        transform: translate(0, 0);
-    }
-    75% {
-        bottom: 1.5rem;
-        right: 1.5rem;
-        opacity: 0.8;
-        transform: translate(5px, -5px);
-    }
-    100% {
-        bottom: 1rem;
-        right: 1rem;
-        opacity: 0.6;
-        transform: translate(0, 0);
-    }
+  0% {
+    transform: translate(0, 0);
+    opacity: 0.7;
+    bottom: 2%;
+    right: 2%;
+  }
+  25% {
+    transform: translate(-40vw, -40vh);
+    opacity: 0.4;
+  }
+  50% {
+    transform: translate(-85vw, -85vh);
+    opacity: 0.7;
+    bottom: auto;
+    right: auto;
+    top: 2%;
+    left: 2%;
+  }
+  75% {
+    transform: translate(-40vw, -40vh);
+    opacity: 0.4;
+  }
+  100% {
+    transform: translate(0, 0);
+    opacity: 0.7;
+    bottom: 2%;
+    right: 2%;
+  }
 }
+
 
 /* Base card style */
 .glass-card {
@@ -201,4 +200,8 @@ body {
   outline: none;
   border-color: var(--brand-gold);
   box-shadow: 0 0 10px var(--brand-gold);
+}
+
+.heptagon-clip {
+  clip-path: polygon(50% 0%, 95% 25%, 95% 75%, 50% 100%, 5% 75%, 5% 25%);
 }
