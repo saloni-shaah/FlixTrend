@@ -108,9 +108,12 @@ export function GuestPostCard({ post }: { post: any }) {
                         <div className="relative">
                             {(() => {
                                 const isVideo = contentPost.mediaUrl.includes('.mp4') || contentPost.mediaUrl.includes('.webm') || contentPost.mediaUrl.includes('.ogg');
-                                return isVideo ? <video src={contentPost.mediaUrl} controls className="w-full rounded-xl" /> : <OptimizedImage src={contentPost.mediaUrl} alt="media" className="w-full rounded-xl" />;
+                                return isVideo ? <video src={contentPost.mediaUrl} controls className="w-full rounded-xl" /> : 
+                                    <div className="relative">
+                                        <OptimizedImage src={contentPost.mediaUrl} alt="media" className="w-full rounded-xl" />
+                                        <Watermark isAnimated={true} />
+                                    </div>;
                             })()}
-                            <Watermark isAnimated={contentPost.mediaUrl.includes('.mp4') || contentPost.mediaUrl.includes('.webm') || contentPost.mediaUrl.includes('.ogg')} />
                         </div>
                     )}
                 </div>
