@@ -1,8 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
-import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { FlixTrendLogo } from './FlixTrendLogo';
 
 const Watermark = () => (
@@ -19,12 +18,23 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const goToNext = () => setCurrentIndex(i => (i + 1) % userFlashes.flashes.length);
-  const goToPrev = () => setCurrentIndex(i => (i - 1 + userFlashes.flashes.length) % userFlashes.flashes.length);
+  const goToNext = useCallback(() => {
+    setCurrentIndex(i => {
+        if (i < userFlashes.flashes.length - 1) {
+            return i + 1;
+        }
+        onClose(); // Close modal after the last flash
+        return i;
+    });
+  }, [userFlashes.flashes.length, onClose]);
+
+  const goToPrev = useCallback(() => {
+    setCurrentIndex(i => (i > 0 ? i - 1 : 0));
+  }, []);
 
   useEffect(() => {
     const flash = userFlashes.flashes[currentIndex];
-    const isVideo = flash.mediaUrl && flash.mediaUrl.match(/\.(mp4|webm|ogg)$/i);
+    const isVideo = flash.mediaUrl && (flash.mediaUrl.includes('.mp4') || flash.mediaUrl.includes('.webm'));
     setProgress(0);
     
     if (timerRef.current) clearInterval(timerRef.current);
@@ -33,7 +43,7 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
         audioRef.current = null;
     }
 
-    const duration = isVideo ? (videoRef.current?.duration || 15) : (flash.song?.snippetEnd ? (flash.song.snippetEnd - flash.song.snippetStart) : 15);
+    const duration = 15; // All flashes are 15 seconds
     
     if (flash.song && flash.song.preview_url) {
         const audio = new Audio(flash.song.preview_url);
@@ -63,7 +73,19 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
           audioRef.current.removeEventListener('ended', goToNext);
       }
     };
-  }, [currentIndex, userFlashes]);
+  }, [currentIndex, userFlashes, goToNext]);
+  
+  const handleContainerClick = (e: React.MouseEvent) => {
+      const { clientX, currentTarget } = e;
+      const { left, width } = currentTarget.getBoundingClientRect();
+      const clickPosition = clientX - left;
+      if (clickPosition < width / 3) {
+          goToPrev();
+      } else {
+          goToNext();
+      }
+  };
+
 
   const handleVideoTimeUpdate = () => {
     if (videoRef.current) {
@@ -77,8 +99,8 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
   const currentFlash = userFlashes.flashes[currentIndex];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90" onClick={onClose}>
-      <div className="relative w-full max-w-lg h-[90vh] flex flex-col items-center justify-center" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90" onClick={handleContainerClick}>
+      <div className="relative w-full max-w-lg h-[90vh] flex flex-col items-center justify-center cursor-pointer" onClick={e => e.stopPropagation()}>
         <button onClick={onClose} className="absolute top-2 right-2 text-white text-3xl z-20">&times;</button>
         {/* Progress Bars */}
         <div className="absolute top-4 left-2 right-2 flex gap-1 z-20">
@@ -90,7 +112,7 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
         </div>
         
         <div className="w-full h-full relative">
-            {currentFlash.mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? (
+            {currentFlash.mediaUrl && (currentFlash.mediaUrl.includes('.mp4') || currentFlash.mediaUrl.includes('.webm')) ? (
                 <div className="relative w-full h-full">
                     <video
                         ref={videoRef}
@@ -108,10 +130,6 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
                     <Watermark />
                 </div>
             )}
-            
-            {/* Navigation */}
-            <button onClick={goToPrev} className="absolute left-0 top-1/2 -translate-y-1/2 bg-black/20 text-white p-2 rounded-full"><FaChevronLeft/></button>
-            <button onClick={goToNext} className="absolute right-0 top-1/2 -translate-y-1/2 bg-black/20 text-white p-2 rounded-full"><FaChevronRight/></button>
         </div>
 
         {currentFlash.caption && (

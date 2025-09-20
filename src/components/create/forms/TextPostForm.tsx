@@ -1,6 +1,7 @@
 
 "use client";
 import React, { useState } from 'react';
+import { MapPin, Smile } from 'lucide-react';
 
 const backgroundColors = [
   '#ffffff', '#ffadad', '#ffd6a5', '#fdffb6', '#caffbf', '#9bf6ff',
@@ -17,8 +18,8 @@ const fontStyles = [
 export function TextPostForm({ data, onDataChange }: { data: any, onDataChange: (data: any) => void }) {
     const [bgImage, setBgImage] = useState<string | null>(data.bgImage || null);
 
-    const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        onDataChange({ ...data, content: e.target.value });
+    const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
+        onDataChange({ ...data, [e.target.name]: e.target.value });
     };
 
     const handleBgColorChange = (color: string) => {
@@ -42,6 +43,7 @@ export function TextPostForm({ data, onDataChange }: { data: any, onDataChange: 
     return (
         <div className="flex flex-col gap-4">
             <textarea
+                name="content"
                 className={`input-glass w-full rounded-2xl min-h-[200px] text-2xl p-4 text-center flex items-center justify-center ${data.fontStyle || 'font-body'}`}
                 placeholder="What's on your mind?"
                 value={data.content || ''}
@@ -54,6 +56,15 @@ export function TextPostForm({ data, onDataChange }: { data: any, onDataChange: 
                 }}
             />
             
+            <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                <input type="text" name="location" className="w-full rounded-xl p-3 pl-10 bg-black/20 text-white border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink" placeholder="Add location..." value={data.location || ''} onChange={handleTextChange} />
+            </div>
+             <div className="relative">
+                <Smile className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                <input type="text" name="mood" className="w-full rounded-xl p-3 pl-10 bg-black/20 text-white border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink" placeholder="How are you feeling?" value={data.mood || ''} onChange={handleTextChange} />
+            </div>
+
             <div className="space-y-3">
                  <h4 className="font-bold text-sm text-accent-cyan">Font Style</h4>
                 <div className="flex flex-wrap gap-2">
