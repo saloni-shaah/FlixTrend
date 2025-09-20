@@ -30,7 +30,8 @@ export default function Step2({ onNext, onBack, postData }: { onNext: (data: any
                 // Use thumbnailFile for media posts or the first mediaFile for flashes
                 const fileToModerate = postData.thumbnailFile || (postData.mediaFiles && postData.mediaFiles[0]);
 
-                if (fileToModerate) {
+                // *** FIX: Only moderate supported image types, not SVGs ***
+                if (fileToModerate && fileToModerate instanceof File && !fileToModerate.type.includes('svg')) {
                     thumbnailDataUri = await fileToDataUri(fileToModerate);
                 }
 
