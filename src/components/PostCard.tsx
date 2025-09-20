@@ -4,7 +4,7 @@
 import React from 'react';
 import { getFirestore, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, deleteDoc, updateDoc, doc as fsDoc, setDoc, getDoc, doc, runTransaction } from "firebase/firestore";
 import { FaPlay, FaRegComment, FaExclamationTriangle, FaVolumeMute, FaUserSlash, FaLink, FaEllipsisV, FaMusic } from "react-icons/fa";
-import { Repeat2, Star, Share, MessageCircle, Bookmark, MapPin, Smile, Download } from "lucide-react";
+import { Repeat2, Star, Share, MessageCircle, Bookmark, MapPin, Smile, Download, X } from "lucide-react";
 import { auth, app } from '@/utils/firebaseClient';
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -52,6 +52,14 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
   const videoRef = React.useRef<HTMLVideoElement>(null);
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const deletePostCallable = httpsCallable(functions, 'deletePost');
+  const [isFullScreen, setIsFullScreen] = React.useState(false);
+
+  const handleDoubleClick = () => {
+    // Only enable full-screen for single media posts (not relays with media, or multi-image posts)
+    if (post.type === 'media' && post.mediaUrl && !Array.isArray(post.mediaUrl)) {
+        setIsFullScreen(prev => !prev);
+    }
+  };
 
 
   React.useEffect(() => {
@@ -463,11 +471,13 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
   }
 
   return (
+    <>
     <motion.div 
       className="glass-card p-5 flex flex-col gap-3 relative animate-fade-in"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
+      onDoubleClick={handleDoubleClick}
     >
       {post.type === 'relay' && (
           <div className="text-xs text-muted-foreground font-bold mb-2 flex items-center gap-2">
@@ -518,6 +528,27 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
         />
       )}
     </motion.div>
+    {isFullScreen && post.mediaUrl && !Array.isArray(post.mediaUrl) && (
+        <div 
+            className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-sm flex items-center justify-center"
+            onClick={handleDoubleClick}
+        >
+            <button onClick={() => setIsFullScreen(false)} className="absolute top-4 right-4 text-white z-10">
+                <X size={32} />
+            </button>
+            <motion.div 
+                layoutId={`postcard-media-${post.id}`}
+                className="relative w-full h-full"
+            >
+                <OptimizedImage 
+                    src={post.mediaUrl}
+                    alt={post.content || 'Full screen image'}
+                    className="w-full h-full object-contain"
+                />
+            </motion.div>
+        </div>
+    )}
+    </>
   );
 }
 
