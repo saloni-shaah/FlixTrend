@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, CheckCircle, Calendar as CalendarIcon } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { getFirestore, collection, addDoc, serverTimestamp, Timestamp } from "firebase/firestore";
+import { getFirestore, collection, addDoc, serverTimestamp, Timestamp, doc, getDoc } from "firebase/firestore";
 import { auth, app } from '@/utils/firebaseClient';
 import { useRouter } from 'next/navigation';
 
@@ -50,6 +50,14 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
         }
 
         try {
+             // Fetch user profile to embed info
+            const userDocRef = doc(db, 'users', user.uid);
+            const userDocSnap = await getDoc(userDocRef);
+            if (!userDocSnap.exists()) {
+                throw new Error("User profile not found!");
+            }
+            const userData = userDocSnap.data();
+
             // 1. Handle File Uploads first
             let finalMediaUrls: string[] = [];
             if (postData.mediaFiles && postData.mediaFiles.length > 0) {
@@ -79,8 +87,9 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
             const finalPostData = {
                 // Common fields
                 userId: user.uid,
-                displayName: user.displayName,
-                // username, avatar_url etc. should be fetched from user profile
+                displayName: userData.name || user.displayName,
+                username: userData.username,
+                avatar_url: userData.avatar_url,
                 type: postData.postType,
                 content: postData.caption || postData.content || postData.question || postData.title,
                 hashtags: (postData.caption?.match(/#\w+/g) || []).map((h:string) => h.replace('#', '')),
@@ -189,4 +198,3 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
         </motion.div>
     );
 }
-
