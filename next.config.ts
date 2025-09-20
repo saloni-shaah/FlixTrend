@@ -43,7 +43,16 @@ const nextConfig: NextConfig = {
             hostname: 'api.dicebear.com',
         }
     ]
-  }
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/apple-app-site-association',
+        destination: '/apple-app-site-association',
+      },
+    ];
+  },
 };
 
 export default withPWA(pwaConfig)(nextConfig);
+
