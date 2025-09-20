@@ -173,6 +173,7 @@ export function GuestPostCard({ post }: { post: any }) {
       {showShareModal && (
         <ShareModal 
             url={`${window.location.origin}/post/${post.id}`}
+            title={post.content}
             onClose={() => setShowShareModal(false)}
         />
       )}

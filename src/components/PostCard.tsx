@@ -465,7 +465,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
                 <ActionButtons />
             </div>
             {showComments && <CommentModal postId={post.id} postAuthorId={post.userId} onClose={() => setShowComments(false)} post={post} />}
-            {showShareModal && <ShareModal url={`${window.location.origin}/post/${post.id}`} onClose={() => setShowShareModal(false)} />}
+            {showShareModal && <ShareModal url={`${window.location.origin}/post/${post.id}`} title={post.content} onClose={() => setShowShareModal(false)} />}
         </div>
     );
   }
@@ -518,6 +518,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
       {showShareModal && (
         <ShareModal 
             url={`${window.location.origin}/post/${post.id}`}
+            title={post.content}
             onClose={() => setShowShareModal(false)}
         />
       )}
