@@ -12,21 +12,33 @@ function CreatePostPageContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const [step, setStep] = useState(1);
-    const [postType, setPostType] = useState<'text' | 'media' | 'poll' | 'live'>(searchParams.get('type') as any || 'text');
-    const [postData, setPostData] = useState({});
+    const initialType = searchParams.get('type') as 'text' | 'media' | 'poll' | 'live' || 'text';
+    const [postType, setPostType] = useState<'text' | 'media' | 'poll' | 'live'>(initialType);
+    const [postData, setPostData] = useState({ postType: initialType });
 
     const handleNext = (data: any) => {
         setPostData(prev => ({ ...prev, ...data }));
-        setStep(s => s + 1);
+        
+        // Skip step 2 if the post is not media type
+        if (postType !== 'media' && step === 1) {
+            setStep(3);
+        } else {
+            setStep(s => s + 1);
+        }
     };
 
     const handleBack = () => {
-        setStep(s => s - 1);
+         // Skip step 2 if the post is not media type
+        if (postType !== 'media' && step === 3) {
+            setStep(1);
+        } else {
+            setStep(s => s - 1);
+        }
     };
     
     const handleTypeChange = (type: 'text' | 'media' | 'poll' | 'live') => {
         setPostType(type);
-        setPostData({});
+        setPostData({ postType: type });
         setStep(1);
     };
 
@@ -36,7 +48,9 @@ function CreatePostPageContent() {
         <Step3 key="step3" onBack={handleBack} postData={postData} />,
     ];
     
-    const totalSteps = postType === 'media' ? 3 : 2; // Media posts have an extra AI check step
+    const totalSteps = postType === 'media' ? 3 : 2;
+    const currentStepLogic = step === 3 && totalSteps === 2 ? 2 : step;
+
 
     return (
         <div className="w-full max-w-4xl mx-auto flex flex-col items-center p-4 min-h-screen">
@@ -66,13 +80,13 @@ function CreatePostPageContent() {
              <div className="w-full max-w-lg mb-8">
                 <div className="flex justify-between items-center text-xs font-bold text-gray-400">
                     <span>Details</span>
-                    <span>{postType === 'media' && 'AI Check'}</span>
+                    {totalSteps === 3 && <span>AI Check</span>}
                     <span>Publish</span>
                 </div>
                 <div className="w-full h-2 bg-black/20 rounded-full mt-1">
                     <motion.div 
                         className="h-2 bg-gradient-to-r from-accent-pink to-accent-cyan rounded-full"
-                        animate={{ width: `${(step / totalSteps) * 100}%` }}
+                        animate={{ width: `${(currentStepLogic / totalSteps) * 100}%` }}
                         transition={{ duration: 0.5, ease: 'easeInOut' }}
                     />
                 </div>
