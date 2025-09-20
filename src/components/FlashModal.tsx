@@ -12,7 +12,7 @@ const Watermark = () => (
     </div>
 );
 
-export function FlashModal({ userFlashes, onClose }: { userFlashes: any; onClose: () => void }) {
+export default function FlashModal({ userFlashes, onClose }: { userFlashes: any; onClose: () => void }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
