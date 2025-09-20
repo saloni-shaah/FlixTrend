@@ -24,14 +24,21 @@ export default function Step2({ onNext, onBack, postData }: { onNext: (data: any
     useEffect(() => {
         const runModeration = async () => {
             setStatus('checking');
-            let thumbnailDataUri: string | undefined = undefined;
-
+            
             try {
-                if (postData.thumbnailFile) {
+                let thumbnailDataUri: string | undefined = undefined;
+                if (postData.postType === 'media' && postData.thumbnailFile) {
                     thumbnailDataUri = await fileToDataUri(postData.thumbnailFile);
                 }
 
-                const textToModerate = [postData.caption, postData.title, postData.description].filter(Boolean).join('\n');
+                const textToModerate = [postData.caption, postData.title, postData.description, postData.question, postData.content].filter(Boolean).join('\n');
+
+                // If there's no text and no image, it's safe to proceed (e.g., an empty text post)
+                if (!textToModerate && !thumbnailDataUri) {
+                    setStatus('safe');
+                    setReason('Content looks good!');
+                    return;
+                }
                 
                 const result = await moderateContent({
                     text: textToModerate,
@@ -51,16 +58,10 @@ export default function Step2({ onNext, onBack, postData }: { onNext: (data: any
                 setReason("An unexpected error occurred during the content check. Please try again.");
             }
         };
+        
+        runModeration();
 
-        // Only run check for media posts for now, as requested.
-        if (postData.postType === 'media') {
-            runModeration();
-        } else {
-            // If not a media post, just skip this step automatically.
-            onNext({});
-        }
-
-    }, [postData, onNext]);
+    }, [postData]);
 
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>

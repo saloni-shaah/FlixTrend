@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview An AI flow to moderate content for safety and quality.
@@ -30,7 +31,9 @@ Review the following content based on these policies:
 3.  **Relevance**: If an image is provided, it must be relevant to the text. Do not allow misleading thumbnails.
 
 Here is the content to review:
+{{#if text}}
 Text: "{{{text}}}"
+{{/if}}
 {{#if thumbnailDataUri}}
 Thumbnail Image: {{media url=thumbnailDataUri}}
 {{/if}}
