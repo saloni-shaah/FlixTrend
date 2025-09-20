@@ -7,8 +7,12 @@ import { Play, Volume2, VolumeX } from 'lucide-react';
 import { PostCard } from './PostCard';
 import { FlixTrendLogo } from './FlixTrendLogo';
 
-const Watermark = () => (
-    <div className="absolute bottom-2 right-2 flex items-center gap-1.5 bg-black/40 text-white py-1 px-2 rounded-full text-xs pointer-events-none z-10">
+const Watermark = ({ isAnimated = false }: { isAnimated?: boolean }) => (
+    <div
+      className={`absolute flex items-center gap-1.5 bg-black/40 text-white py-1 px-2 rounded-full text-xs pointer-events-none z-10 ${
+        isAnimated ? 'animate-[float-watermark_10s_ease-in-out_infinite]' : 'bottom-2 right-2'
+      }`}
+    >
         <FlixTrendLogo size={16} />
         <span className="font-bold">FlixTrend</span>
     </div>
@@ -171,7 +175,7 @@ export function ShortVibesPlayer({ shortVibes, onEndReached, hasMore }: { shortV
                                         playsInline
                                         preload={shouldLoad ? "auto" : "none"}
                                     />
-                                    <Watermark />
+                                    <Watermark isAnimated={true} />
                                     {!isPlaying && activeShortIndex === idx && (
                                         <div className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none">
                                             <Play size={64} className="text-white/70" />

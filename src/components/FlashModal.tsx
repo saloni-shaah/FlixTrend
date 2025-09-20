@@ -4,8 +4,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { FlixTrendLogo } from './FlixTrendLogo';
 
-const Watermark = () => (
-    <div className="absolute bottom-2 right-2 flex items-center gap-1.5 bg-black/40 text-white py-1 px-2 rounded-full text-xs pointer-events-none z-10">
+const Watermark = ({ isAnimated = false }: { isAnimated?: boolean }) => (
+    <div
+      className={`absolute flex items-center gap-1.5 bg-black/40 text-white py-1 px-2 rounded-full text-xs pointer-events-none z-10 ${
+        isAnimated ? 'animate-[float-watermark_10s_ease-in-out_infinite]' : 'bottom-2 right-2'
+      }`}
+    >
         <FlixTrendLogo size={16} />
         <span className="font-bold">FlixTrend</span>
     </div>
@@ -17,6 +21,7 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const touchStartX = useRef(0);
 
   const goToNext = useCallback(() => {
     setCurrentIndex(i => {
@@ -34,7 +39,7 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
 
   useEffect(() => {
     const flash = userFlashes.flashes[currentIndex];
-    const isVideo = flash.mediaUrl && (flash.mediaUrl.includes('.mp4') || flash.mediaUrl.includes('.webm'));
+    const isVideo = flash.mediaUrl && flash.mediaUrl.match(/\.(mp4|webm|ogg)$/i);
     setProgress(0);
     
     if (timerRef.current) clearInterval(timerRef.current);
@@ -75,6 +80,16 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
     };
   }, [currentIndex, userFlashes, goToNext]);
   
+  // Keyboard and click navigation
+  useEffect(() => {
+      const handleKeyDown = (e: KeyboardEvent) => {
+          if (e.key === 'ArrowRight') goToNext();
+          if (e.key === 'ArrowLeft') goToPrev();
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [goToNext, goToPrev]);
+
   const handleContainerClick = (e: React.MouseEvent) => {
       const { clientX, currentTarget } = e;
       const { left, width } = currentTarget.getBoundingClientRect();
@@ -84,6 +99,21 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
       } else {
           goToNext();
       }
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const touchEndX = e.changedTouches[0].clientX;
+    const deltaX = touchEndX - touchStartX.current;
+    if (Math.abs(deltaX) > 50) { // Swipe threshold
+      if (deltaX < 0) { // Swipe left
+        goToNext();
+      } else { // Swipe right
+        goToPrev();
+      }
+    }
   };
 
 
@@ -97,11 +127,13 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
   };
 
   const currentFlash = userFlashes.flashes[currentIndex];
+  const isVideo = currentFlash.mediaUrl.match(/\.(mp4|webm|ogg)$/i);
+
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90" onClick={handleContainerClick}>
-      <div className="relative w-full max-w-lg h-[90vh] flex flex-col items-center justify-center cursor-pointer" onClick={e => e.stopPropagation()}>
-        <button onClick={onClose} className="absolute top-2 right-2 text-white text-3xl z-20">&times;</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+      <div className="relative w-full max-w-lg h-[90vh] flex flex-col items-center justify-center cursor-pointer" onClick={handleContainerClick}>
+        <button onClick={(e) => { e.stopPropagation(); onClose();}} className="absolute top-2 right-2 text-white text-3xl z-20">&times;</button>
         {/* Progress Bars */}
         <div className="absolute top-4 left-2 right-2 flex gap-1 z-20">
             {userFlashes.flashes.map((_:any, idx:number) => (
@@ -112,7 +144,7 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
         </div>
         
         <div className="w-full h-full relative">
-            {currentFlash.mediaUrl && (currentFlash.mediaUrl.includes('.mp4') || currentFlash.mediaUrl.includes('.webm')) ? (
+            {isVideo ? (
                 <div className="relative w-full h-full">
                     <video
                         ref={videoRef}
@@ -122,7 +154,7 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
                         onTimeUpdate={handleVideoTimeUpdate}
                         onEnded={handleVideoEnded}
                     />
-                    <Watermark />
+                    <Watermark isAnimated={true} />
                 </div>
             ) : (
                 <div className="relative w-full h-full">

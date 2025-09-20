@@ -14,8 +14,12 @@ import { FlixTrendLogo } from './FlixTrendLogo';
 
 const db = getFirestore(app);
 
-const Watermark = () => (
-    <div className="absolute bottom-2 right-2 flex items-center gap-1.5 bg-black/40 text-white py-1 px-2 rounded-full text-xs pointer-events-none z-10">
+const Watermark = ({ isAnimated = false }: { isAnimated?: boolean }) => (
+    <div
+      className={`absolute flex items-center gap-1.5 bg-black/40 text-white py-1 px-2 rounded-full text-xs pointer-events-none z-10 ${
+        isAnimated ? 'animate-[float-watermark_10s_ease-in-out_infinite]' : 'bottom-2 right-2'
+      }`}
+    >
         <FlixTrendLogo size={16} />
         <span className="font-bold">FlixTrend</span>
     </div>
@@ -90,7 +94,7 @@ export function GuestPostCard({ post }: { post: any }) {
                                 return (
                                     <div key={index} className="relative aspect-square">
                                         {isVideo ? <video src={url} controls className="w-full h-full object-cover" /> : <OptimizedImage src={url} alt="media" className="w-full h-full object-cover" />}
-                                        <Watermark />
+                                        <Watermark isAnimated={isVideo} />
                                         {index === 3 && contentPost.mediaUrl.length > 4 && (
                                             <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                                                 <span className="text-white text-2xl font-bold">+{contentPost.mediaUrl.length - 4}</span>
@@ -106,7 +110,7 @@ export function GuestPostCard({ post }: { post: any }) {
                                 const isVideo = contentPost.mediaUrl.includes('.mp4') || contentPost.mediaUrl.includes('.webm') || contentPost.mediaUrl.includes('.ogg');
                                 return isVideo ? <video src={contentPost.mediaUrl} controls className="w-full rounded-xl" /> : <OptimizedImage src={contentPost.mediaUrl} alt="media" className="w-full rounded-xl" />;
                             })()}
-                            <Watermark />
+                            <Watermark isAnimated={contentPost.mediaUrl.includes('.mp4') || contentPost.mediaUrl.includes('.webm') || contentPost.mediaUrl.includes('.ogg')} />
                         </div>
                     )}
                 </div>
