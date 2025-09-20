@@ -214,3 +214,58 @@ exports.sendCallNotification = functions.firestore
     }
   });
 
+
+/**
+ * Deletes a post and all its associated subcollections (comments, stars, relays).
+ * This is an HTTPS Callable function.
+ */
+exports.deletePost = functions.https.onCall(async (data, context) => {
+  const { postId } = data;
+  const uid = context.auth?.uid;
+
+  if (!uid) {
+    throw new functions.https.HttpsError("unauthenticated", "You must be logged in to delete a post.");
+  }
+
+  const postRef = db.collection("posts").doc(postId);
+
+  try {
+    const postDoc = await postRef.get();
+    if (!postDoc.exists) {
+      throw new functions.https.HttpsError("not-found", "Post not found.");
+    }
+
+    const postData = postDoc.data();
+    if (postData?.userId !== uid) {
+      throw new functions.https.HttpsError("permission-denied", "You can only delete your own posts.");
+    }
+    
+    // Using a recursive delete utility for subcollections
+    // This is a more robust way to handle subcollection deletion
+    const deleteSubcollection = async (collectionRef: admin.firestore.CollectionReference) => {
+      const snapshot = await collectionRef.get();
+      if (snapshot.empty) {
+        return;
+      }
+      const batch = db.batch();
+      snapshot.docs.forEach(doc => batch.delete(doc.ref));
+      await batch.commit();
+    };
+    
+    await deleteSubcollection(postRef.collection('comments'));
+    await deleteSubcollection(postRef.collection('stars'));
+    await deleteSubcollection(postRef.collection('relays'));
+
+    // Finally, delete the post itself
+    await postRef.delete();
+
+    return { success: true, message: `Post ${postId} deleted successfully.` };
+
+  } catch (error) {
+    console.error("Error deleting post:", error);
+    if (error instanceof functions.https.HttpsError) {
+      throw error;
+    }
+    throw new functions.https.HttpsError("internal", "An error occurred while deleting the post.");
+  }
+});

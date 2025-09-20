@@ -15,8 +15,10 @@ import { OptimizedVideo } from './OptimizedVideo';
 import { FlixTrendLogo } from './FlixTrendLogo';
 import { trackInteraction } from '@/vibe-engine/interactionTracker';
 import { savePostForOffline, isPostDownloaded, removeDownloadedPost } from '@/utils/offline-db';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
 const db = getFirestore(app);
+const functions = getFunctions(app);
 
 const Watermark = () => (
     <div className="absolute bottom-2 right-2 flex items-center gap-1.5 bg-black/40 text-white py-1 px-2 rounded-full text-xs pointer-events-none z-10">
@@ -45,6 +47,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
   const [isPlaying, setIsPlaying] = React.useState(false);
   const videoRef = React.useRef<HTMLVideoElement>(null);
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
+  const deletePostCallable = httpsCallable(functions, 'deletePost');
 
 
   React.useEffect(() => {
@@ -229,7 +232,15 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
   };
 
   const handleDelete = async () => {
-    if (window.confirm("Delete this post?")) await deleteDoc(fsDoc(db, "posts", post.id));
+    if (window.confirm("Are you sure you want to permanently delete this post and all its interactions? This cannot be undone.")) {
+      try {
+        await deletePostCallable({ postId: post.id });
+        // The post will disappear from the feed due to the realtime listener.
+      } catch (error) {
+        console.error("Error deleting post:", error);
+        alert(`Failed to delete post: ${(error as any).message}`);
+      }
+    }
   };
 
   const handleEdit = async (e: React.FormEvent) => {
