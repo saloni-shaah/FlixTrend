@@ -4,7 +4,7 @@ import React, { useRef, useState, useEffect } from "react";
 import { getFirestore, collection, addDoc, serverTimestamp, getDoc, doc, query, onSnapshot, orderBy } from "firebase/firestore";
 import { auth, app } from "@/utils/firebaseClient";
 import { useRouter } from "next/navigation";
-import { MapPin, Smile, UploadCloud, X, Camera, Zap } from "lucide-react";
+import { MapPin, Smile, UploadCloud, X, Camera, Zap, Radio } from "lucide-react";
 
 const db = getFirestore(app);
 
@@ -43,8 +43,8 @@ const backgroundColors = [
   '#a0c4ff', '#bdb2ff', '#ffc6ff', '#fffffc', '#f1f1f1', '#e0e0e0'
 ];
 
-export default function CreatePostModal({ open, onClose, initialType = 'text' }: { open: boolean; onClose: () => void; initialType?: "text" | "media" | "poll" | "flash" | "camera" }) {
-  const [type, setType] = useState<"text" | "media" | "poll" | "flash" | "camera">(initialType);
+export default function CreatePostModal({ open, onClose, initialType = 'text' }: { open: boolean; onClose: () => void; initialType?: "text" | "media" | "poll" | "flash" | "camera" | "live" }) {
+  const [type, setType] = useState<"text" | "media" | "poll" | "flash" | "camera" | "live">(initialType);
   const [content, setContent] = useState("");
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
@@ -205,7 +205,7 @@ export default function CreatePostModal({ open, onClose, initialType = 'text' }:
       }
 
       let uploadedThumbnailUrl = null;
-      if (type === "media" && mediaFiles[0]?.type.startsWith('video') && thumbnailFile) {
+      if (type === 'media' && mediaFiles[0]?.type.startsWith('video') && thumbnailFile) {
         uploadedThumbnailUrl = await uploadToCloudinary(thumbnailFile);
         if (!uploadedThumbnailUrl) throw new Error("Thumbnail upload failed");
       }
@@ -274,6 +274,12 @@ export default function CreatePostModal({ open, onClose, initialType = 'text' }:
     }
     setLoading(false);
   };
+  
+  const handleGoLive = () => {
+      // Placeholder for now
+      alert("Going Live! (UI/Logic to be built)");
+      onClose();
+  }
 
   const handleModalClose = () => {
     stopCamera();
@@ -293,6 +299,7 @@ export default function CreatePostModal({ open, onClose, initialType = 'text' }:
           <button onClick={() => { setType("camera"); startCamera(); }} className={`px-3 py-1 rounded-full font-bold ${type === "camera" ? "bg-accent-cyan text-primary" : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"}`}>Camera</button>
           <button onClick={() => setType("flash")} className={`px-3 py-1 rounded-full font-bold ${type === "flash" ? "bg-accent-cyan text-primary" : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"}`}>Flash</button>
           <button onClick={() => setType("poll")} className={`px-3 py-1 rounded-full font-bold ${type === "poll" ? "bg-accent-cyan text-primary" : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"}`}>Poll</button>
+          <button onClick={() => setType("live")} className={`px-3 py-1 rounded-full font-bold ${type === "live" ? "bg-accent-cyan text-primary" : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"}`}>Live</button>
         </div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 flex-1 overflow-y-auto pr-2">
           {type === "text" && (
@@ -380,6 +387,21 @@ export default function CreatePostModal({ open, onClose, initialType = 'text' }:
             </div>
           )}
 
+          {type === 'live' && (
+            <div className="flex flex-col items-center gap-4 text-center">
+                <Radio className="text-red-500 animate-pulse" size={48} />
+                <h3 className="text-xl font-bold text-white">You're about to go live!</h3>
+                <p className="text-sm text-gray-400">Give your stream a title to let people know what's up.</p>
+                <input
+                    type="text"
+                    className="input-glass w-full"
+                    placeholder="Live Stream Title (e.g., Sunset Vibes, Q&A)"
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                />
+            </div>
+          )}
+
           {type === 'media' && mediaFiles.length > 0 && mediaFiles[0].type.startsWith('video') && (
              <div className="flex flex-col gap-2">
                 <label className="text-sm font-bold text-accent-cyan">Upload Thumbnail (Optional)</label>
@@ -463,9 +485,15 @@ export default function CreatePostModal({ open, onClose, initialType = 'text' }:
           )}
           
           <div className="mt-auto">
-            <button type="submit" className="px-8 py-3 w-full rounded-full bg-accent-cyan text-primary font-bold text-lg shadow-fab-glow hover:scale-105 hover:shadow-lg transition-all duration-200 disabled:opacity-60" disabled={loading || (uploadProgress !== null && uploadProgress < 100)}>
-              {loading ? (uploadProgress !== null ? `Uploading... ${uploadProgress}%` : "Submitting...") : "Submit"}
-            </button>
+            {type === 'live' ? (
+                <button type="button" onClick={handleGoLive} className="px-8 py-3 w-full rounded-full bg-red-500 text-white font-bold text-lg shadow-fab-glow hover:scale-105 hover:shadow-lg transition-all duration-200 disabled:opacity-60" disabled={loading || !content.trim()}>
+                    Go Live Now
+                </button>
+            ) : (
+                <button type="submit" className="px-8 py-3 w-full rounded-full bg-accent-cyan text-primary font-bold text-lg shadow-fab-glow hover:scale-105 hover:shadow-lg transition-all duration-200 disabled:opacity-60" disabled={loading || (uploadProgress !== null && uploadProgress < 100)}>
+                    {loading ? (uploadProgress !== null ? `Uploading... ${uploadProgress}%` : "Submitting...") : "Submit"}
+                </button>
+            )}
             {error && <div className="text-red-400 text-center animate-bounce mt-2">{error}</div>}
           </div>
         </form>

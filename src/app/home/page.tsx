@@ -4,7 +4,7 @@ import "regenerator-runtime/runtime";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import dynamic from 'next/dynamic';
 import { getFirestore, collection, query, orderBy, onSnapshot, getDoc, doc, limit, startAfter, getDocs, where } from "firebase/firestore";
-import { Plus, Bell, Search, Music, Bot, Mic, Camera } from "lucide-react";
+import { Plus, Bell, Search, Music, Bot, Mic, Camera, Radio } from "lucide-react";
 import { auth } from "@/utils/firebaseClient";
 import { useAppState } from "@/utils/AppStateContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -29,7 +29,7 @@ const db = getFirestore(app);
 
 const CHAT_KEYWORDS = ['hi', 'hello', 'hey', 'yo', 'almighty', 'what', 'who', 'when', 'where', 'why', 'how'];
 
-function CreatePostPrompt({ onPromptClick, isPremium }: { onPromptClick: (type: "text" | "media" | "poll" | "camera") => void; isPremium: boolean }) {
+function CreatePostPrompt({ onPromptClick, isPremium }: { onPromptClick: (type: "text" | "media" | "poll" | "camera" | "live") => void; isPremium: boolean }) {
   const [userProfile, setUserProfile] = useState<any>(null);
 
   useEffect(() => {
@@ -67,6 +67,7 @@ function CreatePostPrompt({ onPromptClick, isPremium }: { onPromptClick: (type: 
               <button onClick={() => onPromptClick('media')} className="flex items-center gap-2 text-gray-300 hover:text-accent-cyan"><ImageIcon/> Media</button>
               <button onClick={() => onPromptClick('camera')} className="flex items-center gap-2 text-gray-300 hover:text-accent-cyan"><Camera/> Camera</button>
               <button onClick={() => onPromptClick('poll')} className="flex items-center gap-2 text-gray-300 hover:text-accent-cyan"><BarChart3/> Poll</button>
+              <button onClick={() => onPromptClick('live')} className="flex items-center gap-2 text-red-500 hover:text-red-400"><Radio className="animate-pulse"/> Live</button>
           </div>
         </div>
         {!isPremium && <PremiumUpgradeBanner />}
@@ -99,7 +100,7 @@ function PremiumUpgradeBanner() {
 
 export default function HomePage() {
   const [showPostModal, setShowPostModal] = useState(false);
-  const [initialPostType, setInitialPostType] = useState<"text" | "media" | "poll" | "flash" | "camera">("text");
+  const [initialPostType, setInitialPostType] = useState<"text" | "media" | "poll" | "flash" | "camera" | "live">("text");
   const [showMusicModal, setShowMusicModal] = useState(false);
   const [posts, setPosts] = useState<any[]>([]);
   const [flashes, setFlashes] = useState<any[]>([]);
@@ -230,7 +231,7 @@ export default function HomePage() {
     return () => unsub();
   }, [currentUser]);
 
-  const handleCreatePost = (type: "text" | "media" | "poll" | "flash" | "camera") => {
+  const handleCreatePost = (type: "text" | "media" | "poll" | "flash" | "camera" | "live") => {
     setInitialPostType(type);
     setShowPostModal(true);
   };
