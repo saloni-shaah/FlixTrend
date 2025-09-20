@@ -27,6 +27,9 @@ module.exports = {
       fontFamily: {
         headline: ['"Space Grotesk"', 'sans-serif'],
         body: ['"Inter"', 'sans-serif'],
+        cursive: ['"Dancing Script"', 'cursive'],
+        calligraphy: ['"Great Vibes"', 'cursive'],
+        italiano: ['"Italianno"', 'cursive'],
       },
       keyframes: {
         'fade-in': {
