@@ -4,7 +4,7 @@ import React, { useRef, useState, useEffect } from "react";
 import { getFirestore, collection, addDoc, serverTimestamp, getDoc, doc, query, onSnapshot, orderBy } from "firebase/firestore";
 import { auth, app } from "@/utils/firebaseClient";
 import { useRouter } from "next/navigation";
-import { MapPin, Smile, UploadCloud, X } from "lucide-react";
+import { MapPin, Smile, UploadCloud, X, Camera, Zap } from "lucide-react";
 
 const db = getFirestore(app);
 
@@ -43,8 +43,8 @@ const backgroundColors = [
   '#a0c4ff', '#bdb2ff', '#ffc6ff', '#fffffc', '#f1f1f1', '#e0e0e0'
 ];
 
-export default function CreatePostModal({ open, onClose, initialType = 'text' }: { open: boolean; onClose: () => void; initialType?: "text" | "media" | "poll" | "flash" }) {
-  const [type, setType] = useState<"text" | "media" | "poll" | "flash">(initialType);
+export default function CreatePostModal({ open, onClose, initialType = 'text' }: { open: boolean; onClose: () => void; initialType?: "text" | "media" | "poll" | "flash" | "camera" }) {
+  const [type, setType] = useState<"text" | "media" | "poll" | "flash" | "camera">(initialType);
   const [content, setContent] = useState("");
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
@@ -64,10 +64,65 @@ export default function CreatePostModal({ open, onClose, initialType = 'text' }:
   const [appSongs, setAppSongs] = useState<any[]>([]);
   const [selectedSong, setSelectedSong] = useState<any>(null);
   const [showSongPicker, setShowSongPicker] = useState(false);
+  
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
 
   useEffect(() => {
     setType(initialType);
-  }, [initialType]);
+    if (initialType === 'camera' && open) {
+        startCamera();
+    } else {
+        stopCamera();
+    }
+  }, [initialType, open]);
+
+  useEffect(() => {
+    if (type !== 'camera') {
+        stopCamera();
+    }
+  }, [type]);
+
+  const startCamera = async () => {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        setCameraStream(stream);
+        if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+        }
+    } catch (err) {
+        setError("Camera access was denied. Please enable it in your browser settings.");
+        console.error("Camera error:", err);
+    }
+  };
+
+  const stopCamera = () => {
+      if (cameraStream) {
+          cameraStream.getTracks().forEach(track => track.stop());
+          setCameraStream(null);
+      }
+  };
+
+  const handleCapture = () => {
+    if (videoRef.current && canvasRef.current) {
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const context = canvas.getContext('2d');
+        context?.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+        
+        canvas.toBlob(blob => {
+            if (blob) {
+                const file = new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
+                setMediaFiles(prev => [...prev, file]);
+                setMediaUrls(prev => [...prev, URL.createObjectURL(file)]);
+                setType('media'); // Switch back to media view to show preview
+            }
+        }, 'image/jpeg');
+    }
+  };
 
   useEffect(() => {
     const q = query(collection(db, "songs"), orderBy("createdAt", "desc"));
@@ -174,7 +229,7 @@ export default function CreatePostModal({ open, onClose, initialType = 'text' }:
         displayName: profileData.name || user.displayName,
         username: profileData.username,
         avatar_url: profileData.avatar_url,
-        type,
+        type: type === 'camera' ? 'media' : type,
         content: content,
         mediaUrl: uploadedMediaUrls.length > 0 ? (type === 'flash' ? uploadedMediaUrls[0] : uploadedMediaUrls) : null,
         thumbnailUrl: uploadedThumbnailUrl,
@@ -220,16 +275,22 @@ export default function CreatePostModal({ open, onClose, initialType = 'text' }:
     setLoading(false);
   };
 
+  const handleModalClose = () => {
+    stopCamera();
+    onClose();
+  }
+
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
       <div className="bg-white dark:bg-card rounded-2xl p-6 w-full max-w-md relative animate-pop shadow-xl border border-gray-100 dark:border-accent-cyan/20 flex flex-col max-h-[90vh]">
-        <button onClick={onClose} className="absolute top-2 right-2 text-accent-pink text-2xl">&times;</button>
+        <button onClick={handleModalClose} className="absolute top-2 right-2 text-accent-pink text-2xl">&times;</button>
         <h2 className="text-xl font-headline font-bold mb-4 text-accent-cyan">Create Post</h2>
         <div className="flex gap-2 mb-4 flex-wrap">
           <button onClick={() => setType("text")} className={`px-3 py-1 rounded-full font-bold ${type === "text" ? "bg-accent-cyan text-primary" : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"}`}>Text</button>
           <button onClick={() => setType("media")} className={`px-3 py-1 rounded-full font-bold ${type === "media" ? "bg-accent-cyan text-primary" : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"}`}>Media</button>
+          <button onClick={() => { setType("camera"); startCamera(); }} className={`px-3 py-1 rounded-full font-bold ${type === "camera" ? "bg-accent-cyan text-primary" : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"}`}>Camera</button>
           <button onClick={() => setType("flash")} className={`px-3 py-1 rounded-full font-bold ${type === "flash" ? "bg-accent-cyan text-primary" : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"}`}>Flash</button>
           <button onClick={() => setType("poll")} className={`px-3 py-1 rounded-full font-bold ${type === "poll" ? "bg-accent-cyan text-primary" : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"}`}>Poll</button>
         </div>
@@ -299,6 +360,24 @@ export default function CreatePostModal({ open, onClose, initialType = 'text' }:
                     </div>
                 )}
             </>
+          )}
+
+          {type === 'camera' && (
+            <div className="flex flex-col items-center gap-4">
+                <div className="w-full aspect-video bg-black rounded-lg overflow-hidden">
+                    {cameraStream ? (
+                        <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+                    ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-400">
+                            {error ? error : "Starting camera..."}
+                        </div>
+                    )}
+                </div>
+                <button type="button" className="btn-glass bg-accent-pink text-white w-20 h-20 rounded-full flex items-center justify-center" onClick={handleCapture} disabled={!cameraStream}>
+                    <Zap size={32} />
+                </button>
+                <canvas ref={canvasRef} className="hidden"></canvas>
+            </div>
           )}
 
           {type === 'media' && mediaFiles.length > 0 && mediaFiles[0].type.startsWith('video') && (
@@ -394,5 +473,3 @@ export default function CreatePostModal({ open, onClose, initialType = 'text' }:
     </div>
   );
 }
-
-    
