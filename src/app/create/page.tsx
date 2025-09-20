@@ -27,8 +27,8 @@ function CreatePostPageContent() {
 
     const handleNext = (data: any) => {
         setPostData(prev => ({ ...prev, ...data }));
-        
-        if (postType && ['text', 'poll', 'live', 'flash'].includes(postType) && step === 1) {
+        // Live posts are simple and can skip the AI check step
+        if (postType === 'live' && step === 1) {
             setStep(3);
         } else {
             setStep(s => s + 1);
@@ -36,7 +36,8 @@ function CreatePostPageContent() {
     };
 
     const handleBack = () => {
-        if (postType && ['text', 'poll', 'live', 'flash'].includes(postType) && step === 3) {
+        // Handle backing from publish to content for live posts
+        if (postType === 'live' && step === 3) {
             setStep(1);
         } else {
             setStep(s => s - 1);
@@ -58,8 +59,14 @@ function CreatePostPageContent() {
         <Step3 key="step3" onBack={handleBack} postData={postData} />,
     ] : [];
     
-    const totalSteps = postType && ['text', 'poll', 'live', 'flash'].includes(postType) ? 2 : 3;
-    const currentStepLogic = step === 3 && totalSteps === 2 ? 2 : step;
+    const totalSteps = postType === 'live' ? 2 : 3;
+    const currentStepLogic = step;
+    
+    const stepLabels = ['Details', 'AI Check', 'Publish'];
+    if (totalSteps === 2) {
+        stepLabels.splice(1, 1); // Remove 'AI Check' for live
+    }
+
 
     return (
         <div className="w-full max-w-4xl mx-auto flex flex-col items-center p-4 min-h-screen">
@@ -90,9 +97,7 @@ function CreatePostPageContent() {
                     {/* Progress Bar */}
                     <div className="w-full max-w-lg mb-8">
                         <div className="flex justify-between items-center text-xs font-bold text-gray-400">
-                            <span>Details</span>
-                            {totalSteps === 3 && <span>AI Check</span>}
-                            <span>Publish</span>
+                           {stepLabels.map(label => <span key={label}>{label}</span>)}
                         </div>
                          <div className="relative w-full h-4 mt-1">
                             <svg width="100%" height="100%" viewBox="0 0 200 10" preserveAspectRatio="none" className="absolute top-0 left-0">
@@ -113,7 +118,7 @@ function CreatePostPageContent() {
                                         height="10"
                                         fill="url(#paint0_linear_7_9)"
                                         initial={{ width: 0 }}
-                                        animate={{ width: (currentStepLogic / totalSteps) * 200 }}
+                                        animate={{ width: ((currentStepLogic - 1) / (totalSteps - 1)) * 200 }}
                                         transition={{ duration: 0.5, ease: 'easeInOut' }}
                                     />
                                 </g>
