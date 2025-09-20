@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -6,7 +7,7 @@ import { auth, app } from '@/utils/firebaseClient';
 
 const db = getFirestore(app);
 
-export function NotificationPanel({ onClose }: { onClose: () => void }) {
+export default function NotificationPanel({ onClose }: { onClose: () => void }) {
   const [notifications, setNotifications] = useState<any[]>([]);
   const currentUser = auth.currentUser;
 
