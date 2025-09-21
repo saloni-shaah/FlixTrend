@@ -496,7 +496,7 @@ function timeSince(date: Date) {
 function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
   const [chats, setChats] = useState<any[]>([]);
   const [joinableGroups, setJoinableGroups] = useState<any[]>([]);
-  const [selectedChat, setSelectedChat] = useState<any>(null);
+  const { selectedChat, setSelectedChat } = useAppState();
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [unreadCounts, setUnreadCounts] = useState<{ [key: string]: number }>({});
@@ -644,8 +644,13 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
   
   useEffect(() => {
     if (!selectedChat) return;
-    handleSelectChat(selectedChat);
-  }, [selectedChat, firebaseUser]);
+    const unsub = handleSelectChat(selectedChat);
+    return () => {
+        if (typeof unsub === 'function') {
+            unsub();
+        }
+    };
+  }, [selectedChat?.id, firebaseUser.uid]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -690,7 +695,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
             await addDoc(collection(db, "chats", chatId, "messages"), assistantMessage);
         } else {
             // Handle error, maybe show a toast
-            console.error(response.failure);
+            alert(`An error occurred while communicating with the AI: ${response.failure}`);
             const errorMessage: any = {
                 sender: 'almighty-bot',
                 text: "Yikes, my brain just glitched. Try that again? 😅",
@@ -1214,3 +1219,5 @@ export default function SignalPage() {
   }
   return <ClientOnlySignalPage firebaseUser={firebaseUser} />;
 }
+
+    
