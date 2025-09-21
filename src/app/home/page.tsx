@@ -18,7 +18,7 @@ import { Sparkles } from 'lucide-react';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import { AlmightyLogo } from "@/components/ui/logo";
 
-const AddMusicModal = dynamic(() => import('@/components/MusicDiscovery').then(mod => mod.AddMusicModal), { ssr: false });
+const AddMusicModal = dynamic(() => import('@/components/MusicDiscovery'), { ssr: false });
 const FlashModal = dynamic(() => import('@/components/FlashModal'), { ssr: false });
 const NotificationPanel = dynamic(() => import('@/components/NotificationPanel'), { ssr: false });
 const LiveStream = dynamic(() => import('@/components/LiveStream').then(mod => mod.LiveStream), { ssr: false });
@@ -404,4 +404,12 @@ function HomePageContent() {
       </AnimatePresence>
     </div>
   );
+}
+
+export default function HomePage() {
+    return (
+        <Suspense fallback={<VibeSpaceLoader />}>
+            <HomePageContent />
+        </Suspense>
+    )
 }
