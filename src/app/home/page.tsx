@@ -387,7 +387,7 @@ function HomePageContent() {
       <div className="fixed bottom-24 right-4 z-30">
         <Link href="/signal">
             <motion.button 
-                className="btn-glass-icon w-16 h-16 bg-gradient-to-tr from-accent-purple to-accent-cyan flex items-center justify-center shadow-fab-glow"
+                className="w-16 h-16 rounded-full flex items-center justify-center shadow-fab-glow bg-beige-200/20 dark:bg-tan-900/20 backdrop-blur-md border border-beige-300/30 dark:border-tan-800/30"
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
                 title="Ask Almighty AI"
