@@ -266,7 +266,7 @@ function UserPlaylists({ userId }: { userId: string }) {
         const unsub = onSnapshot(q, (snapshot) => {
             const playlistsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             // Sort client-side
-            playlistsData.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
+            playlistsData.sort((a:any, b:any) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
             setPlaylists(playlistsData);
             setLoading(false);
         });
@@ -311,7 +311,7 @@ function UserCollections({ userId }: { userId: string }) {
         const q = query(collection(db, "collections"), where("ownerId", "==", userId));
         const unsub = onSnapshot(q, (snapshot) => {
             const collectionsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            collectionsData.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
+            collectionsData.sort((a:any, b:any) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
             setCollections(collectionsData);
             setLoading(false);
         });
@@ -587,7 +587,7 @@ export default function SquadPage() {
             {isDeveloper && (
                 <ShieldCheck className="w-6 h-6 text-accent-purple" title="FlixTrend Developer"/>
             )}
-            {isPremium && (
+             {isPremium && (
                 <CheckCircle className="w-6 h-6 text-blue-500" title="Premium User"/>
             )}
         </div>
