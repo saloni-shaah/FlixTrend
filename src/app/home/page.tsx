@@ -18,7 +18,7 @@ import { Sparkles } from 'lucide-react';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import { AlmightyLogo } from "@/components/ui/logo";
 
-const AddMusicModal = dynamic(() => import('@/components/MusicDiscovery'), { ssr: false });
+const AddMusicModal = dynamic(() => import('@/components/MusicDiscovery').then(mod => mod.MusicDiscovery), { ssr: false });
 const FlashModal = dynamic(() => import('@/components/FlashModal'), { ssr: false });
 const NotificationPanel = dynamic(() => import('@/components/NotificationPanel'), { ssr: false });
 const LiveStream = dynamic(() => import('@/components/LiveStream').then(mod => mod.LiveStream), { ssr: false });
@@ -385,7 +385,7 @@ function HomePageContent() {
 
        {/* Bottom Right AI FAB */}
       <div className="fixed bottom-24 right-4 z-30">
-        <Link href="/almighty">
+        <Link href="/signal">
             <motion.button 
                 className="btn-glass-icon w-16 h-16 bg-gradient-to-tr from-accent-purple to-accent-cyan flex items-center justify-center shadow-fab-glow"
                 whileHover={{ scale: 1.1 }}
