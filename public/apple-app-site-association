@@ -1,11 +1,12 @@
+
 {
-  "applinks": {
-    "apps": [],
-    "details": [
-      {
-        "appID": "REPLACE_WITH_YOUR_TEAM_ID.com.example.flixtrend",
-        "paths": ["/post/*", "/squad/*"]
-      }
-    ]
-  }
+    "applinks": {
+        "apps": [],
+        "details": [
+            {
+                "appID": "<TEAM_ID>.<BUNDLE_ID>",
+                "paths": [ "*" ]
+            }
+        ]
+    }
 }
