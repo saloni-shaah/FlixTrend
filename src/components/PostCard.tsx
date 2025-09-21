@@ -1,12 +1,13 @@
+
 "use client";
 
 import React from 'react';
-import { getFirestore, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, deleteDoc, updateDoc, doc as fsDoc, setDoc, getDoc, doc, runTransaction } from "firebase/firestore";
-import { FaPlay, FaRegComment, FaExclamationTriangle, FaVolumeMute, FaUserSlash, FaLink, FaEllipsisV, FaMusic } from "react-icons/fa";
-import { Repeat2, Star, Share, MessageCircle, Bookmark, MapPin, Smile, Download, X } from "lucide-react";
+import { getFirestore, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, deleteDoc, updateDoc, doc as fsDoc, setDoc, getDoc, runTransaction } from "firebase/firestore";
+import { FaPlay, FaRegComment, FaExclamationTriangle, FaVolumeMute, FaUserSlash, FaLink, FaMusic } from "react-icons/fa";
+import { Repeat2, Star, Share, MessageCircle, Bookmark, MapPin, Smile, Download, X, MoreVertical, Check, ChevronRight, Circle } from "lucide-react";
 import { auth, app } from '@/utils/firebaseClient';
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { ShareModal } from './ShareModal';
 import { SignalShareModal } from './SignalShareModal';
 import { AddToCollectionModal } from './AddToCollectionModal';
@@ -17,6 +18,49 @@ import { trackInteraction } from '@/vibe-engine/interactionTracker';
 import { savePostForOffline, isPostDownloaded, removeDownloadedPost } from '@/utils/offline-db';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { CheckCircle, Award, Mic, Crown, Zap, Rocket, Search, Pin, Phone, Mail, Folder } from "lucide-react";
+import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu"
+import { cn } from "@/lib/utils"
+
+
+// START: Copied DropdownMenu components
+const DropdownMenu = DropdownMenuPrimitive.Root
+const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger
+const DropdownMenuContent = React.forwardRef<
+  React.ElementRef<typeof DropdownMenuPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Content>
+>(({ className, sideOffset = 4, ...props }, ref) => (
+  <DropdownMenuPrimitive.Portal>
+    <DropdownMenuPrimitive.Content
+      ref={ref}
+      sideOffset={sideOffset}
+      className={cn(
+        "z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+        className
+      )}
+      {...props}
+    />
+  </DropdownMenuPrimitive.Portal>
+))
+DropdownMenuContent.displayName = DropdownMenuPrimitive.Content.displayName
+const DropdownMenuItem = React.forwardRef<
+  React.ElementRef<typeof DropdownMenuPrimitive.Item>,
+  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Item> & {
+    inset?: boolean
+  }
+>(({ className, inset, ...props }, ref) => (
+  <DropdownMenuPrimitive.Item
+    ref={ref}
+    className={cn(
+      "relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+      inset && "pl-8",
+      className
+    )}
+    {...props}
+  />
+))
+DropdownMenuItem.displayName = DropdownMenuPrimitive.Item.displayName
+// END: Copied DropdownMenu components
+
 
 const db = getFirestore(app);
 const functions = getFunctions(app);
@@ -417,31 +461,53 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
   }
   
   const ActionButtons = () => (
-    <div className={`flex items-center justify-between mt-2 pt-2 border-t border-glass-border ${isShortVibe ? 'w-full' : ''}`}>
-        <div className={`${isShortVibe ? 'flex flex-col items-center gap-6' : 'flex items-center justify-start gap-6'}`} onClick={(e) => e.stopPropagation()}>
-          <button className={`flex items-center gap-1.5 font-bold transition-all ${isShortVibe ? 'flex-col text-white' : 'text-lg text-muted-foreground hover:text-brand-gold'}`} onClick={() => setShowComments(true)}>
-            <MessageCircle size={isShortVibe ? 32 : 20} /> <span className="text-sm">{commentCount}</span>
+    <div className={`flex items-center justify-between mt-2 pt-2 border-t border-glass-border`}>
+        <div className={'flex items-center justify-start gap-6'}>
+          <button className={`flex items-center gap-1.5 font-bold transition-all text-lg text-muted-foreground hover:text-brand-gold`} onClick={() => setShowComments(true)}>
+            <MessageCircle size={20} /> <span className="text-sm">{commentCount}</span>
           </button>
-          <button className={`flex items-center gap-1.5 font-bold transition-all ${isRelayed ? "text-green-400" : isShortVibe ? "text-white hover:text-green-300" : "text-lg text-muted-foreground hover:text-green-400"}`} onClick={handleRelay} >
-            <Repeat2 size={isShortVibe ? 32 : 20} /> <span className="text-sm">{relayCount}</span>
+          <button className={`flex items-center gap-1.5 font-bold transition-all ${isStarred ? "text-yellow-400" : "text-lg text-muted-foreground hover:text-yellow-400"}`} onClick={handleStar}>
+            <Star size={20} fill={isStarred ? "currentColor" : "none"} /> <span className="text-sm">{starCount}</span>
           </button>
-          <button className={`flex items-center gap-1.5 font-bold transition-all ${isStarred ? "text-yellow-400" : isShortVibe ? "text-white hover:text-yellow-300" : "text-lg text-muted-foreground hover:text-yellow-400"}`} onClick={handleStar}>
-            <Star size={isShortVibe ? 32 : 20} fill={isStarred ? "currentColor" : "none"} /> <span className="text-sm">{starCount}</span>
-          </button>
-          <button className={`flex items-center gap-1.5 font-bold transition-all ${isShortVibe ? 'flex-col text-white' : 'text-lg text-muted-foreground hover:text-accent-cyan'}`} onClick={(e) => { e.stopPropagation(); setShowShareModal(true); }}>
-            <Share size={isShortVibe ? 32 : 20} />
+          <button className={`flex items-center gap-1.5 font-bold transition-all text-lg text-muted-foreground hover:text-accent-cyan`} onClick={(e) => { e.stopPropagation(); setShowShareModal(true); }}>
+            <Share size={20} />
           </button>
         </div>
-        {!isShortVibe && (
-           <div className="flex items-center gap-4">
-                <button className={`flex items-center gap-1.5 font-bold transition-all ${isDownloaded ? "text-accent-green" : "text-lg text-muted-foreground hover:text-accent-green"}`} onClick={handleDownload}>
-                    <Download size={20} />
-                </button>
-                <button className={`flex items-center gap-1.5 font-bold transition-all ${isSaved ? "text-accent-purple" : "text-lg text-muted-foreground hover:text-accent-purple"}`} onClick={() => setShowCollectionModal(true)}>
-                    <Bookmark size={20} fill={isSaved ? "currentColor" : "none"}/>
-                </button>
-           </div>
-        )}
+        <div className="flex items-center gap-4">
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <button className="p-2 rounded-full hover:bg-white/10 text-muted-foreground">
+                        <MoreVertical size={20} />
+                    </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="glass-card">
+                    <DropdownMenuItem onSelect={handleRelay} disabled={isRelayed}>
+                        <Repeat2 size={16} className="mr-2"/> {isRelayed ? "Relayed" : "Relay"}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={handleDownload}>
+                        <Download size={16} className="mr-2"/> {isDownloaded ? "Remove Download" : "Download"}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => setShowCollectionModal(true)}>
+                         <Bookmark size={16} className="mr-2" /> Save to Collection
+                    </DropdownMenuItem>
+                    {currentUser?.uid === post.userId && post.type !== 'relay' && (
+                      <>
+                        <DropdownMenuItem onSelect={() => setShowEdit(true)}>
+                          Edit Post
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={handleDelete} className="text-red-400">
+                          Delete Post
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                     {currentUser?.uid !== post.userId && (
+                        <DropdownMenuItem onSelect={() => alert('Reported!')} className="text-red-400">
+                            Report Post
+                        </DropdownMenuItem>
+                     )}
+                </DropdownMenuContent>
+            </DropdownMenu>
+       </div>
     </div>
   );
 
@@ -489,15 +555,6 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
           </div>
       )}
 
-      <div className="relative">
-        {currentUser?.uid === post.userId && post.type !== 'relay' && (
-            <div className="absolute top-0 right-0 flex gap-2 z-10">
-                <button className="text-xs px-2 py-1 rounded bg-white/10 text-white font-bold hover:bg-white/20" onClick={() => setShowEdit(true)}>Edit</button>
-                <button className="text-xs px-2 py-1 rounded bg-red-500/20 text-red-400 font-bold hover:bg-red-500/40" onClick={handleDelete}>Delete</button>
-            </div>
-        )}
-      </div>
-      
       {showEdit && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <form onSubmit={handleEdit} className="glass-card p-6 w-full max-w-md relative">
@@ -728,3 +785,5 @@ function CommentForm({ postId, postAuthorId, parentId, onCommentPosted, isReply 
     </form>
   )
 }
+
+    
