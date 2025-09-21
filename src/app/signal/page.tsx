@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp, where, writeBatch, getDocs, updateDoc, deleteDoc, arrayUnion, arrayRemove, deleteField } from "firebase/firestore";
 import { auth, db } from "@/utils/firebaseClient";
-import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, Smile, Trash2, Users, CheckSquare, Square, MoreVertical, UserPlus, UserX, Edit, Shield, EyeOff, LogOut, UploadCloud, Languages, UserCircle, Cake, MapPin, AtSign, User, Bot } from "lucide-react";
+import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, Smile, Trash2, Users, CheckSquare, Square, MoreVertical, UserPlus, UserX, Edit, Shield, EyeOff, LogOut, UploadCloud, Languages, UserCircle, Cake, MapPin, AtSign, User, Bot, Search } from "lucide-react";
 import { useAppState } from "@/utils/AppStateContext";
 import { createCall } from "@/utils/callService";
 import { motion, AnimatePresence } from "framer-motion";
@@ -513,6 +513,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
   const [showLanguageSelector, setShowLanguageSelector] = useState<string | null>(null);
   const [isTranslating, setIsTranslating] = useState<string | null>(null);
   const [isAlmightyLoading, setIsAlmightyLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const almightyChatObject = {
       id: `almighty-chat_${firebaseUser.uid}`,
@@ -941,6 +942,11 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
     return <p className="text-xs text-gray-400">{selectedChat.isGroup ? `${selectedChat.members.length} members` : 'Offline'}</p>;
   }
 
+  const filteredChats = chats.filter(chat => 
+    chat.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    chat.username?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="flex h-screen w-full bg-transparent font-body text-white overflow-hidden">
         {showCreateGroup && <CreateGroupModal mutuals={chats.filter(c => !c.isGroup && !c.isAlmighty)} currentUser={firebaseUser} onClose={() => setShowCreateGroup(false)} onGroupCreated={(newGroup) => {
@@ -954,11 +960,23 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                     <Users size={20} />
                 </button>
             </div>
+            <div className="p-2">
+                <div className="relative">
+                    <input 
+                        type="text"
+                        placeholder="Search chats..."
+                        className="input-glass w-full pl-10"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20}/>
+                </div>
+            </div>
             <div className="flex-1 overflow-y-auto">
-                {chats.length === 0 ? (
-                    <div className="text-gray-400 text-center p-8">No contacts or groups yet. Follow some users to start chatting!</div>
+                {filteredChats.length === 0 ? (
+                    <div className="text-gray-400 text-center p-8">No chats found.</div>
                 ) : (
-                    chats.map((chat) => (
+                    filteredChats.map((chat) => (
                         <button key={chat.isAlmighty ? chat.id : (chat.isGroup ? chat.id : `dm-${chat.uid}`)} className={`w-full flex items-center gap-4 px-4 py-3 text-left hover:bg-accent-cyan/10 transition-colors duration-200 ${selectedChat?.id === chat.id ? "bg-accent-cyan/20" : ""}`} onClick={() => handleSelectChat(chat)}>
                             <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-xl overflow-hidden shrink-0">
                                 {chat.isAlmighty ? <Bot /> :
@@ -1219,5 +1237,3 @@ export default function SignalPage() {
   }
   return <ClientOnlySignalPage firebaseUser={firebaseUser} />;
 }
-
-    
