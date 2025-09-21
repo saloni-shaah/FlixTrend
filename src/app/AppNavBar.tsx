@@ -2,7 +2,7 @@
 "use client";
 import { usePathname, useRouter } from "next/navigation";
 import { useAppState } from "@/utils/AppStateContext";
-import { Home, Users, MessageSquare } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { getFirestore, collection, query, where, onSnapshot, getDocs } from "firebase/firestore";
@@ -27,6 +27,25 @@ const ScopeIcon = ({ className }: { className?: string }) => (
             <path d="M12 6C8.68629 6 6 8.68629 6 12C6 15.3137 8.68629 18 12 18C15.3137 18 18 15.3137 18 12C18 8.68629 15.3137 6 12 6ZM12 16C9.79086 16 8 14.2091 8 12C8 9.79086 9.79086 8 12 8C14.2091 8 16 9.79086 16 12C16 14.2091 14.2091 16 12 16Z" fill="currentColor" fillOpacity="0.3"/>
         </g>
     </svg>
+);
+
+// Custom SVG for VibeSpace (Home)
+const VibeSpaceIcon = ({ className }: { className?: string }) => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <g>
+      <path d="M3 8L12 3L21 8V19C21 19.5523 20.5523 20 20 20H4C3.44772 20 3 19.5523 3 19V8Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+      <path d="M8 20V14H16V20" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+      <path d="M12 11L12 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    </g>
+  </svg>
+);
+
+// Custom SVG for Squad (Profile)
+const SquadIcon = ({ className }: { className?: string }) => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <path d="M12 12C14.2091 12 16 10.2091 16 8C16 5.79086 14.2091 4 12 4C9.79086 4 8 5.79086 8 8C8 10.2091 9.79086 12 12 12Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M20.59 22C20.59 18.13 16.74 15 12 15C7.26 15 3.41 18.13 3.41 22" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
 );
 
 
@@ -184,9 +203,9 @@ export default function AppNavBar() {
 
   return (
     <nav className="fixed bottom-0 left-0 w-full z-40 bg-background/50 backdrop-blur-lg border-t border-glass-border flex justify-around items-center py-2">
-      <NavButton href="/home" icon={Home} label="VibeSpace" />
+      <NavButton href="/home" icon={VibeSpaceIcon} label="VibeSpace" />
       <NavButton href="/scope" icon={ScopeIcon} label="Scope" />
-      <NavButton href="/squad" icon={Users} label="Squad" />
+      <NavButton href="/squad" icon={SquadIcon} label="Squad" />
       <NavButton href="/signal" icon={MessageSquare} label="Signal" hasNotification={hasUnreadMessages} />
     </nav>
   );
