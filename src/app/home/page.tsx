@@ -374,7 +374,7 @@ function HomePageContent() {
       {/* Top Right FABs */}
       <div className="fixed top-4 right-4 z-30 flex flex-col items-center">
         <button
-          className="btn-glass-icon"
+          className="relative inline-flex items-center justify-center bg-white/10 dark:bg-black/20 backdrop-blur-md border border-white/10 dark:border-black/20 w-12 h-12 rounded-full text-white hover:bg-gradient-to-tr hover:from-accent-purple hover:to-accent-cyan transition-all"
           title="Notifications"
           onClick={() => setShowNotifications(true)}
           aria-label="Notifications"
