@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { generateLivekitToken } from '@/ai/flows/generate-livekit-token-flow';
 import {
-  Room, LocalVideoTrack,
+  Room, LocalVideoTrack, Participant,
 } from 'livekit-client';
 import { auth, db } from '@/utils/firebaseClient';
 import { Video, Mic, MicOff, VideoOff, LogOut, Pause, Play, ArrowLeft } from 'lucide-react';
@@ -72,7 +72,7 @@ export function LiveStream({ title, onStreamEnd }: { title: string, onStreamEnd:
           await room.localParticipant.setCameraEnabled(true);
           await room.localParticipant.setMicrophoneEnabled(true);
           
-          room.localParticipant.tracks.forEach(publication => {
+          room.localParticipant.videoTracks.forEach(publication => {
               if (publication.track?.kind === 'video' && localVideoRef.current) {
                 publication.track.attach(localVideoRef.current);
               }

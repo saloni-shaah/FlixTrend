@@ -44,13 +44,13 @@ export function StreamViewer({ streamPost }: { streamPost: any }) {
         }
       });
       
-      newRoom.on('participantConnected', () => setParticipantCount(newRoom.participants.size + 1));
-      newRoom.on('participantDisconnected', () => setParticipantCount(newRoom.participants.size + 1));
+      newRoom.on('participantConnected', () => setParticipantCount(newRoom.numParticipants + 1));
+      newRoom.on('participantDisconnected', () => setParticipantCount(newRoom.numParticipants + 1));
 
       const connectToRoom = async () => {
         try {
           await newRoom.connect(process.env.NEXT_PUBLIC_LIVEKIT_WS_URL!, token);
-          setParticipantCount(newRoom.participants.size + 1);
+          setParticipantCount(newRoom.numParticipants + 1);
         } catch (err) {
           console.error("Failed to connect as viewer", err);
           setError("Stream not found or has ended.");

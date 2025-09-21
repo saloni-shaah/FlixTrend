@@ -158,9 +158,9 @@ export function TrendChase() {
             </motion.div>
         );
     }
-
+    
     if (gameState === 'ended') {
-        return (
+         return (
              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full max-w-4xl glass-card p-8 text-center">
                 <h2 className="text-3xl font-headline text-accent-pink mb-4">Game Over!</h2>
                 <p className="text-gray-300 text-xl mb-4">Your Final Score:</p>
@@ -215,5 +215,3 @@ export function TrendChase() {
         </div>
     );
 }
-
-    

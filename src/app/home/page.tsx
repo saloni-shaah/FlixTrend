@@ -1,10 +1,10 @@
 
 "use client";
 import "regenerator-runtime/runtime";
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import dynamic from 'next/dynamic';
 import { getFirestore, collection, query, orderBy, onSnapshot, getDoc, doc, limit, startAfter, getDocs, where, Timestamp } from "firebase/firestore";
-import { Plus, Bell, Search, Music, Bot, Mic, Camera, Radio, Video } from "lucide-react";
+import { Plus, Bell, Search, Mic, Video } from "lucide-react";
 import { auth } from "@/utils/firebaseClient";
 import { useAppState } from "@/utils/AppStateContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -14,23 +14,19 @@ import { VibeSpaceLoader } from "@/components/VibeSpaceLoader";
 import AdBanner from "@/components/AdBanner";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { AlignLeft, BarChart3, ImageIcon, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import { AlmightyLogo } from "@/components/ui/logo";
-import { LiveStream } from "@/components/LiveStream";
-import { ShortsPlayer } from "@/components/ShortsPlayer";
 
-
-const AddMusicModal = dynamic(() => import('@/components/MusicDiscovery'), { ssr: false });
+const AddMusicModal = dynamic(() => import('@/components/MusicDiscovery').then(mod => mod.AddMusicModal), { ssr: false });
 const FlashModal = dynamic(() => import('@/components/FlashModal'), { ssr: false });
 const NotificationPanel = dynamic(() => import('@/components/NotificationPanel'), { ssr: false });
-
+const LiveStream = dynamic(() => import('@/components/LiveStream').then(mod => mod.LiveStream), { ssr: false });
+const ShortsPlayer = dynamic(() => import('@/components/ShortsPlayer').then(mod => mod.ShortsPlayer), { ssr: false });
 
 const db = getFirestore(app);
 
-const CHAT_KEYWORDS = ['hi', 'hello', 'hey', 'yo', 'almighty', 'what', 'who', 'when', 'where', 'why', 'how'];
-
-function CreatePostPrompt({ isPremium }: { isPremium: boolean }) {
+const CreatePostPrompt = dynamic(() => Promise.resolve(function CreatePostPrompt({ isPremium }: { isPremium: boolean }) {
   const [userProfile, setUserProfile] = useState<any>(null);
   const router = useRouter();
 
@@ -57,9 +53,9 @@ function CreatePostPrompt({ isPremium }: { isPremium: boolean }) {
         {!isPremium && <PremiumUpgradeBanner />}
       </div>
   );
-}
+}), { ssr: false });
 
-function PremiumUpgradeBanner() {
+const PremiumUpgradeBanner = dynamic(() => Promise.resolve(function PremiumUpgradeBanner() {
     return (
         <Link href="/premium">
             <motion.div 
@@ -79,10 +75,10 @@ function PremiumUpgradeBanner() {
             </motion.div>
         </Link>
     )
-}
+}), { ssr: false });
 
 
-export default function HomePage() {
+function HomePageContent() {
   const [showMusicModal, setShowMusicModal] = useState(false);
   const [posts, setPosts] = useState<any[]>([]);
   const [flashes, setFlashes] = useState<any[]>([]);
@@ -233,7 +229,7 @@ export default function HomePage() {
   };
 
   // Group flashes by user
-  const groupedFlashes = flashes.reduce((acc, flash) => {
+  const groupedFlashes = flashes.reduce((acc: any, flash) => {
     if (!acc[flash.userId]) {
       acc[flash.userId] = {
         userId: flash.userId,
@@ -409,4 +405,3 @@ export default function HomePage() {
     </div>
   );
 }
-

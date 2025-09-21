@@ -13,7 +13,7 @@ export default function Step1({ onNext, postType, postData }: { onNext: (data: a
     const [formData, setFormData] = useState(postData);
 
     const handleDataChange = (data: any) => {
-        setFormData(prev => ({...prev, ...data}));
+        setFormData((prev: any) => ({...prev, ...data}));
     };
 
     const renderForm = () => {

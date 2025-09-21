@@ -24,9 +24,7 @@ export async function createCall(caller: any, callee: any) {
   // Collect ICE candidates
   const offerCandidatesCollection = collection(callDocRef, 'offerCandidates');
   pc.onicecandidate = event => {
-    if (event.candidate) {
-      addDoc(offerCandidatesCollection, event.candidate.toJSON());
-    }
+    event?.candidate && addDoc(offerCandidatesCollection, event.candidate.toJSON());
   };
 
   // Create offer
@@ -81,9 +79,7 @@ export async function answerCall(pc: RTCPeerConnection, callData: any) {
     const callDocRef = doc(db, 'calls', callData.id);
 
     pc.onicecandidate = event => {
-        if (event.candidate) {
-            addDoc(collection(callDocRef, 'answerCandidates'), event.candidate.toJSON());
-        }
+        event?.candidate && addDoc(collection(callDocRef, 'answerCandidates'), event.candidate.toJSON());
     };
     
     await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
