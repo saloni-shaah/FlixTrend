@@ -8,7 +8,6 @@ import { useEffect, useState } from "react";
 import { getFirestore, collection, query, where, onSnapshot, getDocs } from "firebase/firestore";
 import { auth, app } from "@/utils/firebaseClient";
 import { getDownloadedPosts } from "@/utils/offline-db";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 const db = getFirestore(app);
 
@@ -80,7 +79,14 @@ function NavButton({ href, icon: Icon, label, hasNotification }: { href: string;
 export default function AppNavBar() {
   const pathname = usePathname();
   const { isCalling, selectedChat, setSelectedChat } = useAppState();
-  const isMobile = useIsMobile();
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkIsMobile = () => setIsMobile(window.innerWidth < 768);
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
 
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
   const [hasUnreadNotifs, setHasUnreadNotifs] = useState(false);
