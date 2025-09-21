@@ -17,8 +17,6 @@ export const ai = genkit({
   ],
   // Set a default model for all generate calls.
   model: 'googleai/gemini-2.5-flash',
-  // Log all AI-related activity to the console for debugging and monitoring.
-  logSinks: [console.log],
   // Enable tracing to monitor the performance and behavior of AI flows in production.
   enableTracing: true,
 });

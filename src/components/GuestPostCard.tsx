@@ -2,8 +2,7 @@
 "use client";
 
 import React from 'react';
-import { getFirestore, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, deleteDoc, updateDoc, doc as fsDoc, setDoc, getDoc, doc, runTransaction } from "firebase/firestore";
-import { FaPlay, FaRegComment, FaExclamationTriangle, FaVolumeMute, FaUserSlash, FaLink, FaEllipsisV, FaMusic } from "react-icons/fa";
+import { getFirestore } from "firebase/firestore";
 import { Repeat2, Star, Share, MessageCircle, Bookmark } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -11,6 +10,7 @@ import { ShareModal } from './ShareModal';
 import { app } from '@/utils/firebaseClient';
 import { OptimizedImage } from './OptimizedImage';
 import { FlixTrendLogo } from './FlixTrendLogo';
+import { FaMusic } from "react-icons/fa";
 
 const db = getFirestore(app);
 
@@ -174,6 +174,7 @@ export function GuestPostCard({ post }: { post: any }) {
         <ShareModal 
             url={`${window.location.origin}/post/${post.id}`}
             title={post.content}
+            onSignalShare={() => { setShowShareModal(false); /*setShowSignalShare(true);*/ }}
             onClose={() => setShowShareModal(false)}
         />
       )}

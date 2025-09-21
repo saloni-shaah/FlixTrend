@@ -1,7 +1,7 @@
 
 "use client";
 import React, { useState, useRef, useEffect } from 'react';
-import { X, UploadCloud, Music as MusicIcon, MapPin, Smile, Camera, Image as ImageIcon } from 'lucide-react';
+import { X, UploadCloud, Music as MusicIcon, MapPin, Smile, Camera, Image as ImageIcon, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getFirestore, collection, onSnapshot, query, orderBy, getDoc, doc } from 'firebase/firestore';
 import { app } from '@/utils/firebaseClient';
@@ -269,5 +269,3 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
         </div>
     );
 }
-
-    

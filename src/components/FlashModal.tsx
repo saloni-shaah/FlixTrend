@@ -39,7 +39,7 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
 
   useEffect(() => {
     const flash = userFlashes.flashes[currentIndex];
-    const isVideo = flash.mediaUrl && flash.mediaUrl.match(/\.(mp4|webm|ogg)$/i);
+    const isVideo = flash.mediaUrl && (flash.mediaUrl.includes('.mp4') || flash.mediaUrl.includes('.webm') || flash.mediaUrl.includes('.ogg'));
     setProgress(0);
     
     if (timerRef.current) clearInterval(timerRef.current);
@@ -127,7 +127,7 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
   };
 
   const currentFlash = userFlashes.flashes[currentIndex];
-  const isVideo = currentFlash.mediaUrl.match(/\.(mp4|webm|ogg)$/i);
+  const isVideo = currentFlash.mediaUrl.includes('.mp4') || currentFlash.mediaUrl.includes('.webm') || currentFlash.mediaUrl.includes('.ogg');
 
 
   return (
