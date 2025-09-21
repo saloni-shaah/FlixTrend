@@ -2,12 +2,13 @@
 "use client";
 import { usePathname, useRouter } from "next/navigation";
 import { useAppState } from "@/utils/AppStateContext";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { getFirestore, collection, query, where, onSnapshot, getDocs } from "firebase/firestore";
 import { auth, app } from "@/utils/firebaseClient";
 import { getDownloadedPosts } from "@/utils/offline-db";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const db = getFirestore(app);
 
@@ -78,7 +79,9 @@ function NavButton({ href, icon: Icon, label, hasNotification }: { href: string;
 
 export default function AppNavBar() {
   const pathname = usePathname();
-  const { isCalling } = useAppState();
+  const { isCalling, selectedChat, setSelectedChat } = useAppState();
+  const isMobile = useIsMobile();
+
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
   const [hasUnreadNotifs, setHasUnreadNotifs] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
@@ -201,12 +204,23 @@ export default function AppNavBar() {
     );
   }
 
+  const isSignalChatView = isMobile && pathname === '/signal' && selectedChat;
+
   return (
     <nav className="fixed bottom-0 left-0 w-full z-40 bg-background/50 backdrop-blur-lg border-t border-glass-border flex justify-around items-center py-2">
-      <NavButton href="/home" icon={VibeSpaceIcon} label="VibeSpace" />
-      <NavButton href="/scope" icon={ScopeIcon} label="Scope" />
-      <NavButton href="/squad" icon={SquadIcon} label="Squad" />
-      <NavButton href="/signal" icon={MessageSquare} label="Signal" hasNotification={hasUnreadMessages} />
+      {isSignalChatView ? (
+        <button onClick={() => setSelectedChat(null)} className="flex flex-col items-center gap-1 px-2 py-1 text-foreground">
+          <ArrowLeft />
+          <span className="text-xs font-semibold">Back</span>
+        </button>
+      ) : (
+        <>
+          <NavButton href="/home" icon={VibeSpaceIcon} label="VibeSpace" />
+          <NavButton href="/scope" icon={ScopeIcon} label="Scope" />
+          <NavButton href="/squad" icon={SquadIcon} label="Squad" />
+          <NavButton href="/signal" icon={MessageSquare} label="Signal" hasNotification={hasUnreadMessages} />
+        </>
+      )}
     </nav>
   );
 }

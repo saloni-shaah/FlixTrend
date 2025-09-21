@@ -35,6 +35,8 @@ interface AppState {
   playNext: () => void;
   playPrevious: () => void;
   audioPlayer: HTMLAudioElement | null;
+  selectedChat: any | null;
+  setSelectedChat: React.Dispatch<React.SetStateAction<any | null>>;
 }
 
 const AppStateContext = createContext<AppState | undefined>(undefined);
@@ -59,6 +61,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [currentSongIndex, setCurrentSongIndex] = useState<number>(-1);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [selectedChat, setSelectedChat] = useState<any | null>(null);
+
 
   // Effect for handling user presence and push notifications
   useEffect(() => {
@@ -237,6 +241,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     playNext,
     playPrevious,
     audioPlayer: audioRef.current,
+    selectedChat,
+    setSelectedChat,
   };
 
   return (
