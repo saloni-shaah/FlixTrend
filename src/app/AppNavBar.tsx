@@ -2,7 +2,7 @@
 "use client";
 import { usePathname, useRouter } from "next/navigation";
 import { useAppState } from "@/utils/AppStateContext";
-import { Home, Video, Users, MessageSquare, Bell } from "lucide-react";
+import { Home, Users, MessageSquare } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { getFirestore, collection, query, where, onSnapshot, getDocs } from "firebase/firestore";
@@ -10,6 +10,14 @@ import { auth, app } from "@/utils/firebaseClient";
 import { getDownloadedPosts } from "@/utils/offline-db";
 
 const db = getFirestore(app);
+
+// Custom SVG Icon for Scope
+const ScopeIcon = ({ className }: { className?: string }) => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+        <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm-1.5 14V8l6 4-6 4z" fill="currentColor"/>
+    </svg>
+);
+
 
 function NavButton({ href, icon: Icon, label, hasNotification }: { href: string; icon: React.ElementType; label: string; hasNotification?: boolean }) {
   const pathname = usePathname();
@@ -166,7 +174,7 @@ export default function AppNavBar() {
   return (
     <nav className="fixed bottom-0 left-0 w-full z-40 bg-background/50 backdrop-blur-lg border-t border-glass-border flex justify-around items-center py-2">
       <NavButton href="/home" icon={Home} label="VibeSpace" />
-      <NavButton href="/scope" icon={Video} label="Scope" />
+      <NavButton href="/scope" icon={ScopeIcon} label="Scope" />
       <NavButton href="/squad" icon={Users} label="Squad" />
       <NavButton href="/signal" icon={MessageSquare} label="Signal" hasNotification={hasUnreadMessages} />
     </nav>
