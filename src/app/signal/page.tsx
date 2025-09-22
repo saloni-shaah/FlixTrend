@@ -8,7 +8,7 @@ import { useAppState } from "@/utils/AppStateContext";
 import { createCall } from "@/utils/callService";
 import { motion, AnimatePresence } from "framer-motion";
 import { translateText } from "@/ai/flows/translate-text-flow";
-import { getAlmightyResponse } from "almighty/src/app/actions";
+import { getAlmightyResponse } from "../../../almighty-chat/src/app/actions";
 
 
 async function uploadToCloudinary(file: File, onProgress?: (percent: number) => void): Promise<string | null> {
@@ -502,8 +502,13 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
   const [unreadCounts, setUnreadCounts] = useState<{ [key: string]: number }>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { useMediaQuery } = require("@uidotdev/usehooks");
-  const isMobile = useMediaQuery("(max-width: 767px)");
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const checkIsMobile = () => setIsMobile(window.innerWidth < 768);
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
@@ -1082,7 +1087,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                                               </div>
                                           )}
                                       </div>
-                                      <div className={`relative hidden group-hover:flex items-center gap-1 mt-1 ${isUser ? "flex-row-reverse" : ""}`}>
+                                      <div className={`relative hidden group-focus-within:flex md:group-hover:flex items-center gap-1 mt-1 ${isUser ? "flex-row-reverse" : ""}`}>
                                       {msg.sender !== 'system' && 
                                           <>
                                               <div className="relative">
@@ -1237,3 +1242,5 @@ export default function SignalPage() {
   }
   return <ClientOnlySignalPage firebaseUser={firebaseUser} />;
 }
+
+    
