@@ -40,9 +40,8 @@ export function LiveStream({ title, onStreamEnd }: { title: string, onStreamEnd:
     navigator.mediaDevices.getUserMedia({ video: true, audio: true })
       .then(stream => {
          if (localVideoRef.current) {
-            const videoTrack = stream.getVideoTracks()[0];
-            const localVideo = new LocalVideoTrack(videoTrack);
-            localVideo.attach(localVideoRef.current);
+            // Directly attach the stream to the video element
+            localVideoRef.current.srcObject = stream;
         }
         
         // Only get token if camera access is successful
@@ -65,18 +64,19 @@ export function LiveStream({ title, onStreamEnd }: { title: string, onStreamEnd:
   }, [user]);
 
   useEffect(() => {
-    if (token && room && room.state !== 'connected') {
+    if (token && room && room.state !== 'connected' && localVideoRef.current?.srcObject) {
       const connectToRoom = async () => {
         try {
           await room.connect(process.env.NEXT_PUBLIC_LIVEKIT_WS_URL!, token);
-          await room.localParticipant.setCameraEnabled(true);
-          await room.localParticipant.setMicrophoneEnabled(true);
           
-          room.localParticipant.videoTracks.forEach(publication => {
-              if (publication.track?.kind === 'video' && localVideoRef.current) {
-                publication.track.attach(localVideoRef.current);
-              }
-          });
+          // Publish tracks from the stream we already have
+          const stream = localVideoRef.current!.srcObject as MediaStream;
+          await Promise.all([
+              room.localParticipant.setCameraEnabled(true),
+              room.localParticipant.setMicrophoneEnabled(true),
+              room.localParticipant.publishTrack(stream.getVideoTracks()[0]),
+              room.localParticipant.publishTrack(stream.getAudioTracks()[0]),
+          ]);
           
           // Create the "live" post in Firestore only after successful connection
            const postDocRef = await addDoc(collection(db, "posts"), {
@@ -126,6 +126,12 @@ export function LiveStream({ title, onStreamEnd }: { title: string, onStreamEnd:
 
   const handleEndStream = async () => {
     if (room) {
+        // Stop all local tracks before disconnecting
+        room.localParticipant.tracks.forEach(pub => {
+            if (pub.track) {
+                pub.track.stop();
+            }
+        });
       await room.disconnect();
     }
     if (livePostId) {
@@ -164,7 +170,7 @@ export function LiveStream({ title, onStreamEnd }: { title: string, onStreamEnd:
         </div>
 
         <div className="relative w-full h-full">
-            <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-contain" />
+            <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-contain" style={{ transform: "scaleX(-1)" }} />
             {isPaused && (
                 <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center text-center">
                     <Pause size={64} className="mb-4"/>
