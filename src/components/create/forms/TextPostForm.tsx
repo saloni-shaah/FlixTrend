@@ -10,13 +10,16 @@ const backgroundColors = [
 
 const fontStyles = [
     { name: 'Default', style: 'font-body' },
-    { name: 'Cursive', style: 'font-cursive' }, // You would need to add a cursive font to your project
-    { name: 'Calligraphy', style: 'font-calligraphy' }, // And a calligraphy font
+    { name: 'Cursive', style: 'font-cursive' },
+    { name: 'Calligraphy', style: 'font-calligraphy' },
     { name: 'Italiano', style: 'font-italiano' }
 ];
 
 export function TextPostForm({ data, onDataChange }: { data: any, onDataChange: (data: any) => void }) {
-    const [bgImage, setBgImage] = useState<string | null>(data.bgImage || null);
+    const [bgImage, setBgImage] = useState<string | null>(data.backgroundImage || null);
+    
+    // Ensure backgroundColor has a default value
+    const currentBgColor = data.backgroundColor || '#ffffff';
 
     const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
         onDataChange({ ...data, [e.target.name]: e.target.value });
@@ -24,7 +27,7 @@ export function TextPostForm({ data, onDataChange }: { data: any, onDataChange: 
 
     const handleBgColorChange = (color: string) => {
         setBgImage(null); // Clear image if color is selected
-        onDataChange({ ...data, backgroundColor: color, backgroundImage: null });
+        onDataChange({ ...data, backgroundColor: color, backgroundImage: null, backgroundImageFile: null });
     };
 
     const handleImageBgChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -49,7 +52,7 @@ export function TextPostForm({ data, onDataChange }: { data: any, onDataChange: 
                 value={data.content || ''}
                 onChange={handleTextChange}
                 style={{
-                    backgroundColor: data.backgroundColor || 'transparent',
+                    backgroundColor: bgImage ? 'transparent' : currentBgColor,
                     backgroundImage: bgImage ? `url(${bgImage})` : 'none',
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
@@ -78,7 +81,7 @@ export function TextPostForm({ data, onDataChange }: { data: any, onDataChange: 
                 <h4 className="font-bold text-sm text-accent-cyan">Background Color</h4>
                 <div className="flex flex-wrap gap-2">
                     {backgroundColors.map(color => (
-                        <button type="button" key={color} onClick={() => handleBgColorChange(color)} className="w-8 h-8 rounded-full border-2" style={{ backgroundColor: color, borderColor: data.backgroundColor === color ? 'var(--accent-pink)' : 'transparent' }} />
+                        <button type="button" key={color} onClick={() => handleBgColorChange(color)} className="w-8 h-8 rounded-full border-2" style={{ backgroundColor: color, borderColor: currentBgColor === color ? 'var(--accent-pink)' : 'transparent' }} />
                     ))}
                 </div>
 
