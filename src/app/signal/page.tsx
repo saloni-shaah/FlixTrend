@@ -1,6 +1,7 @@
 
 "use client";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp, where, writeBatch, getDocs, updateDoc, deleteDoc, arrayUnion, arrayRemove, deleteField } from "firebase/firestore";
 import { auth, db } from "@/utils/firebaseClient";
 import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, Smile, Trash2, Users, CheckSquare, Square, MoreVertical, UserPlus, UserX, Edit, Shield, EyeOff, LogOut, UploadCloud, Languages, UserCircle, Cake, MapPin, AtSign, User, Bot, Search } from "lucide-react";
@@ -8,7 +9,7 @@ import { useAppState } from "@/utils/AppStateContext";
 import { createCall } from "@/utils/callService";
 import { motion, AnimatePresence } from "framer-motion";
 import { translateText } from "@/ai/flows/translate-text-flow";
-import { getAlmightyResponse } from "../../../almighty-chat/src/app/actions";
+import { getAlmightyResponse } from "../../../almighty/src/app/actions";
 
 
 async function uploadToCloudinary(file: File, onProgress?: (percent: number) => void): Promise<string | null> {
@@ -503,6 +504,8 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const searchParams = useSearchParams();
+
   useEffect(() => {
     const checkIsMobile = () => setIsMobile(window.innerWidth < 768);
     checkIsMobile();
@@ -560,7 +563,14 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
         
         allUserChats.sort((a,b) => (b.lastMessageAt?.toDate() || b.createdAt?.toDate() || 0) - (a.lastMessageAt?.toDate() || a.createdAt?.toDate() || 0));
 
-        setChats([almightyChatObject, ...allUserChats]);
+        const allChats = [almightyChatObject, ...allUserChats];
+        setChats(allChats);
+        
+        const directChat = searchParams.get('chat');
+        if (directChat === 'almighty') {
+            setSelectedChat(almightyChatObject);
+        }
+
     });
 
     // Fetch joinable anonymous groups
@@ -578,7 +588,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
         if (unsubJoinable) unsubJoinable();
     };
 
-  }, [firebaseUser]);
+  }, [firebaseUser, searchParams]);
 
    useEffect(() => {
     if (!selectedChat || selectedChat.isGroup || selectedChat.isAlmighty) {
@@ -1205,7 +1215,7 @@ function AvatarFallback({ children, className }: { children: React.ReactNode, cl
 }
 
 
-export default function SignalPage() {
+function SignalPage() {
   const [firebaseUser, setFirebaseUser] = useState<any>(null);
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(async (user) => {
@@ -1243,4 +1253,11 @@ export default function SignalPage() {
   return <ClientOnlySignalPage firebaseUser={firebaseUser} />;
 }
 
+export default function SignalPageWrapper() {
+    return (
+        <Suspense fallback={<div className="flex h-screen items-center justify-center text-accent-cyan">Loading Signal...</div>}>
+            <SignalPage />
+        </Suspense>
+    )
+}
     
