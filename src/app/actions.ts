@@ -10,14 +10,37 @@ import {
 } from 'almighty/src/ai/schemas/remix-image-schema';
 import { Storage } from '@google-cloud/storage';
 
-const storage = new Storage({
-    projectId: process.env.GCP_PROJECT_ID,
-    credentials: JSON.parse(process.env.GCP_SERVICE_ACCOUNT_KEY_JSON as string),
-});
+let storage: Storage | undefined;
+let bucket: any;
 
-const bucket = storage.bucket(process.env.GCS_BUCKET_NAME as string);
+function initializeStorage() {
+  if (storage) return;
+
+  const projectId = process.env.GCP_PROJECT_ID;
+  const keyJson = process.env.GCP_SERVICE_ACCOUNT_KEY_JSON;
+  const bucketName = process.env.GCS_BUCKET_NAME;
+
+  if (!projectId || !keyJson || !bucketName) {
+    throw new Error("Google Cloud Storage environment variables are not properly configured.");
+  }
+
+  storage = new Storage({
+    projectId: projectId,
+    credentials: JSON.parse(keyJson),
+  });
+
+  bucket = storage.bucket(bucketName);
+}
+
 
 export async function uploadFileToGCS(formData: FormData) {
+  try {
+    initializeStorage();
+  } catch (error: any) {
+    console.error(error.message);
+    return { failure: "Server is not configured for file uploads. Please set up Google Cloud Storage environment variables." };
+  }
+
   const file = formData.get('file') as File;
 
   if (!file) {
