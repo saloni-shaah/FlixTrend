@@ -8,30 +8,9 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { getFirestore, collection, addDoc, serverTimestamp, Timestamp, doc, getDoc } from "firebase/firestore";
 import { auth, app } from '@/utils/firebaseClient';
 import { useRouter } from 'next/navigation';
+import { uploadFileToGCS } from '@/app/actions';
 
 const db = getFirestore(app);
-
-// Helper to upload a file to Cloudinary
-async function uploadToCloudinary(file: File): Promise<string> {
-    const url = `https://api.cloudinary.com/v1_1/drrzvi2jp/upload`;
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("upload_preset", "flixtrend_unsigned");
-    return new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open("POST", url);
-        xhr.onload = () => {
-            if (xhr.status === 200) {
-                const data = JSON.parse(xhr.responseText);
-                resolve(data.secure_url);
-            } else {
-                reject(new Error('Upload failed'));
-            }
-        };
-        xhr.onerror = () => reject(new Error('Upload failed'));
-        xhr.send(formData);
-    });
-}
 
 export default function Step3({ onBack, postData }: { onBack: () => void; postData: any }) {
     const [isScheduling, setIsScheduling] = useState(false);
@@ -62,14 +41,23 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
             let finalMediaUrls: string[] = [];
             if (postData.mediaFiles && postData.mediaFiles.length > 0) {
                 for (const file of postData.mediaFiles) {
-                    const url = await uploadToCloudinary(file);
-                    finalMediaUrls.push(url);
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    const result = await uploadFileToGCS(formData);
+                    if (result.success?.url) {
+                        finalMediaUrls.push(result.success.url);
+                    }
                 }
             }
             
             let finalThumbnailUrl = postData.thumbnailUrl || null;
             if (postData.thumbnailFile) {
-                finalThumbnailUrl = await uploadToCloudinary(postData.thumbnailFile);
+                 const formData = new FormData();
+                formData.append('file', postData.thumbnailFile);
+                const result = await uploadFileToGCS(formData);
+                if (result.success?.url) {
+                    finalThumbnailUrl = result.success.url;
+                }
             }
 
             // 2. Construct the final post object
