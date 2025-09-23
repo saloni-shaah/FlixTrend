@@ -1,13 +1,13 @@
 
 "use server";
 
-import { chatWithAlmighty } from "../ai/flows/ai-chatbot-impersonation";
-import type { ChatWithAlmightyInput } from "../ai/flows/ai-chatbot-impersonation";
-import { remixImage } from "../ai/flows/remix-image-flow";
+import { chatWithAlmighty } from "almighty/src/ai/flows/ai-chatbot-impersonation";
+import type { ChatWithAlmightyInput } from "almighty/src/ai/flows/ai-chatbot-impersonation";
+import { remixImage } from "almighty/src/ai/flows/remix-image-flow";
 import {
   RemixImageInput,
   RemixImageInputSchema,
-} from '../ai/schemas/remix-image-schema';
+} from 'almighty/src/ai/schemas/remix-image-schema';
 import { Storage } from '@google-cloud/storage';
 
 const storage = new Storage({
