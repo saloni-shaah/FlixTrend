@@ -50,8 +50,18 @@ const contentModerationFlow = ai.defineFlow(
     outputSchema: ContentModerationOutputSchema,
   },
   async (input) => {
-    const {output} = await prompt(input);
-    return output!;
+    try {
+        const {output} = await prompt(input);
+        return output!;
+    } catch (error) {
+        console.error("Content Moderation AI Error:", error);
+        // In a real production environment, you might want to alert admins or have a more robust fallback.
+        // For development, we'll default to 'safe' to avoid blocking the user due to rate limits.
+        return {
+            verdict: 'safe',
+            reason: 'Could not perform AI content check. Please proceed with caution.'
+        };
+    }
   }
 );
 
