@@ -9,38 +9,7 @@ import { useAppState } from "@/utils/AppStateContext";
 import { createCall } from "@/utils/callService";
 import { motion, AnimatePresence } from "framer-motion";
 import { translateText } from "@/ai/flows/translate-text-flow";
-import { getAlmightyResponse } from "../../../almighty/src/app/actions";
-
-
-async function uploadToCloudinary(file: File, onProgress?: (percent: number) => void): Promise<string | null> {
-  const url = `https://api.cloudinary.com/v1_1/drrzvi2jp/upload`;
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("upload_preset", "flixtrend_unsigned");
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", url);
-    xhr.upload.onprogress = (event) => {
-      if (event.lengthComputable && onProgress) {
-        onProgress(Math.round((event.loaded / event.total) * 100));
-      }
-    };
-    xhr.onload = () => {
-      if (xhr.responseText) {
-        const data = JSON.parse(xhr.responseText);
-        if (xhr.status === 200 && data.secure_url) {
-          resolve(data.secure_url);
-        } else {
-          reject(new Error(data.error?.message || "Upload failed"));
-        }
-      } else {
-        reject(new Error("Upload failed with empty response"));
-      }
-    };
-    xhr.onerror = () => reject(new Error("Upload failed"));
-    xhr.send(formData);
-  });
-}
+import { getAlmightyResponse, uploadFileToGCS } from "../../../almighty/src/app/actions";
 
 const anonymousNames = ["Ram", "Shyam", "Sita", "Mohan", "Krishna", "Radha", "Anchal", "Anaya", "Advik", "Diya", "Rohan", "Priya", "Arjun", "Saanvi", "Kabir"];
 const generateAnonymousName = (userId: string, chatId: string) => {
@@ -97,8 +66,10 @@ function CreateGroupModal({ mutuals, currentUser, onClose, onGroupCreated }: { m
         try {
             let groupPictureUrl = `https://api.dicebear.com/8.x/identicon/svg?seed=${groupName}`;
             if(groupPictureFile){
-                const url = await uploadToCloudinary(groupPictureFile);
-                if(url) groupPictureUrl = url;
+                const formData = new FormData();
+                formData.append('file', groupPictureFile);
+                const result = await uploadFileToGCS(formData);
+                if(result.success?.url) groupPictureUrl = result.success.url;
             }
 
             const memberUids = [...new Set([...selectedUids, currentUser.uid])];
@@ -504,8 +475,6 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isMobile, setIsMobile] = useState(false);
-  const searchParams = useSearchParams();
-
   useEffect(() => {
     const checkIsMobile = () => setIsMobile(window.innerWidth < 768);
     checkIsMobile();
@@ -563,14 +532,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
         
         allUserChats.sort((a,b) => (b.lastMessageAt?.toDate() || b.createdAt?.toDate() || 0) - (a.lastMessageAt?.toDate() || a.createdAt?.toDate() || 0));
 
-        const allChats = [almightyChatObject, ...allUserChats];
-        setChats(allChats);
-        
-        const directChat = searchParams.get('chat');
-        if (directChat === 'almighty') {
-            setSelectedChat(almightyChatObject);
-        }
-
+        setChats([almightyChatObject, ...allUserChats]);
     });
 
     // Fetch joinable anonymous groups
@@ -588,7 +550,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
         if (unsubJoinable) unsubJoinable();
     };
 
-  }, [firebaseUser, searchParams]);
+  }, [firebaseUser]);
 
    useEffect(() => {
     if (!selectedChat || selectedChat.isGroup || selectedChat.isAlmighty) {
@@ -838,9 +800,11 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
     if (file.type.startsWith('audio/')) type = 'audio';
     
     try {
-        const mediaUrl = await uploadToCloudinary(file);
-        if (mediaUrl) {
-            handleSend(new Event('submit') as any, mediaUrl, type);
+        const formData = new FormData();
+        formData.append('file', file);
+        const result = await uploadFileToGCS(formData);
+        if (result.success?.url) {
+            handleSend(new Event('submit') as any, result.success.url, type);
         }
     } catch (error) {
         console.error("Upload failed:", error);
@@ -1097,7 +1061,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                                               </div>
                                           )}
                                       </div>
-                                      <div className={`relative hidden group-focus-within:flex md:group-hover:flex items-center gap-1 mt-1 ${isUser ? "flex-row-reverse" : ""}`}>
+                                      <div className={`relative hidden group-hover:flex items-center gap-1 mt-1 ${isUser ? "flex-row-reverse" : ""}`}>
                                       {msg.sender !== 'system' && 
                                           <>
                                               <div className="relative">
