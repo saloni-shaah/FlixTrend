@@ -5,39 +5,9 @@ import { getFirestore, collection, addDoc, serverTimestamp, getDoc, doc, query, 
 import { auth, app } from "@/utils/firebaseClient";
 import { useRouter } from "next/navigation";
 import { MapPin, Smile, UploadCloud, X, Camera, Zap, Radio, ImagePlus, Sparkles, Wand2, Loader } from "lucide-react";
-import { remixImageAction } from "../../../almighty-chat/src/app/actions";
+import { remixImageAction, uploadFileToGCS } from "../../../almighty/src/app/actions";
 
 const db = getFirestore(app);
-
-async function uploadToCloudinary(file: File, onProgress?: (percent: number) => void): Promise<string | null> {
-  const url = `https://api.cloudinary.com/v1_1/drrzvi2jp/upload`;
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("upload_preset", "flixtrend_unsigned");
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", url);
-    xhr.upload.onprogress = (event) => {
-      if (event.lengthComputable && onProgress) {
-        onProgress(Math.round((event.loaded / event.total) * 100));
-      }
-    };
-    xhr.onload = () => {
-      if (xhr.responseText) {
-        const data = JSON.parse(xhr.responseText);
-        if (xhr.status === 200 && data.secure_url) {
-          resolve(data.secure_url);
-        } else {
-          reject(new Error(data.error?.message || "Upload failed"));
-        }
-      } else {
-        reject(new Error("Upload failed with empty response"));
-      }
-    };
-    xhr.onerror = () => reject(new Error("Upload failed"));
-    xhr.send(formData);
-  });
-}
 
 const backgroundColors = [
   '#ffffff', '#ffadad', '#ffd6a5', '#fdffb6', '#caffbf', '#9bf6ff',
@@ -261,18 +231,23 @@ export default function CreatePostModal({ open, onClose, initialType = 'text', o
           for (let i = 0; i < mediaFiles.length; i++) {
               const file = mediaFiles[i];
               setUploadProgress(Math.round(((i + 1) / mediaFiles.length) * 100));
-              const url = await uploadToCloudinary(file);
-              if (url) {
-                  uploadedMediaUrls.push(url);
+              const formData = new FormData();
+              formData.append('file', file);
+              const result = await uploadFileToGCS(formData);
+              if (result.success?.url) {
+                  uploadedMediaUrls.push(result.success.url);
               }
           }
-          if (uploadedMediaUrls.length === 0) throw new Error("Media upload failed");
+          if (uploadedMediaUrls.length === 0 && mediaFiles.length > 0) throw new Error("Media upload failed");
       }
 
       let uploadedThumbnailUrl = null;
       if (type === 'media' && mediaFiles[0]?.type.startsWith('video') && thumbnailFile) {
-        uploadedThumbnailUrl = await uploadToCloudinary(thumbnailFile);
-        if (!uploadedThumbnailUrl) throw new Error("Thumbnail upload failed");
+        const formData = new FormData();
+        formData.append('file', thumbnailFile);
+        const result = await uploadFileToGCS(formData);
+        if (!result.success?.url) throw new Error("Thumbnail upload failed");
+        uploadedThumbnailUrl = result.success.url;
       }
 
       const profileSnap = await getDoc(doc(db, "users", user.uid));
@@ -313,6 +288,7 @@ export default function CreatePostModal({ open, onClose, initialType = 'text', o
       if (type === "flash") {
         await addDoc(collection(db, "flashes"), {
           ...postData,
+          content: content, // Ensure content is not undefined
           caption: content,
           expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
         });
@@ -593,5 +569,7 @@ export default function CreatePostModal({ open, onClose, initialType = 'text', o
     </div>
   );
 }
+
+    
 
     
