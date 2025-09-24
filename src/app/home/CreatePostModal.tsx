@@ -273,7 +273,6 @@ export default function CreatePostModal({ open, onClose, initialType = 'text', o
         username: profileData.username,
         avatar_url: profileData.avatar_url,
         type: type,
-        content: content || "",
         mediaUrl: uploadedMediaUrls.length > 0 ? (type === 'flash' ? uploadedMediaUrls[0] : uploadedMediaUrls) : null,
         thumbnailUrl: uploadedThumbnailUrl,
         hashtags: postHashtags,
@@ -287,12 +286,12 @@ export default function CreatePostModal({ open, onClose, initialType = 'text', o
       };
 
       if (type === "flash") {
-        await addDoc(collection(db, "flashes"), {
-          ...postDataObject,
-          caption: content,
-          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-        });
+        postDataObject.content = content || ""; // Ensure content is not undefined
+        postDataObject.caption = content;
+        postDataObject.expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        await addDoc(collection(db, "flashes"), postDataObject);
       } else {
+        postDataObject.content = content;
         const collectionRef = collection(db, "posts");
         await addDoc(collectionRef, postDataObject);
       }
@@ -569,5 +568,3 @@ export default function CreatePostModal({ open, onClose, initialType = 'text', o
     </div>
   );
 }
-
-    
