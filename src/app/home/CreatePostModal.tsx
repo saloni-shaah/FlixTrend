@@ -5,7 +5,7 @@ import { getFirestore, collection, addDoc, serverTimestamp, getDoc, doc, query, 
 import { auth, app } from "@/utils/firebaseClient";
 import { useRouter } from "next/navigation";
 import { MapPin, Smile, UploadCloud, X, Camera, Zap, Radio, ImagePlus, Sparkles, Wand2, Loader } from "lucide-react";
-import { remixImageAction, uploadFileToGCS } from "../../../almighty-chat/src/app/actions";
+import { remixImageAction, uploadFileToGCS } from "almighty/src/app/actions";
 
 const db = getFirestore(app);
 
@@ -236,9 +236,10 @@ export default function CreatePostModal({ open, onClose, initialType = 'text', o
               const result = await uploadFileToGCS(formData);
               if (result.success?.url) {
                   uploadedMediaUrls.push(result.success.url);
+              } else {
+                  throw new Error(result.failure || 'File upload failed');
               }
           }
-          if (uploadedMediaUrls.length === 0 && mediaFiles.length > 0) throw new Error("Media upload failed");
       }
 
       let uploadedThumbnailUrl = null;
@@ -288,6 +289,7 @@ export default function CreatePostModal({ open, onClose, initialType = 'text', o
       if (type === "flash") {
         await addDoc(collection(db, "flashes"), {
           ...postData,
+          content: content,
           caption: content,
           expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
         });
