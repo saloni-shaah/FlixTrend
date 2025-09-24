@@ -9,7 +9,7 @@ import { useAppState } from "@/utils/AppStateContext";
 import { createCall } from "@/utils/callService";
 import { motion, AnimatePresence } from "framer-motion";
 import { translateText } from "@/ai/flows/translate-text-flow";
-import { getAlmightyResponse, uploadFileToGCS } from "../../../almighty/src/app/actions";
+import { getAlmightyResponse, uploadFileToGCS } from "@/app/actions";
 
 const anonymousNames = ["Ram", "Shyam", "Sita", "Mohan", "Krishna", "Radha", "Anchal", "Anaya", "Advik", "Diya", "Rohan", "Priya", "Arjun", "Saanvi", "Kabir"];
 const generateAnonymousName = (userId: string, chatId: string) => {
