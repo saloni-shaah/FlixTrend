@@ -94,13 +94,13 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                     fontStyle: postData.fontStyle,
                 }),
                 ...(postData.postType === 'media' && {
-                    mediaUrl: finalMediaUrls.length > 1 ? finalMediaUrls : finalMediaUrls[0],
+                    mediaUrl: finalMediaUrls.length > 0 ? (finalMediaUrls.length > 1 ? finalMediaUrls : finalMediaUrls[0]) : null,
                     title: postData.title,
                     description: postData.description,
                     thumbnailUrl: finalThumbnailUrl,
                 }),
                 ...(postData.postType === 'flash' && {
-                    mediaUrl: finalMediaUrls[0], // Flash has only one media
+                    mediaUrl: finalMediaUrls.length > 0 ? finalMediaUrls[0] : null, // Flash has only one media
                     song: postData.song,
                     expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // Expires in 24 hours
                 }),
@@ -198,3 +198,5 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
         </motion.div>
     );
 }
+
+    
