@@ -46,6 +46,8 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                     const result = await uploadFileToGCS(formData);
                     if (result.success?.url) {
                         finalMediaUrls.push(result.success.url);
+                    } else {
+                        throw new Error(result.failure || "File upload failed.");
                     }
                 }
             }
@@ -57,6 +59,8 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                 const result = await uploadFileToGCS(formData);
                 if (result.success?.url) {
                     finalThumbnailUrl = result.success.url;
+                } else {
+                    throw new Error(result.failure || "Thumbnail upload failed.");
                 }
             }
 
@@ -81,7 +85,7 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                 username: userData.username,
                 avatar_url: userData.avatar_url,
                 type: postData.postType,
-                content: postData.content || postData.caption || postData.question || postData.title,
+                content: postData.content || postData.caption || postData.question || postData.title || "",
                 hashtags: (postData.caption?.match(/#\w+/g) || []).map((h:string) => h.replace('#', '')),
                 createdAt: serverTimestamp(),
                 publishAt: publishAt,
@@ -103,6 +107,7 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                     mediaUrl: finalMediaUrls.length > 0 ? finalMediaUrls[0] : null, // Flash has only one media
                     song: postData.song,
                     expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // Expires in 24 hours
+                    caption: postData.caption || "",
                 }),
                 ...(postData.postType === 'poll' && {
                     pollOptions: postData.options.map((opt:any) => opt.text),
@@ -198,5 +203,3 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
         </motion.div>
     );
 }
-
-    
