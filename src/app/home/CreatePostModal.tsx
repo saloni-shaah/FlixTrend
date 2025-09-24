@@ -5,7 +5,7 @@ import { getFirestore, collection, addDoc, serverTimestamp, getDoc, doc, query, 
 import { auth, app } from "@/utils/firebaseClient";
 import { useRouter } from "next/navigation";
 import { MapPin, Smile, UploadCloud, X, Camera, Zap, Radio, ImagePlus, Sparkles, Wand2, Loader } from "lucide-react";
-import { remixImageAction, uploadFileToGCS } from "almighty/src/app/actions";
+import { remixImageAction, uploadFileToGCS } from "@/app/actions";
 
 const db = getFirestore(app);
 
@@ -273,7 +273,7 @@ export default function CreatePostModal({ open, onClose, initialType = 'text', o
         username: profileData.username,
         avatar_url: profileData.avatar_url,
         type: type,
-        content: content,
+        content: content || "",
         mediaUrl: uploadedMediaUrls.length > 0 ? (type === 'flash' ? uploadedMediaUrls[0] : uploadedMediaUrls) : null,
         thumbnailUrl: uploadedThumbnailUrl,
         hashtags: postHashtags,
@@ -570,5 +570,3 @@ export default function CreatePostModal({ open, onClose, initialType = 'text', o
     </div>
   );
 }
-
-    
