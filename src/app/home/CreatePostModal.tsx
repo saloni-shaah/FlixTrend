@@ -267,7 +267,7 @@ export default function CreatePostModal({ open, onClose, initialType = 'text', o
         snippetEnd: songSnippet[1],
       } : null;
 
-      const postData: any = {
+      const postDataObject: any = {
         userId: user.uid,
         displayName: profileData.name || user.displayName,
         username: profileData.username,
@@ -288,14 +288,13 @@ export default function CreatePostModal({ open, onClose, initialType = 'text', o
 
       if (type === "flash") {
         await addDoc(collection(db, "flashes"), {
-          ...postData,
-          content: content,
+          ...postDataObject,
           caption: content,
           expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
         });
       } else {
         const collectionRef = collection(db, "posts");
-        await addDoc(collectionRef, postData);
+        await addDoc(collectionRef, postDataObject);
       }
       
       onClose();
@@ -570,3 +569,5 @@ export default function CreatePostModal({ open, onClose, initialType = 'text', o
     </div>
   );
 }
+
+    
