@@ -4,7 +4,7 @@ import "regenerator-runtime/runtime";
 import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import dynamic from 'next/dynamic';
 import { getFirestore, collection, query, orderBy, onSnapshot, getDoc, doc, limit, startAfter, getDocs, where, Timestamp } from "firebase/firestore";
-import { Plus, Bell, Search, Mic, Video } from "lucide-react";
+import { Plus, Bell, Search, Mic, Video, BarChart3, Radio } from "lucide-react";
 import { auth } from "@/utils/firebaseClient";
 import { useAppState } from "@/utils/AppStateContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -14,46 +14,17 @@ import { VibeSpaceLoader } from "@/components/VibeSpaceLoader";
 import AdBanner from "@/components/AdBanner";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Sparkles } from 'lucide-react';
+import { Sparkles, ImageIcon } from 'lucide-react';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import { AlmightyLogo } from "@/components/ui/logo";
+import { CreatePostPrompt } from "@/components/CreatePostPrompt";
+
 
 const AddMusicModal = dynamic(() => import('@/components/MusicDiscovery').then(mod => mod.MusicDiscovery), { ssr: false });
 const FlashModal = dynamic(() => import('@/components/FlashModal'), { ssr: false });
 const NotificationPanel = dynamic(() => import('@/components/NotificationPanel'), { ssr: false });
 const LiveStream = dynamic(() => import('@/components/LiveStream').then(mod => mod.LiveStream), { ssr: false });
 const ShortsPlayer = dynamic(() => import('@/components/ShortsPlayer').then(mod => mod.ShortsPlayer), { ssr: false });
-
-const db = getFirestore(app);
-
-const CreatePostPrompt = dynamic(() => Promise.resolve(function CreatePostPrompt({ isPremium }: { isPremium: boolean }) {
-  const [userProfile, setUserProfile] = useState<any>(null);
-  const router = useRouter();
-
-  useEffect(() => {
-    const unsub = auth.onAuthStateChanged(async (user) => {
-      if (user) {
-        const userDoc = await getDoc(doc(db, "users", user.uid));
-        if (userDoc.exists()) {
-          setUserProfile(userDoc.data());
-        }
-      }
-    });
-    return () => unsub();
-  }, []);
-
-  return (
-      <div className="w-full max-w-xl mb-6">
-        <button className="glass-card p-4 text-center w-full" onClick={() => router.push('/create')}>
-          <h3 className="font-bold text-lg">Flix Your Fit by dropping a post</h3>
-          <span className="text-accent-cyan hover:underline text-sm">
-            click here to make a post
-          </span>
-        </button>
-        {!isPremium && <PremiumUpgradeBanner />}
-      </div>
-  );
-}), { ssr: false });
 
 const PremiumUpgradeBanner = dynamic(() => Promise.resolve(function PremiumUpgradeBanner() {
     return (
@@ -77,6 +48,8 @@ const PremiumUpgradeBanner = dynamic(() => Promise.resolve(function PremiumUpgra
     )
 }), { ssr: false });
 
+
+const db = getFirestore(app);
 
 function HomePageContent() {
   const [showMusicModal, setShowMusicModal] = useState(false);
@@ -354,7 +327,7 @@ function HomePageContent() {
           <VibeSpaceLoader />
         ) : (
           <div className="w-full max-w-xl flex flex-col gap-6">
-            <CreatePostPrompt isPremium={isPremium} />
+            <CreatePostPrompt isPremium={!!isPremium} onGoLive={handleGoLive} />
             {filteredPosts.map((post, index) => (
               <React.Fragment key={post.id}>
                 <PostCard post={post} />
@@ -423,7 +396,3 @@ export default function HomePage() {
         </Suspense>
     )
 }
-
-    
-
-    
