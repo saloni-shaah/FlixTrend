@@ -8,68 +8,32 @@ import {
   RemixImageInput,
   RemixImageInputSchema,
 } from 'almighty/src/ai/schemas/remix-image-schema';
-import { Storage } from '@google-cloud/storage';
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { app } from '@/utils/firebaseClient';
 
-let storage: Storage | undefined;
-let bucket: any;
+const storage = getStorage(app);
 
-function initializeStorage() {
-  if (storage) return;
-
-  const projectId = process.env.GCP_PROJECT_ID;
-  const keyJson = process.env.GCP_SERVICE_ACCOUNT_KEY_JSON;
-  const bucketName = process.env.GCS_BUCKET_NAME;
-
-  if (!projectId || !keyJson || !bucketName) {
-    throw new Error("Google Cloud Storage environment variables are not properly configured.");
-  }
-
-  storage = new Storage({
-    projectId: projectId,
-    credentials: JSON.parse(keyJson),
-  });
-
-  bucket = storage.bucket(bucketName);
-}
-
-
-export async function uploadFileToGCS(formData: FormData) {
-  try {
-    initializeStorage();
-  } catch (error: any) {
-    console.error(error.message);
-    return { failure: "Server is not configured for file uploads. Please set up Google Cloud Storage environment variables." };
-  }
-
+export async function uploadFileToFirebaseStorage(formData: FormData) {
   const file = formData.get('file') as File;
 
   if (!file) {
     return { failure: 'No file found in form data.' };
   }
 
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const fileName = `${Date.now()}-${file.name.replace(/ /g, '_')}`;
-  const blob = bucket.file(fileName);
+  try {
+    const fileName = `${Date.now()}-${file.name.replace(/ /g, '_')}`;
+    const storageRef = ref(storage, fileName);
 
-  const blobStream = blob.createWriteStream({
-    resumable: false,
-    contentType: file.type,
-  });
-
-  return new Promise((resolve, reject) => {
-    blobStream.on('error', (err) => {
-      console.error(err);
-      resolve({ failure: 'Could not upload file.' });
-    });
-
-    blobStream.on('finish', () => {
-      const publicUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
-      resolve({ success: { url: publicUrl } });
-    });
-
-    blobStream.end(buffer);
-  });
+    const snapshot = await uploadBytes(storageRef, file);
+    const downloadURL = await getDownloadURL(snapshot.ref);
+    
+    return { success: { url: downloadURL } };
+  } catch (error) {
+    console.error("Firebase Storage upload error:", error);
+    return { failure: 'Could not upload file to Firebase Storage.' };
+  }
 }
+
 
 export async function getAlmightyResponse(input: ChatWithAlmightyInput) {
   try {
