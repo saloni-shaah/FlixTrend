@@ -9,7 +9,7 @@ import { useAppState } from "@/utils/AppStateContext";
 import { createCall } from "@/utils/callService";
 import { motion, AnimatePresence } from "framer-motion";
 import { translateText } from "@/ai/flows/translate-text-flow";
-import { getAlmightyResponse, uploadFileToGCS } from "@/app/actions";
+import { getAlmightyResponse, uploadFileToFirebaseStorage } from "@/app/actions";
 
 const anonymousNames = ["Ram", "Shyam", "Sita", "Mohan", "Krishna", "Radha", "Anchal", "Anaya", "Advik", "Diya", "Rohan", "Priya", "Arjun", "Saanvi", "Kabir"];
 const generateAnonymousName = (userId: string, chatId: string) => {
@@ -68,7 +68,7 @@ function CreateGroupModal({ mutuals, currentUser, onClose, onGroupCreated }: { m
             if(groupPictureFile){
                 const formData = new FormData();
                 formData.append('file', groupPictureFile);
-                const result = await uploadFileToGCS(formData);
+                const result = await uploadFileToFirebaseStorage(formData);
                 if(result.success?.url) groupPictureUrl = result.success.url;
             }
 
@@ -802,9 +802,11 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
     try {
         const formData = new FormData();
         formData.append('file', file);
-        const result = await uploadFileToGCS(formData);
+        const result = await uploadFileToFirebaseStorage(formData);
         if (result.success?.url) {
             handleSend(new Event('submit') as any, result.success.url, type);
+        } else {
+          throw new Error(result.failure || "Upload failed");
         }
     } catch (error) {
         console.error("Upload failed:", error);

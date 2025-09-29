@@ -8,7 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { getFirestore, collection, addDoc, serverTimestamp, Timestamp, doc, getDoc } from "firebase/firestore";
 import { auth, app } from '@/utils/firebaseClient';
 import { useRouter } from 'next/navigation';
-import { uploadFileToGCS } from '@/app/actions';
+import { uploadFileToFirebaseStorage } from '@/app/actions';
 
 const db = getFirestore(app);
 
@@ -43,7 +43,7 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                 for (const file of postData.mediaFiles) {
                     const formData = new FormData();
                     formData.append('file', file);
-                    const result = await uploadFileToGCS(formData);
+                    const result = await uploadFileToFirebaseStorage(formData);
                     if (result.success?.url) {
                         finalMediaUrls.push(result.success.url);
                     } else {
@@ -56,7 +56,7 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
             if (postData.thumbnailFile) {
                  const formData = new FormData();
                 formData.append('file', postData.thumbnailFile);
-                const result = await uploadFileToGCS(formData);
+                const result = await uploadFileToFirebaseStorage(formData);
                 if (result.success?.url) {
                     finalThumbnailUrl = result.success.url;
                 } else {

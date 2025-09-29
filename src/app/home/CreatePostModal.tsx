@@ -5,7 +5,7 @@ import { getFirestore, collection, addDoc, serverTimestamp, getDoc, doc, query, 
 import { auth, app } from "@/utils/firebaseClient";
 import { useRouter } from "next/navigation";
 import { MapPin, Smile, UploadCloud, X, Camera, Zap, Radio, ImagePlus, Sparkles, Wand2, Loader } from "lucide-react";
-import { remixImageAction, uploadFileToGCS } from "@/app/actions";
+import { remixImageAction, uploadFileToFirebaseStorage } from "@/app/actions";
 
 const db = getFirestore(app);
 
@@ -233,7 +233,7 @@ export default function CreatePostModal({ open, onClose, initialType = 'text', o
               setUploadProgress(Math.round(((i + 1) / mediaFiles.length) * 100));
               const formData = new FormData();
               formData.append('file', file);
-              const result = await uploadFileToGCS(formData);
+              const result = await uploadFileToFirebaseStorage(formData);
               if (result.success?.url) {
                   uploadedMediaUrls.push(result.success.url);
               } else {
@@ -246,7 +246,7 @@ export default function CreatePostModal({ open, onClose, initialType = 'text', o
       if (type === 'media' && mediaFiles[0]?.type.startsWith('video') && thumbnailFile) {
         const formData = new FormData();
         formData.append('file', thumbnailFile);
-        const result = await uploadFileToGCS(formData);
+        const result = await uploadFileToFirebaseStorage(formData);
         if (!result.success?.url) throw new Error("Thumbnail upload failed");
         uploadedThumbnailUrl = result.success.url;
       }
@@ -273,6 +273,7 @@ export default function CreatePostModal({ open, onClose, initialType = 'text', o
         username: profileData.username,
         avatar_url: profileData.avatar_url,
         type: type,
+        content: content,
         mediaUrl: uploadedMediaUrls.length > 0 ? (type === 'flash' ? uploadedMediaUrls[0] : uploadedMediaUrls) : null,
         thumbnailUrl: uploadedThumbnailUrl,
         hashtags: postHashtags,
@@ -286,12 +287,10 @@ export default function CreatePostModal({ open, onClose, initialType = 'text', o
       };
 
       if (type === "flash") {
-        postDataObject.content = content || ""; // Ensure content is not undefined
         postDataObject.caption = content;
         postDataObject.expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
         await addDoc(collection(db, "flashes"), postDataObject);
       } else {
-        postDataObject.content = content;
         const collectionRef = collection(db, "posts");
         await addDoc(collectionRef, postDataObject);
       }

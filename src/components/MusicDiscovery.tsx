@@ -6,34 +6,9 @@ import { Play, Pause, Plus, Music, Search } from 'lucide-react';
 import { getFirestore, collection, addDoc, serverTimestamp, query, onSnapshot, orderBy, where, updateDoc, arrayUnion, doc } from 'firebase/firestore';
 import { auth, app } from '@/utils/firebaseClient';
 import { useAppState } from '@/utils/AppStateContext';
+import { uploadFileToFirebaseStorage } from '@/app/actions';
 
 const db = getFirestore(app);
-
-async function uploadToCloudinary(file: File, onProgress?: (percent: number) => void): Promise<string | null> {
-  const url = `https://api.cloudinary.com/v1_1/drrzvi2jp/upload`;
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("upload_preset", "flixtrend_unsigned");
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", url);
-    xhr.upload.onprogress = (event) => {
-      if (event.lengthComputable && onProgress) {
-        onProgress(Math.round((event.loaded / event.total) * 100));
-      }
-    };
-    xhr.onload = () => {
-      const data = JSON.parse(xhr.responseText);
-      if (xhr.status === 200 && data.secure_url) {
-        resolve(data.secure_url);
-      } else {
-        reject(new Error(data.error?.message || "Upload failed"));
-      }
-    };
-    xhr.onerror = () => reject(new Error("Upload failed"));
-    xhr.send(formData);
-  });
-}
 
 export function AddMusicModal({ onClose }: { onClose: () => void }) {
     const [form, setForm] = useState({
@@ -77,16 +52,21 @@ export function AddMusicModal({ onClose }: { onClose: () => void }) {
         try {
             const user = auth.currentUser;
             if (!user) throw new Error("Not logged in");
-            
-            const audioUrl = await uploadToCloudinary(audioFile);
-            const albumArtUrl = await uploadToCloudinary(albumArtFile);
 
-            if (!audioUrl || !albumArtUrl) throw new Error("File upload failed.");
+            const audioFormData = new FormData();
+            audioFormData.append('file', audioFile);
+            const audioResult = await uploadFileToFirebaseStorage(audioFormData);
+            if (!audioResult.success?.url) throw new Error(audioResult.failure || "Audio upload failed.");
+
+            const artFormData = new FormData();
+            artFormData.append('file', albumArtFile);
+            const artResult = await uploadFileToFirebaseStorage(artFormData);
+            if (!artResult.success?.url) throw new Error(artResult.failure || "Album art upload failed.");
 
             await addDoc(collection(db, 'songs'), {
                 ...form,
-                audioUrl,
-                albumArtUrl,
+                audioUrl: audioResult.success.url,
+                albumArtUrl: artResult.success.url,
                 userId: user.uid,
                 username: user.displayName,
                 createdAt: serverTimestamp(),
