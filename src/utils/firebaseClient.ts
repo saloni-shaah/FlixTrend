@@ -5,13 +5,13 @@ import { getFirestore } from "firebase/firestore";
 import { getMessaging } from "firebase/messaging";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyD5pOxEFENSBHsBSCo8Fnq9bHP_vGQEIHs",
-  authDomain: "flixtrendmvp-a2002.firebaseapp.com",
-  projectId: "flixtrendmvp-a2002",
-  storageBucket: "flixtrendmvp-a2002.appspot.com",
-  messagingSenderId: "589343899228",
-  appId: "1:589343899228:web:ca642b7a4390b357fdf099",
-  measurementId: "G-TK8GF201Q7"
+  apiKey: "AIzaSyBAFigbMPTmbQzIWFlTNkZxrNo3ym51Tto",
+  authDomain: "direct-hope-473110-r0.firebaseapp.com",
+  projectId: "direct-hope-473110-r0",
+  storageBucket: "direct-hope-473110-r0.appspot.com",
+  messagingSenderId: "1074226225704",
+  appId: "1:1074226225704:web:b2a20d917eb2901b1acb1d",
+  measurementId: "G-W34EF2WGHS"
 };
 
 const firebaseApp = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
