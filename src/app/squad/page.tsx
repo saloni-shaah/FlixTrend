@@ -13,6 +13,7 @@ import { FollowButton } from "@/components/FollowButton";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { FollowListModal } from "@/components/FollowListModal";
 import { getDownloadedPosts } from "@/utils/offline-db";
+import { uploadFileToFirebaseStorage } from "@/app/actions";
 
 const db = getFirestore();
 const functions = getFunctions();
@@ -63,35 +64,6 @@ function ProfileBadge({ profile, allUsers }: { profile: any, allUsers: any[] }) 
     )
 }
 
-async function uploadToCloudinary(file: File, onProgress?: (percent: number) => void): Promise<string | null> {
-  const url = `https://api.cloudinary.com/v1_1/drrzvi2jp/upload`;
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("upload_preset", "flixtrend_unsigned");
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", url);
-    xhr.upload.onprogress = (event) => {
-      if (event.lengthComputable && onProgress) {
-        onProgress(Math.round((event.loaded / event.total) * 100));
-      }
-    };
-    xhr.onload = () => {
-      if (xhr.responseText) {
-        const data = JSON.parse(xhr.responseText);
-        if (xhr.status === 200 && data.secure_url) {
-          resolve(data.secure_url);
-        } else {
-          reject(new Error(data.error?.message || "Upload failed"));
-        }
-      } else {
-        reject(new Error("Upload failed with empty response"));
-      }
-    };
-    xhr.onerror = () => reject(new Error("Upload failed"));
-    xhr.send(formData);
-  });
-}
 
 declare global {
     interface Window {
@@ -776,10 +748,16 @@ function EditProfileModal({ profile, onClose }: { profile: any; onClose: () => v
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'avatar_url' | 'banner_url') => {
     if (e.target.files && e.target.files[0]) {
       setUploading(field);
-      setUploadProgress(0);
+      setUploadProgress(0); // You would update this with real progress
       try {
-        const url = await uploadToCloudinary(e.target.files[0], (p) => setUploadProgress(p));
-        setForm((prev) => ({ ...prev, [field]: url || "" }));
+        const formData = new FormData();
+        formData.append('file', e.target.files[0]);
+        const result = await uploadFileToFirebaseStorage(formData);
+        if (result.success?.url) {
+            setForm((prev) => ({ ...prev, [field]: result.success.url }));
+        } else {
+            throw new Error(result.failure || "File upload failed.");
+        }
       } catch (err: any) {
         setError(err.message);
       }
