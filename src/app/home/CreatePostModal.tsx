@@ -4,7 +4,7 @@ import React, { useRef, useState, useEffect } from "react";
 import { getFirestore, collection, addDoc, serverTimestamp, getDoc, doc, query, onSnapshot, orderBy } from "firebase/firestore";
 import { auth, app } from "@/utils/firebaseClient";
 import { useRouter } from "next/navigation";
-import { MapPin, Smile, UploadCloud, X, Camera, Zap, Radio, ImagePlus, Sparkles, Wand2, Loader } from "lucide-react";
+import { MapPin, Smile, X, Camera, Zap, Radio, ImagePlus, Wand2, Loader } from "lucide-react";
 import { remixImageAction, uploadFileToFirebaseStorage } from "@/app/actions";
 
 const db = getFirestore(app);
