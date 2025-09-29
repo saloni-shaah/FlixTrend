@@ -4,7 +4,7 @@ import "regenerator-runtime/runtime";
 import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import dynamic from 'next/dynamic';
 import { getFirestore, collection, query, orderBy, onSnapshot, getDoc, doc, limit, startAfter, getDocs, where, Timestamp } from "firebase/firestore";
-import { Plus, Bell, Search, Mic, Video } from "lucide-react";
+import { Plus, Bell, Search, Mic, Video, BarChart3, Radio } from "lucide-react";
 import { auth } from "@/utils/firebaseClient";
 import { useAppState } from "@/utils/AppStateContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -14,7 +14,7 @@ import { VibeSpaceLoader } from "@/components/VibeSpaceLoader";
 import AdBanner from "@/components/AdBanner";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Sparkles } from 'lucide-react';
+import { Sparkles, ImageIcon } from 'lucide-react';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import { AlmightyLogo } from "@/components/ui/logo";
 import { CreatePostPrompt } from "@/components/CreatePostPrompt";
@@ -71,6 +71,7 @@ function HomePageContent() {
   const router = useRouter();
   const POSTS_PER_PAGE = 5;
   const feedEndRef = useRef<HTMLDivElement>(null);
+  const [hasUnreadNotifs, setHasUnreadNotifs] = useState(false);
   
   const {
     transcript,
@@ -94,6 +95,14 @@ function HomePageContent() {
         if (userDoc.exists()) {
           setUserProfile(userDoc.data());
         }
+
+        // Setup notification listener
+        const q = query(collection(db, "notifications", user.uid, "user_notifications"), where("read", "==", false));
+        const unsubNotifs = onSnapshot(q, (snapshot) => {
+            setHasUnreadNotifs(!snapshot.empty);
+        });
+        return () => unsubNotifs();
+
       } else {
         router.replace('/login'); 
       }
@@ -234,7 +243,7 @@ function HomePageContent() {
     return <ShortsPlayer onClose={() => setShowShortsPlayer(false)} />;
   }
 
-  if (!currentUser || !browserSupportsSpeechRecognition) {
+  if (loading) {
     return <VibeSpaceLoader />;
   }
 
@@ -318,7 +327,7 @@ function HomePageContent() {
           <VibeSpaceLoader />
         ) : (
           <div className="w-full max-w-xl flex flex-col gap-6">
-            <CreatePostPrompt isPremium={isPremium} />
+            <CreatePostPrompt isPremium={!!isPremium} onGoLive={handleGoLive} />
             {filteredPosts.map((post, index) => (
               <React.Fragment key={post.id}>
                 <PostCard post={post} />
@@ -347,18 +356,19 @@ function HomePageContent() {
       {/* Top Right FABs */}
       <div className="fixed top-4 right-4 z-30 flex flex-col items-center">
         <button
-          className="relative inline-flex items-center justify-center bg-white/10 dark:bg-black/20 backdrop-blur-md border border-white/10 dark:border-black/20 w-12 h-12 rounded-full text-white hover:bg-gradient-to-tr hover:from-accent-purple hover:to-accent-cyan transition-all"
+          className={`relative inline-flex items-center justify-center bg-white/10 dark:bg-black/20 backdrop-blur-md border border-white/10 dark:border-black/20 w-12 h-12 rounded-full text-white hover:bg-gradient-to-tr hover:from-accent-purple hover:to-accent-cyan transition-all ${hasUnreadNotifs ? 'animate-pulse' : ''}`}
           title="Notifications"
           onClick={() => setShowNotifications(true)}
           aria-label="Notifications"
         >
           <Bell className="text-xl" />
+          {hasUnreadNotifs && <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-accent-pink rounded-full"></span>}
         </button>
       </div>
 
        {/* Bottom Right AI FAB */}
       <div className="fixed bottom-24 right-4 z-30">
-        <Link href="/signal?chat=almighty">
+        <Link href="/signal">
             <motion.button 
                 className="w-16 h-16 rounded-full flex items-center justify-center shadow-fab-glow bg-green-200/20 dark:bg-green-900/30 backdrop-blur-md"
                 whileHover={{ scale: 1.1 }}
