@@ -1226,5 +1226,3 @@ export default function SignalPageWrapper() {
         </Suspense>
     )
 }
-
-    
