@@ -9,9 +9,9 @@ import {
   RemixImageInputSchema,
 } from 'almighty/src/ai/schemas/remix-image-schema';
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { initializeApp, getApps } from "firebase/app";
 import { app } from '@/utils/firebaseClient';
 
-const storage = getStorage(app);
 
 export async function uploadFileToFirebaseStorage(formData: FormData) {
   const file = formData.get('file') as File;
@@ -21,6 +21,8 @@ export async function uploadFileToFirebaseStorage(formData: FormData) {
   }
 
   try {
+    // Initialize storage inside the action
+    const storage = getStorage(app);
     const fileName = `${Date.now()}-${file.name.replace(/ /g, '_')}`;
     const storageRef = ref(storage, fileName);
 
