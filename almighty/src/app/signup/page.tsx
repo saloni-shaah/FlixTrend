@@ -1,0 +1,261 @@
+
+"use client";
+import React, { useState } from "react";
+import Link from "next/link";
+import { auth, app } from "@/utils/firebaseClient";
+import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } from "firebase/auth";
+import { getFirestore, doc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowRight, ArrowLeft, Camera, UploadCloud } from 'lucide-react';
+import { uploadFileToFirebaseStorage } from "@/app/actions";
+
+const db = getFirestore(app);
+
+// Helper to check for username uniqueness
+async function isUsernameUnique(username: string): Promise<boolean> {
+    const q = query(collection(db, "users"), where("username", "==", username.toLowerCase()));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.empty;
+}
+
+export default function SignupPage() {
+    const [step, setStep] = useState(1);
+    const [form, setForm] = useState({
+        email: "",
+        password: "",
+        confirmPassword: "",
+        username: "",
+        name: "",
+        bio: "",
+        dob: "",
+        gender: "",
+        location: "",
+        phoneNumber: "",
+        accountType: "user",
+    });
+    const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
+    const [profilePicturePreview, setProfilePicturePreview] = useState<string | null>(null);
+    const [bannerFile, setBannerFile] = useState<File | null>(null);
+    const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+    
+    const [error, setError] = useState("");
+    const [success, setSuccess] = useState("");
+    const [loading, setLoading] = useState(false);
+    const router = useRouter();
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+        setForm({ ...form, [e.target.name]: e.target.value });
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'banner') => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            const previewUrl = URL.createObjectURL(file);
+            if (type === 'avatar') {
+                setProfilePictureFile(file);
+                setProfilePicturePreview(previewUrl);
+            } else {
+                setBannerFile(file);
+                setBannerPreview(previewUrl);
+            }
+        }
+    };
+    
+    const nextStep = async () => {
+        setError("");
+        if (step === 1) {
+            if (form.password !== form.confirmPassword) {
+                setError("Passwords do not match");
+                return;
+            }
+            if (form.username.length < 3) {
+                setError("Username must be at least 3 characters long.");
+                return;
+            }
+            setLoading(true);
+            const unique = await isUsernameUnique(form.username);
+            setLoading(false);
+            if (!unique) {
+                setError("This username is already taken. Please choose another.");
+                return;
+            }
+        }
+        setStep(s => s + 1);
+    };
+    
+    const prevStep = () => setStep(s => s - 1);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError("");
+        setSuccess("");
+        
+        if(step !== 3) {
+            nextStep();
+            return;
+        }
+
+        setLoading(true);
+        try {
+            // 1. Create User in Auth
+            const userCredential = await createUserWithEmailAndPassword(auth, form.email, form.password);
+            
+            // 2. Upload files to Firebase Storage
+            let avatarUrl = `https://api.dicebear.com/8.x/bottts-neutral/svg?seed=${form.username}`;
+            let bannerUrl = "";
+
+            if (profilePictureFile) {
+                const avatarFormData = new FormData();
+                avatarFormData.append('file', profilePictureFile);
+                const avatarResult = await uploadFileToFirebaseStorage(avatarFormData);
+                if (avatarResult.success?.url) {
+                    avatarUrl = avatarResult.success.url;
+                } else {
+                    console.warn("Avatar upload failed, using default.");
+                }
+            }
+            if (bannerFile) {
+                const bannerFormData = new FormData();
+                bannerFormData.append('file', bannerFile);
+                const bannerResult = await uploadFileToFirebaseStorage(bannerFormData);
+                if (bannerResult.success?.url) {
+                    bannerUrl = bannerResult.success.url;
+                }
+            }
+
+            // 3. Update Auth Profile
+            await updateProfile(userCredential.user, {
+                displayName: form.name,
+                photoURL: avatarUrl,
+            });
+
+            // 4. Store user profile in Firestore
+            await setDoc(doc(db, "users", userCredential.user.uid), {
+                uid: userCredential.user.uid,
+                email: form.email,
+                name: form.name,
+                username: form.username.toLowerCase(),
+                bio: form.bio,
+                dob: form.dob,
+                gender: form.gender,
+                location: form.location,
+                phoneNumber: form.phoneNumber, // Storing it, but it's unverified
+                accountType: form.accountType,
+                avatar_url: avatarUrl,
+                banner_url: bannerUrl,
+                created_at: new Date().toISOString(),
+                profileComplete: true, 
+            });
+
+            // 5. Send verification email
+            await sendEmailVerification(userCredential.user);
+
+            setSuccess("Signup successful! Please check your email to verify your account. Redirecting...");
+            setTimeout(() => router.push("/home"), 3000);
+        } catch (err: any) {
+            setError(err.message);
+        }
+        setLoading(false);
+    };
+
+    const renderStep = () => {
+        switch(step) {
+            case 1:
+                return (
+                    <motion.div key="step1" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} className="flex flex-col gap-4">
+                        <h3 className="text-xl font-bold text-accent-cyan text-center">Step 1: Account Credentials</h3>
+                        <input type="email" name="email" placeholder="Email" className="input-glass w-full" value={form.email} onChange={handleChange} required />
+                        <input type="text" name="username" placeholder="Username" className="input-glass w-full" value={form.username} onChange={handleChange} required />
+                        <input type="password" name="password" placeholder="Password" className="input-glass w-full" value={form.password} onChange={handleChange} required />
+                        <input type="password" name="confirmPassword" placeholder="Confirm Password" className="input-glass w-full" value={form.confirmPassword} onChange={handleChange} required />
+                    </motion.div>
+                );
+            case 2:
+                return (
+                     <motion.div key="step2" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} className="flex flex-col gap-4">
+                        <h3 className="text-xl font-bold text-accent-cyan text-center">Step 2: Tell Us About Yourself</h3>
+                         <input type="text" name="name" placeholder="Full Name" className="input-glass w-full" value={form.name} onChange={handleChange} required />
+                         <textarea name="bio" placeholder="Your Bio" className="input-glass w-full rounded-2xl min-h-[80px]" value={form.bio} onChange={handleChange} />
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <input type="date" name="dob" placeholder="Date of Birth" className="input-glass w-full" value={form.dob} onChange={handleChange} />
+                            <select name="gender" className="input-glass w-full" value={form.gender} onChange={handleChange}>
+                                <option value="" disabled>Select Gender...</option>
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                                <option value="non-binary">Non-binary</option>
+                                <option value="other">Other</option>
+                                <option value="prefer-not-to-say">Prefer not to say</option>
+                            </select>
+                            <input type="text" name="location" placeholder="Location (e.g., City, Country)" className="input-glass w-full" value={form.location} onChange={handleChange} />
+                            <input type="tel" name="phoneNumber" placeholder="Phone Number (Optional)" className="input-glass w-full" value={form.phoneNumber} onChange={handleChange} />
+                         </div>
+                     </motion.div>
+                );
+            case 3:
+                return (
+                    <motion.div key="step3" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} className="flex flex-col gap-4 items-center">
+                        <h3 className="text-xl font-bold text-accent-cyan text-center">Step 3: Customize Your Look</h3>
+                        
+                        <div className="relative w-32 h-32 rounded-full border-4 border-accent-pink bg-black/20 flex items-center justify-center cursor-pointer overflow-hidden">
+                             <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleFileChange(e, 'avatar')} accept="image/*"/>
+                             {profilePicturePreview ? <img src={profilePicturePreview} alt="avatar" className="w-full h-full object-cover" /> : <Camera className="text-gray-400" />}
+                        </div>
+                        <p className="text-sm text-gray-300">Upload a Profile Picture</p>
+
+                        <div className="w-full h-32 rounded-lg bg-black/20 flex items-center justify-center cursor-pointer overflow-hidden relative">
+                             <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleFileChange(e, 'banner')} accept="image/*"/>
+                             {bannerPreview ? <img src={bannerPreview} alt="banner" className="w-full h-full object-cover" /> : <div className="text-gray-400 flex items-center gap-2"><UploadCloud/> <span>Upload Banner</span></div>}
+                        </div>
+                         <p className="text-sm text-gray-300">Upload a Banner Image</p>
+                    </motion.div>
+                );
+            default: return null;
+        }
+    }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <form
+        onSubmit={handleSubmit}
+        className="glass-card p-8 w-full max-w-lg flex flex-col gap-4"
+      >
+        <h2 className="text-3xl font-headline font-bold text-accent-pink mb-2 text-center">Join FlixTrend</h2>
+        
+        {/* Progress Bar */}
+        <div className="w-full bg-black/20 rounded-full h-2.5 mb-4">
+            <motion.div 
+                className="bg-gradient-to-r from-accent-pink to-accent-cyan h-2.5 rounded-full"
+                animate={{ width: `${(step / 3) * 100}%` }}
+                transition={{ duration: 0.5, ease: 'easeInOut' }}
+            />
+        </div>
+        
+        <AnimatePresence mode="wait">
+            {renderStep()}
+        </AnimatePresence>
+
+        {error && <div className="text-red-400 text-center animate-bounce mt-2">{error}</div>}
+        {success && <div className="text-accent-cyan text-center mt-2">{success}</div>}
+
+        <div className="flex justify-between items-center mt-6">
+            {step > 1 ? (
+                <button type="button" className="btn-glass flex items-center gap-2" onClick={prevStep} disabled={loading}>
+                    <ArrowLeft size={16} /> Back
+                </button>
+            ) : <div />}
+
+            <button type="submit" className="btn-glass bg-accent-pink flex items-center gap-2" disabled={loading}>
+                {loading ? 'Processing...' : step === 3 ? 'Finish & Sign Up' : 'Next'}
+                {step < 3 && <ArrowRight size={16} />}
+            </button>
+        </div>
+
+        <div className="text-center mt-4">
+          <span className="text-gray-400">Already have an account? </span>
+          <Link href="/login" className="text-accent-cyan hover:underline">Login</Link>
+        </div>
+      </form>
+    </div>
+  );
+}
