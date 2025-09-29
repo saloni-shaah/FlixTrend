@@ -112,7 +112,7 @@ function CompleteProfileModal({ profile, onClose }: { profile: any, onClose: () 
     const [error, setError] = useState("");
     const [verificationId, setVerificationId] = useState('');
     const [code, setCode] = useState('');
-    const [step, setStep] = useState(profile.phoneNumber ? 1 : 2); // Skip phone if already exists
+    const [step, setStep] = useState(profile.profileComplete ? 2 : 1);
 
     const setupRecaptcha = () => {
         if (!window.recaptchaVerifier) {
@@ -188,7 +188,7 @@ function CompleteProfileModal({ profile, onClose }: { profile: any, onClose: () 
                 // If we are skipping phone verification because it already exists
                 delete dataToUpdate.phoneNumber;
             }
-            await updateDoc(docRef, dataToUpdate);
+            await setDoc(docRef, dataToUpdate, { merge: true });
             onClose();
         } catch (err: any) {
             setError(err.message);
@@ -473,20 +473,22 @@ function SquadPageContent() {
             if (docSnap.exists()) {
                 const data = docSnap.data();
                 setProfile({ uid: docSnap.id, ...data });
-                 if (!data.profileComplete || !data.phoneNumber) {
+                 if (!data.profileComplete) {
                     setShowCompleteProfile(true);
                 }
             } else {
                  // Create profile if it doesn't exist
+                const defaultUsername = user.email ? user.email.split('@')[0] : `user${user.uid.substring(0,5)}`;
                 setDoc(userDocRef, {
                     uid: user.uid,
-                    name: user.displayName || "",
-                    username: user.displayName ? user.displayName.replace(/\s+/g, "").toLowerCase() : `user${user.uid.substring(0,5)}`,
+                    name: user.displayName || "New User",
+                    username: defaultUsername,
                     email: user.email || "",
                     avatar_url: `https://api.dicebear.com/8.x/bottts-neutral/svg?seed=${user.uid}`,
                     bio: "",
                     interests: "",
-                    createdAt: new Date(),
+                    createdAt: serverTimestamp(),
+                    profileComplete: false,
                 }).then(() => setShowCompleteProfile(true));
             }
         });
@@ -749,9 +751,6 @@ export default function SquadPage() {
         </Suspense>
     );
 }
-
-// NOTE: EditProfileModal and SettingsModal have been removed for brevity as they are not part of the fix.
-// They would be included here in a real scenario.
 
 function EditProfileModal({ profile, onClose }: { profile: any; onClose: () => void }) {
   const [form, setForm] = useState({
