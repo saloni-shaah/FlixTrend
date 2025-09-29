@@ -8,7 +8,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyBAFigbMPTmbQzIWFlTNkZxrNo3ym51Tto",
   authDomain: "direct-hope-473110-r0.firebaseapp.com",
   projectId: "direct-hope-473110-r0",
-  storageBucket: "direct-hope-473110-r0.appspot.com",
+  storageBucket: "direct-hope-473110-r0.firebasestorage.app",
   messagingSenderId: "1074226225704",
   appId: "1:1074226225704:web:b2a20d917eb2901b1acb1d",
   measurementId: "G-W34EF2WGHS"
