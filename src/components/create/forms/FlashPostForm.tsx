@@ -5,7 +5,7 @@ import { X, UploadCloud, Music as MusicIcon, MapPin, Smile, Camera, Image as Ima
 import { motion } from 'framer-motion';
 import { getFirestore, collection, onSnapshot, query, orderBy, getDoc, doc } from 'firebase/firestore';
 import { app } from '@/utils/firebaseClient';
-import { remixImageAction } from 'almighty/src/app/actions';
+import { remixImageAction } from '@/app/actions';
 import { Wand2, Loader } from 'lucide-react';
 
 
