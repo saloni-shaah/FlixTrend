@@ -74,7 +74,7 @@ exports.sendPushNotification = functions.firestore
         title: title,
         body: body,
         icon: "/icon-192x192.png", // Optional: URL to an icon
-        click_action: "https://flixtrendmvp-a2002.web.app/home", // URL to open on click
+        click_action: "https://flixtrend.com/home", // URL to open on click
       },
     };
 
@@ -200,8 +200,8 @@ exports.sendCallNotification = functions.firestore
       notification: {
         title: 'Incoming Call',
         body: `${callerName || 'Someone'} is calling you on FlixTrend!`,
-        icon: '/icon-192x192.png', // Or a specific call URL
-        click_action: 'https://flixtrendmvp-a2002.web.app/signal', // Or a specific call URL
+        icon: '/icon-192x192.png',
+        click_action: 'https://flixtrend.com/signal', 
       },
     };
 

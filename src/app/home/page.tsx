@@ -4,7 +4,7 @@ import "regenerator-runtime/runtime";
 import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import dynamic from 'next/dynamic';
 import { getFirestore, collection, query, orderBy, onSnapshot, getDoc, doc, limit, startAfter, getDocs, where, Timestamp } from "firebase/firestore";
-import { Plus, Bell, Search, Mic, Video, BarChart3, Radio } from "lucide-react";
+import { Plus, Bell, Search, Mic, Video } from "lucide-react";
 import { auth } from "@/utils/firebaseClient";
 import { useAppState } from "@/utils/AppStateContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -14,7 +14,6 @@ import { VibeSpaceLoader } from "@/components/VibeSpaceLoader";
 import AdBanner from "@/components/AdBanner";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Sparkles, ImageIcon } from 'lucide-react';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import { AlmightyLogo } from "@/components/ui/logo";
 import { CreatePostPrompt } from "@/components/CreatePostPrompt";
@@ -25,28 +24,7 @@ const FlashModal = dynamic(() => import('@/components/FlashModal'), { ssr: false
 const NotificationPanel = dynamic(() => import('@/components/NotificationPanel'), { ssr: false });
 const LiveStream = dynamic(() => import('@/components/LiveStream').then(mod => mod.LiveStream), { ssr: false });
 const ShortsPlayer = dynamic(() => import('@/components/ShortsPlayer').then(mod => mod.ShortsPlayer), { ssr: false });
-
-const PremiumUpgradeBanner = dynamic(() => Promise.resolve(function PremiumUpgradeBanner() {
-    return (
-        <Link href="/premium">
-            <motion.div 
-                className="mt-4 p-4 rounded-2xl bg-gradient-to-r from-accent-purple via-accent-pink to-brand-gold cursor-pointer"
-                whileHover={{ scale: 1.02 }}
-            >
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                         <Sparkles className="text-white" />
-                        <div>
-                            <h4 className="font-headline font-bold text-white">Go Premium!</h4>
-                            <p className="text-xs text-white/80">Unlock blue tick, an ad-free experience & more.</p>
-                        </div>
-                    </div>
-                    <span className="px-4 py-2 rounded-full bg-white/20 text-white font-bold text-sm">Upgrade</span>
-                </div>
-            </motion.div>
-        </Link>
-    )
-}), { ssr: false });
+const PremiumUpgradeBanner = dynamic(() => import('@/components/PremiumUpgradeBanner'), { ssr: false });
 
 
 const db = getFirestore(app);
@@ -101,6 +79,13 @@ function HomePageContent() {
         const unsubNotifs = onSnapshot(q, (snapshot) => {
             setHasUnreadNotifs(!snapshot.empty);
         });
+        
+        // Force a re-fetch of posts when user changes
+        setPosts([]);
+        setLastVisible(null);
+        setHasMore(true);
+        fetchPosts(true); // pass true to indicate a reset
+        
         return () => unsubNotifs();
 
       } else {
@@ -111,8 +96,8 @@ function HomePageContent() {
   }, [router]);
 
 
-  const fetchPosts = useCallback(async () => {
-    if (!currentUser) return;
+  const fetchPosts = useCallback(async (isReset = false) => {
+    if (!auth.currentUser) return;
     setLoading(true);
 
     const first = query(
@@ -127,14 +112,14 @@ function HomePageContent() {
     const firstBatch = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
 
-    setPosts(firstBatch);
+    setPosts(isReset ? firstBatch : [...posts, ...firstBatch]);
     setLastVisible(lastDoc);
     setLoading(false);
     setHasMore(documentSnapshots.docs.length === POSTS_PER_PAGE);
-  }, [currentUser]);
+  }, [posts]);
   
   const fetchMorePosts = useCallback(async () => {
-      if (!currentUser || !lastVisible || !hasMore || loadingMore) return;
+      if (!auth.currentUser || !lastVisible || !hasMore || loadingMore) return;
       setLoadingMore(true);
 
       const next = query(
@@ -153,12 +138,8 @@ function HomePageContent() {
       setLastVisible(lastDoc);
       setLoadingMore(false);
       setHasMore(documentSnapshots.docs.length === POSTS_PER_PAGE);
-  }, [currentUser, lastVisible, hasMore, loadingMore]);
+  }, [lastVisible, hasMore, loadingMore]);
 
-
-  useEffect(() => {
-    fetchPosts();
-  }, [fetchPosts]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -243,7 +224,7 @@ function HomePageContent() {
     return <ShortsPlayer onClose={() => setShowShortsPlayer(false)} />;
   }
 
-  if (loading) {
+  if (loading && posts.length === 0) {
     return <VibeSpaceLoader />;
   }
 
@@ -323,7 +304,7 @@ function HomePageContent() {
 
       {/* Feed Section */}
       <section className="flex-1 flex flex-col items-center mt-4">
-        {loading ? (
+        {loading && posts.length === 0 ? (
           <VibeSpaceLoader />
         ) : (
           <div className="w-full max-w-xl flex flex-col gap-6">
@@ -396,5 +377,3 @@ export default function HomePage() {
         </Suspense>
     )
 }
-
-    
