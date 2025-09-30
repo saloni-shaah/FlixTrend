@@ -1,7 +1,7 @@
 
 "use client";
 import React, { createContext, useState, useContext, ReactNode, useEffect, useRef } from 'react';
-import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp, Unsubscribe, updateDoc } from 'firebase/firestore';
+import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp, Unsubscribe, updateDoc, collection, addDoc, getDoc, writeBatch, getDocs } from 'firebase/firestore';
 import { auth, app } from './firebaseClient';
 import { CallScreen } from '@/components/CallScreen';
 import { requestForToken } from './firebaseMessaging';
@@ -25,6 +25,9 @@ interface AppState {
   callTarget: any | null;
   setCallTarget: (target: any | null) => void;
   activeCall: Call | null;
+  // CORRECTED: Added functions to the context definition
+  answerCall: () => Promise<void>; 
+  handleEndCall: () => Promise<void>;
   closeCall: () => void;
   pc: RTCPeerConnection | null;
   activeSong: Song | null;
@@ -50,6 +53,27 @@ const servers = {
   iceCandidatePoolSize: 10,
 };
 
+async function cleanUpCall(callId: string) {
+    if (!callId) return;
+    const callDocRef = doc(db, 'calls', callId);
+    try {
+        const callDocSnap = await getDoc(callDocRef);
+        if (!callDocSnap.exists()) return;
+        const batch = writeBatch(db);
+        const offerCandidatesRef = collection(callDocRef, 'offerCandidates');
+        const answerCandidatesRef = collection(callDocRef, 'answerCandidates');
+        const offerCandidatesSnap = await getDocs(offerCandidatesRef);
+        offerCandidatesSnap.forEach(doc => batch.delete(doc.ref));
+        const answerCandidatesSnap = await getDocs(answerCandidatesRef);
+        answerCandidatesSnap.forEach(doc => batch.delete(doc.ref));
+        batch.delete(callDocRef);
+        await batch.commit();
+    } catch (error) {
+        console.error(`Error cleaning up call ${callId}:`, error);
+    }
+}
+
+
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const [isCalling, setIsCalling] = useState(false);
   const [callTarget, setCallTarget] = useState<any | null>(null);
@@ -64,7 +88,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [selectedChat, setSelectedChat] = useState<any | null>(null);
 
 
-  // Effect for handling user presence and push notifications
   useEffect(() => {
     let callUnsubscribe: Unsubscribe | null = null;
     let callDocUnsubscribe: Unsubscribe | null = null;
@@ -132,21 +155,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
               if (callSnap.exists()) {
                 setActiveCall({ id: callSnap.id, ...callSnap.data() });
               } else {
-                setActiveCall(null);
-                if (peerConnection) peerConnection.close();
-                setPc(null);
+                closeCall(); // Use the state function to properly close down
               }
             });
           } else {
-            setActiveCall(null);
-            if (peerConnection) peerConnection.close();
-            setPc(null);
+            closeCall();
           }
         });
       } else {
-        setActiveCall(null);
-        if (peerConnection) peerConnection.close();
-        setPc(null);
+        closeCall();
       }
     });
 
@@ -157,6 +174,60 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         if(pc) pc.close();
     };
   }, []);
+
+  // CORRECTED: Implementation of answerCall logic
+  const answerCall = async () => {
+    if (!pc || !activeCall) return;
+
+    const callDocRef = doc(db, 'calls', activeCall.id);
+    const answerCandidates = collection(callDocRef, 'answerCandidates');
+    const offerCandidates = collection(callDocRef, 'offerCandidates');
+
+    pc.onicecandidate = (event) => {
+      event.candidate && addDoc(answerCandidates, event.candidate.toJSON());
+    };
+
+    const callData = (await getDoc(callDocRef)).data();
+    if (callData?.offer) {
+      await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
+    }
+
+    const answerDescription = await pc.createAnswer();
+    await pc.setLocalDescription(answerDescription);
+
+    await updateDoc(callDocRef, { answer: { type: answerDescription.type, sdp: answerDescription.sdp } });
+
+    onSnapshot(offerCandidates, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === 'added') {
+          pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
+        }
+      });
+    });
+  };
+
+  // CORRECTED: Implementation of handleEndCall logic
+  const handleEndCall = async () => {
+      if (!activeCall) return;
+      const user = auth.currentUser;
+      if (!user) return;
+      
+      // Clean up the call document in Firestore
+      await cleanUpCall(activeCall.id);
+      
+      // Reset the currentCallId on both users
+      const userDocRef = doc(db, 'users', user.uid);
+      await updateDoc(userDocRef, { currentCallId: null });
+      
+      const otherUserId = user.uid === activeCall.callerId ? activeCall.calleeId : activeCall.callerId;
+      if(otherUserId) {
+          const otherUserDocRef = doc(db, 'users', otherUserId);
+          await updateDoc(otherUserDocRef, { currentCallId: null });
+      }
+      
+      // This will trigger the onSnapshot cleanup
+      closeCall(); 
+  };
   
   useEffect(() => {
     return () => {
@@ -177,7 +248,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
     audio.addEventListener('play', () => setIsPlaying(true));
     audio.addEventListener('pause', () => setIsPlaying(false));
-    audio.addEventListener('ended', playNext); // Play next song when current one ends
+    audio.addEventListener('ended', playNext);
 
     setActiveSong(song);
     setIsPlaying(true);
@@ -231,6 +302,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     callTarget,
     setCallTarget,
     activeCall,
+    answerCall,      // CORRECTED: Expose new function
+    handleEndCall,   // CORRECTED: Expose new function
     closeCall,
     pc,
     activeSong,

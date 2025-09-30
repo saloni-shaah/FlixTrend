@@ -6,7 +6,7 @@ import { MessageSquare, ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { getFirestore, collection, query, where, onSnapshot, getDocs } from "firebase/firestore";
-import { auth, app } from "@/utils/firebaseClient";
+import { auth, app, requestNotificationPermission } from "@/utils/firebaseClient"; // Import the new function
 import { getDownloadedPosts } from "@/utils/offline-db";
 
 const db = getFirestore(app);
@@ -95,6 +95,14 @@ export default function AppNavBar() {
   const currentUser = auth.currentUser;
   const router = useRouter();
   
+  // *** ADDED THIS NEW HOOK FOR NOTIFICATION PERMISSIONS ***
+  useEffect(() => {
+    if (currentUser) {
+      console.log("User is logged in. Requesting notification permission...");
+      requestNotificationPermission(currentUser.uid);
+    }
+  }, [currentUser]); // This runs once when the user's status is known
+
   // Listener for unread messages
   useEffect(() => {
     if (!currentUser) {
@@ -122,7 +130,6 @@ export default function AppNavBar() {
             return onSnapshot(q, (snapshot) => {
                 const hasUnread = snapshot.docs.some(doc => {
                     const data = doc.data();
-                    // Check if readBy exists and if the current user's UID is NOT in it
                     return !data.readBy || !data.readBy.includes(currentUser.uid)
                 });
                 if (hasUnread) {
@@ -177,7 +184,6 @@ export default function AppNavBar() {
             setIsOffline(true);
             const posts = await getDownloadedPosts();
             setDownloadedPosts(posts);
-            // When going offline, redirect to the downloads tab on the squad page.
             if (currentUser) {
                 router.push('/squad?tab=downloads');
             }
@@ -186,7 +192,6 @@ export default function AppNavBar() {
         window.addEventListener('online', goOnline);
         window.addEventListener('offline', goOffline);
 
-        // Initial check
         if (typeof navigator !== 'undefined' && !navigator.onLine) {
             goOffline();
         }

@@ -159,7 +159,7 @@ export function SquadQuests() {
                 
                 <div className="flex flex-col gap-4">
                     {quest.stages.map((stage, index) => (
-                        <QuestStage key={index} stage={stage} index={index} onStageComplete={handleStageComplete} />
+                        <QuestStage key={stage.title} stage={stage} index={index} onStageComplete={handleStageComplete} />
                     ))}
                 </div>
             </div>
@@ -199,5 +199,3 @@ export function SquadQuests() {
         </motion.div>
     );
 }
-
-    

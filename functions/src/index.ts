@@ -1,285 +1,222 @@
 
-/**
- * Import function triggers from their respective submodules:
- *
- * import {onCall} from "firebase-functions/v2/https";
- * import {onDocumentWritten} from "firebase-functions/v2/firestore";
- *
- * See a full list of supported triggers at https://firebase.google.com/docs/functions
- */
-
+import { initializeApp } from "firebase-admin/app";
+import { getFirestore } from "firebase-admin/firestore";
+import { getMessaging } from "firebase-admin/messaging";
 import * as functions from "firebase-functions";
-import * as admin from "firebase-admin";
+import * as logger from "firebase-functions/logger";
 
-// Initialize the Firebase Admin SDK
-admin.initializeApp();
-const db = admin.firestore();
+// Initialize Firebase Admin SDK
+initializeApp();
+const db = getFirestore();
+const messaging = getMessaging();
 
 /**
- * Cloud Function to send a push notification when a new notification
- * is created in a user's `user_notifications` subcollection.
+ * A generic function to send notifications.
+ * This can be triggered by creating a new document in a 'notifications' collection.
  */
-exports.sendPushNotification = functions.firestore
-  .document("notifications/{userId}/user_notifications/{notificationId}")
-  .onCreate(async (snapshot, context) => {
-    const { userId } = context.params;
-    const notificationData = snapshot.data();
-
-    // 1. Get the recipient user's document to find their FCM token
-    const userDocRef = admin.firestore().collection("users").doc(userId);
-    const userDoc = await userDocRef.get();
-
-    if (!userDoc.exists) {
-      console.log(`User document not found for userId: ${userId}`);
+export const sendNotification = functions.firestore
+  .document('notifications/{notificationId}')
+  .onCreate(async (snapshot) => {
+    const notification = snapshot.data();
+    if (!notification) {
+      logger.log('No notification data found');
       return;
     }
 
-    const userData = userDoc.data();
-    const fcmToken = userData?.fcmToken;
+    const { userId, type, message, author } = notification;
+    if (!userId) {
+      logger.log('User ID is missing');
+      return;
+    }
+
+    // Fetch the user's FCM token
+    const userRef = db.collection('users').doc(userId);
+    const userDoc = await userRef.get();
+    if (!userDoc.exists) {
+      logger.log('User not found');
+      return;
+    }
+    const fcmToken = userDoc.data()?.fcmToken;
 
     if (!fcmToken) {
-      console.log(`FCM token not found for userId: ${userId}`);
+      logger.log('FCM token not found for user', userId);
       return;
     }
 
-    // 2. Construct the notification message payload
-    let title = "New Notification on FlixTrend";
-    let body = "You have a new notification.";
+    let notificationTitle = "You have a new notification";
+    let notificationBody = message;
 
-    const fromUsername = notificationData.fromUsername || "Someone";
-
-    switch (notificationData.type) {
-      case "follow":
-        title = "New Follower!";
-        body = `${fromUsername} started following you.`;
-        break;
-      case "like":
-        title = "Your Post was Liked!";
-        body = `${fromUsername} liked your post.`;
-        break;
-      case "comment":
-        title = "New Comment on Your Post!";
-        body = `${fromUsername} commented: "${notificationData.postContent}"`;
-        break;
-      case "missed_call":
-        title = "Missed Call";
-        body = `You missed a call from ${fromUsername}.`;
-        break;
-      default:
-        break;
+    // Customize notification messages based on type
+    switch(type) {
+        case 'like':
+            notificationTitle = `New Like!`;
+            notificationBody = `${author || 'Someone'} liked your post.`;
+            break;
+        case 'comment':
+            notificationTitle = `New Comment!`;
+            notificationBody = `${author || 'Someone'} commented on your post.`;
+            break;
+        case 'follow':
+            notificationTitle = `New Follower!`;
+            notificationBody = `${author || 'Someone'} started following you.`;
+            break;
+        case 'missed_call':
+            notificationTitle = `Missed Call`;
+            notificationBody = `You missed a call from ${author || 'Someone'}.`;
+            break;
     }
 
     const payload = {
       notification: {
-        title: title,
-        body: body,
-        icon: "/icon-192x192.png", // Optional: URL to an icon
-        click_action: "https://flixtrend.com/home", // URL to open on click
+        title: notificationTitle,
+        body: notificationBody,
+        icon: '/icon-192x192.png',
+        click_action: 'https://flixtrend.com/notifications', // Generic link, can be customized
       },
     };
 
-    // 3. Send the notification using the FCM token
     try {
-      const response = await admin.messaging().sendToDevice(fcmToken, payload);
-      console.log("Successfully sent message:", response);
+      await messaging.sendToDevice(fcmToken, payload);
+      logger.info('Successfully sent notification to user:', userId);
     } catch (error) {
-      console.error("Error sending message:", error);
+      logger.error('Error sending notification:', error);
     }
   });
 
 
 /**
- * Deletes all data associated with a user when they delete their account.
- * This is an HTTPS Callable function, meaning it must be triggered by the client app.
+ * Cloud Function to delete a user's data upon account deletion.
+ * This cleans up Firestore and other related user data.
  */
-exports.deleteUserAccount = functions.https.onCall(async (data, context) => {
-  // Check if the user is authenticated.
-  if (!context.auth) {
-    throw new functions.https.HttpsError(
-      "unauthenticated",
-      "The function must be called while authenticated."
-    );
-  }
+export const onUserDelete = functions.auth.user().onDelete(async (user) => {
+  logger.info(`User ${user.uid} is being deleted. Cleaning up data.`);
+  const batch = db.batch();
 
-  const uid = context.auth.uid;
+  // Delete user document from 'users' collection
+  const userRef = db.collection('users').doc(user.uid);
+  batch.delete(userRef);
+
+  // Here you can add more cleanup logic as your app grows. For example:
+  // - Delete user's posts
+  // - Delete user's comments
+  // - Invalidate sessions
 
   try {
-    // 1. Delete user from Firebase Authentication
-    await admin.auth().deleteUser(uid);
-    console.log(`Successfully deleted auth user: ${uid}`);
-
-    const batch = db.batch();
-
-    // 2. Delete user's main profile document
-    const userDocRef = db.collection("users").doc(uid);
-    batch.delete(userDocRef);
-
-    // 3. Delete all of the user's posts
-    const userPostsQuery = db.collection("posts").where("userId", "==", uid);
-    const userPostsSnap = await userPostsQuery.get();
-    userPostsSnap.forEach((doc) => batch.delete(doc.ref));
-
-    // 4. Delete all of the user's flashes
-    const userFlashesQuery = db.collection("flashes").where("userId", "==", uid);
-    const userFlashesSnap = await userFlashesQuery.get();
-    userFlashesSnap.forEach((doc) => batch.delete(doc.ref));
-    
-    // 5. Delete all user notifications
-    const userNotifsRef = db.collection("notifications").doc(uid);
-    // This requires recursive delete, which is complex. For MVP, we delete the doc.
-    // In production, a more robust solution (e.g. another function) is needed.
-    batch.delete(userNotifsRef);
-
-    // 6. Remove user from following/followers lists of other users
-    const followingQuery = db.collection("users").doc(uid).collection("following");
-    const followingSnap = await followingQuery.get();
-    for (const doc of followingSnap.docs) {
-        const otherUserId = doc.id;
-        const otherUserFollowerRef = db.collection("users").doc(otherUserId).collection("followers").doc(uid);
-        batch.delete(otherUserFollowerRef);
-    }
-
-    const followersQuery = db.collection("users").doc(uid).collection("followers");
-    const followersSnap = await followersQuery.get();
-    for (const doc of followersSnap.docs) {
-        const otherUserId = doc.id;
-        const otherUserFollowingRef = db.collection("users").doc(otherUserId).collection("following").doc(uid);
-        batch.delete(otherUserFollowingRef);
-    }
-
-    // You might need more logic here to delete comments, likes, etc.
-    // This can get very complex. For an MVP, this is a strong start.
-
     await batch.commit();
-
-    return { result: `Successfully deleted user data for ${uid}` };
-
+    logger.info(`Successfully cleaned up data for user ${user.uid}.`);
   } catch (error) {
-    console.error("Error deleting user:", error);
-    throw new functions.https.HttpsError(
-      "internal",
-      "An error occurred while deleting the user account."
-    );
+    logger.error(`Error cleaning up data for user ${user.uid}:`, error);
   }
 });
 
 
 /**
- * Cloud Function to send a push notification for an incoming call.
+ * Sends a push notification to the callee when a new call document is created.
+ * This is triggered whenever a call is initiated.
  */
-exports.sendCallNotification = functions.firestore
-  .document('calls/{callId}')
-  .onCreate(async (snapshot, context) => {
-    const callData = snapshot.data();
-    if (!callData) {
-      console.log('No data associated with the call event.');
-      return;
-    }
+export const onCallCreated = functions.firestore
+    .document('calls/{callId}')
+    .onCreate(async (snap) => {
+        const callData = snap.data();
+        if (!callData) {
+            logger.log('No call data found in document');
+            return;
+        }
 
-    const { calleeId, callerName } = callData;
+        const { calleeId, callerName } = callData;
 
-    // Get the callee's user document to find their FCM token
-    const userDocRef = admin.firestore().collection('users').doc(calleeId);
-    const userDoc = await userDocRef.get();
+        if (!calleeId) {
+            logger.log('calleeId is missing from call document');
+            return;
+        }
 
-    if (!userDoc.exists) {
-      console.log(`User document not found for calleeId: ${calleeId}`);
-      return;
-    }
+        // Get the callee's user document to find their FCM token
+        const userDocRef = db.collection('users').doc(calleeId);
+        const userDoc = await userDocRef.get();
+    
+        if (!userDoc.exists) {
+            logger.log(`User document not found for calleeId: ${calleeId}`);
+            return;
+        }
+    
+        const userData = userDoc.data();
+        const fcmToken = userData?.fcmToken;
+    
+        if (!fcmToken) {
+            logger.log(`FCM token not found for calleeId: ${calleeId}`);
+            return;
+        }
+    
+        // Construct a data-heavy payload for a ringtone effect
+        const payload = {
+            token: fcmToken,
+            // Send all info in the data payload for the service worker to handle
+            data: {
+                type: 'incoming_call',
+                title: 'Incoming Call',
+                body: `${callerName || 'Someone'} is calling you on FlixTrend!`,
+                icon: '/icon-192x192.png',
+                click_action: 'https://flixtrend.com/signal',
+            },
+            // APNs (Apple) specific configuration for a critical alert with sound
+            apns: {
+                headers: {
+                    'apns-push-type': 'alert', // Use 'alert' for web, 'voip' for native iOS
+                    'apns-priority': '10', // Highest priority
+                },
+                payload: {
+                    aps: {
+                        sound: 'default', // Using a default sound, can be a custom file like 'ringtone.caf'
+                        'content-available': 1, // To wake up the app
+                    },
+                },
+            },
+            // Android specific configuration for high priority and custom sound channel
+            android: {
+                priority: 'high',
+                notification: {
+                    sound: 'default', // Can be 'ringtone' if you have a ringtone.mp3 asset
+                    channel_id: 'incoming_calls', // Requires a Notification Channel on the client
+                },
+            },
+        };
 
-    const userData = userDoc.data();
-    const fcmToken = userData?.fcmToken;
-
-    if (!fcmToken) {
-      console.log(`FCM token not found for calleeId: ${calleeId}`);
-      return;
-    }
-
-    // Construct the notification message payload for the call
-    const payload = {
-      notification: {
-        title: 'Incoming Call',
-        body: `${callerName || 'Someone'} is calling you on FlixTrend!`,
-        icon: '/icon-192x192.png',
-        click_action: 'https://flixtrend.com/signal', 
-      },
-    };
-
-    // Send the notification using the FCM token
-    try {
-      const response = await admin.messaging().sendToDevice(fcmToken, payload);
-      console.log('Successfully sent call notification:', response);
-    } catch (error) {
-      console.error('Error sending call notification:', error);
-    }
-  });
+        // Send the notification using the generic send method
+        try {
+            // @ts-ignore
+            const response = await getMessaging().send(payload);
+            logger.info('Successfully sent call notification:', response);
+        } catch (error) {
+            logger.error('Error sending call notification:', error);
+        }
+    });
 
 
 /**
  * Deletes a post and all its associated subcollections (comments, stars, relays).
- * This is an HTTPS Callable function.
+ * This ensures data integrity when a post is removed.
  */
-exports.deletePost = functions.https.onCall(async (data, context) => {
-  const { postId } = data;
-  const uid = context.auth?.uid;
+export const onDeletePost = functions.firestore
+    .document('posts/{postId}')
+    .onDelete(async (snapshot, context) => {
+        const { postId } = context.params;
+        logger.info(`Post ${postId} is being deleted. Deleting subcollections.`);
 
-  if (!uid) {
-    throw new functions.https.HttpsError("unauthenticated", "You must be logged in to delete a post.");
-  }
-
-  const postRef = db.collection("posts").doc(postId);
-
-  try {
-    const postDoc = await postRef.get();
-    if (!postDoc.exists) {
-      throw new functions.https.HttpsError("not-found", "Post not found.");
-    }
-
-    const postData = postDoc.data();
-    if (postData?.userId !== uid) {
-      throw new functions.https.HttpsError("permission-denied", "You can only delete your own posts.");
-    }
-    
-    // Using a recursive delete utility for subcollections
-    // This is a more robust way to handle subcollection deletion
-    const deleteSubcollection = async (collectionRef: admin.firestore.CollectionReference) => {
-      try {
-        const snapshot = await collectionRef.limit(500).get(); // Process in batches of 500
-        if (snapshot.empty) {
-          return;
-        }
+        const subcollections = ['comments', 'stars', 'relays'];
         const batch = db.batch();
-        snapshot.docs.forEach(doc => batch.delete(doc.ref));
-        await batch.commit();
-        // Recurse to delete remaining documents if any
-        if (snapshot.size === 500) {
-            await deleteSubcollection(collectionRef);
+
+        for (const subcollection of subcollections) {
+            const collectionRef = db.collection('posts').doc(postId).collection(subcollection);
+            const documents = await collectionRef.get();
+            documents.forEach(doc => {
+                batch.delete(doc.ref);
+            });
         }
-      } catch (error) {
-        // If the subcollection doesn't exist, we can safely ignore the error.
-        if ((error as any).code === 'NOT_FOUND' || (error as any).code === 5) {
-             console.log(`Subcollection not found, skipping: ${collectionRef.path}`);
-             return;
+
+        try {
+            await batch.commit();
+            logger.info(`Successfully deleted subcollections for post ${postId}.`);
+        } catch (error) {
+            logger.error(`Error deleting subcollections for post ${postId}:`, error);
         }
-        // For other errors, re-throw
-        throw error;
-      }
-    };
-    
-    await deleteSubcollection(postRef.collection('comments'));
-    await deleteSubcollection(postRef.collection('stars'));
-    await deleteSubcollection(postRef.collection('relays'));
-
-    // Finally, delete the post itself
-    await postRef.delete();
-
-    return { success: true, message: `Post ${postId} deleted successfully.` };
-
-  } catch (error) {
-    console.error("Error deleting post:", error);
-    if (error instanceof functions.https.HttpsError) {
-      throw error;
-    }
-    throw new functions.https.HttpsError("internal", "An error occurred while deleting the post.");
-  }
-});
+    });
