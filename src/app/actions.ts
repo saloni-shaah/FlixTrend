@@ -72,7 +72,7 @@ const ModerationInputSchema = z.object({
 export async function runContentModerationAction(input: z.infer<typeof ModerationInputSchema>) {
     try {
         // Now running the flow securely on the server.
-        const result = await contentModerationFlow.run(input);
+        const result = await contentModerationFlow(input);
         return { success: result, failure: null };
     } catch (error: any) {
         console.error("Content moderation action error:", error);
