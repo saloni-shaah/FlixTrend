@@ -75,9 +75,9 @@ export const contentModerationFlow = ai.defineFlow(
       },
     });
 
-    const output = response.output();
+    const output = response.output;
     if (!output) {
-      console.error("Moderation flow failed to produce valid output.", response.usage());
+      console.error("Moderation flow failed to produce valid output.", response.usage);
       return {
         analysis: "AI model failed to produce a valid response.",
         decision: 'deny',
