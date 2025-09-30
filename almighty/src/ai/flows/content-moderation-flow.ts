@@ -5,7 +5,6 @@
  */
 
 import { ai } from '@/ai/ai';
-import { defineFlow } from '@genkit-ai/flow';
 import { z } from 'zod';
 import { SafetyPolicy } from '@genkit-ai/googleai';
 
@@ -56,7 +55,7 @@ const noSafetyBlocks: SafetyPolicy[] = [
   { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
 ];
 
-export const contentModerationFlow = defineFlow(
+export const contentModerationFlow = ai.defineFlow(
   {
     name: 'contentModerationFlow',
     inputSchema: ContentModerationInputSchema,
