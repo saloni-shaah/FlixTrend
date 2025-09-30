@@ -4,6 +4,7 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { app } from '@/utils/firebaseClient';
 import { ai } from '@/ai/ai';
 import { z } from 'genkit';
+import { contentModerationFlow } from "@/ai/flows/content-moderation-flow";
 
 export async function uploadFileToFirebaseStorage(formData: FormData) {
   const file = formData.get('file') as File;
@@ -59,5 +60,22 @@ export async function remixImageAction(input: z.infer<typeof RemixImageInputSche
     } catch(err: any) {
         console.error("Remix image action error:", err);
         return { success: null, failure: err.message || 'An unknown error occurred during image remixing.' };
+    }
+}
+
+// CORRECTED: Server Action to wrap the content moderation flow.
+const ModerationInputSchema = z.object({
+  text: z.string().optional(),
+  media: z.array(z.object({ url: z.string() })).optional(),
+});
+
+export async function runContentModerationAction(input: z.infer<typeof ModerationInputSchema>) {
+    try {
+        // Now running the flow securely on the server.
+        const result = await contentModerationFlow.run(input);
+        return { success: result, failure: null };
+    } catch (error: any) {
+        console.error("Content moderation action error:", error);
+        return { success: null, failure: error.message || "An unknown error occurred during moderation." };
     }
 }

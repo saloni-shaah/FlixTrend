@@ -26,23 +26,15 @@ function CreatePostPageContent() {
         }
     }, [initialType, typeSelected]);
 
+    // CORRECTED: The dangerous 'live' post bypass has been removed.
     const handleNext = (data: any) => {
         setPostData(prev => ({ ...prev, ...data }));
-        // Live posts are simple and can skip the AI check step
-        if (postType === 'live' && step === 1) {
-            setStep(3);
-        } else {
-            setStep(s => s + 1);
-        }
+        setStep(s => s + 1);
     };
 
+    // CORRECTED: The 'live' post bypass has been removed from the back button as well.
     const handleBack = () => {
-        // Handle backing from publish to content for live posts
-        if (postType === 'live' && step === 3) {
-            setStep(1);
-        } else {
-            setStep(s => s - 1);
-        }
+        setStep(s => s - 1);
     };
     
     const handleTypeChange = (type: 'text' | 'media' | 'poll' | 'flash' | 'live') => {
@@ -50,23 +42,20 @@ function CreatePostPageContent() {
         setPostData({ postType: type, songId: initialSongId });
         setStep(1);
         setTypeSelected(true);
-        // Update URL without reloading page
         router.push(`/create?type=${type}${initialSongId ? `&songId=${initialSongId}`: ''}`, { scroll: false });
     };
-
-    const steps = postType ? [
-        <Step1 key="step1" onNext={handleNext} postType={postType} postData={postData} />,
+    
+    // CORRECTED: All post types now follow the same 3-step process.
+    const steps = [
+        <Step1 key="step1" onNext={handleNext} postType={postType!} postData={postData} />,
         <Step2 key="step2" onNext={handleNext} onBack={handleBack} postData={postData} />,
         <Step3 key="step3" onBack={handleBack} postData={postData} />,
-    ] : [];
+    ];
     
-    const totalSteps = postType === 'live' ? 2 : 3;
+    const totalSteps = 3; // All posts have 3 steps.
     const currentStepLogic = step;
     
-    const stepLabels = ['Details', 'AI Check', 'Publish'];
-    if (totalSteps === 2) {
-        stepLabels.splice(1, 1); // Remove 'AI Check' for live
-    }
+    const stepLabels = ['Details', 'AI Check', 'Publish']; // Always show all 3 labels.
 
 
     return (
@@ -75,7 +64,7 @@ function CreatePostPageContent() {
 
             {!typeSelected && (
                  <div className="flex flex-col md:flex-row gap-4 mb-8 w-full md:w-auto">
-                     <button onClick={() => handleTypeChange('text')} className={`w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'text' ? 'bg-accent-cyan text-black' : 'bg-transparent text-gray-300'}`}>
+                    <button onClick={() => handleTypeChange('text')} className={`w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'text' ? 'bg-accent-cyan text-black' : 'bg-transparent text-gray-300'}`}>
                         <AlignLeft />Text Post
                     </button>
                      <button onClick={() => handleTypeChange('flash')} className={`w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'flash' ? 'bg-accent-cyan text-black' : 'bg-transparent text-gray-300'}`}>
@@ -153,5 +142,3 @@ export default function CreatePostPage() {
         </Suspense>
     );
 }
-
-    

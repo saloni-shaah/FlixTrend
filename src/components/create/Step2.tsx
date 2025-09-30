@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, ArrowLeft, Loader, CheckCircle, XCircle } from 'lucide-react';
-import { moderateContent } from '@/ai/flows/content-moderation-flow';
+// CORRECTED: Import the server action, not the raw flow.
+import { runContentModerationAction } from '@/app/actions';
 
 type ModerationStatus = 'checking' | 'safe' | 'unsafe';
 
@@ -26,40 +27,49 @@ export default function Step2({ onNext, onBack, postData }: { onNext: (data: any
             setStatus('checking');
             
             try {
-                let thumbnailDataUri: string | undefined = undefined;
-                // Use thumbnailFile for media posts or the first mediaFile for flashes
-                const fileToModerate = postData.thumbnailFile || (postData.mediaFiles && postData.mediaFiles[0]);
+                const textToModerate = [
+                    postData.caption, postData.title, postData.description, postData.question, postData.content
+                ].filter(Boolean).join(' \n ');
 
-                // *** FIX: Only moderate supported image types, not SVGs ***
-                if (fileToModerate && fileToModerate instanceof File && !fileToModerate.type.includes('svg')) {
-                    thumbnailDataUri = await fileToDataUri(fileToModerate);
+                const mediaToModerate: { url: string }[] = [];
+                const filesToProcess: File[] = [];
+                if (postData.thumbnailFile) filesToProcess.push(postData.thumbnailFile);
+                if (postData.mediaFiles) filesToProcess.push(...postData.mediaFiles);
+
+                for (const file of filesToProcess) {
+                    if (file instanceof File && file.type.startsWith('image/')) {
+                        const dataUri = await fileToDataUri(file);
+                        mediaToModerate.push({ url: dataUri });
+                    }
                 }
 
-                const textToModerate = [postData.caption, postData.title, postData.description, postData.question, postData.content].filter(Boolean).join('\n');
-
-                // If there's no text and no image, it's safe to proceed (e.g., an empty text post is allowed)
-                if (!textToModerate && !thumbnailDataUri) {
+                if (!textToModerate && mediaToModerate.length === 0) {
                     setStatus('safe');
                     setReason('Content looks good!');
                     return;
                 }
                 
-                const result = await moderateContent({
+                // CORRECTED: Call the server action instead of the flow directly.
+                const result = await runContentModerationAction({
                     text: textToModerate,
-                    thumbnailDataUri: thumbnailDataUri,
+                    media: mediaToModerate,
                 });
 
-                if (result.verdict === 'safe') {
+                if (result.failure) {
+                    throw new Error(result.failure);
+                }
+
+                if (result.success?.decision === 'approve') {
                     setStatus('safe');
-                    setReason(result.reason);
+                    setReason(result.success.reason || 'Content approved!');
                 } else {
                     setStatus('unsafe');
-                    setReason(result.reason);
+                    setReason(result.success?.reason || 'Content violates our community guidelines.');
                 }
-            } catch (error) {
-                console.error("Moderation error:", error);
+            } catch (error: any) {
+                console.error("Moderation error in Step2:", error);
                 setStatus('unsafe');
-                setReason("An unexpected error occurred during the content check. Please try again.");
+                setReason(error.message || "An unexpected error occurred during the content check. Please try again.");
             }
         };
         

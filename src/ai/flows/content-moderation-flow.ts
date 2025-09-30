@@ -1,70 +1,91 @@
 
-'use server';
 /**
- * @fileOverview An AI flow to moderate content for safety and quality.
- *
- * - moderateContent: The main function to call the flow.
+ * @fileOverview AI-powered moderation flow for FlixTrend using chain-of-thought reasoning.
+ * This forces the AI to analyze content before making a decision, improving accuracy.
  */
 
-import {ai} from '@/ai/ai';
-import {z} from 'zod';
+import { ai, SafetyPolicy } from '@/ai/ai';
+import { defineFlow } from '@genkit-ai/flow';
+import { z } from 'zod';
 
 const ContentModerationInputSchema = z.object({
-  text: z.string().optional().describe('The text content of the post (caption, title, etc.).'),
-  thumbnailDataUri: z.string().optional().describe("The post's thumbnail image as a data URI."),
+  text: z.string().optional().describe('All text content combined (caption, title, etc.).'),
+  media: z.array(z.object({ url: z.string() })).optional().describe("An array of media items (images, videos) as data URIs."),
 });
 
+// DEFINITIVE FIX: Added 'analysis' field to force chain-of-thought reasoning.
 const ContentModerationOutputSchema = z.object({
-    verdict: z.enum(['safe', 'unsafe']).describe("The final verdict. 'safe' if the content is okay, 'unsafe' if it violates any policy."),
-    reason: z.string().describe("A brief, user-friendly explanation if the verdict is 'unsafe'."),
+    analysis: z.string().describe("Your step-by-step reasoning. First, state if any rule is violated and why. If not, state that the content is compliant."),
+    decision: z.enum(['approve', 'deny']).describe("Based ONLY on your analysis, decide whether to approve or deny. If your analysis found no clear violation, you MUST approve."),
+    reason: z.string().describe("A brief, user-friendly explanation for the decision. If approved, say 'Content approved!'. If denied, explain the violation simply."),
 });
 
-const prompt = ai.definePrompt({
-  name: 'contentModerationPrompt',
-  input: {schema: ContentModerationInputSchema},
-  output: {schema: ContentModerationOutputSchema},
-  prompt: `You are an expert content moderator for a Gen-Z social media app called FlixTrend. Your job is to review user-submitted content to ensure it's safe, appropriate, and high-quality.
+// DEFINITIVE FIX: Updated prompt to implement chain-of-thought.
+const moderationPrompt = `You are a fair and balanced content moderator for a Gen-Z social media app called FlixTrend.
+Your goal is to keep the platform safe while allowing for creative expression, humor, and slang.
 
-Review the following content based on these policies:
-1.  **Harmful Content**: Absolutely no hate speech, violence, harassment, bullying, or explicit sexual content.
-2.  **Spam/Low-Quality**: The content must have some substance. Flag posts that are nonsensical, gibberish, or clearly low-effort spam.
-3.  **Relevance**: If an image is provided, it must be relevant to the text. Do not allow misleading thumbnails.
+**Your Task (Chain-of-Thought Process):**
 
-Here is the content to review:
-{{#if text}}
-Text: "{{{text}}}"
-{{/if}}
-{{#if thumbnailDataUri}}
-Thumbnail Image: {{media url=thumbnailDataUri}}
-{{/if}}
+**Step 1: Analysis**
+Carefully review the content against the rules below. In your 'analysis' field, write down your reasoning.
+- If a rule is clearly and severely violated, state which rule and why.
+- If no rules are violated, explicitly state "Content is compliant."
 
-Your task:
-- If the content violates any of the above policies, set the 'verdict' to 'unsafe' and provide a short, clear 'reason' for the user (e.g., "This content may violate our policy on hate speech.", "The thumbnail appears to be unrelated to the text.").
-- If the content is safe and appropriate, set the 'verdict' to 'safe' and the 'reason' to "Content looks good!".`,
-});
+**Step 2: Decision**
+Based ONLY on your analysis from Step 1, make your 'decision'.
+- If your analysis identified a clear and severe violation, you MUST decide 'deny'.
+- If your analysis concluded "Content is compliant", you MUST decide 'approve'.
 
-const contentModerationFlow = ai.defineFlow(
+**Rules (Deny content ONLY for clear and severe violations):**
+1. Harmful or Abusive: True hate speech, credible violent threats, harassment, bullying, promotion of self-harm, graphic violence, or hard sexually explicit/vulgar material.
+2. Spam/Illegal: Promoting illegal acts, scams, or posting pure gibberish.
+
+Be lenient. Do NOT flag edgy humor, slang, or mild profanity. If it's ambiguous, approve it.
+
+**Content to Review:**
+TEXT: "{{text}}"
+MEDIA: {{mediaList}}
+`;
+
+const noSafetyBlocks: SafetyPolicy[] = [
+  { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+  { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+  { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+  { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+];
+
+export const contentModerationFlow = defineFlow(
   {
     name: 'contentModerationFlow',
     inputSchema: ContentModerationInputSchema,
     outputSchema: ContentModerationOutputSchema,
   },
   async (input) => {
-    try {
-        const {output} = await prompt(input);
-        return output!;
-    } catch (error) {
-        console.error("Content Moderation AI Error:", error);
-        // In a real production environment, you might want to alert admins or have a more robust fallback.
-        // For development, we'll default to 'safe' to avoid blocking the user due to rate limits.
-        return {
-            verdict: 'safe',
-            reason: 'Could not perform AI content check. Please proceed with caution.'
-        };
+    const mediaList = input.media?.map(item => `- ${item.url}`).join('\n') || 'N/A';
+    const finalPrompt = moderationPrompt
+      .replace('"{{text}}"', JSON.stringify(input.text || ''))
+      .replace('{{mediaList}}', mediaList);
+
+    const response = await ai.generate({
+      model: 'googleai/gemini-1.5-flash-preview',
+      prompt: finalPrompt,
+      output: { schema: ContentModerationOutputSchema },
+      safetySettings: noSafetyBlocks,
+      config: {
+        temperature: 0.1,
+      },
+    });
+
+    const output = response.output();
+    if (!output) {
+      console.error("Moderation flow failed to produce valid output.", response.usage());
+      return {
+        analysis: "AI model failed to produce a valid response.",
+        decision: 'deny',
+        reason: 'Could not verify content safety at this time. Please try again.',
+      };
     }
+
+    return output;
   }
 );
-
-export async function moderateContent(input: z.infer<typeof ContentModerationInputSchema>): Promise<z.infer<typeof ContentModerationOutputSchema>> {
-  return await contentModerationFlow(input);
-}

@@ -1,7 +1,7 @@
 
 "use client";
-import React, { useState, useRef } from 'react';
-import { ChevronDown, UploadCloud, X, MapPin, Smile } from 'lucide-react';
+import React, { useState, useRef, useCallback } from 'react';
+import { ChevronDown, UploadCloud, X, MapPin, Smile, Music } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange: (data: any) => void }) {
@@ -9,16 +9,32 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
     const [mediaPreviews, setMediaPreviews] = useState<string[]>(data.mediaPreviews || []);
     const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(data.thumbnailPreview || null);
     const [showDescription, setShowDescription] = useState(false);
+    const [isDragging, setIsDragging] = useState(false); // New state for drag-and-drop
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // --- NEW: Consolidated function to handle file processing ---
+    const processFiles = (files: File[]) => {
+        const imageVideoAudioFiles = files.filter(file => 
+            file.type.startsWith('image/') || 
+            file.type.startsWith('video/') || 
+            file.type.startsWith('audio/')
+        );
+
+        if (imageVideoAudioFiles.length === 0) return;
+
+        const urls = imageVideoAudioFiles.map(file => URL.createObjectURL(file));
+        const newFiles = [...mediaFiles, ...imageVideoAudioFiles];
+        const newPreviews = [...mediaPreviews, ...urls];
+
+        setMediaFiles(newFiles);
+        setMediaPreviews(newPreviews);
+        onDataChange({ ...data, mediaFiles: newFiles, mediaPreviews: newPreviews });
+    };
+
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
-            const files = Array.from(e.target.files);
-            const urls = files.map(file => URL.createObjectURL(file));
-            setMediaFiles(prev => [...prev, ...files]);
-            setMediaPreviews(prev => [...prev, ...urls]);
-            onDataChange({ ...data, mediaFiles: [...mediaFiles, ...files], mediaPreviews: [...mediaPreviews, ...urls] });
+            processFiles(Array.from(e.target.files));
         }
     };
     
@@ -42,6 +58,34 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
         }
     }
 
+    // --- NEW: Drag and Drop Event Handlers ---
+    const handleDragEnter = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(true);
+    }, []);
+
+    const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+    }, []);
+
+    const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        e.stopPropagation(); // Necessary to allow dropping
+    }, []);
+
+    const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            processFiles(Array.from(e.dataTransfer.files));
+            e.dataTransfer.clearData();
+        }
+    }, [mediaFiles, mediaPreviews, data]); // Dependencies for processFiles
+
     const hasVideo = mediaFiles.some(f => f.type.startsWith('video/'));
 
     return (
@@ -56,26 +100,54 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
                 onChange={handleTextChange}
             />
 
-            <div className="p-4 border-2 border-dashed border-accent-cyan/30 rounded-2xl text-center">
-                <button type="button" className="btn-glass flex items-center justify-center gap-2 mx-auto" onClick={() => fileInputRef.current?.click()}>
-                    <UploadCloud /> Upload Media
-                </button>
-                <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" multiple accept="image/*,video/*" />
+            {/* --- MODIFIED: Added drag-drop handlers and dynamic styling --- */}
+            <div 
+                className={`p-4 border-2 border-dashed rounded-2xl text-center transition-colors duration-300 ${isDragging ? 'border-accent-pink bg-accent-pink/10' : 'border-accent-cyan/30'}`}
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+            >
+                <div className="flex flex-col items-center justify-center gap-2 mx-auto">
+                    <UploadCloud className={`transition-transform duration-300 ${isDragging ? 'scale-110' : ''}`} />
+                    <p className="text-sm text-gray-400">{isDragging ? 'Drop your files here!' : 'Drag & drop files or click to upload'}</p>
+                    <button type="button" className="btn-glass mt-2" onClick={() => fileInputRef.current?.click()}>
+                        Choose from Device
+                    </button>
+                </div>
+                {/* --- MODIFIED: Updated 'accept' to include audio files --- */}
+                <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" multiple accept="image/*,video/*,audio/*" />
+                <p className="text-xs text-gray-500 mt-2">Also supports camera and gallery on mobile.</p>
 
                  {mediaPreviews.length > 0 && (
-                    <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-2">
-                        {mediaPreviews.map((url, index) => (
-                            <div key={index} className="relative group aspect-square">
-                                {mediaFiles[index].type.startsWith("video") ? (
-                                    <video src={url} className="w-full h-full object-cover rounded-lg" />
-                                ) : (
-                                    <img src={url} alt={`preview ${index}`} className="w-full h-full object-cover rounded-lg" />
-                                )}
-                                <button type="button" onClick={() => removeMedia(index)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <X size={16} />
-                                </button>
-                            </div>
-                        ))}
+                    <div className="mt-4 grid grid-cols-3 md:grid-cols-4 gap-2">
+                        {mediaPreviews.map((url, index) => {
+                            const file = mediaFiles[index];
+                            let previewContent;
+
+                            if (file.type.startsWith("video")) {
+                                previewContent = <video src={url} className="w-full h-full object-cover rounded-lg" />;
+                            } else if (file.type.startsWith("image")) {
+                                previewContent = <img src={url} alt={`preview ${index}`} className="w-full h-full object-cover rounded-lg" />;
+                            } else if (file.type.startsWith("audio")) {
+                                // --- NEW: Preview for audio files ---
+                                previewContent = (
+                                    <div className="w-full h-full bg-background/50 rounded-lg flex flex-col items-center justify-center p-2 text-center">
+                                        <Music className="text-accent-pink" size={32} />
+                                        <p className="text-xs text-gray-300 mt-2 break-all">{file.name}</p>
+                                    </div>
+                                );
+                            }
+
+                            return (
+                                <div key={index} className="relative group aspect-square">
+                                    {previewContent}
+                                    <button type="button" onClick={() => removeMedia(index)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                        <X size={16} />
+                                    </button>
+                                </div>
+                            );
+                        })}
                     </div>
                 )}
             </div>
