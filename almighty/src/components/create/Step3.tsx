@@ -2,46 +2,38 @@
 "use client";
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, CheckCircle, Calendar as CalendarIcon } from 'lucide-react';
+import { ArrowLeft, CheckCircle, ShieldOff, Calendar as CalendarIcon } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { getFirestore, collection, addDoc, serverTimestamp, Timestamp, doc, getDoc } from "firebase/firestore";
 import { auth, app } from '@/utils/firebaseClient';
 import { useRouter } from 'next/navigation';
+// CORRECTED: Import the server actions, not the raw flow.
+import { uploadFileToFirebaseStorage, runContentModerationAction } from '@/app/actions';
 
 const db = getFirestore(app);
 
-// Helper to upload a file to Cloudinary
-async function uploadToCloudinary(file: File): Promise<string> {
-    const url = `https://api.cloudinary.com/v1_1/drrzvi2jp/upload`;
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("upload_preset", "flixtrend_unsigned");
+// Helper to convert a File object to a Base64 Data URI for the AI
+const fileToDataUri = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open("POST", url);
-        xhr.onload = () => {
-            if (xhr.status === 200) {
-                const data = JSON.parse(xhr.responseText);
-                resolve(data.secure_url);
-            } else {
-                reject(new Error('Upload failed'));
-            }
-        };
-        xhr.onerror = () => reject(new Error('Upload failed'));
-        xhr.send(formData);
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = (error) => reject(error);
+        reader.readAsDataURL(file);
     });
-}
+};
 
 export default function Step3({ onBack, postData }: { onBack: () => void; postData: any }) {
     const [isScheduling, setIsScheduling] = useState(false);
     const [scheduleDate, setScheduleDate] = useState<Date | undefined>();
     const [scheduleTime, setScheduleTime] = useState('12:00');
     const [isPublishing, setIsPublishing] = useState(false);
+    const [moderationError, setModerationError] = useState<string | null>(null);
     const router = useRouter();
 
     const handleSubmit = async () => {
         setIsPublishing(true);
+        setModerationError(null);
         const user = auth.currentUser;
         if (!user) {
             alert("You must be logged in to post.");
@@ -50,29 +42,73 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
         }
 
         try {
-             // Fetch user profile to embed info
-            const userDocRef = doc(db, 'users', user.uid);
-            const userDocSnap = await getDoc(userDocRef);
-            if (!userDocSnap.exists()) {
-                throw new Error("User profile not found!");
-            }
-            const userData = userDocSnap.data();
+            // --- AI CONTENT MODERATION --- //
+            const textToModerate = [
+                postData.title, postData.caption, postData.content, postData.description,
+                postData.mood, postData.location, postData.question,
+            ].filter(Boolean).join(' \n ');
 
-            // 1. Handle File Uploads first
-            let finalMediaUrls: string[] = [];
-            if (postData.mediaFiles && postData.mediaFiles.length > 0) {
-                for (const file of postData.mediaFiles) {
-                    const url = await uploadToCloudinary(file);
-                    finalMediaUrls.push(url);
+            const mediaToModerate: { url: string }[] = [];
+            const filesToProcess: File[] = [];
+            if (postData.thumbnailFile) filesToProcess.push(postData.thumbnailFile);
+            if (postData.mediaFiles) filesToProcess.push(...postData.mediaFiles);
+
+            for (const file of filesToProcess) {
+                if (file instanceof File && file.type.startsWith('image/')) {
+                    const dataUri = await fileToDataUri(file);
+                    mediaToModerate.push({ url: dataUri });
                 }
             }
             
-            let finalThumbnailUrl = postData.thumbnailUrl || null;
-            if (postData.thumbnailFile) {
-                finalThumbnailUrl = await uploadToCloudinary(postData.thumbnailFile);
+            // CORRECTED: Call the server action instead of the flow directly.
+            const moderationResult = await runContentModerationAction({
+                text: textToModerate,
+                media: mediaToModerate,
+            });
+
+            if (moderationResult.failure) {
+                throw new Error(moderationResult.failure);
             }
 
-            // 2. Construct the final post object
+            if (moderationResult.success?.decision === 'deny') {
+                setModerationError(moderationResult.success.reason || 'Your post violates our content guidelines.');
+                setIsPublishing(false);
+                return; // STOP execution
+            }
+            
+            // --- MODERATION PASSED - PROCEED --- //
+
+            const userDocRef = doc(db, 'users', user.uid);
+            const userDocSnap = await getDoc(userDocRef);
+            if (!userDocSnap.exists()) throw new Error("User profile not found!");
+            const userData = userDocSnap.data();
+
+            let finalMediaUrls: string[] = [];
+            if (postData.mediaFiles && postData.mediaFiles.length > 0) {
+                for (const file of postData.mediaFiles) {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    const result = await uploadFileToFirebaseStorage(formData);
+                    if (result.success?.url) {
+                        finalMediaUrls.push(result.success.url);
+                    } else {
+                        throw new Error(result.failure || "File upload failed.");
+                    }
+                }
+            }
+            
+            let finalThumbnailUrl = postData.thumbnailPreview || null;
+            if (postData.thumbnailFile) {
+                 const formData = new FormData();
+                formData.append('file', postData.thumbnailFile);
+                const result = await uploadFileToFirebaseStorage(formData);
+                if (result.success?.url) {
+                    finalThumbnailUrl = result.success.url;
+                } else {
+                    throw new Error(result.failure || "Thumbnail upload failed.");
+                }
+            }
+
             let publishAt;
             if (isScheduling && scheduleDate) {
                 const [hours, minutes] = scheduleTime.split(':');
@@ -84,55 +120,44 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                 publishAt = serverTimestamp();
             }
 
+            const livekitRoomName = postData.postType === 'live' ? `${user.uid}-${Date.now()}` : null;
             const collectionName = postData.postType === 'flash' ? 'flashes' : 'posts';
 
             const finalPostData: any = {
-                // Common fields
                 userId: user.uid,
                 displayName: userData.name || user.displayName,
                 username: userData.username,
                 avatar_url: userData.avatar_url,
                 type: postData.postType,
-                content: postData.content || postData.caption || postData.question || postData.title,
+                content: postData.content || postData.caption || postData.question || postData.title || "",
                 hashtags: (postData.caption?.match(/#\w+/g) || []).map((h:string) => h.replace('#', '')),
                 createdAt: serverTimestamp(),
                 publishAt: publishAt,
                 location: postData.location,
                 mood: postData.mood,
-
-                // Type-specific fields
-                ...(postData.postType === 'text' && {
-                    backgroundColor: postData.backgroundColor || '#ffffff',
-                    fontStyle: postData.fontStyle,
-                }),
-                ...(postData.postType === 'media' && {
-                    mediaUrl: finalMediaUrls.length > 1 ? finalMediaUrls : finalMediaUrls[0],
-                    title: postData.title,
-                    description: postData.description,
-                    thumbnailUrl: finalThumbnailUrl,
-                }),
-                ...(postData.postType === 'flash' && {
-                    mediaUrl: finalMediaUrls[0], // Flash has only one media
-                    song: postData.song,
-                    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // Expires in 24 hours
-                }),
-                ...(postData.postType === 'poll' && {
-                    pollOptions: postData.options.map((opt:any) => opt.text),
-                }),
-                 ...(postData.postType === 'live' && {
-                    // Live specific fields, if any
-                }),
+                ...(postData.postType === 'text' && { backgroundColor: postData.backgroundColor, fontStyle: postData.fontStyle }),
+                ...(postData.postType === 'media' && { mediaUrl: finalMediaUrls.length > 0 ? (finalMediaUrls.length > 1 ? finalMediaUrls : finalMediaUrls[0]) : null, title: postData.title, description: postData.description, thumbnailUrl: finalThumbnailUrl }),
+                ...(postData.postType === 'flash' && { mediaUrl: finalMediaUrls.length > 0 ? finalMediaUrls[0] : null, song: postData.song, expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), caption: postData.caption || "" }),
+                ...(postData.postType === 'poll' && { pollOptions: postData.options.map((opt:any) => opt.text) }),
+                ...(postData.postType === 'live' && { livekitRoom: livekitRoomName }),
             };
             
-            // 3. Save to Firestore
             await addDoc(collection(db, collectionName), finalPostData);
             
-            // 4. Redirect on success
-            router.push('/home');
+            if (postData.postType === 'live' && livekitRoomName) {
+                router.push(`/broadcast/${encodeURIComponent(livekitRoomName)}`);
+            } else {
+                router.push('/home');
+            }
 
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error publishing post:", error);
-            alert("Failed to publish post. Please try again.");
+            // Display a more specific error if it came from our handled moderation action
+            if (error.message.includes("moderation")) {
+                 setModerationError(error.message);
+            } else {
+                alert("Failed to publish post. Please try again.");
+            }
         } finally {
             setIsPublishing(false);
         }
@@ -144,14 +169,27 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
              <div className="glass-card p-8">
                 <h2 className="text-2xl font-headline text-accent-pink mb-4">Step 3: Publish</h2>
-                <p className="text-gray-400 mb-6">Review the content guidelines and schedule your post if you'd like.</p>
+                <p className="text-gray-400 mb-6">Your post will be checked by our AI for compliance with our content guidelines before it goes live.</p>
                  
+                {moderationError && (
+                    <motion.div 
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-red-500/20 border border-red-500 text-red-300 p-4 rounded-lg mb-6 flex items-center gap-3"
+                    >
+                        <ShieldOff size={24} />
+                        <div>
+                            <h4 className="font-bold">Post Rejected</h4>
+                            <p className="text-sm">{moderationError}</p>
+                        </div>
+                    </motion.div>
+                )}
+
                 <div className="bg-black/20 p-4 rounded-lg space-y-3 text-sm text-gray-300">
                     <h4 className="font-bold text-accent-cyan">Content Guidelines</h4>
                     <p>✓ Be respectful. No harassment, hate speech, or bullying.</p>
                     <p>✓ Keep it safe. No explicit, violent, or illegal content.</p>
                     <p>✓ Respect copyright. Only post content you own or have rights to.</p>
-                    <p>FlixTrend may remove posts that violate these guidelines to keep the community safe.</p>
                 </div>
 
                 {shouldShowScheduling && (
