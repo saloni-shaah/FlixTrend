@@ -23,14 +23,14 @@ const ContentModerationOutputSchema = z.object({
     reason: z.string().describe("A brief, user-friendly explanation for the decision. If approved, say 'Content approved!'. If denied, explain the violation simply."),
 });
 
-// DEFINITIVE FIX: Updated prompt to implement chain-of-thought.
+// DEFINITIVE FIX: Updated prompt to implement chain-of-thought and properly handle media.
 const moderationPrompt = `You are a fair and balanced content moderator for a Gen-Z social media app called FlixTrend.
 Your goal is to keep the platform safe while allowing for creative expression, humor, and slang.
 
 **Your Task (Chain-of-Thought Process):**
 
 **Step 1: Analysis**
-Carefully review the content against the rules below. In your 'analysis' field, write down your reasoning.
+Carefully review the content (both text and any attached media) against the rules below. In your 'analysis' field, write down your reasoning.
 - If a rule is clearly and severely violated, state which rule and why.
 - If no rules are violated, explicitly state "Content is compliant."
 
@@ -70,17 +70,43 @@ export const contentModerationFlow = ai.defineFlow(
   },
   async (input) => {
     
-    // Prepare the prompt with the input data. We'll use Handlebars-like syntax for the prompt template.
-    const promptParts = [
-      moderationPrompt
-        .replace('{{{text}}}', JSON.stringify(input.text || '')),
-    ];
-    
-    const mediaParts = input.media?.map(m => ({ media: { url: m.url } })) || [];
+    // CORRECTED: Construct a multi-part prompt with text and media parts for the AI.
+    const promptParts: any[] = [{
+      text: `You are a fair and balanced content moderator for a Gen-Z social media app called FlixTrend.
+Your goal is to keep the platform safe while allowing for creative expression, humor, and slang.
+
+**Your Task (Chain-of-Thought Process):**
+
+**Step 1: Analysis**
+Carefully review the content (both text and any attached media) against the rules below. In your 'analysis' field, write down your reasoning.
+- If a rule is clearly and severely violated, state which rule and why.
+- If no rules are violated, explicitly state "Content is compliant."
+
+**Step 2: Decision**
+Based ONLY on your analysis from Step 1, make your 'decision'.
+- If your analysis identified a clear and severe violation, you MUST decide 'deny'.
+- If your analysis concluded "Content is compliant", you MUST decide 'approve'.
+
+**Rules (Deny content ONLY for clear and severe violations):**
+1. Harmful or Abusive: True hate speech, credible violent threats, harassment, bullying, promotion of self-harm, graphic violence, or hard sexually explicit/vulgar material.
+2. Spam/Illegal: Promoting illegal acts, scams, or posting pure gibberish.
+
+Be lenient. Do NOT flag edgy humor, slang, or mild profanity. If it's ambiguous, approve it.
+
+**Content to Review:**
+TEXT: ${JSON.stringify(input.text || '')}`
+    }];
+
+    // Add media parts correctly.
+    if (input.media) {
+      for (const mediaItem of input.media) {
+        promptParts.push({ media: { url: mediaItem.url } });
+      }
+    }
 
     const response = await ai.generate({
       model: 'googleai/gemini-2.5-flash',
-      prompt: [...promptParts, ...mediaParts],
+      prompt: promptParts, // Pass the array of prompt parts
       output: { schema: ContentModerationOutputSchema },
       safetySettings: noSafetyBlocks, // We are the moderator; we need to see everything.
       config: {
