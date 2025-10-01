@@ -44,6 +44,7 @@
     "@tailwindcss/line-clamp": "^0.4.4",
     "@tailwindcss/typography": "^0.5.16",
     "@uidotdev/usehooks": "^2.4.1",
+    "chess.js": "^1.0.0-beta.8",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cloudinary": "^2.4.0",
@@ -75,6 +76,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.11",
+    "@types/chess.js": "^0.13.1",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
