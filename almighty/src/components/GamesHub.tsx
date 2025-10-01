@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
@@ -7,6 +6,7 @@ import { VibeJumper } from './games/VibeJumper';
 import { OfflineDinoRun } from './games/OfflineDinoRun';
 import { SnakeAndLadder } from './games/SnakeAndLadder';
 import { ChessGame } from './games/Chess';
+import { FlashMatch } from './games/FlashMatch';
 
 const ComingSoonComponent = () => (
     <div className="w-full h-full bg-black flex flex-col items-center justify-center text-white p-4">
@@ -24,8 +24,8 @@ const gamesList = [
     { id: 'offline-dino-run', name: 'Offline Dino Run', component: OfflineDinoRun, description: "The classic offline game, but with the FlixTrend logo." },
     { id: 'snake-and-ladder', name: 'Snake & Ladder', component: SnakeAndLadder, description: "Climb the ladders and dodge the snakes in this classic board game." },
     { id: 'chess', name: 'Chess', component: ChessGame, description: "The classic strategy game. Play against a friend locally." },
+    { id: 'flash-match', name: 'Flash Match', component: FlashMatch, description: "A fast-paced tile-matching game with brand icons." },
     // Placeholders
-    { id: 'flash-match', name: 'Flash Match', description: "A fast-paced tile-matching game with brand icons." },
     { id: 'scope-slider', name: 'Scope Slider', description: "A sliding puzzle game using images from popular posts." },
     { id: 'echo-chamber', name: 'Echo Chamber', description: 'A "Simon Says" memory game with color patterns.' },
     { id: 'glitch-grid', name: 'Glitch Grid', description: "A 2048-style game with social media icons." },
