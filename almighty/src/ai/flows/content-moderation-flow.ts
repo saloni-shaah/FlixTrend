@@ -23,38 +23,6 @@ const ContentModerationOutputSchema = z.object({
     reason: z.string().describe("A brief, user-friendly explanation for the decision. If approved, say 'Content approved!'. If denied, explain the violation simply."),
 });
 
-// DEFINITIVE FIX: Updated prompt to implement chain-of-thought and properly handle media.
-const moderationPrompt = `You are a fair and balanced content moderator for a Gen-Z social media app called FlixTrend.
-Your goal is to keep the platform safe while allowing for creative expression, humor, and slang.
-
-**Your Task (Chain-of-Thought Process):**
-
-**Step 1: Analysis**
-Carefully review the content (both text and any attached media) against the rules below. In your 'analysis' field, write down your reasoning.
-- If a rule is clearly and severely violated, state which rule and why.
-- If no rules are violated, explicitly state "Content is compliant."
-
-**Step 2: Decision**
-Based ONLY on your analysis from Step 1, make your 'decision'.
-- If your analysis identified a clear and severe violation, you MUST decide 'deny'.
-- If your analysis concluded "Content is compliant", you MUST decide 'approve'.
-
-**Rules (Deny content ONLY for clear and severe violations):**
-1. Harmful or Abusive: True hate speech, credible violent threats, harassment, bullying, promotion of self-harm, graphic violence, or hard sexually explicit/vulgar material.
-2. Spam/Illegal: Promoting illegal acts, scams, or posting pure gibberish.
-
-Be lenient. Do NOT flag edgy humor, slang, or mild profanity. If it's ambiguous, approve it.
-
-**Content to Review:**
-TEXT: {{{text}}}
-{{#if media}}
-MEDIA:
-{{#each media}}
-- {{media url=this.url}}
-{{/each}}
-{{/if}}
-`;
-
 const noSafetyBlocks: SafetyPolicy[] = [
   { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
   { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
