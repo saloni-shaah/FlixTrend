@@ -46,7 +46,7 @@ Based ONLY on your analysis from Step 1, make your 'decision'.
 Be lenient. Do NOT flag edgy humor, slang, or mild profanity. If it's ambiguous, approve it.
 
 **Content to Review:**
-TEXT: "{{text}}"
+TEXT: {{{text}}}
 {{#if media}}
 MEDIA:
 {{#each media}}
@@ -70,15 +70,21 @@ export const contentModerationFlow = ai.defineFlow(
   },
   async (input) => {
     
-    const promptParts = [moderationPrompt.replace('{{text}}', JSON.stringify(input.text || ''))];
+    // Prepare the prompt with the input data. We'll use Handlebars-like syntax for the prompt template.
+    const promptParts = [
+      moderationPrompt
+        .replace('{{{text}}}', JSON.stringify(input.text || '')),
+    ];
     
+    const mediaParts = input.media?.map(m => ({ media: { url: m.url } })) || [];
+
     const response = await ai.generate({
       model: 'googleai/gemini-2.5-flash',
-      prompt: promptParts,
+      prompt: [...promptParts, ...mediaParts],
       output: { schema: ContentModerationOutputSchema },
-      safetySettings: noSafetyBlocks,
+      safetySettings: noSafetyBlocks, // We are the moderator; we need to see everything.
       config: {
-        temperature: 0.1,
+        temperature: 0.0, // Lower temperature for more deterministic safety checks.
       },
     });
 
