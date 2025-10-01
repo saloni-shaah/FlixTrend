@@ -1,14 +1,17 @@
+
 "use client";
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Gamepad2, ArrowLeft } from 'lucide-react';
 import { VibeJumper } from './games/VibeJumper';
 import { OfflineDinoRun } from './games/OfflineDinoRun';
+import { SnakeAndLadder } from './games/SnakeAndLadder';
 
 // This will be the list of all our games
 const gamesList = [
     { id: 'vibe-jumper', name: 'Vibe Jumper', component: VibeJumper, description: "An endless jumper where you hop on trending hashtag clouds." },
     { id: 'offline-dino-run', name: 'Offline Dino Run', component: OfflineDinoRun, description: "The classic offline game, but with the FlixTrend logo." },
+    { id: 'snake-and-ladder', name: 'Snake & Ladder', component: SnakeAndLadder, description: "Climb the ladders and dodge the snakes in this classic board game." },
 ];
 
 export function GamesHub() {
@@ -65,7 +68,7 @@ export function GamesHub() {
                 >
                     <Gamepad2 size={40} className="text-gray-500 mb-3"/>
                     <h3 className="text-xl font-bold font-headline text-gray-500">Coming Soon...</h3>
-                    <p className="text-sm text-gray-600 mt-2">48 more games are on the way, including Ludo, Snake & Ladder, and AR experiences!</p>
+                    <p className="text-sm text-gray-600 mt-2">47 more games are on the way, including Ludo, multiplayer modes, and AR experiences!</p>
                 </motion.div>
             </div>
 
