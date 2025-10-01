@@ -177,5 +177,3 @@ export function GamesHub() {
         </motion.div>
     );
 }
-
-    
