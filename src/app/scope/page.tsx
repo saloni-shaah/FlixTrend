@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
 import { getFirestore, collection, query, onSnapshot, getDocs, orderBy, limit, where, startAfter } from "firebase/firestore";
@@ -275,3 +274,5 @@ export default function ScopePage() {
     </div>
   );
 }
+
+    

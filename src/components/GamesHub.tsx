@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
@@ -76,6 +75,7 @@ const gamesList = [
     { id: 'scope-slider', name: 'Scope Slider', component: ScopeSlider, description: "A sliding puzzle game using images from popular posts." },
     { id: 'echo-chamber', name: 'Echo Chamber', component: EchoChamber, description: 'A "Simon Says" memory game with color patterns.' },
     { id: 'glitch-grid', name: 'Glitch Grid', component: GlitchGrid, description: "A 2048-style game with social media icons." },
+    // Placeholders
     { id: 'trend-rider', name: 'Trend Rider', component: TrendRider, description: "An endless runner where you dodge obstacles in a neon tunnel." },
     { id: 'meme-maker-offline', name: 'Meme Maker Offline', component: MemeMakerOffline, description: "A simple meme generator with pre-loaded templates." },
     { id: 'word-vibe', name: 'Word Vibe', component: WordVibe, description: "A Wordle-style game with 5-letter Gen-Z slang words." },
@@ -176,3 +176,5 @@ export function GamesHub() {
         </motion.div>
     );
 }
+
+    
