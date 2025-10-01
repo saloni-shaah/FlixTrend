@@ -3,12 +3,10 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, ArrowLeft, Loader, CheckCircle, XCircle } from 'lucide-react';
-// CORRECTED: Import the server action, not the raw flow.
 import { runContentModerationAction } from '@/app/actions';
 
 type ModerationStatus = 'checking' | 'safe' | 'unsafe';
 
-// Helper to convert File to Data URI
 function fileToDataUri(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -32,15 +30,18 @@ export default function Step2({ onNext, onBack, postData }: { onNext: (data: any
                 ].filter(Boolean).join(' \n ');
 
                 const mediaToModerate: { url: string }[] = [];
-                const filesToProcess: File[] = [];
-                if (postData.thumbnailFile) filesToProcess.push(postData.thumbnailFile);
-                if (postData.mediaFiles) filesToProcess.push(...postData.mediaFiles);
-
-                for (const file of filesToProcess) {
-                    if (file instanceof File && file.type.startsWith('image/')) {
-                        const dataUri = await fileToDataUri(file);
-                        mediaToModerate.push({ url: dataUri });
+                if (postData.mediaFiles) {
+                    for (const file of postData.mediaFiles) {
+                        if (file instanceof File && (file.type.startsWith('image/') || file.type.startsWith('video/'))) {
+                            const dataUri = await fileToDataUri(file);
+                            mediaToModerate.push({ url: dataUri });
+                        }
                     }
+                }
+                
+                if (postData.thumbnailFile instanceof File && postData.thumbnailFile.type.startsWith('image/')) {
+                    const dataUri = await fileToDataUri(postData.thumbnailFile);
+                    mediaToModerate.push({ url: dataUri });
                 }
 
                 if (!textToModerate && mediaToModerate.length === 0) {
@@ -49,10 +50,9 @@ export default function Step2({ onNext, onBack, postData }: { onNext: (data: any
                     return;
                 }
                 
-                // CORRECTED: Call the server action instead of the flow directly.
                 const result = await runContentModerationAction({
                     text: textToModerate,
-                    media: mediaToModerate,
+                    media: mediaToModerate.length > 0 ? mediaToModerate : undefined,
                 });
 
                 if (result.failure) {

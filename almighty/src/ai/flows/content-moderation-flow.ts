@@ -1,4 +1,6 @@
 
+'use server';
+
 /**
  * @fileOverview AI-powered moderation flow for FlixTrend using chain-of-thought reasoning.
  * This forces the AI to analyze content before making a decision, improving accuracy.
@@ -45,7 +47,12 @@ Be lenient. Do NOT flag edgy humor, slang, or mild profanity. If it's ambiguous,
 
 **Content to Review:**
 TEXT: "{{text}}"
-MEDIA: {{mediaList}}
+{{#if media}}
+MEDIA:
+{{#each media}}
+- {{media url=this.url}}
+{{/each}}
+{{/if}}
 `;
 
 const noSafetyBlocks: SafetyPolicy[] = [
@@ -62,14 +69,12 @@ export const contentModerationFlow = ai.defineFlow(
     outputSchema: ContentModerationOutputSchema,
   },
   async (input) => {
-    const mediaList = input.media?.map(item => `- ${item.url}`).join('\n') || 'N/A';
-    const finalPrompt = moderationPrompt
-      .replace('"{{text}}"', JSON.stringify(input.text || ''))
-      .replace('{{mediaList}}', mediaList);
-
+    
+    const promptParts = [moderationPrompt.replace('{{text}}', JSON.stringify(input.text || ''))];
+    
     const response = await ai.generate({
       model: 'googleai/gemini-2.5-flash',
-      prompt: finalPrompt,
+      prompt: promptParts,
       output: { schema: ContentModerationOutputSchema },
       safetySettings: noSafetyBlocks,
       config: {

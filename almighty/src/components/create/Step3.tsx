@@ -8,12 +8,10 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { getFirestore, collection, addDoc, serverTimestamp, Timestamp, doc, getDoc } from "firebase/firestore";
 import { auth, app } from '@/utils/firebaseClient';
 import { useRouter } from 'next/navigation';
-// CORRECTED: Import the server actions, not the raw flow.
 import { uploadFileToFirebaseStorage, runContentModerationAction } from '@/app/actions';
 
 const db = getFirestore(app);
 
-// Helper to convert a File object to a Base64 Data URI for the AI
 const fileToDataUri = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -42,42 +40,36 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
         }
 
         try {
-            // --- AI CONTENT MODERATION --- //
             const textToModerate = [
                 postData.title, postData.caption, postData.content, postData.description,
                 postData.mood, postData.location, postData.question,
             ].filter(Boolean).join(' \n ');
-
+            
             const mediaToModerate: { url: string }[] = [];
-            const filesToProcess: File[] = [];
-            if (postData.thumbnailFile) filesToProcess.push(postData.thumbnailFile);
-            if (postData.mediaFiles) filesToProcess.push(...postData.mediaFiles);
-
-            for (const file of filesToProcess) {
-                if (file instanceof File && file.type.startsWith('image/')) {
-                    const dataUri = await fileToDataUri(file);
-                    mediaToModerate.push({ url: dataUri });
+            if (postData.mediaFiles) {
+                for (const file of postData.mediaFiles) {
+                    if (file instanceof File && (file.type.startsWith('image/') || file.type.startsWith('video/'))) {
+                        const dataUri = await fileToDataUri(file);
+                        mediaToModerate.push({ url: dataUri });
+                    }
                 }
             }
-            
-            // CORRECTED: Call the server action instead of the flow directly.
+            if (postData.thumbnailFile instanceof File) {
+                 const dataUri = await fileToDataUri(postData.thumbnailFile);
+                 mediaToModerate.push({ url: dataUri });
+            }
+
             const moderationResult = await runContentModerationAction({
                 text: textToModerate,
-                media: mediaToModerate,
+                media: mediaToModerate.length > 0 ? mediaToModerate : undefined,
             });
 
-            if (moderationResult.failure) {
-                throw new Error(moderationResult.failure);
-            }
-
-            if (moderationResult.success?.decision === 'deny') {
-                setModerationError(moderationResult.success.reason || 'Your post violates our content guidelines.');
+            if (moderationResult.failure || moderationResult.success?.decision === 'deny') {
+                setModerationError(moderationResult.success?.reason || moderationResult.failure || 'Your post violates our content guidelines.');
                 setIsPublishing(false);
-                return; // STOP execution
+                return;
             }
             
-            // --- MODERATION PASSED - PROCEED --- //
-
             const userDocRef = doc(db, 'users', user.uid);
             const userDocSnap = await getDoc(userDocRef);
             if (!userDocSnap.exists()) throw new Error("User profile not found!");
@@ -97,7 +89,7 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                 }
             }
             
-            let finalThumbnailUrl = postData.thumbnailPreview || null;
+            let finalThumbnailUrl = postData.thumbnailUrl || null;
             if (postData.thumbnailFile) {
                  const formData = new FormData();
                 formData.append('file', postData.thumbnailFile);
@@ -152,7 +144,6 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
 
         } catch (error: any) {
             console.error("Error publishing post:", error);
-            // Display a more specific error if it came from our handled moderation action
             if (error.message.includes("moderation")) {
                  setModerationError(error.message);
             } else {

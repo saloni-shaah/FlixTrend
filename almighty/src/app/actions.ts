@@ -63,7 +63,6 @@ export async function remixImageAction(input: z.infer<typeof RemixImageInputSche
     }
 }
 
-// CORRECTED: Server Action to wrap the content moderation flow.
 const ModerationInputSchema = z.object({
   text: z.string().optional(),
   media: z.array(z.object({ url: z.string() })).optional(),
@@ -71,7 +70,6 @@ const ModerationInputSchema = z.object({
 
 export async function runContentModerationAction(input: z.infer<typeof ModerationInputSchema>) {
     try {
-        // Now running the flow securely on the server.
         const result = await contentModerationFlow(input);
         return { success: result, failure: null };
     } catch (error: any) {
@@ -79,3 +77,5 @@ export async function runContentModerationAction(input: z.infer<typeof Moderatio
         return { success: null, failure: error.message || "An unknown error occurred during moderation." };
     }
 }
+
+export { contentModerationFlow };
