@@ -72,8 +72,8 @@ const gamesList = [
     { id: 'snake-and-ladder', name: 'Snake & Ladder', component: SnakeAndLadder, description: "Climb the ladders and dodge the snakes in this classic board game." },
     { id: 'chess', name: 'Chess', component: ChessGame, description: "The classic strategy game. Play against a friend locally." },
     { id: 'flash-match', name: 'Flash Match', component: FlashMatch, description: "A fast-paced tile-matching game with brand icons." },
-    // Placeholders
     { id: 'scope-slider', name: 'Scope Slider', component: ScopeSlider, description: "A sliding puzzle game using images from popular posts." },
+    // Placeholders
     { id: 'echo-chamber', name: 'Echo Chamber', component: EchoChamber, description: 'A "Simon Says" memory game with color patterns.' },
     { id: 'glitch-grid', name: 'Glitch Grid', component: GlitchGrid, description: "A 2048-style game with social media icons." },
     { id: 'trend-rider', name: 'Trend Rider', component: TrendRider, description: "An endless runner where you dodge obstacles in a neon tunnel." },
