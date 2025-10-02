@@ -1,0 +1,134 @@
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 90vh;
+  width: 100%;
+  max-width: 800px;
+  margin: auto;
+  background: rgba(21, 21, 21, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 1.5rem;
+  overflow: hidden;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.chat-header {
+  padding: 1rem;
+  border-bottom: 1px solid var(--glass-border);
+  text-align: center;
+  background: rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.chat-messages {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.chat-message-wrapper {
+    display: flex;
+    gap: 0.75rem;
+    max-width: 80%;
+}
+
+.chat-message-wrapper.user-message {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+}
+
+.chat-message-wrapper.bot-message {
+    align-self: flex-start;
+}
+
+.avatar {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.user-message .avatar {
+    background-color: var(--accent-pink);
+    color: white;
+}
+
+.bot-message .avatar {
+    background-color: var(--accent-purple);
+    color: white;
+}
+
+.chat-bubble {
+    padding: 0.75rem 1rem;
+    border-radius: 1.25rem;
+    line-height: 1.5;
+}
+
+.user-bubble {
+    background-color: var(--accent-cyan);
+    color: black;
+    border-top-right-radius: 0.5rem;
+}
+
+.bot-bubble {
+    background-color: #37373B;
+    color: #EAEAEA;
+    border-top-left-radius: 0.5rem;
+}
+
+.chat-input-form {
+  display: flex;
+  padding: 1rem;
+  border-top: 1px solid var(--glass-border);
+  gap: 0.5rem;
+}
+
+.chat-input {
+  flex-grow: 1;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--glass-border);
+  border-radius: 9999px;
+  padding: 0.75rem 1.25rem;
+  color: white;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.chat-input:focus {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 10px var(--accent-cyan);
+}
+
+.chat-send-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 9999px;
+    background-color: var(--accent-cyan);
+    color: black;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.chat-send-button:hover:not(:disabled) {
+    transform: scale(1.1);
+    box-shadow: 0 0 10px var(--accent-cyan);
+}
+
+.chat-send-button:disabled {
+    background-color: #555;
+    cursor: not-allowed;
+}
