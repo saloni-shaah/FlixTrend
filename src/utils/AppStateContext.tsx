@@ -112,18 +112,18 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         const onlineData = { status: 'online', lastSeen: serverTimestamp() };
         const offlineData = { status: 'offline', lastSeen: serverTimestamp() };
         
-        updateDoc(userDocRef, onlineData);
+        setDoc(userDocRef, onlineData, { merge: true });
 
         const onVisibilityChange = () => {
              if (document.visibilityState === 'hidden') {
-                updateDoc(userDocRef, offlineData);
+                setDoc(userDocRef, offlineData, { merge: true });
             } else {
-                updateDoc(userDocRef, onlineData);
+                setDoc(userDocRef, onlineData, { merge: true });
             }
         }
         
         window.addEventListener('visibilitychange', onVisibilityChange);
-        window.addEventListener('beforeunload', () => updateDoc(userDocRef, offlineData));
+        window.addEventListener('beforeunload', () => setDoc(userDocRef, offlineData, { merge: true }));
 
         return () => {
              window.removeEventListener('visibilitychange', onVisibilityChange);
