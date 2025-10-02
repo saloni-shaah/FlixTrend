@@ -260,7 +260,7 @@ function CompleteProfileModal({ profile, onClose }: { profile: any, onClose: () 
                 
                 {step === 3 && (
                     <div className="flex flex-col gap-4">
-                        <p className="text-sm text-gray-300 mb-4">We've sent a code to {form.phoneNumber}. Please enter it below.</p>
+                        <p className="text-sm text-gray-300 mb-4">We've sent a code to ${form.phoneNumber}. Please enter it below.</p>
                         <input type="text" name="code" placeholder="6-digit code" className="input-glass w-full" value={code} onChange={(e) => setCode(e.target.value)} required />
                         <button type="button" className="btn-glass bg-green-500 text-white mt-2" disabled={loading} onClick={onVerifyCode}>
                             {loading ? "Verifying..." : "Verify & Complete Profile"}
@@ -309,8 +309,8 @@ function UserPlaylists({ userId }: { userId: string }) {
               <Music className="text-accent-purple" size={32} />
             </div>
             <div>
-              <h3 className="font-bold text-lg text-accent-cyan">{playlist.name}</h3>
-              <p className="text-sm text-gray-400">{playlist.songIds?.length || 0} songs</p>
+              <h3 className="font-bold text-lg text-accent-cyan">${playlist.name}</h3>
+              <p className="text-sm text-gray-400">${playlist.songIds?.length || 0} songs</p>
             </div>
           </div>
         ))}
@@ -358,8 +358,8 @@ function UserCollections({ userId }: { userId: string }) {
                         <Folder className="text-accent-pink" size={48} />
                     </div>
                     <div className="p-3">
-                        <h3 className="font-bold text-accent-cyan truncate">{collectionItem.name}</h3>
-                        <p className="text-xs text-gray-400">{collectionItem.postIds?.length || 0} posts</p>
+                        <h3 className="font-bold text-accent-cyan truncate">${collectionItem.name}</h3>
+                        <p className="text-xs text-gray-400">${collectionItem.postIds?.length || 0} posts</p>
                     </div>
                 </div>
             ))}
@@ -389,7 +389,7 @@ function CollectionDetailView({ collection, onBack }: { collection: any, onBack:
     return (
         <div className="w-full max-w-xl flex flex-col gap-6">
             <button onClick={onBack} className="btn-glass self-start">{"< Back to Collections"}</button>
-            <h2 className="text-2xl font-bold text-accent-cyan">{collection.name}</h2>
+            <h2 className="text-2xl font-bold text-accent-cyan">${collection.name}</h2>
             {loading && <p className="text-center text-gray-400">Loading posts...</p>}
             {!loading && posts.length === 0 && <p className="text-center text-gray-400">This collection is empty.</p>}
             {posts.map(post => <PostCard key={post.id} post={post} />)}
@@ -869,7 +869,7 @@ function EditProfileModal({ profile, onClose }: { profile: any; onClose: () => v
             type="text" name="name" placeholder="Full Name" className="input-glass w-full"
             value={form.name} onChange={handleChange} required />
           <input
-            type="text" name="username" placeholder="Username" className="input-glass w-full"
+            type="text" name="username" placeholder="Username" className="input-glass w-full disabled:opacity-50 disabled:cursor-not-allowed"
             value={profile.username || ""} disabled />
           <textarea
             name="bio" placeholder="Bio" className="input-glass w-full rounded-2xl" rows={3}
@@ -1197,3 +1197,5 @@ function DeleteAccountModal({ profile, onClose }: { profile: any, onClose: () =>
         </div>
     )
 }
+
+    
