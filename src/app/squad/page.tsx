@@ -663,7 +663,7 @@ function SquadPageContent() {
                                 {item.avatar_url ? <img src={item.avatar_url} alt={item.name} className="w-full h-full object-cover" /> : (item.type === 'group' ? <Users/> : 'U')}
                             </div>
                             <div>
-                                <div className="font-bold">{item.name || item.username}</div>
+                                <div className="font-bold text-sm truncate">{item.name || item.username}</div>
                                 <div className="text-xs text-gray-400">{item.type === 'user' ? `@${item.username}` : `${item.members?.length || 0} members`}</div>
                             </div>
                         </div>
@@ -771,7 +771,6 @@ export default function SquadPage() {
 function EditProfileModal({ profile, onClose }: { profile: any; onClose: () => void }) {
   const [form, setForm] = useState({
     name: profile.name || "",
-    username: profile.username || "",
     bio: profile.bio || "",
     interests: profile.interests || "",
     avatar_url: profile.avatar_url || "",
@@ -840,17 +839,21 @@ function EditProfileModal({ profile, onClose }: { profile: any; onClose: () => v
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 overflow-y-auto pr-2">
           {/* Avatar and Banner */}
           <div className="relative h-24 mb-12">
-            <div className="h-full w-full rounded-lg bg-white/10 overflow-hidden">
+            <div className="relative h-full w-full rounded-lg bg-white/10 overflow-hidden">
               {form.banner_url && <img src={form.banner_url} alt="Banner" className="w-full h-full object-cover"/>}
+               <button type="button" onClick={() => bannerInputRef.current?.click()} className="absolute inset-0 w-full h-full bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                    <Camera size={24} />
+               </button>
             </div>
-            <button type="button" onClick={() => bannerInputRef.current?.click()} className="absolute bottom-1 right-1 btn-glass-icon w-8 h-8"><Camera size={16}/></button>
             <input type="file" ref={bannerInputRef} onChange={(e) => handleFileUpload(e, 'banner_url')} className="hidden" accept="image/*" />
 
             <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-24 h-24 rounded-full border-4 border-background bg-background">
-              <div className="w-full h-full rounded-full overflow-hidden">
+              <div className="relative w-full h-full rounded-full overflow-hidden">
                 {form.avatar_url && <img src={form.avatar_url} alt="Avatar" className="w-full h-full object-cover"/>}
+                 <button type="button" onClick={() => avatarInputRef.current?.click()} className="absolute inset-0 w-full h-full bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                    <Camera size={24} />
+                </button>
               </div>
-              <button type="button" onClick={() => avatarInputRef.current?.click()} className="absolute bottom-0 right-0 btn-glass-icon w-8 h-8"><Camera size={16}/></button>
               <input type="file" ref={avatarInputRef} onChange={(e) => handleFileUpload(e, 'avatar_url')} className="hidden" accept="image/*" />
             </div>
           </div>
@@ -867,7 +870,7 @@ function EditProfileModal({ profile, onClose }: { profile: any; onClose: () => v
             value={form.name} onChange={handleChange} required />
           <input
             type="text" name="username" placeholder="Username" className="input-glass w-full"
-            value={form.username} onChange={handleChange} required />
+            value={profile.username || ""} disabled />
           <textarea
             name="bio" placeholder="Bio" className="input-glass w-full rounded-2xl" rows={3}
             value={form.bio} onChange={handleChange} />
@@ -1194,5 +1197,3 @@ function DeleteAccountModal({ profile, onClose }: { profile: any, onClose: () =>
         </div>
     )
 }
-
-    
