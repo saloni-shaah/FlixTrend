@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { auth, app } from "@/utils/firebaseClient";
 import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } from "firebase/auth";
-import { getFirestore, doc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { getFirestore, doc, setDoc, collection, query, where, getDocs, serverTimestamp } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, ArrowLeft, Camera, UploadCloud } from 'lucide-react';
@@ -67,6 +67,10 @@ export default function SignupPage() {
         if (step === 1) {
             if (form.password !== form.confirmPassword) {
                 setError("Passwords do not match");
+                return;
+            }
+            if (form.password.length < 6) {
+                setError("Password must be at least 6 characters long.");
                 return;
             }
             if (form.username.length < 3) {
@@ -133,19 +137,19 @@ export default function SignupPage() {
             // 4. Store user profile in Firestore
             await setDoc(doc(db, "users", userCredential.user.uid), {
                 uid: userCredential.user.uid,
-                email: form.email,
+                email: form.email.toLowerCase(),
                 name: form.name,
                 username: form.username.toLowerCase(),
                 bio: form.bio,
                 dob: form.dob,
                 gender: form.gender,
                 location: form.location,
-                phoneNumber: form.phoneNumber, // Storing it, but it's unverified
+                phoneNumber: form.phoneNumber,
                 accountType: form.accountType,
                 avatar_url: avatarUrl,
                 banner_url: bannerUrl,
-                created_at: new Date().toISOString(),
-                profileComplete: true, 
+                createdAt: serverTimestamp(),
+                profileComplete: !!(form.dob && form.gender && form.location),
             });
 
             // 5. Send verification email
@@ -154,7 +158,11 @@ export default function SignupPage() {
             setSuccess("Signup successful! Please check your email to verify your account. Redirecting...");
             setTimeout(() => router.push("/home"), 3000);
         } catch (err: any) {
-            setError(err.message);
+            if(err.code === 'auth/email-already-in-use') {
+                setError("This email is already in use. Please use another email or log in.");
+            } else {
+                setError(err.message);
+            }
         }
         setLoading(false);
     };
@@ -167,7 +175,7 @@ export default function SignupPage() {
                         <h3 className="text-xl font-bold text-accent-cyan text-center">Step 1: Account Credentials</h3>
                         <input type="email" name="email" placeholder="Email" className="input-glass w-full" value={form.email} onChange={handleChange} required />
                         <input type="text" name="username" placeholder="Username" className="input-glass w-full" value={form.username} onChange={handleChange} required />
-                        <input type="password" name="password" placeholder="Password" className="input-glass w-full" value={form.password} onChange={handleChange} required />
+                        <input type="password" name="password" placeholder="Password (min. 6 characters)" className="input-glass w-full" value={form.password} onChange={handleChange} required />
                         <input type="password" name="confirmPassword" placeholder="Confirm Password" className="input-glass w-full" value={form.confirmPassword} onChange={handleChange} required />
                     </motion.div>
                 );
@@ -259,3 +267,5 @@ export default function SignupPage() {
     </div>
   );
 }
+
+    
