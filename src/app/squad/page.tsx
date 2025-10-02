@@ -780,7 +780,6 @@ function EditProfileModal({ profile, onClose }: { profile: any; onClose: () => v
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [uploading, setUploading] = useState<string | null>(null);
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
@@ -791,7 +790,6 @@ function EditProfileModal({ profile, onClose }: { profile: any; onClose: () => v
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'avatar_url' | 'banner_url') => {
     if (e.target.files && e.target.files[0]) {
       setUploading(field);
-      setUploadProgress(0); 
       try {
         const formData = new FormData();
         formData.append('file', e.target.files[0]);
@@ -805,7 +803,6 @@ function EditProfileModal({ profile, onClose }: { profile: any; onClose: () => v
         setError(err.message);
       }
       setUploading(null);
-      setUploadProgress(null);
     }
   };
 
@@ -828,7 +825,7 @@ function EditProfileModal({ profile, onClose }: { profile: any; onClose: () => v
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <motion.div 
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -836,57 +833,55 @@ function EditProfileModal({ profile, onClose }: { profile: any; onClose: () => v
       >
         <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white">&times;</button>
         <h2 className="text-xl font-headline font-bold mb-4 text-accent-cyan">Edit Profile</h2>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4 overflow-y-auto pr-2">
-          {/* Avatar and Banner */}
-          <div className="relative h-24 mb-12">
-            <div className="relative h-full w-full rounded-lg bg-white/10 overflow-hidden">
-              {form.banner_url && <img src={form.banner_url} alt="Banner" className="w-full h-full object-cover"/>}
-               <button type="button" onClick={() => bannerInputRef.current?.click()} className="absolute inset-0 w-full h-full bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                    <Camera size={24} />
-               </button>
-            </div>
-            <input type="file" ref={bannerInputRef} onChange={(e) => handleFileUpload(e, 'banner_url')} className="hidden" accept="image/*" />
-
-            <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-24 h-24 rounded-full border-4 border-background bg-background">
-              <div className="relative w-full h-full rounded-full overflow-hidden">
-                {form.avatar_url && <img src={form.avatar_url} alt="Avatar" className="w-full h-full object-cover"/>}
-                 <button type="button" onClick={() => avatarInputRef.current?.click()} className="absolute inset-0 w-full h-full bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                    <Camera size={24} />
+        
+        <div className="flex-1 overflow-y-auto pr-2">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+              <div className="relative h-24 mb-12">
+                <button type="button" onClick={() => bannerInputRef.current?.click()} className="relative group h-full w-full rounded-lg bg-white/10 overflow-hidden">
+                  {form.banner_url && <img src={form.banner_url} alt="Banner" className="w-full h-full object-cover"/>}
+                   <div className="absolute inset-0 w-full h-full bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Camera size={24} />
+                   </div>
                 </button>
-              </div>
-              <input type="file" ref={avatarInputRef} onChange={(e) => handleFileUpload(e, 'avatar_url')} className="hidden" accept="image/*" />
-            </div>
-          </div>
-          
-          {(uploading || uploadProgress !== null) && (
-            <div className="w-full bg-gray-700 rounded-full h-2.5">
-              <div className="bg-accent-cyan h-2.5 rounded-full" style={{width: `${uploadProgress || 0}%`}}></div>
-              <p className="text-xs text-center mt-1">Uploading {uploading?.replace('_url','')}...</p>
-            </div>
-          )}
+                <input type="file" ref={bannerInputRef} onChange={(e) => handleFileUpload(e, 'banner_url')} className="hidden" accept="image/*" />
 
-          <input
-            type="text" name="name" placeholder="Full Name" className="input-glass w-full"
-            value={form.name} onChange={handleChange} required />
-          <input
-            type="text" name="username" placeholder="Username" className="input-glass w-full disabled:opacity-50 disabled:cursor-not-allowed"
-            value={profile.username || ""} disabled />
-          <textarea
-            name="bio" placeholder="Bio" className="input-glass w-full rounded-2xl" rows={3}
-            value={form.bio} onChange={handleChange} />
-          <input
-            type="text" name="interests" placeholder="Interests (e.g., tech, music, art)" className="input-glass w-full"
-            value={form.interests} onChange={handleChange} />
-          
-          {error && <div className="text-red-400 text-center">{error}</div>}
-          {success && <div className="text-green-400 text-center">{success}</div>}
-          
-          <button
-            type="submit" className="btn-glass bg-accent-cyan text-black mt-4"
-            disabled={loading || !!uploading}>
-            {loading ? "Saving..." : !!uploading ? "Uploading..." : "Save Changes"}
-          </button>
-        </form>
+                <button type="button" onClick={() => avatarInputRef.current?.click()} className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-24 h-24 rounded-full border-4 border-background bg-background group">
+                  <div className="relative w-full h-full rounded-full overflow-hidden">
+                    {form.avatar_url && <img src={form.avatar_url} alt="Avatar" className="w-full h-full object-cover"/>}
+                     <div className="absolute inset-0 w-full h-full bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Camera size={24} />
+                    </div>
+                  </div>
+                </button>
+                <input type="file" ref={avatarInputRef} onChange={(e) => handleFileUpload(e, 'avatar_url')} className="hidden" accept="image/*" />
+              </div>
+              
+              {uploading && (
+                <div className="text-center text-accent-cyan text-sm">Uploading {uploading?.replace('_url','')}...</div>
+              )}
+
+              <input
+                type="text" name="name" placeholder="Full Name" className="input-glass w-full"
+                value={form.name} onChange={handleChange} required />
+              
+              <textarea
+                name="bio" placeholder="Bio" className="input-glass w-full rounded-2xl" rows={3}
+                value={form.bio} onChange={handleChange} />
+              
+              <input
+                type="text" name="interests" placeholder="Interests (e.g., tech, music, art)" className="input-glass w-full"
+                value={form.interests} onChange={handleChange} />
+              
+              {error && <div className="text-red-400 text-center">{error}</div>}
+              {success && <div className="text-green-400 text-center">{success}</div>}
+              
+              <button
+                type="submit" className="btn-glass bg-accent-cyan text-black mt-4"
+                disabled={loading || !!uploading}>
+                {loading ? "Saving..." : !!uploading ? "Uploading..." : "Save Changes"}
+              </button>
+            </form>
+        </div>
       </motion.div>
     </div>
   );
@@ -1197,5 +1192,3 @@ function DeleteAccountModal({ profile, onClose }: { profile: any, onClose: () =>
         </div>
     )
 }
-
-    
