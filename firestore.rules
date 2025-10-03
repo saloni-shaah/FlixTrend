@@ -1,33 +1,42 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper function to check for admin roles
+    
+    // Function to check if the requesting user has an admin role.
     function isAdmin() {
-      // Get the user's profile from the /users collection
+      // Check if the user is authenticated first.
+      if (request.auth == null) {
+        return false;
+      }
+      // Get the user's profile document from the 'users' collection.
       let userProfile = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-      // Check if the user's role array contains any of the admin roles
+      
+      // Ensure the 'role' field exists and is a list.
+      if (!('role' in userProfile) || !(userProfile.role is list)) {
+        return false;
+      }
+      
+      // Check if the user's role list contains any of the admin roles.
       return userProfile.role.hasAny(['founder', 'cto', 'developer']);
     }
 
     // Rules for the 'users' collection
     match /users/{userId} {
-      // Anyone can read a user's public profile
+      // Anyone can read a user's public profile.
       allow read: if true;
-
-      // A user can create their own profile
+      
+      // A user can create their own profile document.
       allow create: if request.auth.uid == userId;
-
-      // A user can update their own profile, but cannot change their role
+      
+      // A user can update their own profile, but cannot change their own 'role' or 'isPremium' status.
       allow update: if request.auth.uid == userId && !('role' in request.resource.data);
 
-      // An admin can update any user's profile, specifically to change their role
-      allow update: if isAdmin() && 'role' in request.resource.data;
+      // An admin can update ONLY the 'role' and 'isPremium' fields of any user.
+      allow update: if isAdmin() && request.resource.data.keys().hasOnly(['role', 'isPremium']);
     }
 
-    // Placeholder for other collections. Deny all access by default.
+    // Default deny all other collections/documents for security.
     match /{document=**} {
       allow read, write: if false;
     }
