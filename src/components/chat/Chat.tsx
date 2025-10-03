@@ -4,10 +4,21 @@
 import React, { useState, useEffect, useRef } from "react";
 import { getFirestore, collection, query, onSnapshot, orderBy, addDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "@/utils/firebaseClient";
-import { Send, Bot, User } from "lucide-react";
+import { Send, Bot, User, UploadCloud } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getAlmightyResponse } from "@/app/actions";
+import { getAlmightyResponse, remixImageAction } from "@/app/actions";
 import './Chat.css';
+
+// Helper to convert File to Data URI
+const fileToDataUri = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = (error) => reject(error);
+        reader.readAsDataURL(file);
+    });
+};
+
 
 function ChatMessageLoading() {
   return (
@@ -32,7 +43,10 @@ export function Chat() {
     const [newMessage, setNewMessage] = useState("");
     const [currentUser, setCurrentUser] = useState<any>(null);
     const [isAlmightyLoading, setIsAlmightyLoading] = useState(false);
+    const [imageFile, setImageFile] = useState<File | null>(null);
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged(user => {
@@ -54,7 +68,7 @@ export function Chat() {
                  setMessages([{
                     id: 'initial',
                     sender: 'almighty-bot',
-                    text: 'Hi! I\'m Almighty, your AI companion. Ask me anything!',
+                    text: 'Hi! I\'m Almighty, your AI companion. Ask me anything, or upload an image to start remixing!',
                     createdAt: { toDate: () => new Date() } // Mock date for sorting
                 }]);
             } else {
@@ -67,13 +81,31 @@ export function Chat() {
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages, isAlmightyLoading]);
+    
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            if(file.type.startsWith('image/')) {
+                setImageFile(file);
+                setImagePreview(URL.createObjectURL(file));
+            } else {
+                alert("Only image files are supported for remixing.");
+            }
+        }
+    };
 
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newMessage.trim() || !currentUser) return;
+        if ((!newMessage.trim() && !imageFile) || !currentUser) return;
 
         const textToSend = newMessage;
+        const fileToSend = imageFile;
+
+        // Clear inputs immediately
         setNewMessage("");
+        setImageFile(null);
+        setImagePreview(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
 
         // Remove initial greeting if it's there
         if(messages.length === 1 && messages[0].id === 'initial') {
@@ -81,53 +113,91 @@ export function Chat() {
         }
 
         const chatId = `almighty-chat_${currentUser.uid}`;
-        const userMessage = {
-            sender: currentUser.uid,
-            text: textToSend,
-            createdAt: serverTimestamp(),
-            type: 'text'
-        };
-        await addDoc(collection(db, "chats", chatId, "messages"), userMessage);
-
-        setIsAlmightyLoading(true);
-
-        const currentContext = messages.map(m => `${m.sender === currentUser.uid ? 'User' : 'Almighty'}: ${m.text}`).join('\n');
         
-        try {
-            const response = await getAlmightyResponse({
-                userName: currentUser.displayName || 'User',
-                message: textToSend,
-                context: currentContext,
-            });
-
-            // Add a safety check for the entire response object
-            if (!response) {
-                throw new Error("The AI service returned an unexpected error.");
-            }
-
-            if (response.success?.response) {
-                const assistantMessage = {
+        // Handle image upload and remixing
+        if (fileToSend) {
+            const imageDataUrl = await fileToDataUri(fileToSend);
+            // Save user's message (image + prompt)
+            const userMessage = {
+                sender: currentUser.uid,
+                text: textToSend, // The prompt for the remix
+                imageUrl: imageDataUrl, // The uploaded image
+                createdAt: serverTimestamp(),
+                type: 'image'
+            };
+            await addDoc(collection(db, "chats", chatId, "messages"), userMessage);
+            
+            setIsAlmightyLoading(true);
+            try {
+                const response = await remixImageAction({ photoDataUri: imageDataUrl, prompt: textToSend });
+                if (response.success?.remixedPhotoDataUri) {
+                    const aiImageMessage = {
+                        sender: 'almighty-bot',
+                        text: 'Here is your remixed image!',
+                        imageUrl: response.success.remixedPhotoDataUri,
+                        createdAt: serverTimestamp(),
+                        type: 'image'
+                    };
+                    await addDoc(collection(db, "chats", chatId, "messages"), aiImageMessage);
+                } else {
+                    throw new Error(response.failure || "The AI couldn't remix the image.");
+                }
+            } catch (error: any) {
+                console.error("AI Remix Error:", error);
+                const errorMessage = {
                     sender: 'almighty-bot',
-                    text: response.success.response,
+                    text: `Sorry, I hit a snag while remixing: ${error.message}`,
                     createdAt: serverTimestamp(),
                     type: 'text'
                 };
-                await addDoc(collection(db, "chats", chatId, "messages"), assistantMessage);
-            } else {
-                // Use the failure message from the action, or a default error.
-                throw new Error(response.failure || "The AI didn't provide a response.");
+                await addDoc(collection(db, "chats", chatId, "messages"), errorMessage);
+            } finally {
+                setIsAlmightyLoading(false);
             }
-        } catch (error) {
-            console.error("AI Response Error:", error);
-            const errorMessage = {
-                sender: 'almighty-bot',
-                text: "Yikes, my brain just glitched. Try that again? 😅",
+        // Handle regular text message
+        } else {
+             const userMessage = {
+                sender: currentUser.uid,
+                text: textToSend,
                 createdAt: serverTimestamp(),
                 type: 'text'
             };
-            await addDoc(collection(db, "chats", chatId, "messages"), errorMessage);
-        } finally {
-            setIsAlmightyLoading(false);
+            await addDoc(collection(db, "chats", chatId, "messages"), userMessage);
+            setIsAlmightyLoading(true);
+            const currentContext = messages.map(m => `${m.sender === currentUser.uid ? 'User' : 'Almighty'}: ${m.text}`).join('\n');
+            
+            try {
+                const response = await getAlmightyResponse({
+                    userName: currentUser.displayName || 'User',
+                    message: textToSend,
+                    context: currentContext,
+                });
+                if (!response) {
+                    throw new Error("The AI service returned an unexpected error.");
+                }
+                if (response.success?.response) {
+                    const assistantMessage = {
+                        sender: 'almighty-bot',
+                        text: response.success.response,
+                        createdAt: serverTimestamp(),
+                        type: 'text'
+                    };
+                    await addDoc(collection(db, "chats", chatId, "messages"), assistantMessage);
+                } else {
+                    throw new Error(response.failure || "The AI didn't provide a response.");
+                }
+            } catch (error: any) {
+                console.error("AI Response Error:", error);
+                const errorMessage = {
+                    sender: 'almighty-bot',
+                    text: "Yikes, my brain just glitched. Try that again? 😅",
+                    createdAt: serverTimestamp(),
+                    type: 'text'
+                };
+                await addDoc(collection(db, "chats", chatId, "messages"), errorMessage);
+            } finally {
+                setIsAlmightyLoading(false);
+            }
         }
     };
 
@@ -154,7 +224,10 @@ export function Chat() {
                                     {isUser ? <User /> : <Bot />}
                                 </div>
                                 <div className={`chat-bubble ${isUser ? 'user-bubble' : 'bot-bubble'}`}>
-                                    {msg.text}
+                                    {msg.text && <p>{msg.text}</p>}
+                                    {msg.imageUrl && (
+                                        <img src={msg.imageUrl} alt="chat content" className="mt-2 rounded-lg max-w-xs" />
+                                    )}
                                 </div>
                             </motion.div>
                         );
@@ -163,17 +236,35 @@ export function Chat() {
                 {isAlmightyLoading && <ChatMessageLoading />}
                 <div ref={messagesEndRef} />
             </div>
-            <form onSubmit={handleSend} className="chat-input-form">
-                <input
-                    type="text"
-                    value={newMessage}
-                    onChange={e => setNewMessage(e.target.value)}
-                    placeholder="Ask Almighty anything..."
-                    className="chat-input"
-                />
-                <button type="submit" className="chat-send-button" disabled={!newMessage.trim() || isAlmightyLoading}>
-                    <Send />
-                </button>
+            <form onSubmit={handleSend} className="chat-input-form flex-col">
+                {imagePreview && (
+                    <div className="relative w-24 h-24 mb-2">
+                        <img src={imagePreview} alt="upload preview" className="w-full h-full object-cover rounded-lg"/>
+                        <button 
+                            type="button" 
+                            onClick={() => { setImageFile(null); setImagePreview(null); if(fileInputRef.current) fileInputRef.current.value = ""; }} 
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
+                        >
+                            <X size={16} />
+                        </button>
+                    </div>
+                )}
+                <div className="flex w-full gap-2 items-center">
+                    <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
+                     <button type="button" onClick={() => fileInputRef.current?.click()} className="chat-send-button !bg-gray-600">
+                        <UploadCloud />
+                    </button>
+                    <input
+                        type="text"
+                        value={newMessage}
+                        onChange={e => setNewMessage(e.target.value)}
+                        placeholder={imageFile ? "Add a prompt to remix your image..." : "Ask Almighty anything..."}
+                        className="chat-input"
+                    />
+                    <button type="submit" className="chat-send-button" disabled={(!newMessage.trim() && !imageFile) || isAlmightyLoading}>
+                        <Send />
+                    </button>
+                </div>
             </form>
         </div>
     );
