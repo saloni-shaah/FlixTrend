@@ -68,8 +68,8 @@ export async function getAlmightyResponse(input: z.infer<typeof AlmightyResponse
 
 
 const RemixImageInputSchema = z.object({
-  photoDataUri: z.string().describe(
-      "A photo as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+  photoUrl: z.string().url().describe(
+      "A public URL of a photo."
   ),
   prompt: z.string().describe(
       'A text prompt describing the desired style transformation (e.g., "turn this into an anime character").'
@@ -77,14 +77,14 @@ const RemixImageInputSchema = z.object({
 });
 
 const RemixImageOutputSchema = z.object({
-  remixedPhotoDataUri: z.string().describe('The remixed image as a data URI.'),
+  remixedPhotoUrl: z.string().url().describe('The public URL of the remixed image.'),
 });
 
 export async function remixImageAction(input: z.infer<typeof RemixImageInputSchema>): Promise<{success: z.infer<typeof RemixImageOutputSchema> | null, failure: string | null}> {
     try {
         const { media } = await ai.generate({
             model: 'googleai/gemini-2.5-flash-image-preview',
-            prompt: [{ media: { url: input.photoDataUri } }, { text: input.prompt }],
+            prompt: [{ media: { url: input.photoUrl } }, { text: input.prompt }],
             config: {
                 responseModalities: ['TEXT', 'IMAGE'],
             },
@@ -94,7 +94,21 @@ export async function remixImageAction(input: z.infer<typeof RemixImageInputSche
             throw new Error('Image generation failed to produce an image.');
         }
 
-        return { success: { remixedPhotoDataUri: media.url }, failure: null };
+        // The generated image is a data URI. We need to upload it to get a public URL.
+        const base64Data = media.url.split(',')[1];
+        const buffer = Buffer.from(base64Data, 'base64');
+        
+        // Convert Buffer to a File-like object for the upload action
+        const blob = new Blob([buffer], { type: 'image/png' });
+        const formData = new FormData();
+        formData.append('file', blob, 'remixed-image.png');
+
+        const uploadResult = await uploadFileToFirebaseStorage(formData);
+        if (!uploadResult.success?.url) {
+            throw new Error(uploadResult.failure || 'Failed to upload remixed image.');
+        }
+
+        return { success: { remixedPhotoUrl: uploadResult.success.url }, failure: null };
 
     } catch(err: any) {
         console.error("Remix image action error:", err);
