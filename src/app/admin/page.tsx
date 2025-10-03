@@ -111,6 +111,7 @@ export default function AdminPage() {
              const userToLoginDoc = userQuerySnap.docs[0];
              const userToLoginData = userToLoginDoc.data();
              
+             // This is the crucial missing piece. We set the state to trigger the redirect.
              setLoggedInAdminProfile({uid: userToLoginDoc.id, ...userToLoginData});
 
         } catch (err: any) {
@@ -156,5 +157,7 @@ export default function AdminPage() {
         </div>
     );
 }
+
+    
 
     
