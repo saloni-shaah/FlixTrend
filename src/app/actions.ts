@@ -76,13 +76,20 @@ User's latest message:
 
 export async function getAlmightyResponse(input: z.infer<typeof AlmightyResponseInputSchema>): Promise<{ success: z.infer<typeof AlmightyResponseOutputSchema> | null, failure: string | null }> {
     try {
-        const response = await almightyPrompt(input);
-        if (!response) {
-          throw new Error("AI failed to generate a response.");
+        const result = await almightyPrompt(input);
+        
+        // DEFINITIVE FIX: Check if the result or its 'response' property is null/undefined.
+        // The AI model can sometimes return a nullish value if it can't generate a proper response.
+        if (!result?.response) {
+          console.error("AI response was null or empty.", result);
+          return { success: null, failure: "The AI returned an empty response. It might be feeling a bit shy!" };
         }
-        return { success: response, failure: null };
+        
+        return { success: result, failure: null };
+
     } catch (err: any) {
         console.error("Almighty AI action error:", err);
+        // Ensure a failure object is always returned on error.
         return { success: null, failure: err.message || "An unknown error occurred while talking to the AI." };
     }
 }
