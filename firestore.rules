@@ -1,82 +1,43 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- Helper Functions ---
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-
-    // This is the key: Check the requesting user's EXISTING document in the database
-    // for an admin-level role. This is more secure than checking incoming data.
-    function isExistingAdmin() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['founder', 'cto', 'developer']);
+    // A user is an admin if their auth token has the 'admin' custom claim set to true.
+    function isAdmin() {
+      return request.auth.token.admin == true;
     }
     
-    match /users/{userId} {
-      // Anyone logged in can view user profiles.
-      allow read: if request.auth != null;
-      
-      // A user can create their own profile.
-      allow create: if isOwner(userId);
-
-      // A user can update their own profile, BUT they cannot change their own 'role'.
-      allow update: if isOwner(userId) && !('role' in request.resource.data);
-
-      // --- The Definitive Fix ---
-      // An existing admin is allowed to update the 'role' field of ANY user.
-      // This rule is specific and secure.
-      allow update: if isExistingAdmin() && request.resource.data.keys().hasOnly(['role']);
+    // A one-time-use function to allow the project owner to grant themselves the first admin/founder role.
+    // This should be considered temporary. Once the first user has the 'founder' role and custom claims
+    // are fully set up, this can be removed for even tighter security.
+    function isProjectOwner() {
+      return request.auth.uid == "uQpi9hoaX9dQQ2YHOYv05orx1rQ2";
     }
 
-    // Rules for other collections
+    match /users/{userId} {
+      allow read: if true;
+      allow create: if request.auth.uid == userId;
+
+      // Allow users to update their own profile.
+      // Also, allow an admin (or the project owner for bootstrapping) to update ONLY the 'role' field of any user.
+      allow update: if (request.auth.uid == userId) || 
+                     ((isAdmin() || isProjectOwner()) && request.resource.data.keys().hasOnly(['role']));
+                     
+      allow delete: if request.auth.uid == userId;
+    }
+
+    // Rules for other collections (posts, chats, etc.) should go here.
+    // Example for posts:
     match /posts/{postId} {
       allow read: if true;
-      allow create, update, delete: if isOwner(request.resource.data.userId);
-
-      match /{allChildren=**} {
-        allow read, write: if request.auth != null;
-      }
-    }
-
-    match /flashes/{flashId} {
-      allow read: if true;
-      allow create, delete: if isOwner(request.resource.data.userId);
+      allow create, update, delete: if request.auth.uid == request.resource.data.userId;
     }
     
-    match /groups/{groupId} {
-        allow read: if request.auth != null && resource.data.members.hasAny([request.auth.uid]);
-        allow create: if request.auth != null;
-        allow update: if request.auth != null && resource.data.admins.hasAny([request.auth.uid]);
-        allow delete: if request.auth != null && resource.data.admins.hasAny([request.auth.uid]);
-    }
-
-    match /chats/{chatId}/{messageId} {
-        // More complex logic would be needed here for group chats vs DMs
-        allow read, write: if request.auth != null;
-    }
-
-    match /notifications/{userId}/{allChildren=**} {
-      allow read, write: if isOwner(userId);
-    }
-
-    match /playlists/{playlistId} {
-        allow read, write: if isOwner(resource.data.ownerId);
-    }
-
-    match /collections/{collectionId} {
-        allow read, write: if isOwner(resource.data.ownerId);
-    }
-
-    match /songs/{songId} {
-        allow read: if true;
-        allow create: if request.auth != null;
-    }
-
-     match /app_status/{docId} {
-        allow read: if true;
-        allow write: if isExistingAdmin();
+    // Default deny all other access
+    match /{path=**} {
+      allow read, write: if false;
     }
   }
 }
