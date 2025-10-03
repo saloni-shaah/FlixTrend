@@ -46,8 +46,7 @@ function AdminDashboard({ userProfile, onLogout }: { userProfile: any, onLogout:
             }
             const userToUpdateDoc = userQuerySnap.docs[0];
             await updateDoc(doc(db, "users", userToUpdateDoc.id), {
-                isPremium: true,
-                premiumUntil: null, // or set an expiry date
+                isPremium: true
             });
             alert(`Premium status granted to ${username}.`);
         } catch(error: any) {
@@ -129,21 +128,12 @@ export default function AdminPage() {
                 const userDoc = await getDoc(doc(db, "users", currentUser.uid));
                 if (userDoc.exists()) {
                     const profileData = userDoc.data();
-                    const roles = Array.isArray(profileData.role) ? profileData.role : [profileData.role].filter(Boolean);
+                    const roles = Array.isArray(profileData.role) ? profileData.role : [];
                     if (roles.includes('developer') || roles.includes('founder') || roles.includes('cto')) {
                         setUser(currentUser);
                         setUserProfile({uid: userDoc.id, ...profileData});
-                    } else {
-                        setUser(null);
-                        setUserProfile(null);
                     }
-                } else {
-                    setUser(null);
-                    setUserProfile(null);
                 }
-            } else {
-                 setUser(null);
-                 setUserProfile(null);
             }
             setLoading(false);
         });
@@ -171,7 +161,6 @@ export default function AdminPage() {
         }
 
         try {
-            // Find user by USERNAME
             const usersRef = collection(db, "users");
             const q = query(usersRef, where("username", "==", onboardForm.username));
             const userQuerySnap = await getDocs(q);
@@ -192,10 +181,11 @@ export default function AdminPage() {
                 role: rolesToSet,
             });
             
-            setSuccess(`Success! ${onboardForm.username} has been onboarded.`);
+            setSuccess(`Success! ${onboardForm.username} has been onboarded as a developer.`);
             setOnboardForm({ username: '', pass1: '', pass2: '' });
 
         } catch (err: any) {
+            console.error("Onboarding error:", err);
             setError(err.message);
         }
         setIsProcessing(false);
@@ -224,7 +214,7 @@ export default function AdminPage() {
 
              const userToLoginDoc = userQuerySnap.docs[0];
              const userToLoginData = userToLoginDoc.data();
-             const userRoles = Array.isArray(userToLoginData.role) ? userToLoginData.role : (userToLoginData.role ? [userToLoginData.role] : []);
+             const userRoles = Array.isArray(userToLoginData.role) ? userToLoginData.role : [];
 
              if (!userRoles.includes('developer') && !userRoles.includes('founder') && !userRoles.includes('cto')) {
                  setError("This account does not have developer privileges.");
@@ -232,13 +222,12 @@ export default function AdminPage() {
                  return;
              }
              
-             // This is a simulated login. In a real app, we'd re-auth with Firebase.
-             setUserProfile({uid: userToLoginDoc.id, ...userToLoginData});
-             
+             // Check if the currently logged-in Firebase user matches the developer profile
              if(auth.currentUser?.uid === userToLoginDoc.id) {
                 setUser(auth.currentUser);
+                setUserProfile({uid: userToLoginDoc.id, ...userToLoginData});
              } else {
-                setError("There was a mismatch with the logged-in user. Please log in to FlixTrend with your developer account and try again.");
+                setError("Authentication mismatch. Please log in to FlixTrend with the developer account you're trying to access the admin panel with, and then try again.");
              }
 
         } catch (err: any) {
@@ -266,9 +255,9 @@ export default function AdminPage() {
                 {activeTab === 'login' ? (
                      <form onSubmit={handleLoginSubmit} className="p-6 flex flex-col gap-4">
                         <h2 className="text-2xl font-headline font-bold text-accent-cyan mb-2 text-center flex items-center justify-center gap-2"><LogIn/> Developer Login</h2>
-                        <input name="username" placeholder="Your FlixTrend Username" className="input-glass" onChange={handleLoginChange} value={loginForm.username} />
-                        <input name="pass1" type="password" placeholder="Company Password 1" className="input-glass" onChange={handleLoginChange} value={loginForm.pass1} />
-                        <input name="pass2" type="password" placeholder="Company Password 2" className="input-glass" onChange={handleLoginChange} value={loginForm.pass2} />
+                        <input name="username" placeholder="Your FlixTrend Username" className="input-glass" onChange={handleLoginChange} value={loginForm.username} required />
+                        <input name="pass1" type="password" placeholder="Company Password 1" className="input-glass" onChange={handleLoginChange} value={loginForm.pass1} required />
+                        <input name="pass2" type="password" placeholder="Company Password 2" className="input-glass" onChange={handleLoginChange} value={loginForm.pass2} required />
                          {error && <p className="text-red-400 text-center text-sm">{error}</p>}
                         <button type="submit" className="btn-glass bg-accent-cyan text-black mt-2" disabled={isProcessing}>{isProcessing ? "Verifying..." : "Login"}</button>
                     </form>
