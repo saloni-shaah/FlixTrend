@@ -2,36 +2,27 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Function to check if the requesting user has an admin-level role.
-    // It securely reads the requesting user's own profile document to check their role.
-    function isRequestingUserAdmin() {
-      let userRoles = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-      // Ensure userRoles is a list before checking for roles
-      return userRoles is list && (
-        'founder' in userRoles ||
-        'cto' in userRoles ||
-        'developer' in userRoles
-      );
+    // A user's role is stored in their auth token as a custom claim.
+    // This function checks if the user has the 'admin' claim set to true.
+    function isAdmin() {
+      return request.auth.token.admin == true;
     }
 
     match /users/{userId} {
-      // Anyone can view a user's public profile.
-      allow read;
+      // Anyone can read public user profiles.
+      allow read: if true;
 
-      // A user can create their own profile document.
-      allow create: if request.auth.uid == userId;
+      // Users can only create or update their own profile.
+      // They cannot grant themselves a role.
+      allow create, update: if request.auth.uid == userId && !('role' in request.resource.data);
 
-      // A user can update their own profile, but they are NOT allowed to change their own role.
-      allow update: if request.auth.uid == userId && !('role' in request.resource.data);
-      
-      // An admin user IS allowed to update ONLY the 'role' field of another user.
-      // This is the specific permission needed for the admin page to onboard new developers.
-      allow update (role): if isRequestingUserAdmin() && request.resource.data.keys().hasOnly(['role']);
+      // An admin can update the 'role' field of any user.
+      // This is the rule that will allow your admin page to function.
+      allow update (role): if isAdmin();
     }
-
-    // Explicitly deny all other writes to protect user data.
+    
     match /{document=**} {
-      allow write: if false;
+        allow read, write: if false;
     }
   }
 }
