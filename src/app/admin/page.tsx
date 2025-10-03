@@ -24,7 +24,7 @@ export default function AdminPage() {
     const [activeTab, setActiveTab] = useState('login');
 
     const [loginForm, setLoginForm] = useState({ username: '', pass1: '', pass2: '' });
-    const [onboardForm, setOnboardForm] = useState({ username: '', pass1, '', pass2: '' });
+    const [onboardForm, setOnboardForm] = useState({ username: '', pass1: '', pass2: '' });
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
@@ -156,3 +156,5 @@ export default function AdminPage() {
         </div>
     );
 }
+
+    
