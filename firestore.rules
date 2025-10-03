@@ -4,49 +4,30 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper Functions
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    // Function to get the roles of the currently authenticated user
-    function getRequestingUserRoles() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-    }
-
-    // Function to check if the user is an admin (founder, cto, or developer)
+    // Helper function to check for admin roles
     function isAdmin() {
-      if (!isSignedIn()) {
-        return false;
-      }
-      let userRoles = getRequestingUserRoles();
-      // Ensure userRoles is a list before checking for admin roles
-      return userRoles is list && 
-             (userRoles.hasAny(['founder', 'cto', 'developer']));
+      // Get the user's profile from the /users collection
+      let userProfile = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      // Check if the user's role array contains any of the admin roles
+      return userProfile.role.hasAny(['founder', 'cto', 'developer']);
     }
 
     // Rules for the 'users' collection
     match /users/{userId} {
-      // Anyone can read a user's profile
+      // Anyone can read a user's public profile
       allow read: if true;
 
-      // Users can only create their own document
-      allow create: if isOwner(userId);
+      // A user can create their own profile
+      allow create: if request.auth.uid == userId;
 
-      // Users can update their own document.
-      // Admins can update any user's document, but ONLY the 'role' field.
-      allow update: if isOwner(userId) || 
-                     (isAdmin() && request.resource.data.keys().hasOnly(['role']));
+      // A user can update their own profile, but cannot change their role
+      allow update: if request.auth.uid == userId && !('role' in request.resource.data);
 
-      // Only the user themselves or an admin can delete a user document
-      allow delete: if isOwner(userId) || isAdmin();
+      // An admin can update any user's profile, specifically to change their role
+      allow update: if isAdmin() && 'role' in request.resource.data;
     }
 
-    // Fallback rule: deny all other writes to all other collections by default
+    // Placeholder for other collections. Deny all access by default.
     match /{document=**} {
       allow read, write: if false;
     }
