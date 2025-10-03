@@ -1,40 +1,97 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // Helper function to check for admin roles
+
+    // Helper function to identify the founder by their unique UID.
     function isFounder() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role[0] == 'founder';
-    }
-    
-    function isDeveloper() {
-       return 'developer' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      return request.auth.uid == 'uQpi9hoaX9dQQ2YHOYv05orx1rQ2';
     }
 
     match /users/{userId} {
-      // Anyone can read a user's public profile
+      // Anyone can read a user's public profile.
       allow read: if true;
-      
-      // A user can create their own profile
-      allow create: if request.auth.uid == userId;
-      
-      // Update Rules:
-      allow update: if 
-          // Rule 1: A user can update their own profile, but cannot change their own 'role'.
-          (request.auth.uid == userId && !('role' in request.resource.data)) ||
-          
-          // Rule 2: An existing founder can update anyone's 'role' field.
-          (isFounder() && request.resource.data.keys().hasOnly(['role'])) ||
-          
-          // Rule 3 (Bootstrap): The specific founder UID can update their OWN role to bootstrap permissions.
-          // This is a one-time operation for the main admin.
-          (request.auth.uid == 'uQpi9hoaX9dQQ2YHOYv05orx1rQ2' && userId == 'uQpi9hoaX9dQQ2YHOYv05orx1rQ2' && 'role' in request.resource.data);
+
+      // A user can update their own profile, but they CANNOT change their own role.
+      // This prevents a regular user from making themselves an admin.
+      allow update: if request.auth.uid == userId
+                      && !('role' in request.resource.data);
+
+      // The founder is explicitly allowed to update any user's role field.
+      // This is the crucial rule that fixes the admin page permission error.
+      allow update: if isFounder() && 'role' in request.resource.data;
+    }
+
+    // Rules for other collections
+    match /posts/{postId} {
+      allow read: if true;
+      allow create: if request.auth.uid == request.resource.data.userId;
+      allow update, delete: if request.auth.uid == resource.data.userId;
+
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if request.auth.uid != null;
+        allow delete: if request.auth.uid == resource.data.userId;
+      }
+      match /stars/{starId} {
+        allow read: if true;
+        allow create, delete: if request.auth.uid == starId;
+      }
+       match /relays/{relayId} {
+        allow read: if true;
+        allow create, delete: if request.auth.uid == relayId;
+      }
+      match /pollVotes/{voteId} {
+          allow read: if true;
+          allow create: if request.auth.uid == voteId;
+          allow update: if false; // Votes are final
+          allow delete: if false;
+      }
+    }
+
+    match /flashes/{flashId} {
+        allow read: if request.auth.uid != null;
+        allow create: if request.auth.uid == request.resource.data.userId;
+        allow delete: if request.auth.uid == resource.data.userId;
+    }
+
+    match /chats/{chatId}/messages/{messageId} {
+      allow read, create: if request.auth.uid != null; // Simplified for MVP
+      allow update, delete: if request.auth.uid == resource.data.sender;
     }
     
-    // Default deny for all other collections
-    match /{document=**} {
-      allow read, write: if false;
+    match /groups/{groupId} {
+        allow read, update: if request.auth.uid in resource.data.members;
+        allow create: if request.auth.uid != null;
+        allow delete: if request.auth.uid in resource.data.admins;
+    }
+    
+    match /songs/{songId} {
+        allow read: if true;
+        allow create: if request.auth.uid != null;
+        allow update, delete: if request.auth.uid == resource.data.userId;
+    }
+    
+    match /playlists/{playlistId} {
+        allow read, update, delete: if request.auth.uid == resource.data.ownerId;
+        allow create: if request.auth.uid != null;
+    }
+    
+    match /collections/{collectionId} {
+         allow read, update, delete: if request.auth.uid == resource.data.ownerId;
+        allow create: if request.auth.uid != null;
+    }
+
+    // Notifications can be read and deleted by the recipient.
+    // They are created by server-side functions (Cloud Functions), not directly by clients.
+    match /notifications/{userId}/user_notifications/{notificationId} {
+        allow read, delete: if request.auth.uid == userId;
+        allow create, update: if false;
+    }
+    
+     // App Status can only be changed by the Founder
+    match /app_status/{statusId} {
+        allow read: if true;
+        allow write: if isFounder();
     }
   }
 }
