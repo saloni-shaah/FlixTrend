@@ -2,8 +2,8 @@
 "use client";
 import React, { useEffect, useState, useRef, Suspense } from "react";
 import { auth } from "@/utils/firebaseClient";
-import { getFirestore, doc, getDoc, setDoc, collection, query, where, getCountFromServer, getDocs, onSnapshot, orderBy, updateDoc, writeBatch, deleteDoc, arrayUnion, arrayRemove } from "firebase/firestore";
-import { Cog, Palette, Lock, MessageCircle, LogOut, Camera, Star, Bell, Trash2, AtSign, Compass, MapPin, User, Tag, ShieldCheck, Music, Bookmark, Heart, Folder, Download, CheckCircle, Award, Mic, Crown, Zap, Rocket, Search, Pin, Phone, Mail } from "lucide-react";
+import { getFirestore, doc, getDoc, setDoc, collection, query, where, getCountFromServer, getDocs, onSnapshot, orderBy, updateDoc, writeBatch, deleteDoc, arrayUnion, arrayRemove, serverTimestamp } from "firebase/firestore";
+import { Cog, Palette, Lock, MessageCircle, LogOut, Camera, Star, Bell, Trash2, AtSign, Compass, MapPin, User, Tag, ShieldCheck, Music, Bookmark, Heart, Folder, Download, CheckCircle, Award, Mic, Crown, Zap, Rocket, Search, Pin, Phone, Mail, X } from "lucide-react";
 import { signOut, EmailAuthProvider, reauthenticateWithCredential, RecaptchaVerifier, signInWithPhoneNumber, PhoneAuthProvider, linkWithCredential, AuthCredential, sendEmailVerification } from "firebase/auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -489,9 +489,14 @@ function SquadPageContent() {
             if (docSnap.exists()) {
                 const data = docSnap.data();
                 setProfile({ uid: docSnap.id, ...data });
-                 if (!data.profileComplete) {
+                 // CORRECTED LOGIC: Check if profile is truly incomplete before showing modal.
+                 const isProfileActuallyComplete = data.profileComplete || (data.dob && data.gender && data.location);
+                 if (!isProfileActuallyComplete) {
                     setShowCompleteProfile(true);
-                }
+                 } else if (data.profileComplete === false) {
+                    // If it's false but data exists, update it to true
+                    updateDoc(userDocRef, { profileComplete: true });
+                 }
             } else {
                  // Create profile if it doesn't exist
                 const defaultUsername = user.email ? user.email.split('@')[0] : `user${user.uid.substring(0,5)}`;
@@ -769,122 +774,134 @@ export default function SquadPage() {
 }
 
 function EditProfileModal({ profile, onClose }: { profile: any; onClose: () => void }) {
-  const [form, setForm] = useState({
-    name: profile.name || "",
-    bio: profile.bio || "",
-    interests: profile.interests || "",
-    avatar_url: profile.avatar_url || "",
-    banner_url: profile.banner_url || "",
-  });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [uploading, setUploading] = useState<string | null>(null);
-  const avatarInputRef = useRef<HTMLInputElement>(null);
-  const bannerInputRef = useRef<HTMLInputElement>(null);
+    const [form, setForm] = useState({
+      name: profile.name || "",
+      bio: profile.bio || "",
+      interests: profile.interests || "",
+    });
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
+    const [success, setSuccess] = useState("");
+    const [uploading, setUploading] = useState<string | null>(null);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+    const bannerInputRef = useRef<HTMLInputElement>(null);
+    const avatarInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'avatar_url' | 'banner_url') => {
-    if (e.target.files && e.target.files[0]) {
-      setUploading(field);
-      try {
-        const formData = new FormData();
-        formData.append('file', e.target.files[0]);
-        const result = await uploadFileToFirebaseStorage(formData);
-        if (result.success?.url) {
-            setForm((prev) => ({ ...prev, [field]: result.success.url }));
+    const [avatarPreview, setAvatarPreview] = useState(profile.avatar_url || null);
+    const [bannerPreview, setBannerPreview] = useState(profile.banner_url || null);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      setForm({ ...form, [e.target.name]: e.target.value });
+    };
+  
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, field: 'avatar_url' | 'banner_url') => {
+      const file = e.target.files?.[0];
+      if (file) {
+        setUploading(field);
+        const previewUrl = URL.createObjectURL(file);
+        if (field === 'avatar_url') {
+            setAvatarPreview(previewUrl);
         } else {
-            throw new Error(result.failure || "File upload failed.");
+            setBannerPreview(previewUrl);
         }
+
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            const result = await uploadFileToFirebaseStorage(formData);
+            if (result.success?.url) {
+                const userDocRef = doc(db, 'users', auth.currentUser!.uid);
+                await updateDoc(userDocRef, { [field]: result.success.url });
+                setSuccess(`${field === 'avatar_url' ? 'Profile picture' : 'Banner'} updated!`);
+            } else {
+                throw new Error(result.failure || "File upload failed.");
+            }
+        } catch (err: any) {
+            setError(err.message);
+        }
+        setUploading(null);
+      }
+    };
+  
+    const handleSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setLoading(true);
+      setError("");
+      setSuccess("");
+      try {
+        const user = auth.currentUser;
+        if (!user) throw new Error("Not logged in");
+        const docRef = doc(db, "users", user.uid);
+        await setDoc(docRef, { ...form }, { merge: true });
+        setSuccess("Profile updated!");
+        setTimeout(onClose, 1000);
       } catch (err: any) {
         setError(err.message);
       }
-      setUploading(null);
-    }
-  };
+      setLoading(false);
+    };
+  
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <motion.div 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="glass-card p-6 w-full max-w-md relative max-h-[90vh] flex flex-col"
+            >
+                <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white">&times;</button>
+                <h2 className="text-xl font-headline font-bold mb-4 text-accent-cyan">Edit Profile</h2>
+                
+                <div className="flex-1 overflow-y-auto pr-2">
+                    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                      <div className="relative h-24 mb-12">
+                        <button type="button" onClick={() => bannerInputRef.current?.click()} className="relative group h-full w-full rounded-lg bg-white/10 overflow-hidden">
+                          {bannerPreview && <img src={bannerPreview} alt="Banner" className="w-full h-full object-cover"/>}
+                           <div className="absolute inset-0 w-full h-full bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Camera size={24} />
+                           </div>
+                        </button>
+                        <input type="file" ref={bannerInputRef} onChange={(e) => handleFileChange(e, 'banner_url')} className="hidden" accept="image/*" />
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    setSuccess("");
-    try {
-      const user = auth.currentUser;
-      if (!user) throw new Error("Not logged in");
-      const docRef = doc(db, "users", user.uid);
-      await setDoc(docRef, { ...form }, { merge: true }); // Upsert profile
-      setSuccess("Profile updated!");
-      setTimeout(onClose, 1000);
-    } catch (err: any) {
-      setError(err.message);
-    }
-    setLoading(false);
-  };
+                        <button type="button" onClick={() => avatarInputRef.current?.click()} className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-24 h-24 rounded-full border-4 border-background bg-background group">
+                          <div className="relative w-full h-full rounded-full overflow-hidden">
+                            {avatarPreview && <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover"/>}
+                             <div className="absolute inset-0 w-full h-full bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Camera size={24} />
+                            </div>
+                          </div>
+                        </button>
+                        <input type="file" ref={avatarInputRef} onChange={(e) => handleFileChange(e, 'avatar_url')} className="hidden" accept="image/*" />
+                      </div>
+                      
+                      {uploading && (
+                        <div className="text-center text-accent-cyan text-sm">Uploading {uploading === 'avatar_url' ? 'profile picture' : 'banner'}...</div>
+                      )}
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="glass-card p-6 w-full max-w-md relative max-h-[90vh] flex flex-col"
-      >
-        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white">&times;</button>
-        <h2 className="text-xl font-headline font-bold mb-4 text-accent-cyan">Edit Profile</h2>
-        
-        <div className="flex-1 overflow-y-auto pr-2">
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              <div className="relative h-24 mb-12">
-                <button type="button" onClick={() => bannerInputRef.current?.click()} className="relative group h-full w-full rounded-lg bg-white/10 overflow-hidden">
-                  {form.banner_url && <img src={form.banner_url} alt="Banner" className="w-full h-full object-cover"/>}
-                   <div className="absolute inset-0 w-full h-full bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Camera size={24} />
-                   </div>
-                </button>
-                <input type="file" ref={bannerInputRef} onChange={(e) => handleFileUpload(e, 'banner_url')} className="hidden" accept="image/*" />
-
-                <button type="button" onClick={() => avatarInputRef.current?.click()} className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-24 h-24 rounded-full border-4 border-background bg-background group">
-                  <div className="relative w-full h-full rounded-full overflow-hidden">
-                    {form.avatar_url && <img src={form.avatar_url} alt="Avatar" className="w-full h-full object-cover"/>}
-                     <div className="absolute inset-0 w-full h-full bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Camera size={24} />
-                    </div>
-                  </div>
-                </button>
-                <input type="file" ref={avatarInputRef} onChange={(e) => handleFileUpload(e, 'avatar_url')} className="hidden" accept="image/*" />
-              </div>
-              
-              {uploading && (
-                <div className="text-center text-accent-cyan text-sm">Uploading {uploading?.replace('_url','')}...</div>
-              )}
-
-              <input
-                type="text" name="name" placeholder="Full Name" className="input-glass w-full"
-                value={form.name} onChange={handleChange} required />
-              
-              <textarea
-                name="bio" placeholder="Bio" className="input-glass w-full rounded-2xl" rows={3}
-                value={form.bio} onChange={handleChange} />
-              
-              <input
-                type="text" name="interests" placeholder="Interests (e.g., tech, music, art)" className="input-glass w-full"
-                value={form.interests} onChange={handleChange} />
-              
-              {error && <div className="text-red-400 text-center">{error}</div>}
-              {success && <div className="text-green-400 text-center">{success}</div>}
-              
-              <button
-                type="submit" className="btn-glass bg-accent-cyan text-black mt-4"
-                disabled={loading || !!uploading}>
-                {loading ? "Saving..." : !!uploading ? "Uploading..." : "Save Changes"}
-              </button>
-            </form>
+                      <input
+                        type="text" name="name" placeholder="Full Name" className="input-glass w-full"
+                        value={form.name} onChange={handleChange} required />
+                      
+                      <textarea
+                        name="bio" placeholder="Bio" className="input-glass w-full rounded-2xl" rows={3}
+                        value={form.bio} onChange={handleChange} />
+                      
+                      <input
+                        type="text" name="interests" placeholder="Interests (e.g., tech, music, art)" className="input-glass w-full"
+                        value={form.interests} onChange={handleChange} />
+                      
+                      {error && <div className="text-red-400 text-center">{error}</div>}
+                      {success && <div className="text-green-400 text-center">{success}</div>}
+                      
+                      <button
+                        type="submit" className="btn-glass bg-accent-cyan text-black mt-4"
+                        disabled={loading || !!uploading}>
+                        {loading ? "Saving..." : "Save Changes"}
+                      </button>
+                    </form>
+                </div>
+            </motion.div>
         </div>
-      </motion.div>
-    </div>
-  );
+    );
 }
 
 function SettingsModal({ profile, firebaseUser, onClose }: { profile: any; firebaseUser: any; onClose: () => void }) {
