@@ -76,14 +76,14 @@ const RemixImageInputSchema = z.object({
   ),
 });
 
-const RemixImageOutputSchema = z.object({
-  remixedPhotoUrl: z.string().url().describe('The public URL of the remixed image.'),
+const ImageOutputSchema = z.object({
+  imageUrl: z.string().url().describe('The public URL of the generated or remixed image.'),
 });
 
-export async function remixImageAction(input: z.infer<typeof RemixImageInputSchema>): Promise<{success: z.infer<typeof RemixImageOutputSchema> | null, failure: string | null}> {
+export async function remixImageAction(input: z.infer<typeof RemixImageInputSchema>): Promise<{success: z.infer<typeof ImageOutputSchema> | null, failure: string | null}> {
     try {
         const { media } = await ai.generate({
-            model: 'googleai/gemini-2.5-flash-image-preview',
+            model: 'googleai/gemini-1.5-flash-latest',
             prompt: [{ media: { url: input.photoUrl } }, { text: input.prompt }],
             config: {
                 responseModalities: ['TEXT', 'IMAGE'],
@@ -94,11 +94,9 @@ export async function remixImageAction(input: z.infer<typeof RemixImageInputSche
             throw new Error('Image generation failed to produce an image.');
         }
 
-        // The generated image is a data URI. We need to upload it to get a public URL.
         const base64Data = media.url.split(',')[1];
         const buffer = Buffer.from(base64Data, 'base64');
         
-        // Convert Buffer to a File-like object for the upload action
         const blob = new Blob([buffer], { type: 'image/png' });
         const formData = new FormData();
         formData.append('file', blob, 'remixed-image.png');
@@ -108,11 +106,48 @@ export async function remixImageAction(input: z.infer<typeof RemixImageInputSche
             throw new Error(uploadResult.failure || 'Failed to upload remixed image.');
         }
 
-        return { success: { remixedPhotoUrl: uploadResult.success.url }, failure: null };
+        return { success: { imageUrl: uploadResult.success.url }, failure: null };
 
     } catch(err: any) {
         console.error("Remix image action error:", err);
         return { success: null, failure: err.message || 'An unknown error occurred during image remixing.' };
+    }
+}
+
+const GenerateImageInputSchema = z.object({
+  prompt: z.string().describe('A text prompt describing the desired image.'),
+});
+
+export async function generateImageAction(input: z.infer<typeof GenerateImageInputSchema>): Promise<{ success: z.infer<typeof ImageOutputSchema> | null; failure: string | null }> {
+    try {
+        const { media } = await ai.generate({
+            model: 'googleai/gemini-1.5-flash-latest', // Using the stable model
+            prompt: `Generate an image of: ${input.prompt}`,
+            config: {
+                responseModalities: ['IMAGE'],
+            },
+        });
+
+        if (!media?.url) {
+            throw new Error('Image generation failed to produce an image.');
+        }
+
+        const base64Data = media.url.split(',')[1];
+        const buffer = Buffer.from(base64Data, 'base64');
+
+        const blob = new Blob([buffer], { type: 'image/png' });
+        const formData = new FormData();
+        formData.append('file', blob, 'generated-image.png');
+
+        const uploadResult = await uploadFileToFirebaseStorage(formData);
+        if (!uploadResult.success?.url) {
+            throw new Error(uploadResult.failure || 'Failed to upload generated image.');
+        }
+
+        return { success: { imageUrl: uploadResult.success.url }, failure: null };
+    } catch (err: any) {
+        console.error("Generate image action error:", err);
+        return { success: null, failure: err.message || 'An unknown error occurred during image generation.' };
     }
 }
 
@@ -123,7 +158,6 @@ const ModerationInputSchema = z.object({
 
 export async function runContentModerationAction(input: z.infer<typeof ModerationInputSchema>) {
     try {
-        // Now running the flow securely on the server.
         const result = await contentModerationFlow(input);
         return { success: result, failure: null };
     } catch (error: any) {
