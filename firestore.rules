@@ -1,42 +1,36 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // A user is an admin if their auth token has the 'admin' custom claim set to true.
-    function isAdmin() {
-      return request.auth.token.admin == true;
+    
+    // Check if the user making the request has a 'founder' role in their own profile document.
+    function isFounder() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['founder']);
     }
     
-    // A one-time-use function to allow the project owner to grant themselves the first admin/founder role.
-    // This should be considered temporary. Once the first user has the 'founder' role and custom claims
-    // are fully set up, this can be removed for even tighter security.
-    function isProjectOwner() {
-      return request.auth.uid == "uQpi9hoaX9dQQ2YHOYv05orx1rQ2";
+    // Check if the user is the owner of the document.
+    function isOwner(userId) {
+      return request.auth.uid == userId;
     }
 
     match /users/{userId} {
+      // Allow public read of user profiles.
       allow read: if true;
-      allow create: if request.auth.uid == userId;
+      
+      // Allow users to create their own profile and update their own non-role data.
+      // The `isOwner` check is crucial here.
+      allow create, update: if isOwner(userId) && !('role' in request.resource.data);
 
-      // Allow users to update their own profile.
-      // Also, allow an admin (or the project owner for bootstrapping) to update ONLY the 'role' field of any user.
-      allow update: if (request.auth.uid == userId) || 
-                     ((isAdmin() || isProjectOwner()) && request.resource.data.keys().hasOnly(['role']));
-                     
-      allow delete: if request.auth.uid == userId;
+      // --- THE DEFINITIVE FIX ---
+      // 1. Allow a founder to update ONLY the 'role' field of any user.
+      // 2. Contains a one-time bootstrap rule to allow the first user (you) to become a founder.
+      allow update: if request.resource.data.keys().hasOnly(['role']) && 
+                      (isFounder() || request.auth.uid == 'uQpi9hoaX9dQQ2YHOYv05orx1rQ2');
     }
 
-    // Rules for other collections (posts, chats, etc.) should go here.
-    // Example for posts:
-    match /posts/{postId} {
-      allow read: if true;
-      allow create, update, delete: if request.auth.uid == request.resource.data.userId;
-    }
-    
-    // Default deny all other access
-    match /{path=**} {
+    // Default deny for all other collections.
+    // This is a security best practice.
+    match /{document=**} {
       allow read, write: if false;
     }
   }
