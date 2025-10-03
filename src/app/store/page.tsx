@@ -7,6 +7,9 @@ import { CheckoutForm } from '@/components/store/CheckoutForm';
 import { ShoppingBag, Loader } from 'lucide-react';
 import { getFirestore, collection, query, onSnapshot, orderBy } from 'firebase/firestore';
 import { app } from '@/utils/firebaseClient';
+import { FirestorePermissionError } from '@/firebase/errors';
+import { errorEmitter } from '@/firebase/error-emitter';
+
 
 const db = getFirestore(app);
 
@@ -20,6 +23,15 @@ export default function StorePage() {
         const q = query(collection(db, "products"), orderBy("createdAt", "desc"));
         const unsub = onSnapshot(q, (snapshot) => {
             setProducts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            setLoading(false);
+        },
+        async (serverError) => {
+            console.error("Firestore onSnapshot error:", serverError);
+            const permissionError = new FirestorePermissionError({
+              path: 'products',
+              operation: 'list',
+            });
+            errorEmitter.emit('permission-error', permissionError);
             setLoading(false);
         });
         return () => unsub();
