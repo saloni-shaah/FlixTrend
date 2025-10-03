@@ -6,19 +6,8 @@ import { getFirestore, collection, query, onSnapshot, orderBy, addDoc, serverTim
 import { auth, db } from "@/utils/firebaseClient";
 import { Send, Bot, User, UploadCloud, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getAlmightyResponse, remixImageAction, uploadFileToFirebaseStorage } from "@/app/actions";
+import { getAlmightyResponse, remixImageAction, generateImageAction, uploadFileToFirebaseStorage } from "@/app/actions";
 import './Chat.css';
-
-// Helper to convert File to Data URI
-const fileToDataUri = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = (error) => reject(error);
-        reader.readAsDataURL(file);
-    });
-};
-
 
 function ChatMessageLoading() {
   return (
@@ -68,7 +57,7 @@ export function Chat() {
                  setMessages([{
                     id: 'initial',
                     sender: 'almighty-bot',
-                    text: 'Hi! I\'m Almighty, your AI companion. Ask me anything, or upload an image to start remixing!',
+                    text: "Hi! I'm Almighty, your AI companion. Ask me anything, or try `/imagine a futuristic city` to generate an image!",
                     createdAt: { toDate: () => new Date() } // Mock date for sorting
                 }]);
             } else {
@@ -101,78 +90,67 @@ export function Chat() {
         const textToSend = newMessage;
         const fileToSend = imageFile;
 
-        // Clear inputs immediately
         setNewMessage("");
         setImageFile(null);
         setImagePreview(null);
         if (fileInputRef.current) fileInputRef.current.value = "";
 
-        // Remove initial greeting if it's there
         if(messages.length === 1 && messages[0].id === 'initial') {
             setMessages([]);
         }
 
         const chatId = `almighty-chat_${currentUser.uid}`;
         
-        // Handle image upload and remixing
-        if (fileToSend) {
-             setIsAlmightyLoading(true); // Show loading indicator
+        // --- TEXT TO IMAGE GENERATION ---
+        if (textToSend.toLowerCase().startsWith('/imagine ')) {
+            const prompt = textToSend.substring(8).trim();
+            const userMessage = { sender: currentUser.uid, text: textToSend, createdAt: serverTimestamp(), type: 'text' };
+            await addDoc(collection(db, "chats", chatId, "messages"), userMessage);
+            setIsAlmightyLoading(true);
             try {
-                // Upload the original image to get a URL
+                const response = await generateImageAction({ prompt });
+                if (response.success?.imageUrl) {
+                    const aiImageMessage = { sender: 'almighty-bot', text: `Here's your image for: "${prompt}"`, imageUrl: response.success.imageUrl, createdAt: serverTimestamp(), type: 'image' };
+                    await addDoc(collection(db, "chats", chatId, "messages"), aiImageMessage);
+                } else {
+                    throw new Error(response.failure || "The AI couldn't generate an image for that prompt.");
+                }
+            } catch (error: any) {
+                const errorMessage = { sender: 'almighty-bot', text: `Sorry, I hit a snag: ${error.message}`, createdAt: serverTimestamp(), type: 'text' };
+                await addDoc(collection(db, "chats", chatId, "messages"), errorMessage);
+            } finally {
+                setIsAlmightyLoading(false);
+            }
+        // --- IMAGE REMIXING ---
+        } else if (fileToSend) {
+             setIsAlmightyLoading(true);
+            try {
                 const formData = new FormData();
                 formData.append('file', fileToSend);
                 const uploadResult = await uploadFileToFirebaseStorage(formData);
-                if (!uploadResult.success?.url) {
-                    throw new Error(uploadResult.failure || 'File upload failed.');
-                }
+                if (!uploadResult.success?.url) throw new Error(uploadResult.failure || 'File upload failed.');
                 const originalImageUrl = uploadResult.success.url;
 
-                // Save user's message (image URL + prompt)
-                const userMessage = {
-                    sender: currentUser.uid,
-                    text: textToSend,
-                    imageUrl: originalImageUrl,
-                    createdAt: serverTimestamp(),
-                    type: 'image'
-                };
+                const userMessage = { sender: currentUser.uid, text: textToSend, imageUrl: originalImageUrl, createdAt: serverTimestamp(), type: 'image' };
                 await addDoc(collection(db, "chats", chatId, "messages"), userMessage);
 
-                // Now call the remix action with the URL
                 const remixResponse = await remixImageAction({ photoUrl: originalImageUrl, prompt: textToSend });
                 
-                if (remixResponse.success?.remixedPhotoUrl) {
-                    const aiImageMessage = {
-                        sender: 'almighty-bot',
-                        text: 'Here is your remixed image!',
-                        imageUrl: remixResponse.success.remixedPhotoUrl,
-                        createdAt: serverTimestamp(),
-                        type: 'image'
-                    };
+                if (remixResponse.success?.imageUrl) {
+                    const aiImageMessage = { sender: 'almighty-bot', text: 'Here is your remixed image!', imageUrl: remixResponse.success.imageUrl, createdAt: serverTimestamp(), type: 'image' };
                     await addDoc(collection(db, "chats", chatId, "messages"), aiImageMessage);
                 } else {
                     throw new Error(remixResponse.failure || "The AI couldn't remix the image.");
                 }
             } catch (error: any) {
-                 console.error("AI Remix Error:", error);
-                const errorMessage = {
-                    sender: 'almighty-bot',
-                    text: `Sorry, I hit a snag while remixing: ${error.message}`,
-                    createdAt: serverTimestamp(),
-                    type: 'text'
-                };
+                const errorMessage = { sender: 'almighty-bot', text: `Sorry, I hit a snag while remixing: ${error.message}`, createdAt: serverTimestamp(), type: 'text' };
                 await addDoc(collection(db, "chats", chatId, "messages"), errorMessage);
             } finally {
                 setIsAlmightyLoading(false);
             }
-
-        // Handle regular text message
+        // --- REGULAR CHAT ---
         } else {
-             const userMessage = {
-                sender: currentUser.uid,
-                text: textToSend,
-                createdAt: serverTimestamp(),
-                type: 'text'
-            };
+             const userMessage = { sender: currentUser.uid, text: textToSend, createdAt: serverTimestamp(), type: 'text' };
             await addDoc(collection(db, "chats", chatId, "messages"), userMessage);
             setIsAlmightyLoading(true);
             const currentContext = messages.map(m => `${m.sender === currentUser.uid ? 'User' : 'Almighty'}: ${m.text}`).join('\n');
@@ -189,24 +167,14 @@ export function Chat() {
                 }
                 
                 if (response.success?.response) {
-                    const assistantMessage = {
-                        sender: 'almighty-bot',
-                        text: response.success.response,
-                        createdAt: serverTimestamp(),
-                        type: 'text'
-                    };
+                    const assistantMessage = { sender: 'almighty-bot', text: response.success.response, createdAt: serverTimestamp(), type: 'text' };
                     await addDoc(collection(db, "chats", chatId, "messages"), assistantMessage);
                 } else {
                     throw new Error(response.failure || "The AI didn't provide a response.");
                 }
             } catch (error: any) {
                 console.error("AI Response Error:", error);
-                const errorMessage = {
-                    sender: 'almighty-bot',
-                    text: "Yikes, my brain just glitched. Try that again? 😅",
-                    createdAt: serverTimestamp(),
-                    type: 'text'
-                };
+                const errorMessage = { sender: 'almighty-bot', text: "Yikes, my brain just glitched. Try that again? 😅", createdAt: serverTimestamp(), type: 'text' };
                 await addDoc(collection(db, "chats", chatId, "messages"), errorMessage);
             } finally {
                 setIsAlmightyLoading(false);
@@ -271,7 +239,7 @@ export function Chat() {
                         type="text"
                         value={newMessage}
                         onChange={e => setNewMessage(e.target.value)}
-                        placeholder={imageFile ? "Add a prompt to remix your image..." : "Ask Almighty anything..."}
+                        placeholder={imageFile ? "Add a prompt to remix your image..." : "Ask or try '/imagine an astronaut...'"}
                         className="chat-input"
                     />
                     <button type="submit" className="chat-send-button" disabled={(!newMessage.trim() && !imageFile) || isAlmightyLoading}>
