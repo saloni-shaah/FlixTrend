@@ -80,28 +80,22 @@ function ProfileBadge({ profile, allUsers }: { profile: any, allUsers: any[] }) 
     if (!profile) return null;
 
     const isCreator = profile.accountType === 'creator';
-    const isFounder = profile.email === 'next181489111@gmail.com'; // Check for founder email
     
     const sortedUsers = [...allUsers].sort((a, b) => b.followerCount - a.followerCount);
     const userRank = sortedUsers.findIndex(u => u.uid === profile.uid);
 
     let rankBadge = null;
-    if (userRank === 0 && !isFounder) {
+    if (userRank === 0) {
         rankBadge = { text: "Global Icon", color: "bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-500 text-black shadow-lg", icon: <Crown size={14} /> };
-    } else if (userRank === 1 && !isFounder) {
+    } else if (userRank === 1) {
         rankBadge = { text: "Trendsetter", color: "bg-gradient-to-r from-gray-400 to-gray-200 text-black shadow-md", icon: <Zap size={14} /> };
-    } else if (userRank === 2 && !isFounder) {
+    } else if (userRank === 2) {
         rankBadge = { text: "Rising Star", color: "bg-gradient-to-r from-yellow-600 to-amber-400 text-white shadow-md", icon: <Rocket size={14} /> };
     }
     
     return (
         <div className="flex items-center justify-center gap-2 mt-2 flex-wrap">
-            {isFounder && (
-                <div className="flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 text-white shadow-lg">
-                    <ShieldCheck size={14}/> Founder
-                </div>
-            )}
-            {isCreator && !isFounder && (
+            {isCreator && (
                 <div className="flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-gradient-to-r from-accent-purple to-accent-pink text-white shadow-md">
                     <Mic size={14}/> Vibe Creator
                 </div>
@@ -267,7 +261,7 @@ function CompleteProfileModal({ profile, onClose }: { profile: any, onClose: () 
                 
                 {step === 3 && (
                     <div className="flex flex-col gap-4">
-                        <p className="text-sm text-gray-300 mb-4">We've sent a code to ${formData.phoneNumber}. Please enter it below.</p>
+                        <p className="text-sm text-gray-300 mb-4">We've sent a code to ${`formData.phoneNumber`}. Please enter it below.</p>
                         <input type="text" name="code" placeholder="6-digit code" className="input-glass w-full" value={code} onChange={(e) => setCode(e.target.value)} required />
                         <button type="button" className="btn-glass bg-green-500 text-white mt-2" disabled={loading} onClick={onVerifyCode}>
                             {loading ? "Verifying..." : "Verify & Complete Profile"}
@@ -1215,3 +1209,5 @@ function DeleteAccountModal({ profile, onClose }: { profile: any, onClose: () =>
         </div>
     )
 }
+
+    
