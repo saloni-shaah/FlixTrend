@@ -7,11 +7,12 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { motion } from 'framer-motion';
 import { ShieldCheck, UserPlus, KeyRound, LogIn, Trash2, Crown, EyeOff, Radio } from 'lucide-react';
 import { getFunctions, httpsCallable } from "firebase/functions";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 const db = getFirestore(app);
 const functions = getFunctions(app);
 
-// In a real app, these would be server-side checks, but for the MVP we do it client-side.
 const COMPANY_PASS_1 = "flixtrendlovesme";
 const COMPANY_PASS_2 = "iloveflixtrend";
 
@@ -35,23 +36,29 @@ function AdminDashboard({ userProfile, onLogout }: { userProfile: any, onLogout:
         const username = prompt("Enter the username of the user to grant premium to:");
         if (!username) return;
 
-        try {
-            const usersRef = collection(db, "users");
-            const q = query(usersRef, where("username", "==", username));
-            const userQuerySnap = await getDocs(q);
+        const usersRef = collection(db, "users");
+        const q = query(usersRef, where("username", "==", username));
+        const userQuerySnap = await getDocs(q);
 
-            if (userQuerySnap.empty) {
-                alert("User not found.");
-                return;
-            }
-            const userToUpdateDoc = userQuerySnap.docs[0];
-            await updateDoc(doc(db, "users", userToUpdateDoc.id), {
-                isPremium: true
-            });
-            alert(`Premium status granted to ${username}.`);
-        } catch(error: any) {
-             alert(`Failed to grant premium: ${error.message}`);
+        if (userQuerySnap.empty) {
+            alert("User not found.");
+            return;
         }
+        
+        const userToUpdateDoc = userQuerySnap.docs[0];
+        const docRef = doc(db, "users", userToUpdateDoc.id);
+        const data = { isPremium: true };
+
+        updateDoc(docRef, data)
+          .catch(async (serverError) => {
+            const permissionError = new FirestorePermissionError({
+              path: docRef.path,
+              operation: 'update',
+              requestResourceData: data,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+          });
+        alert(`Premium status granted to ${username}. (If permissions allow)`);
     };
 
     const handleToggleMaintenance = async () => {
@@ -80,21 +87,18 @@ function AdminDashboard({ userProfile, onLogout }: { userProfile: any, onLogout:
                 </div>
                 
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {/* Post Moderation */}
                     <div className="glass-card p-6 flex flex-col items-center text-center">
                         <Trash2 className="text-red-400 mb-2" size={32}/>
                         <h3 className="font-bold text-lg text-red-400">Content Moderation</h3>
                         <p className="text-xs text-gray-400 mb-4">Permanently delete a post from the database.</p>
                         <button onClick={handleDeletePost} className="btn-glass bg-red-500/20 text-red-400 w-full">Delete Post</button>
                     </div>
-                    {/* User Management */}
                      <div className="glass-card p-6 flex flex-col items-center text-center">
                         <Crown className="text-yellow-400 mb-2" size={32}/>
                         <h3 className="font-bold text-lg text-yellow-400">Grant Premium</h3>
                         <p className="text-xs text-gray-400 mb-4">Give a user premium status for free.</p>
                         <button onClick={handleGrantPremium} className="btn-glass bg-yellow-500/20 text-yellow-400 w-full">Grant Premium</button>
                     </div>
-                     {/* Maintenance Mode */}
                      <div className="glass-card p-6 flex flex-col items-center text-center">
                         <EyeOff className="text-accent-purple mb-2" size={32}/>
                         <h3 className="font-bold text-lg text-accent-purple">Maintenance Mode</h3>
@@ -128,6 +132,7 @@ export default function AdminPage() {
                 const userDoc = await getDoc(doc(db, "users", currentUser.uid));
                 if (userDoc.exists()) {
                     const profileData = userDoc.data();
+                    // Ensure role is an array
                     const roles = Array.isArray(profileData.role) ? profileData.role : [];
                     if (roles.includes('developer') || roles.includes('founder') || roles.includes('cto')) {
                         setUser(currentUser);
@@ -177,18 +182,33 @@ export default function AdminPage() {
             const isFounder = userData.email === 'next181489111@gmail.com';
             const rolesToSet: string[] = isFounder ? ['founder', 'cto'] : ['developer'];
 
-            await updateDoc(doc(db, "users", userDoc.id), {
-                role: rolesToSet,
-            });
-            
-            setSuccess(`Success! ${onboardForm.username} has been onboarded as a developer.`);
-            setOnboardForm({ username: '', pass1: '', pass2: '' });
+            const docRef = doc(db, "users", userDoc.id);
+            const dataToUpdate = { role: rolesToSet };
+
+            // Refactored updateDoc call with new error handling
+            updateDoc(docRef, dataToUpdate)
+              .then(() => {
+                setSuccess(`Success! ${onboardForm.username} has been onboarded as a developer.`);
+                setOnboardForm({ username: '', pass1: '', pass2: '' });
+                setIsProcessing(false);
+              })
+              .catch(async (serverError) => {
+                const permissionError = new FirestorePermissionError({
+                  path: docRef.path,
+                  operation: 'update',
+                  requestResourceData: dataToUpdate,
+                });
+                errorEmitter.emit('permission-error', permissionError);
+                // Also set a user-facing error message
+                setError("Permission denied. Ensure you have admin rights.");
+                setIsProcessing(false);
+              });
 
         } catch (err: any) {
             console.error("Onboarding error:", err);
             setError(err.message);
+            setIsProcessing(false);
         }
-        setIsProcessing(false);
     };
     
     const handleLoginSubmit = async (e: React.FormEvent) => {
@@ -222,7 +242,6 @@ export default function AdminPage() {
                  return;
              }
              
-             // Check if the currently logged-in Firebase user matches the developer profile
              if(auth.currentUser?.uid === userToLoginDoc.id) {
                 setUser(auth.currentUser);
                 setUserProfile({uid: userToLoginDoc.id, ...userToLoginData});
