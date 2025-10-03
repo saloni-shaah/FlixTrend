@@ -179,11 +179,11 @@ export default function AdminPage() {
             }
 
             const userDoc = userQuerySnap.docs[0];
-            const isFounder = userDoc.data().email === 'next181489111@gmail.com';
+            const isSelf = userDoc.id === auth.currentUser?.uid;
             
-            // If the logged-in user is the one being onboarded (i.e., the founder bootstrapping themselves)
-            // or if the logged-in user is already a founder, allow role assignment.
-            const rolesToSet: string[] = isFounder ? ['founder', 'cto', 'developer'] : ['developer'];
+            // If the logged-in user is onboarding themselves, give them founder/cto/dev roles.
+            // Otherwise, just give 'developer'.
+            const rolesToSet: string[] = isSelf ? ['founder', 'cto', 'developer'] : ['developer'];
             
             const docRef = doc(db, "users", userDoc.id);
             const dataToUpdate = { role: rolesToSet };
