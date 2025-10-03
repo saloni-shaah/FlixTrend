@@ -177,16 +177,14 @@ export default function AdminPage() {
 
             const userDoc = userQuerySnap.docs[0];
             const isFounder = userDoc.data().email === 'next181489111@gmail.com';
-            const rolesToSet: string[] = isFounder ? ['founder', 'cto'] : ['developer'];
+            const rolesToSet: string[] = isFounder ? ['founder', 'cto', 'developer'] : ['developer'];
 
             const docRef = doc(db, "users", userDoc.id);
             const dataToUpdate = { role: rolesToSet };
-
-            // IMPORTANT: This only sets the role in Firestore.
-            // A Cloud Function is required to set the custom claim for `isAdmin()` to work.
+            
             updateDoc(docRef, dataToUpdate)
               .then(() => {
-                setSuccess(`Success! ${onboardForm.username} has been granted developer roles in the database. A custom claim must be set via a Cloud Function for admin permissions to be active.`);
+                setSuccess(`Success! ${onboardForm.username} has been granted developer roles.`);
                 setOnboardForm({ username: '', pass1: '', pass2: '' });
                 setIsProcessing(false);
               })
