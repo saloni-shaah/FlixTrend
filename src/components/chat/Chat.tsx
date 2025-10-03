@@ -6,7 +6,7 @@ import { getFirestore, collection, query, onSnapshot, orderBy, addDoc, serverTim
 import { auth, db } from "@/utils/firebaseClient";
 import { Send, Bot, User, UploadCloud, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getAlmightyResponse, remixImageAction } from "@/app/actions";
+import { getAlmightyResponse, remixImageAction, uploadFileToFirebaseStorage } from "@/app/actions";
 import './Chat.css';
 
 // Helper to convert File to Data URI
@@ -116,34 +116,44 @@ export function Chat() {
         
         // Handle image upload and remixing
         if (fileToSend) {
-            const imageDataUrl = await fileToDataUri(fileToSend);
-            // Save user's message (image + prompt)
-            const userMessage = {
-                sender: currentUser.uid,
-                text: textToSend, // The prompt for the remix
-                imageUrl: imageDataUrl, // The uploaded image
-                createdAt: serverTimestamp(),
-                type: 'image'
-            };
-            await addDoc(collection(db, "chats", chatId, "messages"), userMessage);
-            
-            setIsAlmightyLoading(true);
+             setIsAlmightyLoading(true); // Show loading indicator
             try {
-                const response = await remixImageAction({ photoDataUri: imageDataUrl, prompt: textToSend });
-                if (response.success?.remixedPhotoDataUri) {
+                // Upload the original image to get a URL
+                const formData = new FormData();
+                formData.append('file', fileToSend);
+                const uploadResult = await uploadFileToFirebaseStorage(formData);
+                if (!uploadResult.success?.url) {
+                    throw new Error(uploadResult.failure || 'File upload failed.');
+                }
+                const originalImageUrl = uploadResult.success.url;
+
+                // Save user's message (image URL + prompt)
+                const userMessage = {
+                    sender: currentUser.uid,
+                    text: textToSend,
+                    imageUrl: originalImageUrl,
+                    createdAt: serverTimestamp(),
+                    type: 'image'
+                };
+                await addDoc(collection(db, "chats", chatId, "messages"), userMessage);
+
+                // Now call the remix action with the URL
+                const remixResponse = await remixImageAction({ photoUrl: originalImageUrl, prompt: textToSend });
+                
+                if (remixResponse.success?.remixedPhotoUrl) {
                     const aiImageMessage = {
                         sender: 'almighty-bot',
                         text: 'Here is your remixed image!',
-                        imageUrl: response.success.remixedPhotoDataUri,
+                        imageUrl: remixResponse.success.remixedPhotoUrl,
                         createdAt: serverTimestamp(),
                         type: 'image'
                     };
                     await addDoc(collection(db, "chats", chatId, "messages"), aiImageMessage);
                 } else {
-                    throw new Error(response.failure || "The AI couldn't remix the image.");
+                    throw new Error(remixResponse.failure || "The AI couldn't remix the image.");
                 }
             } catch (error: any) {
-                console.error("AI Remix Error:", error);
+                 console.error("AI Remix Error:", error);
                 const errorMessage = {
                     sender: 'almighty-bot',
                     text: `Sorry, I hit a snag while remixing: ${error.message}`,
@@ -154,6 +164,7 @@ export function Chat() {
             } finally {
                 setIsAlmightyLoading(false);
             }
+
         // Handle regular text message
         } else {
              const userMessage = {
