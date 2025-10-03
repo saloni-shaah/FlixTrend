@@ -4,6 +4,9 @@ import { getFirestore } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 import * as functions from "firebase-functions";
 import * as logger from "firebase-functions/logger";
+import { onCall, HttpsError } from "firebase-functions/v2/https";
+import * as admin from "firebase-admin";
+
 
 // Initialize Firebase Admin SDK
 initializeApp();
@@ -195,28 +198,54 @@ export const onCallCreated = functions.firestore
 /**
  * Deletes a post and all its associated subcollections (comments, stars, relays).
  * This ensures data integrity when a post is removed.
+ * This is an HTTPS Callable function.
  */
-export const onDeletePost = functions.firestore
-    .document('posts/{postId}')
-    .onDelete(async (snapshot, context) => {
-        const { postId } = context.params;
-        logger.info(`Post ${postId} is being deleted. Deleting subcollections.`);
+export const deletePost = onCall(async (request) => {
+    const { postId } = request.data;
+    const uid = request.auth?.uid;
 
-        const subcollections = ['comments', 'stars', 'relays'];
-        const batch = db.batch();
+    if (!uid) {
+        throw new HttpsError("unauthenticated", "You must be logged in to delete a post.");
+    }
+    
+    const postRef = admin.firestore().collection("posts").doc(postId);
+    const postDoc = await postRef.get();
 
-        for (const subcollection of subcollections) {
-            const collectionRef = db.collection('posts').doc(postId).collection(subcollection);
-            const documents = await collectionRef.get();
-            documents.forEach(doc => {
-                batch.delete(doc.ref);
-            });
-        }
+    if (!postDoc.exists) {
+        throw new HttpsError("not-found", "Post not found.");
+    }
 
-        try {
-            await batch.commit();
-            logger.info(`Successfully deleted subcollections for post ${postId}.`);
-        } catch (error) {
-            logger.error(`Error deleting subcollections for post ${postId}:`, error);
-        }
-    });
+    const postData = postDoc.data();
+    const isOwner = postData?.userId === uid;
+
+    // Fetch the admin user's document to check their role
+    const adminUserDoc = await admin.firestore().collection('users').doc(uid).get();
+    const adminUserData = adminUserDoc.data();
+    const isAdmin = adminUserData?.role?.includes('founder') || adminUserData?.role?.includes('developer');
+
+    if (!isOwner && !isAdmin) {
+        throw new HttpsError("permission-denied", "You do not have permission to delete this post.");
+    }
+
+    try {
+        const deleteSubcollection = async (collectionRef: admin.firestore.CollectionReference) => {
+             const snapshot = await collectionRef.limit(500).get();
+             if (snapshot.empty) return;
+             const batch = admin.firestore().batch();
+             snapshot.docs.forEach(doc => batch.delete(doc.ref));
+             await batch.commit();
+             if (snapshot.size === 500) await deleteSubcollection(collectionRef);
+        };
+        
+        await deleteSubcollection(postRef.collection('comments'));
+        await deleteSubcollection(postRef.collection('stars'));
+        await deleteSubcollection(postRef.collection('relays'));
+        
+        await postRef.delete();
+        
+        return { success: true, message: `Post ${postId} deleted successfully.` };
+    } catch (error) {
+        logger.error("Error deleting post and subcollections:", error);
+        throw new HttpsError("internal", "An error occurred while deleting the post.");
+    }
+});
