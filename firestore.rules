@@ -3,47 +3,61 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- Helper Functions ---
+    // Helper functions
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
-    
+
     function isFounder() {
-      // The founder's UID is hardcoded for bootstrap and administrative purposes.
+      // Allow the specific founder UID to have special permissions.
+      // This is a secure way to bootstrap the first admin.
       return request.auth.uid == 'uQpi9hoaX9dQQ2YHOYv05orx1rQ2';
     }
 
-    // --- User Profiles ---
+    function isExistingAdmin() {
+      // Allow users who already have an admin-level role to manage other users.
+      // This requires reading the user's own profile document.
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['founder', 'cto', 'developer']);
+    }
+
+    // USER PROFILES
     match /users/{userId} {
-      // Anyone can read user profiles.
-      allow read: if true;
+      // Anyone can read public profile info
+      allow read;
 
-      // Users can create their own profile.
+      // A user can update their own profile, BUT cannot change their role.
+      // An admin (founder/cto/dev) CAN change another user's role or premium status.
+      allow update: if (isOwner(userId) && !('role' in request.resource.data)) ||
+                       (isFounder() && request.resource.data.keys().hasOnly(['role', 'isPremium'])) ||
+                       (isExistingAdmin() && request.resource.data.keys().hasOnly(['role', 'isPremium']));
+
+      // Only the user themselves or an admin can create their own document (signup).
       allow create: if isOwner(userId);
-
-      // Rule for updating profiles:
-      // 1. A user can update their own profile, BUT they cannot change their 'role'.
-      // 2. The Founder can update ANY user's profile, but ONLY to change the 'role' field.
-      allow update: if (
-        isOwner(userId) && !('role' in request.resource.data)
-      ) || (
-        isFounder() && request.resource.data.keys().hasOnly(['role'])
-      );
-
-      // Users can delete their own profile.
-      allow delete: if isOwner(userId);
       
+      // Nobody can delete user documents directly for safety. This is handled by a Cloud Function.
+      allow delete: if false;
+
       // Subcollections
-      match /{allChildren=**} {
+      match /{allPaths=**} {
         allow read, write: if isOwner(userId);
       }
     }
-
-    // --- Posts, Flashes, and other collections ---
-    // (Add rules for other collections like posts, flashes, chats etc. here as needed)
-    // For now, these are open to allow app functionality during development.
+    
+    // POSTS, FLASHES, and other public content
     match /{document=**} {
-      allow read, write: if request.auth != null;
+        // Default allow read for all public content
+        allow read;
+        
+        // Allow create/update/delete if user is authenticated
+        allow write: if request.auth != null;
+    }
+
+    // APP STATUS (for Maintenance Mode)
+    match /app_status/{statusId} {
+        // Anyone can read the app status (to see if it's in maintenance)
+        allow read;
+        // Only a founder or existing admin can change the app status
+        allow write: if isFounder() || isExistingAdmin();
     }
   }
 }
