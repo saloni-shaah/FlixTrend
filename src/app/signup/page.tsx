@@ -5,12 +5,13 @@ import Link from "next/link";
 import { auth, app } from "@/utils/firebaseClient";
 import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } from "firebase/auth";
 import { getFirestore, doc, setDoc, collection, query, where, getDocs, serverTimestamp } from "firebase/firestore";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, ArrowLeft, Camera, UploadCloud } from 'lucide-react';
-import { uploadFileToFirebaseStorage } from "@/app/actions";
 
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 // Helper to check for username uniqueness
 async function isUsernameUnique(username: string): Promise<boolean> {
@@ -109,23 +110,18 @@ export default function SignupPage() {
             let avatarUrl = `https://api.dicebear.com/8.x/bottts-neutral/svg?seed=${form.username}`;
             let bannerUrl = "";
 
+            const uploadFile = async (file: File) => {
+                const fileName = `${userCredential.user.uid}-${Date.now()}-${file.name}`;
+                const storageRef = ref(storage, `user_uploads/${fileName}`);
+                const snapshot = await uploadBytes(storageRef, file);
+                return await getDownloadURL(snapshot.ref);
+            };
+
             if (profilePictureFile) {
-                const avatarFormData = new FormData();
-                avatarFormData.append('file', profilePictureFile);
-                const avatarResult = await uploadFileToFirebaseStorage(avatarFormData);
-                if (avatarResult.success?.url) {
-                    avatarUrl = avatarResult.success.url;
-                } else {
-                    console.warn("Avatar upload failed, using default.");
-                }
+                avatarUrl = await uploadFile(profilePictureFile);
             }
             if (bannerFile) {
-                const bannerFormData = new FormData();
-                bannerFormData.append('file', bannerFile);
-                const bannerResult = await uploadFileToFirebaseStorage(bannerFormData);
-                if (bannerResult.success?.url) {
-                    bannerUrl = bannerResult.success.url;
-                }
+                bannerUrl = await uploadFile(bannerFile);
             }
 
             // 3. Update Auth Profile

@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useRef, Suspense } from "react";
 import { auth } from "@/utils/firebaseClient";
 import { getFirestore, doc, getDoc, setDoc, collection, query, where, getCountFromServer, getDocs, onSnapshot, orderBy, updateDoc, writeBatch, deleteDoc, arrayUnion, arrayRemove, serverTimestamp } from "firebase/firestore";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Cog, Palette, Lock, MessageCircle, LogOut, Camera, Star, Bell, Trash2, AtSign, Compass, MapPin, User, Tag, ShieldCheck, Music, Bookmark, Heart, Folder, Download, CheckCircle, Award, Mic, Crown, Zap, Rocket, Search, Pin, Phone, Mail, X } from "lucide-react";
 import { signOut, EmailAuthProvider, reauthenticateWithCredential, RecaptchaVerifier, signInWithPhoneNumber, PhoneAuthProvider, linkWithCredential, AuthCredential, sendEmailVerification } from "firebase/auth";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -13,13 +14,13 @@ import { FollowButton } from "@/components/FollowButton";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { FollowListModal } from "@/components/FollowListModal";
 import { getDownloadedPosts } from "@/utils/offline-db";
-import { uploadFileToFirebaseStorage } from "@/app/actions";
 import { app } from "@/utils/firebaseClient";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu"
 import { cn } from "@/lib/utils"
 
 
 const db = getFirestore(app);
+const storage = getStorage(app);
 const functions = getFunctions(app);
 
 // START: Copied DropdownMenu components
@@ -51,7 +52,7 @@ const DropdownMenuItem = React.forwardRef<
   <DropdownMenuPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+      "relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&>svg]:pointer-events-none [&>svg]:size-4 [&>svg]:shrink-0",
       inset && "pl-8",
       className
     )}
@@ -806,16 +807,15 @@ function EditProfileModal({ profile, onClose }: { profile: any; onClose: () => v
         }
 
         try {
-            const formData = new FormData();
-            formData.append('file', file);
-            const result = await uploadFileToFirebaseStorage(formData);
-            if (result.success?.url) {
-                const userDocRef = doc(db, 'users', auth.currentUser!.uid);
-                await updateDoc(userDocRef, { [field]: result.success.url });
-                setSuccess(`${field === 'avatar_url' ? 'Profile picture' : 'Banner'} updated!`);
-            } else {
-                throw new Error(result.failure || "File upload failed.");
-            }
+            const fileName = `${auth.currentUser!.uid}-${Date.now()}-${file.name}`;
+            const storageRef = ref(storage, `user_uploads/${fileName}`);
+            const snapshot = await uploadBytes(storageRef, file);
+            const downloadURL = await getDownloadURL(snapshot.ref);
+
+            const userDocRef = doc(db, 'users', auth.currentUser!.uid);
+            await updateDoc(userDocRef, { [field]: downloadURL });
+            setSuccess(`${field === 'avatar_url' ? 'Profile picture' : 'Banner'} updated!`);
+
         } catch (err: any) {
             setError(err.message);
         }

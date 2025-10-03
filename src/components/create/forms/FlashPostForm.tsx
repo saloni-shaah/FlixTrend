@@ -4,12 +4,14 @@ import React, { useState, useRef, useEffect } from 'react';
 import { X, UploadCloud, Music as MusicIcon, MapPin, Smile, Camera, Image as ImageIcon, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getFirestore, collection, onSnapshot, query, orderBy, getDoc, doc } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { app } from '@/utils/firebaseClient';
 import { remixImageAction } from '@/app/actions';
 import { Wand2, Loader } from 'lucide-react';
 
 
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange: (data: any) => void }) {
     const [mediaFile, setMediaFile] = useState<File | null>(data.mediaFiles?.[0] || null);
@@ -269,5 +271,3 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
         </div>
     );
 }
-
-    
