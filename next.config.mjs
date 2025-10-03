@@ -1,11 +1,10 @@
 
-import type { NextConfig } from "next";
-import withPWA from "next-pwa";
+import createNextPwa from 'next-pwa';
 
-const isDev = process.env.NODE_ENV === "development";
+const isDev = process.env.NODE_ENV === 'development';
 
-const pwaConfig = {
-  dest: "public",
+const withPWA = createNextPwa({
+  dest: 'public',
   register: true,
   skipWaiting: true,
   disable: isDev,
@@ -25,9 +24,10 @@ const pwaConfig = {
       },
     },
   ],
-};
+});
 
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -36,15 +36,15 @@ const nextConfig: NextConfig = {
   },
   images: {
     remotePatterns: [
-        {
-            protocol: 'https',
-            hostname: 'api.dicebear.com',
-        },
-        {
-            protocol: 'https',
-            hostname: 'firebasestorage.googleapis.com',
-        }
-    ]
+      {
+        protocol: 'https',
+        hostname: 'api.dicebear.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'firebasestorage.googleapis.com',
+      },
+    ],
   },
   async rewrites() {
     return [
@@ -56,6 +56,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-// The type definition for the PWA wrapper is not perfectly aligned with NextConfig,
-// so we use a type assertion to satisfy TypeScript.
-export default withPWA(pwaConfig)(nextConfig) as (phase: string, defaultConfig: {}) => Promise<any>;
+export default withPWA(nextConfig);
