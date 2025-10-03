@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useState, useEffect } from 'react';
 import { getFirestore, collection, query, where, getDocs, doc, updateDoc, setDoc, getDoc } from 'firebase/firestore';
@@ -168,7 +169,7 @@ export default function AdminPage() {
 
         try {
             const usersRef = collection(db, "users");
-            const q = query(usersRef, where("username", "==", onboardForm.username.toLowerCase()));
+            const q = query(usersRef, where("username", "==", onboardForm.username));
             const userQuerySnap = await getDocs(q);
 
             if (userQuerySnap.empty) {
@@ -223,7 +224,7 @@ export default function AdminPage() {
         
         try {
              const usersRef = collection(db, "users");
-             const q = query(usersRef, where("username", "==", loginForm.username.toLowerCase()));
+             const q = query(usersRef, where("username", "==", loginForm.username));
              const userQuerySnap = await getDocs(q);
 
              if (userQuerySnap.empty) {
