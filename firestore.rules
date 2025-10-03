@@ -3,78 +3,69 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
     function isFounder() {
+      // The unique UID for the original founder, granting super-admin access.
       return request.auth.uid == 'uQpi9hoaX9dQQ2YHOYv05orx1rQ2';
     }
 
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-    
-    function isDeveloper() {
-        // Use exists() to prevent errors if the user doc or role field doesn't exist.
-        return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['developer', 'founder']);
+    function getRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
 
     match /users/{userId} {
       allow read: if true;
       allow create: if request.auth.uid == userId;
-      allow update: if (isOwner(userId) && !(request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'isPremium']))) ||
-                       (isFounder() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'isPremium']));
+      // Allow owners to update their own profile, but NOT their role.
+      // Allow founders to ONLY update the role field of any user.
+      allow update: if (isOwner(userId) && !('role' in request.resource.data)) ||
+                      (isFounder() && request.resource.data.keys().hasOnly(['role']));
     }
 
-    match /posts/{postId} {
-      allow read, create: if request.auth != null;
-      allow update: if request.auth.uid == resource.data.userId;
-      allow delete: if request.auth.uid == resource.data.userId || isDeveloper();
-
-      match /{subcollection}/{docId} {
-        allow read, write: if request.auth != null;
-      }
-    }
-
-    match /flashes/{flashId} {
-      allow read, create, delete: if request.auth != null;
-    }
-
-    match /calls/{callId} {
-      allow read, create, update, delete: if request.auth != null;
-    }
-    
-    match /chats/{chatId}/{message=**} {
+    match /posts/{postId}/{document=**} {
       allow read, write: if request.auth != null;
     }
 
+    match /flashes/{flashId} {
+      allow read, write: if request.auth != null;
+    }
+
+    match /chats/{chatId}/{document=**} {
+      allow read, write: if request.auth != null; // Simplified for MVP
+    }
+    
     match /groups/{groupId} {
-        allow read, write: if request.auth.uid in resource.data.members;
+      allow read, write: if request.auth != null; // Simplified for MVP
+    }
+
+    match /notifications/{userId}/{document=**} {
+      allow read, write: if isOwner(userId);
+    }
+    
+    match /app_status/{statusId} {
+        allow read: if true;
+        allow write: if isFounder();
+    }
+    
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['founder', 'developer']);
     }
 
     match /collections/{collectionId} {
-        allow read, write: if request.auth.uid == resource.data.ownerId;
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.ownerId;
+    }
+
+    match /playlists/{playlistId} {
+       allow read, write: if request.auth != null && request.auth.uid == resource.data.ownerId;
     }
 
     match /songs/{songId} {
         allow read: if true;
         allow create: if request.auth != null;
-    }
-    
-    match /playlists/{playlistId} {
-        allow read, write: if request.auth.uid == resource.data.ownerId;
-    }
-
-    match /app_status/{statusId} {
-        allow read: if true;
-        allow write: if isDeveloper();
-    }
-
-    match /products/{productId} {
-      allow read: if true;
-      allow write: if isDeveloper();
-    }
-
-    match /notifications/{userId}/{subcollection}/{notificationId} {
-        allow read, write, delete: if request.auth.uid == userId;
     }
   }
 }
