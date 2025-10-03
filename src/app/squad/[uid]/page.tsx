@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
@@ -44,7 +43,7 @@ const DropdownMenuItem = React.forwardRef<
   <DropdownMenuPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+      "relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&>svg]:pointer-events-none [&>svg]:size-4 [&>svg]:shrink-0",
       inset && "pl-8",
       className
     )}
@@ -69,6 +68,9 @@ const getAllUsersWithFollowerCounts = async () => {
 
 function ProfileBadge({ profile, allUsers }: { profile: any, allUsers: any[] }) {
     if (!profile) return null;
+    
+    const isFounder = profile.email === 'next181489111@gmail.com';
+    const isDeveloper = profile.role === 'developer';
 
     const isCreator = profile.accountType === 'creator';
     
@@ -86,6 +88,21 @@ function ProfileBadge({ profile, allUsers }: { profile: any, allUsers: any[] }) 
     
     return (
         <div className="flex items-center justify-center gap-2 mt-2 flex-wrap">
+             {isFounder && (
+                <>
+                    <div className="flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-gradient-to-r from-purple-600 to-blue-500 text-white shadow-md">
+                        <Award size={14}/> Founder
+                    </div>
+                     <div className="flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-gradient-to-r from-blue-600 to-teal-500 text-white shadow-md">
+                        <ShieldCheck size={14}/> CTO
+                    </div>
+                </>
+            )}
+             {isDeveloper && !isFounder && (
+                <div className="flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-gradient-to-r from-gray-700 to-gray-500 text-white shadow-md">
+                    <ShieldCheck size={14}/> FlixTrend Developer
+                </div>
+            )}
             {isCreator && (
                 <div className="flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-gradient-to-r from-accent-purple to-accent-pink text-white shadow-md">
                     <Mic size={14}/> Vibe Creator
@@ -178,7 +195,6 @@ export default function UserProfilePage() {
   }
   
   const initials = profile.name?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || profile.username?.slice(0, 2).toUpperCase() || "U";
-  const isDeveloper = profile.email === 'next181489111@gmail.com';
   const isPremium = profile.isPremium && (!profile.premiumUntil || profile.premiumUntil.toDate() > new Date());
   
   return (
@@ -207,9 +223,6 @@ export default function UserProfilePage() {
         </div>
         <div className="flex items-center justify-center gap-2">
             <h2 className="text-2xl font-headline font-bold text-center">{profile.name}</h2>
-            {isDeveloper && (
-                <ShieldCheck className="w-6 h-6 text-accent-purple" title="FlixTrend Developer"/>
-            )}
              {isPremium && (
                 <CheckCircle className="w-6 h-6 text-blue-500" title="Premium User"/>
             )}
@@ -300,5 +313,3 @@ export default function UserProfilePage() {
     </div>
   );
 }
-
-    

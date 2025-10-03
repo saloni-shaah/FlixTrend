@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
@@ -180,7 +179,7 @@ export default function LandingPage() {
                  <span className="text-gray-600">|</span>
                  <Link href="/hiring" className="text-lg font-semibold hover:text-accent-pink transition-colors">We're Hiring</Link>
                  <span className="text-gray-600">|</span>
-                 <Link href="/about" className="text-lg font-semibold hover:text-accent-pink transition-colors">About FlixTrend</Link>
+                 <Link href="/admin" className="text-lg font-semibold hover:text-accent-pink transition-colors">Admin</Link>
             </div>
         </section>
 
