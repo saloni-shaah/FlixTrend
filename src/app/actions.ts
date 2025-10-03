@@ -76,11 +76,11 @@ User's latest message:
 
 export async function getAlmightyResponse(input: z.infer<typeof AlmightyResponseInputSchema>): Promise<{ success: z.infer<typeof AlmightyResponseOutputSchema> | null, failure: string | null }> {
     try {
-        const { output } = await almightyPrompt(input);
-        if (!output) {
+        const response = await almightyPrompt(input);
+        if (!response) {
           throw new Error("AI failed to generate a response.");
         }
-        return { success: output, failure: null };
+        return { success: response, failure: null };
     } catch (err: any) {
         console.error("Almighty AI action error:", err);
         return { success: null, failure: err.message || "An unknown error occurred while talking to the AI." };

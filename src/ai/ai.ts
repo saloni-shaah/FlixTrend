@@ -4,8 +4,7 @@
  * It is a central place to manage AI-related configurations for the application.
  */
 import { genkit } from 'genkit';
-import { googleAI } from '@genkit-ai/google-genai'; // Updated import
-import { SafetyPolicy } from '@genkit-ai/googleai'; // SafetyPolicy can still be imported from here
+import { googleAI, SafetyPolicy } from '@genkit-ai/google-genai'; // Updated import for both
 
 // Initialize the Genkit framework with the Google AI plugin.
 // This allows the application to use Google's generative AI models (e.g., Gemini).
