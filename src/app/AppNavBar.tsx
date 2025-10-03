@@ -2,7 +2,7 @@
 "use client";
 import { usePathname, useRouter } from "next/navigation";
 import { useAppState } from "@/utils/AppStateContext";
-import { MessageSquare, ArrowLeft } from "lucide-react";
+import { MessageSquare, ArrowLeft, ShoppingBag } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { getFirestore, collection, query, where, onSnapshot, getDocs } from "firebase/firestore";
@@ -228,6 +228,7 @@ export default function AppNavBar() {
         <>
           <NavButton href="/home" icon={VibeSpaceIcon} label="VibeSpace" />
           <NavButton href="/scope" icon={ScopeIcon} label="Scope" />
+          <NavButton href="/store" icon={ShoppingBag} label="Store" />
           <NavButton href="/squad" icon={SquadIcon} label="Squad" />
           <NavButton href="/signal" icon={MessageSquare} label="Signal" hasNotification={hasUnreadMessages} />
         </>

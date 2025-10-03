@@ -1,0 +1,67 @@
+
+[
+    {
+        "id": "prod_001",
+        "name": "FlixTrend 'Vibe' Hoodie",
+        "category": "Apparel",
+        "price": 2499,
+        "description": "Stay cozy while chasing trends with this premium oversized hoodie. Features the FlixTrend logo and a subtle 'Vibe' embroidery.",
+        "imageUrl": "https://picsum.photos/seed/ftstore1/600/600"
+    },
+    {
+        "id": "prod_002",
+        "name": "Neon Wave Snapback",
+        "category": "Accessories",
+        "price": 999,
+        "description": "A stylish snapback cap with a neon wave design inspired by the FlixTrend UI. Perfect for making a statement.",
+        "imageUrl": "https://picsum.photos/seed/ftstore2/600/600"
+    },
+    {
+        "id": "prod_003",
+        "name": "Almighty AI Desk Mat",
+        "category": "Desk Accessories",
+        "price": 1299,
+        "description": "Upgrade your setup with this large desk mat featuring our beloved AI companion, Almighty. Smooth surface for gaming and work.",
+        "imageUrl": "https://picsum.photos/seed/ftstore3/600/600"
+    },
+    {
+        "id": "prod_004",
+        "name": "Voltix Security Laptop Sleeve",
+        "category": "Accessories",
+        "price": 1599,
+        "description": "Protect your tech with the Voltix Security laptop sleeve. Sleek, padded, and secure, just like our platform.",
+        "imageUrl": "https://picsum.photos/seed/ftstore4/600/600"
+    },
+    {
+        "id": "prod_005",
+        "name": "Cyber Pink Tumbler",
+        "category": "Drinkware",
+        "price": 899,
+        "description": "Stay hydrated with this insulated tumbler in FlixTrend's signature Cyber Pink. Keeps your drinks hot or cold for hours.",
+        "imageUrl": "https://picsum.photos/seed/ftstore5/600/600"
+    },
+    {
+        "id": "prod_006",
+        "name": "'Signal' Glow-in-the-Dark Tee",
+        "category": "Apparel",
+        "price": 1199,
+        "description": "A comfortable black t-shirt with the 'Signal' chat icon that glows in the dark. Perfect for late-night vibes.",
+        "imageUrl": "https://picsum.photos/seed/ftstore6/600/600"
+    },
+    {
+        "id": "prod_007",
+        "name": "FlixTrend Sticker Pack",
+        "category": "Stickers",
+        "price": 499,
+        "description": "Decorate your laptop, water bottle, or anything else with this pack of high-quality vinyl stickers featuring logos and icons from the app.",
+        "imageUrl": "https://picsum.photos/seed/ftstore7/600/600"
+    },
+    {
+        "id": "prod_008",
+        "name": "Founder's Edition Enamel Pin",
+        "category": "Collectibles",
+        "price": 799,
+        "description": "A limited edition enamel pin to show you were here from the beginning. A must-have for early supporters.",
+        "imageUrl": "https://picsum.photos/seed/ftstore8/600/600"
+    }
+]
