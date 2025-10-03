@@ -76,6 +76,9 @@ User's latest message:
 export async function getAlmightyResponse(input: z.infer<typeof AlmightyResponseInputSchema>): Promise<{ success: z.infer<typeof AlmightyResponseOutputSchema> | null, failure: string | null }> {
     try {
         const { output } = await almightyPrompt(input);
+        if (!output) {
+          throw new Error("AI failed to generate a response.");
+        }
         return { success: output, failure: null };
     } catch (err: any) {
         console.error("Almighty AI action error:", err);
