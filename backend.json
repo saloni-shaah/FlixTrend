@@ -38,9 +38,12 @@
             "description": "URL for the user's profile banner image."
         },
         "role": {
-          "type": "string",
-          "enum": ["user", "creator", "developer", "founder", "cto"],
-          "description": "The role of the user within the application."
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["user", "creator", "developer", "founder", "cto"]
+          },
+          "description": "The roles of the user within the application."
         },
         "createdAt": {
           "type": "string",
