@@ -1,44 +1,37 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Function to check if the requesting user has an admin role.
-    function isAdmin() {
-      // Check if the user is authenticated first.
-      if (request.auth == null) {
-        return false;
-      }
-      // Get the user's profile document from the 'users' collection.
-      let userProfile = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-      
-      // Ensure the 'role' field exists and is a list.
-      if (!('role' in userProfile) || !(userProfile.role is list)) {
-        return false;
-      }
-      
-      // Check if the user's role list contains any of the admin roles.
-      return userProfile.role.hasAny(['founder', 'cto', 'developer']);
+
+    // Function to check if the requesting user has an admin-level role.
+    // It securely reads the requesting user's own profile document to check their role.
+    function isRequestingUserAdmin() {
+      let userRoles = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      // Ensure userRoles is a list before checking for roles
+      return userRoles is list && (
+        'founder' in userRoles ||
+        'cto' in userRoles ||
+        'developer' in userRoles
+      );
     }
 
-    // Rules for the 'users' collection
     match /users/{userId} {
-      // Anyone can read a user's public profile.
-      allow read: if true;
-      
+      // Anyone can view a user's public profile.
+      allow read;
+
       // A user can create their own profile document.
       allow create: if request.auth.uid == userId;
-      
-      // A user can update their own profile, but cannot change their own 'role' or 'isPremium' status.
-      allow update: if request.auth.uid == userId && !('role' in request.resource.data);
 
-      // An admin can update ONLY the 'role' and 'isPremium' fields of any user.
-      allow update: if isAdmin() && request.resource.data.keys().hasOnly(['role', 'isPremium']);
+      // A user can update their own profile, but they are NOT allowed to change their own role.
+      allow update: if request.auth.uid == userId && !('role' in request.resource.data);
+      
+      // An admin user IS allowed to update ONLY the 'role' field of another user.
+      // This is the specific permission needed for the admin page to onboard new developers.
+      allow update (role): if isRequestingUserAdmin() && request.resource.data.keys().hasOnly(['role']);
     }
 
-    // Default deny all other collections/documents for security.
+    // Explicitly deny all other writes to protect user data.
     match /{document=**} {
-      allow read, write: if false;
+      allow write: if false;
     }
   }
 }
