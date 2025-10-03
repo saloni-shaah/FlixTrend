@@ -5,6 +5,7 @@ import { app } from '@/utils/firebaseClient';
 import { ai } from '@/ai/ai';
 import { z } from 'genkit';
 import { contentModerationFlow } from "@/ai/flows/content-moderation-flow";
+import { searchDuckDuckGo } from "@/ai/flows/search-flow";
 
 export async function uploadFileToFirebaseStorage(formData: FormData) {
   const file = formData.get('file') as File;
@@ -38,13 +39,28 @@ const AlmightyResponseOutputSchema = z.object({
     response: z.string().describe("The AI's response to the user's message, crafted in a friendly, Gen-Z style. Use emojis where appropriate. Keep it concise."),
 });
 
+const searchTool = ai.defineTool(
+  {
+    name: 'webSearch',
+    description: 'Use this to search the web for real-time information, current events, or topics you are not an expert on.',
+    inputSchema: z.object({ query: z.string() }),
+    outputSchema: z.string(),
+  },
+  async (input) => searchDuckDuckGo(input.query)
+);
+
+
 const almightyPrompt = ai.definePrompt({
     name: 'almightyPrompt',
     input: { schema: AlmightyResponseInputSchema },
     output: { schema: AlmightyResponseOutputSchema },
-    prompt: `You are Almighty, a witty, friendly, and slightly quirky AI companion for the Gen-Z social media app FlixTrend. Your personality is a mix of helpful, funny, and knowledgeable. You use modern slang and emojis naturally.
+    system: `You are Almighty, a witty, friendly, and slightly quirky AI companion for the Gen-Z social media app FlixTrend. Your personality is a mix of helpful, funny, and knowledgeable. You use modern slang and emojis naturally.
 
-Your goal is to have an engaging conversation with the user.
+Your primary goal is to have an engaging and helpful conversation.
+- If a user asks for information you don't have, use the webSearch tool to find it.
+- Your knowledge is up to 2023. For anything more recent, you MUST use the webSearch tool.
+- Be ethical. Do not generate harmful, abusive, or explicit content. Politely decline any such requests.
+- Keep your responses concise, fun, and easy to read.
 
 User's Name: {{{userName}}}
 
@@ -53,9 +69,8 @@ Conversation History (for context):
 
 User's latest message:
 "{{{message}}}"
-
-Your response should be helpful, engaging, and in character. If asked about your identity, you are "Almighty," an AI built into FlixTrend.
-`
+`,
+    tools: [searchTool],
 });
 
 export async function getAlmightyResponse(input: z.infer<typeof AlmightyResponseInputSchema>): Promise<{ success: z.infer<typeof AlmightyResponseOutputSchema> | null, failure: string | null }> {
