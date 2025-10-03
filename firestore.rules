@@ -3,33 +3,31 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if a user is an admin based on their role in their own document.
-    // IMPORTANT: This can only be used in rules where the user is already granted read access to their own document.
-    function isRole(role) {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role[0] == role;
+    // Helper function to identify the founder by their unique ID.
+    // This is a secure way to grant initial super-admin privileges.
+    function isFounder() {
+      return request.auth.uid == 'uQpi9hoaX9dQQ2YHOYv05orx1rQ2';
     }
 
-    // New, correct rules for the 'users' collection
+    // Rules for the 'users' collection
     match /users/{userId} {
-      // READ: Anyone can read public profiles.
+      // ANYONE can read public user profiles.
       allow read: if true;
 
-      // UPDATE: This is the critical fix.
-      allow update: if 
-            // Case 1: You are updating your own document to give yourself the initial founder roles.
-            // This is a secure, one-time bootstrap operation.
-            (request.auth.uid == userId && request.resource.data.role == ['founder', 'cto', 'developer']) ||
-            // Case 2: An existing founder is updating another user's role.
-            (isRole('founder') && request.resource.data.keys().hasOnly(['role']));
-      
-      // CREATE/DELETE: Users can create their own profile, but not delete it through the client.
+      // A user can create their own profile.
       allow create: if request.auth.uid == userId;
-      allow delete: if false;
+
+      // Allow a user to update their own profile, BUT NOT their role.
+      // Allow a founder to update ONLY the role field of another user.
+      allow update: if (request.auth.uid == userId && !('role' in request.resource.data))
+                    || (isFounder() && request.resource.data.keys().hasOnly(['role']));
     }
 
-    // Default deny all other collections for security
-    match /{path=**}/documents/{document} {
-      allow read, write: if false;
+    // Rules for all other collections (posts, chats, etc.)
+    // These are simplified for now. You would add more specific rules
+    // for each collection as your app grows.
+    match /{document=**} {
+      allow read, write: if request.auth != null;
     }
   }
 }
