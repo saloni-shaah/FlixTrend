@@ -31,7 +31,7 @@ const PremiumUpgradeBanner = () => (
 );
 
 
-export function CreatePostPrompt({ isPremium }: { isPremium: boolean }) {
+export function CreatePostPrompt({ isPremium, onGoLive }: { isPremium: boolean, onGoLive: (title: string) => void }) {
   const [userProfile, setUserProfile] = useState<any>(null);
   const router = useRouter();
 
@@ -59,5 +59,3 @@ export function CreatePostPrompt({ isPremium }: { isPremium: boolean }) {
       </div>
   );
 }
-
-    
