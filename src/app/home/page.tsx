@@ -22,7 +22,6 @@ import { CreatePostPrompt } from "@/components/CreatePostPrompt";
 const AddMusicModal = dynamic(() => import('@/components/MusicDiscovery').then(mod => mod.MusicDiscovery), { ssr: false });
 const FlashModal = dynamic(() => import('@/components/FlashModal'), { ssr: false });
 const NotificationPanel = dynamic(() => import('@/components/NotificationPanel'), { ssr: false });
-const LiveStream = dynamic(() => import('@/components/LiveStream').then(mod => mod.LiveStream), { ssr: false });
 const ShortsPlayer = dynamic(() => import('@/components/ShortsPlayer').then(mod => mod.ShortsPlayer), { ssr: false });
 const PremiumUpgradeBanner = dynamic(() => import('@/components/PremiumUpgradeBanner'), { ssr: false });
 
@@ -43,8 +42,6 @@ function HomePageContent() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [lastVisible, setLastVisible] = useState<any>(null);
   const [hasMore, setHasMore] = useState(true);
-  const [isLive, setIsLive] = useState(false);
-  const [liveStreamTitle, setLiveStreamTitle] = useState('');
   const [showShortsPlayer, setShowShortsPlayer] = useState(false);
   const router = useRouter();
   const POSTS_PER_PAGE = 5;
@@ -178,8 +175,8 @@ function HomePageContent() {
   }, [currentUser]);
   
   const handleGoLive = (title: string) => {
-      setLiveStreamTitle(title);
-      setIsLive(true);
+      const roomName = `${currentUser.uid}-${Date.now()}`;
+      router.push(`/broadcast/${encodeURIComponent(roomName)}`);
   }
 
   const handleVoiceSearch = () => {
@@ -226,10 +223,6 @@ function HomePageContent() {
 
   if (loading && posts.length === 0) {
     return <VibeSpaceLoader />;
-  }
-
-   if (isLive) {
-    return <LiveStream title={liveStreamTitle} onStreamEnd={() => setIsLive(false)} />;
   }
 
   return (

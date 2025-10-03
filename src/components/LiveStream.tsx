@@ -1,16 +1,16 @@
 
 'use client';
 import { useEffect, useState } from 'react';
-import { auth } from '@/utils/firebaseClient'; // Corrected import path
+import { auth } from '@/utils/firebaseClient';
 import { generateLivekitToken } from '@/ai/flows/generate-livekit-token-flow';
 import { LiveKitRoom, ParticipantTile } from '@livekit/components-react';
 import '@livekit/components-styles';
 
 /**
-* LiveStream component for VIEWERS.
+* LiveStreamViewer component for VIEWERS.
 * This component connects to a LiveKit room and displays the broadcast.
 */
-export function LiveStream({ roomName, streamerName }: { roomName: string, streamerName: string }) {
+export function LiveStreamViewer({ roomName, streamerName }: { roomName: string, streamerName: string }) {
   const [user, setUser] = useState(auth.currentUser);
   const [token, setToken] = useState<string | null>(null);
 
