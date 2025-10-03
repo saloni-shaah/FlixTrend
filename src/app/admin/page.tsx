@@ -60,7 +60,6 @@ function AdminDashboard({ userProfile, onLogout }: { userProfile: any, onLogout:
               requestResourceData: data,
             });
             errorEmitter.emit('permission-error', permissionError);
-            alert(`Failed to grant premium: ${serverError.message}`);
           });
     };
 
@@ -164,11 +163,19 @@ export default function AdminPage() {
             const dataToUpdate = { role: ['developer'] };
             const docRef = doc(db, "users", userDoc.id);
             
-            await updateDoc(docRef, dataToUpdate);
-
-            setSuccess(`Success! ${onboardForm.username} has been granted the developer role.`);
-            setOnboardForm({ username: '', pass1: '', pass2: '' });
-            setLoggedInAdminProfile(userDoc.data()); // Log them in after successful onboarding
+            updateDoc(docRef, dataToUpdate)
+              .then(() => {
+                setSuccess(`Success! ${onboardForm.username} has been granted the developer role.`);
+                setOnboardForm({ username: '', pass1: '', pass2: '' });
+              })
+              .catch(async (serverError) => {
+                const permissionError = new FirestorePermissionError({
+                  path: docRef.path,
+                  operation: 'update',
+                  requestResourceData: dataToUpdate,
+                });
+                errorEmitter.emit('permission-error', permissionError);
+              });
             
         } catch (err: any) {
             console.error("Onboarding error:", err);
@@ -258,3 +265,4 @@ export default function AdminPage() {
     );
 }
 
+    
