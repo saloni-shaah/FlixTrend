@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useState, useEffect } from 'react';
 import { getFirestore, collection, query, where, getDocs, doc, updateDoc, setDoc, getDoc } from 'firebase/firestore';
@@ -129,15 +128,18 @@ export default function AdminPage() {
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser) {
+                setUser(currentUser);
                 const userDoc = await getDoc(doc(db, "users", currentUser.uid));
                 if (userDoc.exists()) {
                     const profileData = userDoc.data();
                     const roles = Array.isArray(profileData.role) ? profileData.role : [];
                     if (roles.includes('developer') || roles.includes('founder') || roles.includes('cto')) {
-                        setUser(currentUser);
                         setUserProfile({uid: userDoc.id, ...profileData});
                     }
                 }
+            } else {
+                setUser(null);
+                setUserProfile(null);
             }
             setLoading(false);
         });
@@ -166,7 +168,7 @@ export default function AdminPage() {
 
         try {
             const usersRef = collection(db, "users");
-            const q = query(usersRef, where("username", "==", onboardForm.username));
+            const q = query(usersRef, where("username", "==", onboardForm.username.toLowerCase()));
             const userQuerySnap = await getDocs(q);
 
             if (userQuerySnap.empty) {
@@ -177,8 +179,11 @@ export default function AdminPage() {
 
             const userDoc = userQuerySnap.docs[0];
             const isFounder = userDoc.data().email === 'next181489111@gmail.com';
+            
+            // If the logged-in user is the one being onboarded (i.e., the founder bootstrapping themselves)
+            // or if the logged-in user is already a founder, allow role assignment.
             const rolesToSet: string[] = isFounder ? ['founder', 'cto', 'developer'] : ['developer'];
-
+            
             const docRef = doc(db, "users", userDoc.id);
             const dataToUpdate = { role: rolesToSet };
             
@@ -195,7 +200,7 @@ export default function AdminPage() {
                   requestResourceData: dataToUpdate,
                 });
                 errorEmitter.emit('permission-error', permissionError);
-                setError("Permission denied. Ensure you are an admin and the rules are set correctly.");
+                setError("Permission denied. You might need to bootstrap your own admin role first.");
                 setIsProcessing(false);
               });
 
@@ -218,7 +223,7 @@ export default function AdminPage() {
         
         try {
              const usersRef = collection(db, "users");
-             const q = query(usersRef, where("username", "==", loginForm.username));
+             const q = query(usersRef, where("username", "==", loginForm.username.toLowerCase()));
              const userQuerySnap = await getDocs(q);
 
              if (userQuerySnap.empty) {
