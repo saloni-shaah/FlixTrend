@@ -80,22 +80,28 @@ function ProfileBadge({ profile, allUsers }: { profile: any, allUsers: any[] }) 
     if (!profile) return null;
 
     const isCreator = profile.accountType === 'creator';
+    const isFounder = profile.email === 'next181489111@gmail.com'; // Check for founder email
     
     const sortedUsers = [...allUsers].sort((a, b) => b.followerCount - a.followerCount);
     const userRank = sortedUsers.findIndex(u => u.uid === profile.uid);
 
     let rankBadge = null;
-    if (userRank === 0) {
+    if (userRank === 0 && !isFounder) {
         rankBadge = { text: "Global Icon", color: "bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-500 text-black shadow-lg", icon: <Crown size={14} /> };
-    } else if (userRank === 1) {
+    } else if (userRank === 1 && !isFounder) {
         rankBadge = { text: "Trendsetter", color: "bg-gradient-to-r from-gray-400 to-gray-200 text-black shadow-md", icon: <Zap size={14} /> };
-    } else if (userRank === 2) {
+    } else if (userRank === 2 && !isFounder) {
         rankBadge = { text: "Rising Star", color: "bg-gradient-to-r from-yellow-600 to-amber-400 text-white shadow-md", icon: <Rocket size={14} /> };
     }
     
     return (
         <div className="flex items-center justify-center gap-2 mt-2 flex-wrap">
-            {isCreator && (
+            {isFounder && (
+                <div className="flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 text-white shadow-lg">
+                    <ShieldCheck size={14}/> Founder
+                </div>
+            )}
+            {isCreator && !isFounder && (
                 <div className="flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-gradient-to-r from-accent-purple to-accent-pink text-white shadow-md">
                     <Mic size={14}/> Vibe Creator
                 </div>
@@ -261,7 +267,7 @@ function CompleteProfileModal({ profile, onClose }: { profile: any, onClose: () 
                 
                 {step === 3 && (
                     <div className="flex flex-col gap-4">
-                        <p className="text-sm text-gray-300 mb-4">We've sent a code to ${form.phoneNumber}. Please enter it below.</p>
+                        <p className="text-sm text-gray-300 mb-4">We've sent a code to ${formData.phoneNumber}. Please enter it below.</p>
                         <input type="text" name="code" placeholder="6-digit code" className="input-glass w-full" value={code} onChange={(e) => setCode(e.target.value)} required />
                         <button type="button" className="btn-glass bg-green-500 text-white mt-2" disabled={loading} onClick={onVerifyCode}>
                             {loading ? "Verifying..." : "Verify & Complete Profile"}
@@ -310,8 +316,8 @@ function UserPlaylists({ userId }: { userId: string }) {
               <Music className="text-accent-purple" size={32} />
             </div>
             <div>
-              <h3 className="font-bold text-lg text-accent-cyan">${playlist.name}</h3>
-              <p className="text-sm text-gray-400">${playlist.songIds?.length || 0} songs</p>
+              <h3 className="font-bold text-lg text-accent-cyan">${`playlist.name`}</h3>
+              <p className="text-sm text-gray-400">${`playlist.songIds?.length || 0`} songs</p>
             </div>
           </div>
         ))}
@@ -359,8 +365,8 @@ function UserCollections({ userId }: { userId: string }) {
                         <Folder className="text-accent-pink" size={48} />
                     </div>
                     <div className="p-3">
-                        <h3 className="font-bold text-accent-cyan truncate">${collectionItem.name}</h3>
-                        <p className="text-xs text-gray-400">${collectionItem.postIds?.length || 0} posts</p>
+                        <h3 className="font-bold text-accent-cyan truncate">${`collectionItem.name`}</h3>
+                        <p className="text-xs text-gray-400">${`collectionItem.postIds?.length || 0`} posts</p>
                     </div>
                 </div>
             ))}
@@ -390,7 +396,7 @@ function CollectionDetailView({ collection, onBack }: { collection: any, onBack:
     return (
         <div className="w-full max-w-xl flex flex-col gap-6">
             <button onClick={onBack} className="btn-glass self-start">{"< Back to Collections"}</button>
-            <h2 className="text-2xl font-bold text-accent-cyan">${collection.name}</h2>
+            <h2 className="text-2xl font-bold text-accent-cyan">${`collection.name`}</h2>
             {loading && <p className="text-center text-gray-400">Loading posts...</p>}
             {!loading && posts.length === 0 && <p className="text-center text-gray-400">This collection is empty.</p>}
             {posts.map(post => <PostCard key={post.id} post={post} />)}
@@ -476,7 +482,7 @@ function SquadPageContent() {
   
   const handleSelectChat = (item: any) => {
       // This is a placeholder. In a real app, you would navigate to the chat.
-      alert(`Navigating to chat with ${item.name || item.username}`);
+      alert(`Navigating to chat with ${`item.name || item.username`}`);
       setSearchTerm('');
       setIsSearching(false);
   }
@@ -670,7 +676,7 @@ function SquadPageContent() {
                             </div>
                             <div>
                                 <div className="font-bold text-sm truncate">{item.name || item.username}</div>
-                                <div className="text-xs text-gray-400">{item.type === 'user' ? `@${item.username}` : `${item.members?.length || 0} members`}</div>
+                                <div className="text-xs text-gray-400">{item.type === 'user' ? `@${item.username}` : `${`item.members?.length || 0`} members`}</div>
                             </div>
                         </div>
                     ))
@@ -874,7 +880,7 @@ function EditProfileModal({ profile, onClose }: { profile: any; onClose: () => v
                       </div>
                       
                       {uploading && (
-                        <div className="text-center text-accent-cyan text-sm">Uploading {uploading === 'avatar_url' ? 'profile picture' : 'banner'}...</div>
+                        <div className="text-center text-accent-cyan text-sm">Uploading ${`uploading === 'avatar_url' ? 'profile picture' : 'banner'`}...</div>
                       )}
 
                       <input
