@@ -5,7 +5,7 @@ import { getFirestore, collection, query, where, getDocs, doc, updateDoc, setDoc
 import { app, auth } from '@/utils/firebaseClient';
 import { onAuthStateChanged } from 'firebase/auth';
 import { motion } from 'framer-motion';
-import { ShieldCheck, UserPlus, KeyRound, LogIn, Trash2, Crown, Eye, EyeOff, Radio } from 'lucide-react';
+import { ShieldCheck, UserPlus, KeyRound, LogIn, Trash2, Crown, EyeOff, Radio } from 'lucide-react';
 import { getFunctions, httpsCallable } from "firebase/functions";
 
 const db = getFirestore(app);
@@ -118,7 +118,7 @@ export default function AdminPage() {
     const [activeTab, setActiveTab] = useState('login');
 
     const [loginForm, setLoginForm] = useState({ username: '', pass1: '', pass2: '' });
-    const [onboardForm, setOnboardForm] = useState({ username: '', email: '', pass1: '', pass2: '' });
+    const [onboardForm, setOnboardForm] = useState({ username: '', pass1: '', pass2: '' });
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
@@ -132,7 +132,7 @@ export default function AdminPage() {
                     const roles = Array.isArray(profileData.role) ? profileData.role : [profileData.role].filter(Boolean);
                     if (roles.includes('developer') || roles.includes('founder') || roles.includes('cto')) {
                         setUser(currentUser);
-                        setUserProfile(profileData);
+                        setUserProfile({uid: userDoc.id, ...profileData});
                     } else {
                         setUser(null);
                         setUserProfile(null);
@@ -171,29 +171,21 @@ export default function AdminPage() {
         }
 
         try {
-            // Find user by EMAIL to verify they have an account
+            // Find user by USERNAME
             const usersRef = collection(db, "users");
-            const q = query(usersRef, where("email", "==", onboardForm.email.toLowerCase()));
+            const q = query(usersRef, where("username", "==", onboardForm.username));
             const userQuerySnap = await getDocs(q);
 
             if (userQuerySnap.empty) {
-                setError("No user found with that email address. The person must have a FlixTrend account first.");
+                setError("No user found with that username. The person must have a FlixTrend account first.");
                 setIsProcessing(false);
                 return;
             }
 
             const userDoc = userQuerySnap.docs[0];
             const userData = userDoc.data();
-
-            // Then, check if the username they provided matches the found user's username
-            if (userData.username.toLowerCase() !== onboardForm.username.toLowerCase()) {
-                 setError("The username provided does not match the account for that email.");
-                 setIsProcessing(false);
-                 return;
-            }
-
-            const isFounder = onboardForm.email.toLowerCase() === 'next181489111@gmail.com';
             
+            const isFounder = userData.email === 'next181489111@gmail.com';
             const rolesToSet: string[] = isFounder ? ['founder', 'cto'] : ['developer'];
 
             await updateDoc(doc(db, "users", userDoc.id), {
@@ -201,7 +193,7 @@ export default function AdminPage() {
             });
             
             setSuccess(`Success! ${onboardForm.username} has been onboarded.`);
-            setOnboardForm({ username: '', email: '', pass1: '', pass2: '' });
+            setOnboardForm({ username: '', pass1: '', pass2: '' });
 
         } catch (err: any) {
             setError(err.message);
@@ -230,8 +222,9 @@ export default function AdminPage() {
                  return;
              }
 
-             const userToLogin = userQuerySnap.docs[0].data();
-             const userRoles = Array.isArray(userToLogin.role) ? userToLogin.role : (userToLogin.role ? [userToLogin.role] : []);
+             const userToLoginDoc = userQuerySnap.docs[0];
+             const userToLoginData = userToLoginDoc.data();
+             const userRoles = Array.isArray(userToLoginData.role) ? userToLoginData.role : (userToLoginData.role ? [userToLoginData.role] : []);
 
              if (!userRoles.includes('developer') && !userRoles.includes('founder') && !userRoles.includes('cto')) {
                  setError("This account does not have developer privileges.");
@@ -240,12 +233,11 @@ export default function AdminPage() {
              }
              
              // This is a simulated login. In a real app, we'd re-auth with Firebase.
-             setUserProfile(userToLogin);
-             // Ensure the main `user` state is also set if the current Firebase user matches.
-             if(auth.currentUser?.uid === userToLogin.uid) {
+             setUserProfile({uid: userToLoginDoc.id, ...userToLoginData});
+             
+             if(auth.currentUser?.uid === userToLoginDoc.id) {
                 setUser(auth.currentUser);
              } else {
-                // This case shouldn't happen if the user is already logged into FlixTrend
                 setError("There was a mismatch with the logged-in user. Please log in to FlixTrend with your developer account and try again.");
              }
 
@@ -260,7 +252,7 @@ export default function AdminPage() {
     }
 
     if (user && userProfile) {
-        return <AdminDashboard userProfile={userProfile} onLogout={() => { setUser(null); setUserProfile(null); }} />;
+        return <AdminDashboard userProfile={userProfile} onLogout={() => { setUser(null); setUserProfile(null); auth.signOut(); }} />;
     }
 
     return (
@@ -284,7 +276,6 @@ export default function AdminPage() {
                     <form onSubmit={handleOnboardSubmit} className="p-6 flex flex-col gap-4">
                          <h2 className="text-2xl font-headline font-bold text-accent-pink mb-2 text-center flex items-center justify-center gap-2"><UserPlus/> Onboard New Hire</h2>
                          <input name="username" placeholder="Their FlixTrend Username" className="input-glass" onChange={handleOnboardChange} value={onboardForm.username} required />
-                         <input name="email" type="email" placeholder="Their FlixTrend Email" className="input-glass" onChange={handleOnboardChange} value={onboardForm.email} required />
                          <input name="pass1" type="password" placeholder="Company Password 1" className="input-glass" onChange={handleOnboardChange} value={onboardForm.pass1} required />
                          <input name="pass2" type="password" placeholder="Company Password 2" className="input-glass" onChange={handleOnboardChange} value={onboardForm.pass2} required />
 
