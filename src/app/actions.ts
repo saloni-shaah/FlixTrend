@@ -28,6 +28,47 @@ export async function uploadFileToFirebaseStorage(formData: FormData) {
   }
 }
 
+const AlmightyResponseInputSchema = z.object({
+    userName: z.string().describe("The name of the user who is interacting with the AI."),
+    message: z.string().describe("The user's current message."),
+    context: z.string().optional().describe("The recent history of the conversation, for context."),
+});
+
+const AlmightyResponseOutputSchema = z.object({
+    response: z.string().describe("The AI's response to the user's message, crafted in a friendly, Gen-Z style. Use emojis where appropriate. Keep it concise."),
+});
+
+const almightyPrompt = ai.definePrompt({
+    name: 'almightyPrompt',
+    input: { schema: AlmightyResponseInputSchema },
+    output: { schema: AlmightyResponseOutputSchema },
+    prompt: `You are Almighty, a witty, friendly, and slightly quirky AI companion for the Gen-Z social media app FlixTrend. Your personality is a mix of helpful, funny, and knowledgeable. You use modern slang and emojis naturally.
+
+Your goal is to have an engaging conversation with the user.
+
+User's Name: {{{userName}}}
+
+Conversation History (for context):
+{{{context}}}
+
+User's latest message:
+"{{{message}}}"
+
+Your response should be helpful, engaging, and in character. If asked about your identity, you are "Almighty," an AI built into FlixTrend.
+`
+});
+
+export async function getAlmightyResponse(input: z.infer<typeof AlmightyResponseInputSchema>): Promise<{ success: z.infer<typeof AlmightyResponseOutputSchema> | null, failure: string | null }> {
+    try {
+        const { output } = await almightyPrompt(input);
+        return { success: output, failure: null };
+    } catch (err: any) {
+        console.error("Almighty AI action error:", err);
+        return { success: null, failure: err.message || "An unknown error occurred while talking to the AI." };
+    }
+}
+
+
 const RemixImageInputSchema = z.object({
   photoDataUri: z.string().describe(
       "A photo as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."

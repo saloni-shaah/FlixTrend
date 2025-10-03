@@ -9,7 +9,7 @@ import { useAppState } from "@/utils/AppStateContext";
 import { createCall } from "@/utils/callService";
 import { motion, AnimatePresence } from "framer-motion";
 import { translateText } from "@/ai/flows/translate-text-flow";
-import { getAlmightyResponse, uploadFileToFirebaseStorage } from "@/app/actions";
+import { uploadFileToFirebaseStorage } from "@/app/actions";
 
 const anonymousNames = ["Ram", "Shyam", "Sita", "Mohan", "Krishna", "Radha", "Anchal", "Anaya", "Advik", "Diya", "Rohan", "Priya", "Arjun", "Saanvi", "Kabir"];
 const generateAnonymousName = (userId: string, chatId: string) => {
@@ -489,19 +489,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
   const [translations, setTranslations] = useState<{[messageId: string]: string}>({});
   const [showLanguageSelector, setShowLanguageSelector] = useState<string | null>(null);
   const [isTranslating, setIsTranslating] = useState<string | null>(null);
-  const [isAlmightyLoading, setIsAlmightyLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-
-  const almightyChatObject = {
-      id: `almighty-chat_${firebaseUser.uid}`,
-      uid: 'almighty-bot',
-      isGroup: false,
-      isAlmighty: true,
-      name: 'Almighty',
-      bio: 'Your Gen-Z AI companion',
-      avatar_url: '', // Will use Bot icon
-      username: 'almighty'
-  };
 
 
   useEffect(() => {
@@ -532,7 +520,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
         
         allUserChats.sort((a,b) => (b.lastMessageAt?.toDate() || b.createdAt?.toDate() || 0) - (a.lastMessageAt?.toDate() || a.createdAt?.toDate() || 0));
 
-        setChats([almightyChatObject, ...allUserChats]);
+        setChats(allUserChats);
     });
 
     // Fetch joinable anonymous groups
@@ -553,7 +541,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
   }, [firebaseUser]);
 
    useEffect(() => {
-    if (!selectedChat || selectedChat.isGroup || selectedChat.isAlmighty) {
+    if (!selectedChat || selectedChat.isGroup) {
       setOnlineStatus(null);
       return;
     }
@@ -580,11 +568,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
     setTranslations({});
     
     let chatId: string;
-    if (chat.isAlmighty) {
-        chatId = `almighty-chat_${firebaseUser.uid}`;
-    } else {
-        chatId = chat.isGroup ? chat.id : getChatId(firebaseUser.uid, chat.uid);
-    }
+    chatId = chat.isGroup ? chat.id : getChatId(firebaseUser.uid, chat.uid);
     
     const q = query(
         collection(db, "chats", chatId, "messages"),
@@ -595,24 +579,22 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
       setMessages(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
     });
 
-    if (!chat.isAlmighty) {
-        // Mark messages as read
-        const unreadQuery = query(
-            collection(db, "chats", chatId, "messages"), 
-            where("readBy", "not-in", [[firebaseUser.uid]])
-        );
-        const unreadDocs = await getDocs(unreadQuery);
-        const batch = writeBatch(db);
-        let hasUnread = false;
-        unreadDocs.forEach(doc => {
-          const data = doc.data();
-          if(!data.readBy || !data.readBy.includes(firebaseUser.uid)){
-            hasUnread = true;
-            batch.update(doc.ref, { readBy: arrayUnion(firebaseUser.uid) });
-          }
-        });
-        if(hasUnread) await batch.commit();
-    }
+    // Mark messages as read
+    const unreadQuery = query(
+        collection(db, "chats", chatId, "messages"), 
+        where("readBy", "not-in", [[firebaseUser.uid]])
+    );
+    const unreadDocs = await getDocs(unreadQuery);
+    const batch = writeBatch(db);
+    let hasUnread = false;
+    unreadDocs.forEach(doc => {
+      const data = doc.data();
+      if(!data.readBy || !data.readBy.includes(firebaseUser.uid)){
+        hasUnread = true;
+        batch.update(doc.ref, { readBy: arrayUnion(firebaseUser.uid) });
+      }
+    });
+    if(hasUnread) await batch.commit();
 
 
     return () => unsubMessages();
@@ -632,7 +614,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isAlmightyLoading]);
+  }, [messages]);
 
   const handleSend = async (e: React.FormEvent, mediaUrl: string | null = null, type: 'text' | 'image' | 'video' | 'audio' = 'text') => {
     e.preventDefault();
@@ -640,51 +622,6 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
     
     const textToSend = newMessage;
     setNewMessage("");
-
-    if (selectedChat.isAlmighty) {
-        const chatId = `almighty-chat_${firebaseUser.uid}`;
-        const userMessage: any = {
-            sender: firebaseUser.uid,
-            text: textToSend,
-            createdAt: serverTimestamp(),
-            type: 'text'
-        };
-        await addDoc(collection(db, "chats", chatId, "messages"), userMessage);
-
-        setIsAlmightyLoading(true);
-
-        // We construct the context from the current message history
-        const currentContext = messages.map(m => `${m.sender === firebaseUser.uid ? 'User' : 'Almighty'}: ${m.text}`).join('\n');
-        
-        const response = await getAlmightyResponse({
-            userName: firebaseUser.name || firebaseUser.displayName,
-            message: textToSend,
-            context: currentContext,
-        });
-
-        setIsAlmightyLoading(false);
-        if (response.success) {
-            const assistantMessage: any = {
-                sender: 'almighty-bot',
-                text: response.success.response,
-                createdAt: serverTimestamp(),
-                type: 'text'
-            };
-            await addDoc(collection(db, "chats", chatId, "messages"), assistantMessage);
-        } else {
-            // Handle error, maybe show a toast
-            alert(`An error occurred while communicating with the AI: ${response.failure}`);
-            const errorMessage: any = {
-                sender: 'almighty-bot',
-                text: "Yikes, my brain just glitched. Try that again? 😅",
-                createdAt: serverTimestamp(),
-                type: 'text'
-            };
-            await addDoc(collection(db, "chats", chatId, "messages"), errorMessage);
-        }
-        return;
-    }
-
 
     const chatId = selectedChat.isGroup ? selectedChat.id : getChatId(firebaseUser.uid, selectedChat.uid);
     const messageData: any = {
@@ -715,30 +652,9 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
     await addDoc(collection(db, "chats", chatId, "messages"), messageData);
   };
   
-    const handleDeleteAlmightyChat = async () => {
-        if (!firebaseUser || !selectedChat.isAlmighty) return;
-        if (!window.confirm("Are you sure you want to delete your chat history with Almighty? This cannot be undone.")) return;
-
-        const chatId = `almighty-chat_${firebaseUser.uid}`;
-        const messagesCollectionRef = collection(db, "chats", chatId, "messages");
-        
-        try {
-            const messagesSnap = await getDocs(messagesCollectionRef);
-            const batch = writeBatch(db);
-            messagesSnap.forEach(doc => {
-                batch.delete(doc.ref);
-            });
-            await batch.commit();
-            setMessages([]); // Clear local state
-        } catch (error) {
-            console.error("Error clearing Almighty chat:", error);
-            alert("Failed to clear chat history.");
-        }
-    };
-  
   const handleDeleteMessage = async (messageId: string) => {
     if (!selectedChat || !firebaseUser) return;
-    const chatId = selectedChat.isAlmighty ? `almighty-chat_${firebaseUser.uid}` : selectedChat.isGroup ? selectedChat.id : getChatId(firebaseUser.uid, selectedChat.uid);
+    const chatId = selectedChat.isGroup ? selectedChat.id : getChatId(firebaseUser.uid, selectedChat.uid);
     const messageRef = doc(db, "chats", chatId, "messages", messageId);
     if(window.confirm("Are you sure you want to delete this message for everyone? This action is irreversible.")) {
       await deleteDoc(messageRef);
@@ -747,7 +663,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
 
   const handleReact = async (messageId: string, emoji: string) => {
     if (!selectedChat || !firebaseUser) return;
-    const chatId = selectedChat.isAlmighty ? `almighty-chat_${firebaseUser.uid}` : selectedChat.isGroup ? selectedChat.id : getChatId(firebaseUser.uid, selectedChat.uid);
+    const chatId = selectedChat.isGroup ? selectedChat.id : getChatId(firebaseUser.uid, selectedChat.uid);
     const messageRef = doc(db, "chats", chatId, "messages", messageId);
     const messageSnap = await getDoc(messageRef);
     const messageData = messageSnap.data();
@@ -911,9 +827,6 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
 
   const renderStatus = () => {
     if (!selectedChat) return null;
-    if (selectedChat.isAlmighty) {
-        return <p className="text-xs text-green-400">Online</p>;
-    }
     if (onlineStatus?.status === 'online') {
         return <p className="text-xs text-green-400">Online</p>;
     }
@@ -930,8 +843,8 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
 
   return (
     <div className="flex h-screen w-full bg-transparent font-body text-white overflow-hidden">
-        {showCreateGroup && <CreateGroupModal mutuals={chats.filter(c => !c.isGroup && !c.isAlmighty)} currentUser={firebaseUser} onClose={() => setShowCreateGroup(false)} onGroupCreated={(newGroup) => {
-            setChats(prev => [almightyChatObject, newGroup, ...prev.slice(1)]);
+        {showCreateGroup && <CreateGroupModal mutuals={chats.filter(c => !c.isGroup)} currentUser={firebaseUser} onClose={() => setShowCreateGroup(false)} onGroupCreated={(newGroup) => {
+            setChats(prev => [newGroup, ...prev]);
             setSelectedChat(newGroup);
         }} />}
         <div className={`w-full md:w-1/3 md:min-w-[350px] border-r border-accent-cyan/10 bg-black/60 flex flex-col ${isMobile && selectedChat ? "hidden" : ""}`}>
@@ -958,18 +871,16 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                     <div className="text-gray-400 text-center p-8">No chats found.</div>
                 ) : (
                     filteredChats.map((chat) => (
-                        <button key={chat.isAlmighty ? chat.id : (chat.isGroup ? chat.id : `dm-${chat.uid}`)} className={`w-full flex items-center gap-4 px-4 py-3 text-left hover:bg-accent-cyan/10 transition-colors duration-200 ${selectedChat?.id === chat.id ? "bg-accent-cyan/20" : ""}`} onClick={() => handleSelectChat(chat)}>
+                        <button key={chat.isGroup ? chat.id : `dm-${chat.uid}`} className={`w-full flex items-center gap-4 px-4 py-3 text-left hover:bg-accent-cyan/10 transition-colors duration-200 ${selectedChat?.id === chat.id ? "bg-accent-cyan/20" : ""}`} onClick={() => handleSelectChat(chat)}>
                             <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-xl overflow-hidden shrink-0">
-                                {chat.isAlmighty ? <Bot /> :
-                                 chat.isGroup ? 
+                                {chat.isGroup ? 
                                     (chat.avatar_url ? <img src={chat.avatar_url} alt={chat.name} className="w-full h-full object-cover"/> : (chat.groupType === 'anonymous' ? <Shield/> : chat.groupType === 'pseudonymous' ? <EyeOff/> : <Users/>)) :
                                     (chat.avatar_url ? <img src={chat.avatar_url} alt="avatar" className="w-full h-full object-cover"/> : getInitials(chat))
                                 }
                             </div>
                             <div className="flex-1 overflow-hidden">
                                 <span className="font-bold text-white block truncate">{chat.name || chat.username}</span>
-                                {!chat.isGroup && !chat.isAlmighty && <span className="text-xs text-gray-400 block truncate">@{chat.username}</span>}
-                                {chat.isAlmighty && <span className="text-xs text-gray-400 block truncate">{chat.bio}</span>}
+                                {!chat.isGroup && <span className="text-xs text-gray-400 block truncate">@{chat.username}</span>}
                             </div>
                             {unreadCounts[chat.id] > 0 && (
                                 <span className="bg-accent-pink text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
@@ -1003,27 +914,24 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                     <div className="flex items-center gap-3 p-3 border-b border-accent-cyan/10 bg-black/60 shadow-md shrink-0">
                         {isMobile && <button onClick={() => setSelectedChat(null)} className="p-2 rounded-full hover:bg-accent-cyan/10"><ArrowLeft size={20}/></button>}
                          <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-lg overflow-hidden shrink-0">
-                           {selectedChat.isAlmighty ? <Bot /> :
-                            selectedChat.isGroup ? 
+                           {selectedChat.isGroup ? 
                                 (selectedChat.avatar_url ? <img src={selectedChat.avatar_url} alt={selectedChat.name} className="w-full h-full object-cover"/> : (selectedChat.groupType === 'anonymous' ? <Shield/> : selectedChat.groupType === 'pseudonymous' ? <EyeOff/> : <Users/>)) :
                                 (selectedChat.avatar_url ? <img src={selectedChat.avatar_url} alt="avatar" className="w-full h-full object-cover"/> : getInitials(selectedChat))
                            }
                         </div>
-                        <button className="flex-1 text-left" disabled={selectedChat.groupType === 'anonymous' || selectedChat.isAlmighty} onClick={() => selectedChat.isGroup ? setShowGroupInfo(true) : setShowUserInfo(true)}>
+                        <button className="flex-1 text-left" disabled={selectedChat.groupType === 'anonymous'} onClick={() => selectedChat.isGroup ? setShowGroupInfo(true) : setShowUserInfo(true)}>
                             <h3 className="font-bold text-white">{selectedChat.name || selectedChat.username}</h3>
                             {renderStatus()}
                         </button>
                         <div className="flex items-center gap-2">
-                           {selectedChat.isAlmighty && <button onClick={handleDeleteAlmightyChat} className="p-2 rounded-full hover:bg-red-500/20 text-red-400" title="Clear Chat History"><Trash2 size={20}/></button>}
-                           {!selectedChat.isGroup && !selectedChat.isAlmighty && <button onClick={() => handleCall('video')} className="p-2 rounded-full hover:bg-accent-cyan/10"><Video size={20}/></button>}
-                           {!selectedChat.isGroup && !selectedChat.isAlmighty && <button onClick={() => handleCall('voice')} className="p-2 rounded-full hover:bg-accent-cyan/10"><Phone size={20}/></button>}
+                           {!selectedChat.isGroup && <button onClick={() => handleCall('video')} className="p-2 rounded-full hover:bg-accent-cyan/10"><Video size={20}/></button>}
+                           {!selectedChat.isGroup && <button onClick={() => handleCall('voice')} className="p-2 rounded-full hover:bg-accent-cyan/10"><Phone size={20}/></button>}
                         </div>
                     </div>
                     
                      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-1">
                         {messages.map(msg => {
                             const isUser = msg.sender === firebaseUser.uid;
-                            const isBot = msg.sender === 'almighty-bot';
                             
                             const senderInfo = selectedChat.isGroup ?
                                 (selectedChat.groupType === 'simple' ? selectedChat.memberInfo?.[msg.sender] : null)
@@ -1031,7 +939,6 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                             
                             const displayName = selectedChat.groupType === 'anonymous' ? generateAnonymousName(msg.sender, selectedChat.id) : 
                                                 selectedChat.groupType === 'pseudonymous' ? selectedChat.pseudonyms?.[msg.sender] || 'Anon' : 
-                                                isBot ? 'Almighty' :
                                                 senderInfo?.name || "User";
                             
                             return (
@@ -1040,7 +947,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                                     <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
                                       <div className={`relative px-4 py-2 rounded-2xl ${isUser ? "bg-accent-cyan text-black rounded-br-none" : msg.sender === 'system' ? "bg-gray-800 text-gray-400 text-xs italic" : "bg-gray-700 text-white rounded-bl-none"}`}>
                                           {!isUser && msg.sender !== 'system' && (
-                                              <div className={`font-bold text-sm ${isBot ? 'text-accent-purple' : 'text-accent-pink'}`}>{displayName}</div>
+                                              <div className="font-bold text-sm text-accent-pink">{displayName}</div>
                                           )}
                                           {msg.type === 'image' && <img src={msg.mediaUrl} alt={msg.text || "image"} className="rounded-lg max-w-xs" />}
                                           {msg.type === 'video' && <video src={msg.mediaUrl} controls className="rounded-lg max-w-xs" />}
@@ -1110,12 +1017,11 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                               </div>
                               )
                           })}
-                        {isAlmightyLoading && <ChatMessageLoading />}
                          <div ref={messagesEndRef} />
                     </div>
 
                     <form onSubmit={handleSend} className="flex items-center gap-2 p-2 border-t border-accent-cyan/10 bg-black/60 shrink-0">
-                         <button type="button" onClick={() => fileInputRef.current?.click()} className="p-3 rounded-full hover:bg-accent-cyan/20 transition-colors" disabled={selectedChat.isAlmighty}>
+                         <button type="button" onClick={() => fileInputRef.current?.click()} className="p-3 rounded-full hover:bg-accent-cyan/20 transition-colors">
                             <Paperclip size={20}/>
                          </button>
                          <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*,video/*,audio/*" />
@@ -1129,14 +1035,14 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                         <GroupInfoPanel 
                             group={selectedChat}
                             currentUser={firebaseUser}
-                            mutuals={chats.filter(c => !c.isGroup && !c.isAlmighty)}
+                            mutuals={chats.filter(c => !c.isGroup)}
                             onClose={() => setShowGroupInfo(false)}
                             onGroupUpdate={(updatedGroup) => setSelectedChat(updatedGroup)}
                             onGroupDeleted={handleDeleteGroup}
                             onLeaveGroup={handleLeaveGroup}
                         />
                     )}
-                     {!selectedChat.isGroup && !selectedChat.isAlmighty && showUserInfo && (
+                     {!selectedChat.isGroup && showUserInfo && (
                         <UserInfoPanel
                             user={selectedChat}
                             onClose={() => setShowUserInfo(false)}
