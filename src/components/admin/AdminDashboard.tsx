@@ -1,8 +1,8 @@
 
 "use client";
-import React, { useState, useRef } from 'react';
-import { getFirestore, collection, query, where, getDocs, doc, updateDoc, setDoc, getDoc, addDoc, serverTimestamp } from 'firebase/firestore';
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import React, { useState, useRef, useEffect } from 'react';
+import { getFirestore, collection, query, where, getDocs, doc, updateDoc, setDoc, getDoc, addDoc, serverTimestamp, onSnapshot, deleteDoc } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { app } from '@/utils/firebaseClient';
 import { Trash2, Crown, EyeOff, Radio, UploadCloud, Loader } from 'lucide-react';
 import { getFunctions, httpsCallable } from "firebase/functions";
@@ -107,6 +107,70 @@ function AddProductForm() {
     );
 }
 
+function ManageProducts() {
+    const [products, setProducts] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+
+    useEffect(() => {
+        const q = query(collection(db, "products"), orderBy("createdAt", "desc"));
+        const unsub = onSnapshot(q, (snapshot) => {
+            setProducts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            setLoading(false);
+        }, (err) => {
+            setError("Failed to load products. Check permissions.");
+            setLoading(false);
+        });
+        return () => unsub();
+    }, []);
+
+    const handleRemoveProduct = async (product: any) => {
+        if (!window.confirm(`Are you sure you want to remove "${product.name}" from the store? This cannot be undone.`)) return;
+
+        try {
+            // Delete Firestore document
+            const docRef = doc(db, 'products', product.id);
+            await deleteDoc(docRef);
+
+            // Delete image from Firebase Storage
+            if (product.imageUrl) {
+                const imageRef = ref(storage, product.imageUrl);
+                await deleteObject(imageRef);
+            }
+            alert("Product removed successfully.");
+        } catch(err: any) {
+            const permissionError = new FirestorePermissionError({
+              path: `products/${product.id}`,
+              operation: 'delete',
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            alert(`Failed to remove product: ${err.message}`);
+        }
+    };
+    
+    if (loading) return <div className="glass-card p-6 text-center"><Loader className="animate-spin mx-auto" /></div>;
+
+    return (
+        <div className="glass-card p-6 lg:col-span-3">
+             <h3 className="font-bold text-lg text-accent-cyan mb-4">Manage Products</h3>
+             {error && <p className="text-red-400 text-sm mb-2">{error}</p>}
+             <div className="max-h-96 overflow-y-auto space-y-3">
+                {products.map(product => (
+                    <div key={product.id} className="flex items-center gap-4 bg-black/20 p-2 rounded-lg">
+                        <img src={product.imageUrl} alt={product.name} className="w-16 h-16 rounded-md object-cover"/>
+                        <div className="flex-1">
+                            <p className="font-bold">{product.name}</p>
+                            <p className="text-sm text-gray-400">₹{product.price}</p>
+                        </div>
+                        <button onClick={() => handleRemoveProduct(product)} className="btn-glass-icon w-10 h-10 bg-red-500/20 text-red-400 hover:bg-red-500/40">
+                            <Trash2 size={16}/>
+                        </button>
+                    </div>
+                ))}
+             </div>
+        </div>
+    );
+}
 
 export default function AdminDashboard({ userProfile, onLogout }: { userProfile: any, onLogout: () => void }) {
 
@@ -216,9 +280,12 @@ export default function AdminDashboard({ userProfile, onLogout }: { userProfile:
                         <button onClick={handleToggleMaintenance} className="btn-glass bg-purple-500/20 text-purple-400 w-full mb-2">Toggle Maintenance</button>
                         <button onClick={handleGoLive} className="btn-glass bg-green-500/20 text-green-400 w-full flex items-center justify-center gap-2"><Radio/>Go Live During Maint.</button>
                     </div>
+                    <ManageProducts />
                 </div>
                  <button onClick={onLogout} className="btn-glass self-center mt-8">Log Out</button>
             </div>
         </div>
     )
 }
+
+    
