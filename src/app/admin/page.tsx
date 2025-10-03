@@ -50,6 +50,9 @@ function AdminDashboard({ userProfile, onLogout }: { userProfile: any, onLogout:
         const data = { isPremium: true };
 
         updateDoc(docRef, data)
+          .then(() => {
+              alert(`Premium status granted to ${username}.`);
+          })
           .catch(async (serverError) => {
             const permissionError = new FirestorePermissionError({
               path: docRef.path,
@@ -57,8 +60,8 @@ function AdminDashboard({ userProfile, onLogout }: { userProfile: any, onLogout:
               requestResourceData: data,
             });
             errorEmitter.emit('permission-error', permissionError);
+            alert(`Failed to grant premium: ${serverError.message}`);
           });
-        alert(`Premium status granted to ${username}. (If permissions allow)`);
     };
 
     const handleToggleMaintenance = async () => {
@@ -115,9 +118,8 @@ function AdminDashboard({ userProfile, onLogout }: { userProfile: any, onLogout:
 
 
 export default function AdminPage() {
-    const [user, setUser] = useState<any>(null);
-    const [userProfile, setUserProfile] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
+    const [loggedInAdminProfile, setLoggedInAdminProfile] = useState<any>(null);
+    const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState('login');
 
     const [loginForm, setLoginForm] = useState({ username: '', pass1: '', pass2: '' });
@@ -126,26 +128,6 @@ export default function AdminPage() {
     const [success, setSuccess] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
 
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-            if (currentUser) {
-                setUser(currentUser);
-                const userDoc = await getDoc(doc(db, "users", currentUser.uid));
-                if (userDoc.exists()) {
-                    const profileData = userDoc.data();
-                    const roles = Array.isArray(profileData.role) ? profileData.role : [];
-                    if (roles.includes('developer') || roles.includes('founder') || roles.includes('cto')) {
-                        setUserProfile({uid: userDoc.id, ...profileData});
-                    }
-                }
-            } else {
-                setUser(null);
-                setUserProfile(null);
-            }
-            setLoading(false);
-        });
-        return () => unsubscribe();
-    }, []);
     
     const handleOnboardChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setOnboardForm({ ...onboardForm, [e.target.name]: e.target.value });
@@ -179,37 +161,20 @@ export default function AdminPage() {
             }
 
             const userDoc = userQuerySnap.docs[0];
-            const isSelf = userDoc.id === auth.currentUser?.uid;
-            
-            // If the logged-in user is onboarding themselves, give them founder/cto/dev roles.
-            // Otherwise, just give 'developer'.
-            const rolesToSet: string[] = isSelf ? ['founder', 'cto', 'developer'] : ['developer'];
-            
+            const dataToUpdate = { role: ['developer'] };
             const docRef = doc(db, "users", userDoc.id);
-            const dataToUpdate = { role: rolesToSet };
             
-            updateDoc(docRef, dataToUpdate)
-              .then(() => {
-                setSuccess(`Success! ${onboardForm.username} has been granted developer roles.`);
-                setOnboardForm({ username: '', pass1: '', pass2: '' });
-                setIsProcessing(false);
-              })
-              .catch(async (serverError) => {
-                const permissionError = new FirestorePermissionError({
-                  path: docRef.path,
-                  operation: 'update',
-                  requestResourceData: dataToUpdate,
-                });
-                errorEmitter.emit('permission-error', permissionError);
-                setError("Permission denied. You might need to bootstrap your own admin role first.");
-                setIsProcessing(false);
-              });
+            await updateDoc(docRef, dataToUpdate);
 
+            setSuccess(`Success! ${onboardForm.username} has been granted the developer role.`);
+            setOnboardForm({ username: '', pass1: '', pass2: '' });
+            setLoggedInAdminProfile(userDoc.data()); // Log them in after successful onboarding
+            
         } catch (err: any) {
             console.error("Onboarding error:", err);
             setError(err.message);
-            setIsProcessing(false);
         }
+        setIsProcessing(false);
     };
     
     const handleLoginSubmit = async (e: React.FormEvent) => {
@@ -238,17 +203,12 @@ export default function AdminPage() {
              const userRoles = Array.isArray(userToLoginData.role) ? userToLoginData.role : [];
 
              if (!userRoles.includes('developer') && !userRoles.includes('founder') && !userRoles.includes('cto')) {
-                 setError("This account does not have developer privileges.");
+                 setError("This account does not have developer privileges. Use the 'New Hire' tab to grant the role.");
                  setIsProcessing(false);
                  return;
              }
              
-             if(auth.currentUser?.uid === userToLoginDoc.id) {
-                setUser(auth.currentUser);
-                setUserProfile({uid: userToLoginDoc.id, ...userToLoginData});
-             } else {
-                setError("Authentication mismatch. Please log in to FlixTrend with the developer account you're trying to access the admin panel with, and then try again.");
-             }
+             setLoggedInAdminProfile({uid: userToLoginDoc.id, ...userToLoginData});
 
         } catch (err: any) {
             setError(err.message);
@@ -260,8 +220,8 @@ export default function AdminPage() {
         return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
     }
 
-    if (user && userProfile) {
-        return <AdminDashboard userProfile={userProfile} onLogout={() => { setUser(null); setUserProfile(null); auth.signOut(); }} />;
+    if (loggedInAdminProfile) {
+        return <AdminDashboard userProfile={loggedInAdminProfile} onLogout={() => setLoggedInAdminProfile(null)} />;
     }
 
     return (
@@ -290,10 +250,11 @@ export default function AdminPage() {
 
                          {error && <p className="text-red-400 text-center text-sm">{error}</p>}
                          {success && <p className="text-green-400 text-center text-sm">{success}</p>}
-                         <button type="submit" className="btn-glass bg-accent-pink text-white mt-2" disabled={isProcessing}>{isProcessing ? "Onboarding..." : "Onboard Team Member"}</button>
+                         <button type="submit" className="btn-glass bg-accent-pink text-white mt-2" disabled={isProcessing}>{isProcessing ? "Onboarding..." : "Onboard & Grant Role"}</button>
                     </form>
                 )}
             </div>
         </div>
     );
 }
+

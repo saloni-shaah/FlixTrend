@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
@@ -53,71 +54,6 @@ const DropdownMenuItem = React.forwardRef<
 DropdownMenuItem.displayName = DropdownMenuPrimitive.Item.displayName
 // END: Copied DropdownMenu components
 
-// Helper to get all users and their follower counts
-const getAllUsersWithFollowerCounts = async () => {
-    const usersSnap = await getDocs(collection(db, "users"));
-    const users = usersSnap.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
-
-    const followerCounts = await Promise.all(users.map(async user => {
-        const followersSnap = await getDocs(collection(db, "users", user.uid, "followers"));
-        return { ...user, followerCount: followersSnap.size };
-    }));
-    
-    return followerCounts;
-}
-
-function ProfileBadge({ profile, allUsers }: { profile: any, allUsers: any[] }) {
-    if (!profile) return null;
-    
-    const userRoles = Array.isArray(profile.role) ? profile.role : [profile.role];
-    const isFounder = userRoles.includes('founder');
-    const isCto = userRoles.includes('cto');
-    const isDeveloper = userRoles.includes('developer');
-    const isCreator = profile.accountType === 'creator';
-    
-    const sortedUsers = [...allUsers].sort((a, b) => b.followerCount - a.followerCount);
-    const userRank = sortedUsers.findIndex(u => u.uid === profile.uid);
-
-    let rankBadge = null;
-    if (userRank === 0) {
-        rankBadge = { text: "Global Icon", color: "bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-500 text-black shadow-lg", icon: <Crown size={14} /> };
-    } else if (userRank === 1) {
-        rankBadge = { text: "Trendsetter", color: "bg-gradient-to-r from-gray-400 to-gray-200 text-black shadow-md", icon: <Zap size={14} /> };
-    } else if (userRank === 2) {
-        rankBadge = { text: "Rising Star", color: "bg-gradient-to-r from-yellow-600 to-amber-400 text-white shadow-md", icon: <Rocket size={14} /> };
-    }
-    
-    return (
-        <div className="flex items-center justify-center gap-2 mt-2 flex-wrap">
-             {isFounder && (
-                <div className="flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-gradient-to-r from-purple-600 to-blue-500 text-white shadow-md">
-                    <Award size={14}/> Founder
-                </div>
-            )}
-             {isCto && (
-                 <div className="flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-gradient-to-r from-blue-600 to-teal-500 text-white shadow-md">
-                    <ShieldCheck size={14}/> CTO
-                </div>
-            )}
-             {isDeveloper && !isFounder && !isCto && (
-                <div className="flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-gradient-to-r from-gray-700 to-gray-500 text-white shadow-md">
-                    <ShieldCheck size={14}/> FlixTrend Developer
-                </div>
-            )}
-            {isCreator && (
-                <div className="flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-gradient-to-r from-accent-purple to-accent-pink text-white shadow-md">
-                    <Mic size={14}/> Vibe Creator
-                </div>
-            )}
-            {rankBadge && (
-                <div className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full ${rankBadge.color}`}>
-                    {rankBadge.icon} {rankBadge.text}
-                </div>
-            )}
-        </div>
-    )
-}
-
 export default function UserProfilePage() {
   const params = useParams();
   const uid = typeof params?.uid === 'string' ? params.uid : Array.isArray(params?.uid) ? params.uid[0] : null;
@@ -131,15 +67,12 @@ export default function UserProfilePage() {
   const [starredPosts, setStarredPosts] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("posts");
   const [showFollowList, setShowFollowList] = useState<null | 'followers' | 'following'>(null);
-  const [allUsers, setAllUsers] = useState<any[]>([]);
 
 
   useEffect(() => {
     const unsub = auth.onAuthStateChanged((user) => {
       setFirebaseUser(user);
     });
-    // Fetch all users once for ranking
-    getAllUsersWithFollowerCounts().then(setAllUsers);
     return () => unsub();
   }, []);
 
@@ -229,8 +162,6 @@ export default function UserProfilePage() {
             )}
         </div>
         <p className="text-accent-cyan font-semibold mb-1 text-center">@{profile.username || "username"}</p>
-        
-        <ProfileBadge profile={profile} allUsers={allUsers} />
 
         {/* Stats */}
         <div className="flex justify-center gap-8 my-4 w-full">
@@ -314,3 +245,4 @@ export default function UserProfilePage() {
     </div>
   );
 }
+
