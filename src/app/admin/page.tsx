@@ -7,8 +7,8 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { motion } from 'framer-motion';
 import { ShieldCheck, UserPlus, KeyRound, LogIn, Trash2, Crown, EyeOff, Radio } from 'lucide-react';
 import { getFunctions, httpsCallable } from "firebase/functions";
-import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { errorEmitter } from '@/firebase/error-emitter';
 
 const db = getFirestore(app);
 const functions = getFunctions(app);
@@ -132,7 +132,6 @@ export default function AdminPage() {
                 const userDoc = await getDoc(doc(db, "users", currentUser.uid));
                 if (userDoc.exists()) {
                     const profileData = userDoc.data();
-                    // Ensure role is an array
                     const roles = Array.isArray(profileData.role) ? profileData.role : [];
                     if (roles.includes('developer') || roles.includes('founder') || roles.includes('cto')) {
                         setUser(currentUser);
@@ -177,18 +176,17 @@ export default function AdminPage() {
             }
 
             const userDoc = userQuerySnap.docs[0];
-            const userData = userDoc.data();
-            
-            const isFounder = userData.email === 'next181489111@gmail.com';
+            const isFounder = userDoc.data().email === 'next181489111@gmail.com';
             const rolesToSet: string[] = isFounder ? ['founder', 'cto'] : ['developer'];
 
             const docRef = doc(db, "users", userDoc.id);
             const dataToUpdate = { role: rolesToSet };
 
-            // Refactored updateDoc call with new error handling
+            // IMPORTANT: This only sets the role in Firestore.
+            // A Cloud Function is required to set the custom claim for `isAdmin()` to work.
             updateDoc(docRef, dataToUpdate)
               .then(() => {
-                setSuccess(`Success! ${onboardForm.username} has been onboarded as a developer.`);
+                setSuccess(`Success! ${onboardForm.username} has been granted developer roles in the database. A custom claim must be set via a Cloud Function for admin permissions to be active.`);
                 setOnboardForm({ username: '', pass1: '', pass2: '' });
                 setIsProcessing(false);
               })
@@ -199,8 +197,7 @@ export default function AdminPage() {
                   requestResourceData: dataToUpdate,
                 });
                 errorEmitter.emit('permission-error', permissionError);
-                // Also set a user-facing error message
-                setError("Permission denied. Ensure you have admin rights.");
+                setError("Permission denied. Ensure you are an admin and the rules are set correctly.");
                 setIsProcessing(false);
               });
 
