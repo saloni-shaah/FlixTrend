@@ -117,18 +117,16 @@ export default function AdminPage() {
     const [activeTab, setActiveTab] = useState('login');
 
     const [loginForm, setLoginForm] = useState({ username: '', pass1: '', pass2: '' });
-    const [onboardForm, setOnboardForm] = useState({ username: '', email: '', companyEmail: '', code: '', pass1: '', pass2: '' });
+    const [onboardForm, setOnboardForm] = useState({ username: '', email: '', pass1: '', pass2: '' });
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
-    const [showCodeField, setShowCodeField] = useState(false);
-
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser) {
                 const userDoc = await getDoc(doc(db, "users", currentUser.uid));
-                if (userDoc.exists() && (userDoc.data().role === 'developer' || userDoc.data().role === 'founder')) {
+                if (userDoc.exists() && (userDoc.data().role === 'developer' || userDoc.data().role === 'founder' || userDoc.data().role === 'cto')) {
                     setUser(currentUser);
                     setUserProfile(userDoc.data());
                 } else {
@@ -152,22 +150,6 @@ export default function AdminPage() {
         setLoginForm({ ...loginForm, [e.target.name]: e.target.value });
     };
     
-    const handleSendCode = async () => {
-        setError('');
-        // Temporarily removed validation to allow founder onboarding
-        // if (!onboardForm.companyEmail.endsWith('@flixtrend.com')) { 
-        //     setError('Please use a valid company email.');
-        //     return;
-        // }
-        // In a real app, this would trigger a backend function to send an email.
-        // For now, we'll just simulate it.
-        setIsProcessing(true);
-        await new Promise(res => setTimeout(res, 1000));
-        setSuccess('A verification code has been sent to your company email.');
-        setShowCodeField(true);
-        setIsProcessing(false);
-    };
-    
     const handleOnboardSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
@@ -182,26 +164,33 @@ export default function AdminPage() {
 
         try {
             const usersRef = collection(db, "users");
-            const q = query(usersRef, where("username", "==", onboardForm.username), where("email", "==", onboardForm.email));
+            const q = query(usersRef, where("username", "==", onboardForm.username));
             const userQuerySnap = await getDocs(q);
 
             if (userQuerySnap.empty) {
-                setError("No user found with that username and email combination.");
+                setError("No user found with that username.");
                 setIsProcessing(false);
                 return;
             }
 
-            const userToUpdateDoc = userQuerySnap.docs[0];
+            const userDoc = userQuerySnap.docs[0];
+            if (userDoc.data().email !== onboardForm.email) {
+                 setError("The email does not match the username provided.");
+                 setIsProcessing(false);
+                 return;
+            }
+
             const isFounder = onboardForm.email === 'next181489111@gmail.com';
             
-            await updateDoc(doc(db, "users", userToUpdateDoc.id), {
-                role: isFounder ? 'founder' : 'developer',
-                companyEmail: onboardForm.companyEmail,
+            const rolesToSet: string[] = isFounder ? ['founder', 'cto'] : ['developer'];
+
+            await updateDoc(doc(db, "users", userDoc.id), {
+                role: rolesToSet,
             });
             
-            setSuccess(`Success! ${onboardForm.username} has been onboarded as a ${isFounder ? 'founder' : 'developer'}.`);
-            setOnboardForm({ username: '', email: '', companyEmail: '', code: '', pass1: '', pass2: '' }); // Reset form
-            setShowCodeField(false);
+            setSuccess(`Success! ${onboardForm.username} has been onboarded.`);
+            setOnboardForm({ username: '', email: '', pass1: '', pass2: '' });
+
         } catch (err: any) {
             setError(err.message);
         }
@@ -230,7 +219,9 @@ export default function AdminPage() {
              }
 
              const userToLogin = userQuerySnap.docs[0].data();
-             if (userToLogin.role !== 'developer' && userToLogin.role !== 'founder') {
+             const userRoles = Array.isArray(userToLogin.role) ? userToLogin.role : [userToLogin.role];
+
+             if (!userRoles.includes('developer') && !userRoles.includes('founder') && !userRoles.includes('cto')) {
                  setError("This account does not have developer privileges.");
                  setIsProcessing(false);
                  return;
@@ -238,7 +229,7 @@ export default function AdminPage() {
              
              // This is a simulated login. In a real app, we'd re-auth with Firebase.
              setUserProfile(userToLogin);
-             setUser(auth.currentUser); // Assume they are already logged in via main app
+             setUser(auth.currentUser);
 
         } catch (err: any) {
             setError(err.message);
@@ -275,24 +266,13 @@ export default function AdminPage() {
                     <form onSubmit={handleOnboardSubmit} className="p-6 flex flex-col gap-4">
                          <h2 className="text-2xl font-headline font-bold text-accent-pink mb-2 text-center flex items-center justify-center gap-2"><UserPlus/> Onboard New Hire</h2>
                          <input name="username" placeholder="FlixTrend Username" className="input-glass" onChange={handleOnboardChange} value={onboardForm.username} />
-                         <input name="email" type="email" placeholder="FlixTrend Email" className="input-glass" onChange={handleOnboardChange} value={onboardForm.email} />
-                         
-                         {!showCodeField ? (
-                            <div className="flex gap-2">
-                                <input name="companyEmail" type="email" placeholder="Company or Personal Email" className="input-glass flex-1" onChange={handleOnboardChange} value={onboardForm.companyEmail} />
-                                <button type="button" className="btn-glass px-4" onClick={handleSendCode} disabled={isProcessing}>{isProcessing ? '...' : 'Send'}</button>
-                            </div>
-                         ) : (
-                             <>
-                                <input name="code" placeholder="Verification Code" className="input-glass" onChange={handleOnboardChange} value={onboardForm.code} />
-                                <input name="pass1" type="password" placeholder="Company Password 1" className="input-glass" onChange={handleOnboardChange} value={onboardForm.pass1} />
-                                <input name="pass2" type="password" placeholder="Company Password 2" className="input-glass" onChange={handleOnboardChange} value={onboardForm.pass2} />
-                             </>
-                         )}
+                         <input name="email" type="email" placeholder="Their FlixTrend Email" className="input-glass" onChange={handleOnboardChange} value={onboardForm.email} />
+                         <input name="pass1" type="password" placeholder="Company Password 1" className="input-glass" onChange={handleOnboardChange} value={onboardForm.pass1} />
+                         <input name="pass2" type="password" placeholder="Company Password 2" className="input-glass" onChange={handleOnboardChange} value={onboardForm.pass2} />
 
                          {error && <p className="text-red-400 text-center text-sm">{error}</p>}
                          {success && <p className="text-green-400 text-center text-sm">{success}</p>}
-                         <button type="submit" className="btn-glass bg-accent-pink text-white mt-2" disabled={isProcessing || !showCodeField}>{isProcessing ? "Onboarding..." : "Onboard Team Member"}</button>
+                         <button type="submit" className="btn-glass bg-accent-pink text-white mt-2" disabled={isProcessing}>{isProcessing ? "Onboarding..." : "Onboard Team Member"}</button>
                     </form>
                 )}
             </div>

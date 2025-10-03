@@ -69,9 +69,10 @@ const getAllUsersWithFollowerCounts = async () => {
 function ProfileBadge({ profile, allUsers }: { profile: any, allUsers: any[] }) {
     if (!profile) return null;
     
-    const isFounder = profile.email === 'next181489111@gmail.com';
-    const isDeveloper = profile.role === 'developer';
-
+    const userRoles = Array.isArray(profile.role) ? profile.role : [profile.role];
+    const isFounder = userRoles.includes('founder');
+    const isCto = userRoles.includes('cto');
+    const isDeveloper = userRoles.includes('developer');
     const isCreator = profile.accountType === 'creator';
     
     const sortedUsers = [...allUsers].sort((a, b) => b.followerCount - a.followerCount);
@@ -89,16 +90,16 @@ function ProfileBadge({ profile, allUsers }: { profile: any, allUsers: any[] }) 
     return (
         <div className="flex items-center justify-center gap-2 mt-2 flex-wrap">
              {isFounder && (
-                <>
-                    <div className="flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-gradient-to-r from-purple-600 to-blue-500 text-white shadow-md">
-                        <Award size={14}/> Founder
-                    </div>
-                     <div className="flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-gradient-to-r from-blue-600 to-teal-500 text-white shadow-md">
-                        <ShieldCheck size={14}/> CTO
-                    </div>
-                </>
+                <div className="flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-gradient-to-r from-purple-600 to-blue-500 text-white shadow-md">
+                    <Award size={14}/> Founder
+                </div>
             )}
-             {isDeveloper && !isFounder && (
+             {isCto && (
+                 <div className="flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-gradient-to-r from-blue-600 to-teal-500 text-white shadow-md">
+                    <ShieldCheck size={14}/> CTO
+                </div>
+            )}
+             {isDeveloper && !isFounder && !isCto && (
                 <div className="flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-gradient-to-r from-gray-700 to-gray-500 text-white shadow-md">
                     <ShieldCheck size={14}/> FlixTrend Developer
                 </div>
