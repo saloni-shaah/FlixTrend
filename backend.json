@@ -1,0 +1,67 @@
+
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Represents a user's public and private profile data.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "The unique ID of the user, matching their Firebase Auth UID."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The user's email address."
+        },
+        "username": {
+          "type": "string",
+          "description": "The user's public, unique username."
+        },
+        "name": {
+          "type": "string",
+          "description": "The user's full display name."
+        },
+        "bio": {
+          "type": "string",
+          "description": "A short user biography."
+        },
+        "avatar_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL for the user's profile picture."
+        },
+        "banner_url": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL for the user's profile banner image."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["user", "creator", "developer", "founder", "cto"],
+          "description": "The role of the user within the application."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of when the user account was created."
+        },
+        "isPremium": {
+          "type": "boolean",
+          "description": "Indicates if the user has a premium subscription."
+        }
+      },
+      "required": ["uid", "email", "username", "name", "createdAt"]
+    }
+  },
+  "auth": {
+    "providers": ["EMAIL_PASSWORD", "GOOGLE"]
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Stores all user profile documents."
+    }
+  }
+}
