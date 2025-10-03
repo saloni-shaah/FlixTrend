@@ -175,7 +175,10 @@ export default function AdminPage() {
             }
 
             const userDoc = userQuerySnap.docs[0];
-            if (userDoc.data().email.toLowerCase() !== onboardForm.email.toLowerCase()) {
+            const userData = userDoc.data();
+
+            // DEFINITIVE FIX: Check if userData.email exists before calling .toLowerCase()
+            if (!userData.email || userData.email.toLowerCase() !== onboardForm.email.toLowerCase()) {
                  setError("The email does not match the username provided.");
                  setIsProcessing(false);
                  return;
@@ -280,5 +283,3 @@ export default function AdminPage() {
         </div>
     );
 }
-
-    
