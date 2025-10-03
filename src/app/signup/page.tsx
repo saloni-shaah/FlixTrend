@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { auth, app } from "@/utils/firebaseClient";
 import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } from "firebase/auth";
-import { getFirestore, doc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { getFirestore, doc, setDoc, collection, query, where, getDocs, serverTimestamp } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, ArrowLeft, Camera, UploadCloud } from 'lucide-react';
