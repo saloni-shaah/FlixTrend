@@ -127,9 +127,16 @@ export default function AdminPage() {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser) {
                 const userDoc = await getDoc(doc(db, "users", currentUser.uid));
-                if (userDoc.exists() && (userDoc.data().role === 'developer' || userDoc.data().role === 'founder' || userDoc.data().role === 'cto')) {
-                    setUser(currentUser);
-                    setUserProfile(userDoc.data());
+                if (userDoc.exists()) {
+                    const profileData = userDoc.data();
+                    const roles = Array.isArray(profileData.role) ? profileData.role : [profileData.role].filter(Boolean);
+                    if (roles.includes('developer') || roles.includes('founder') || roles.includes('cto')) {
+                        setUser(currentUser);
+                        setUserProfile(profileData);
+                    } else {
+                        setUser(null);
+                        setUserProfile(null);
+                    }
                 } else {
                     setUser(null);
                     setUserProfile(null);
@@ -164,12 +171,13 @@ export default function AdminPage() {
         }
 
         try {
+            // Find user by EMAIL to verify they have an account
             const usersRef = collection(db, "users");
-            const q = query(usersRef, where("username", "==", onboardForm.username));
+            const q = query(usersRef, where("email", "==", onboardForm.email.toLowerCase()));
             const userQuerySnap = await getDocs(q);
 
             if (userQuerySnap.empty) {
-                setError("No user found with that username.");
+                setError("No user found with that email address. The person must have a FlixTrend account first.");
                 setIsProcessing(false);
                 return;
             }
@@ -177,9 +185,9 @@ export default function AdminPage() {
             const userDoc = userQuerySnap.docs[0];
             const userData = userDoc.data();
 
-            // DEFINITIVE FIX: Check if userData.email exists before calling .toLowerCase()
-            if (!userData.email || userData.email.toLowerCase() !== onboardForm.email.toLowerCase()) {
-                 setError("The email does not match the username provided.");
+            // Then, check if the username they provided matches the found user's username
+            if (userData.username.toLowerCase() !== onboardForm.username.toLowerCase()) {
+                 setError("The username provided does not match the account for that email.");
                  setIsProcessing(false);
                  return;
             }
@@ -233,7 +241,13 @@ export default function AdminPage() {
              
              // This is a simulated login. In a real app, we'd re-auth with Firebase.
              setUserProfile(userToLogin);
-             setUser(auth.currentUser);
+             // Ensure the main `user` state is also set if the current Firebase user matches.
+             if(auth.currentUser?.uid === userToLogin.uid) {
+                setUser(auth.currentUser);
+             } else {
+                // This case shouldn't happen if the user is already logged into FlixTrend
+                setError("There was a mismatch with the logged-in user. Please log in to FlixTrend with your developer account and try again.");
+             }
 
         } catch (err: any) {
             setError(err.message);
@@ -260,7 +274,7 @@ export default function AdminPage() {
                 {activeTab === 'login' ? (
                      <form onSubmit={handleLoginSubmit} className="p-6 flex flex-col gap-4">
                         <h2 className="text-2xl font-headline font-bold text-accent-cyan mb-2 text-center flex items-center justify-center gap-2"><LogIn/> Developer Login</h2>
-                        <input name="username" placeholder="FlixTrend Username" className="input-glass" onChange={handleLoginChange} value={loginForm.username} />
+                        <input name="username" placeholder="Your FlixTrend Username" className="input-glass" onChange={handleLoginChange} value={loginForm.username} />
                         <input name="pass1" type="password" placeholder="Company Password 1" className="input-glass" onChange={handleLoginChange} value={loginForm.pass1} />
                         <input name="pass2" type="password" placeholder="Company Password 2" className="input-glass" onChange={handleLoginChange} value={loginForm.pass2} />
                          {error && <p className="text-red-400 text-center text-sm">{error}</p>}
@@ -269,10 +283,10 @@ export default function AdminPage() {
                 ) : (
                     <form onSubmit={handleOnboardSubmit} className="p-6 flex flex-col gap-4">
                          <h2 className="text-2xl font-headline font-bold text-accent-pink mb-2 text-center flex items-center justify-center gap-2"><UserPlus/> Onboard New Hire</h2>
-                         <input name="username" placeholder="FlixTrend Username" className="input-glass" onChange={handleOnboardChange} value={onboardForm.username} />
-                         <input name="email" type="email" placeholder="Their FlixTrend Email" className="input-glass" onChange={handleOnboardChange} value={onboardForm.email} />
-                         <input name="pass1" type="password" placeholder="Company Password 1" className="input-glass" onChange={handleOnboardChange} value={onboardForm.pass1} />
-                         <input name="pass2" type="password" placeholder="Company Password 2" className="input-glass" onChange={handleOnboardChange} value={onboardForm.pass2} />
+                         <input name="username" placeholder="Their FlixTrend Username" className="input-glass" onChange={handleOnboardChange} value={onboardForm.username} required />
+                         <input name="email" type="email" placeholder="Their FlixTrend Email" className="input-glass" onChange={handleOnboardChange} value={onboardForm.email} required />
+                         <input name="pass1" type="password" placeholder="Company Password 1" className="input-glass" onChange={handleOnboardChange} value={onboardForm.pass1} required />
+                         <input name="pass2" type="password" placeholder="Company Password 2" className="input-glass" onChange={handleOnboardChange} value={onboardForm.pass2} required />
 
                          {error && <p className="text-red-400 text-center text-sm">{error}</p>}
                          {success && <p className="text-green-400 text-center text-sm">{success}</p>}
