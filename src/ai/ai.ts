@@ -16,8 +16,8 @@ export const ai = genkit({
     }),
   ],
   // Set a default model for all generate calls.
-  // Updated to gemini-1.5-flash for cost-effectiveness and speed.
-  model: 'googleai/gemini-1.5-flash',
+  // Updated to gemini-2.5-flash-preview as requested.
+  model: 'googleai/gemini-2.5-flash-preview',
   // Enable tracing to monitor the performance and behavior of AI flows in production.
   enableTracing: true,
 });
