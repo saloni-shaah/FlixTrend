@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { getFirestore, collection, query, onSnapshot, orderBy, addDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "@/utils/firebaseClient";
-import { Send, Bot, User, UploadCloud } from "lucide-react";
+import { Send, Bot, User, UploadCloud, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getAlmightyResponse, remixImageAction } from "@/app/actions";
 import './Chat.css';
@@ -172,9 +172,11 @@ export function Chat() {
                     message: textToSend,
                     context: currentContext,
                 });
+
                 if (!response) {
                     throw new Error("The AI service returned an unexpected error.");
                 }
+                
                 if (response.success?.response) {
                     const assistantMessage = {
                         sender: 'almighty-bot',
