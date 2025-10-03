@@ -178,7 +178,7 @@ export default function LandingPage() {
                  <span className="text-gray-600">|</span>
                  <Link href="/premium" className="text-lg font-semibold hover:text-accent-pink transition-colors">Premium</Link>
                  <span className="text-gray-600">|</span>
-                 <Link href="#" className="text-lg font-semibold hover:text-accent-pink transition-colors">We're Hiring</Link>
+                 <Link href="/hiring" className="text-lg font-semibold hover:text-accent-pink transition-colors">We're Hiring</Link>
                  <span className="text-gray-600">|</span>
                  <Link href="/about" className="text-lg font-semibold hover:text-accent-pink transition-colors">About FlixTrend</Link>
             </div>

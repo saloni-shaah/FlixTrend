@@ -478,3 +478,247 @@
 [debug] [2025-10-03T10:36:34.318Z] > authorizing via signed-in user (flixtreend@gmail.com)
 [debug] [2025-10-03T10:36:34.407Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/ 200
 [debug] [2025-10-03T10:36:34.407Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/ [omitted]
+[error] Failed to fetch Firebase Project from Studio Workspace because WORKSPACE_SLUG environment variable is empty
+[error] Failed to fetch Firebase Project from Studio Workspace because WORKSPACE_SLUG environment variable is empty
+[debug] [2025-10-03T12:04:01.153Z] Checked if tokens are valid: false, expires at: 1759491392049
+[debug] [2025-10-03T12:04:01.160Z] Checked if tokens are valid: false, expires at: 1759491392049
+[debug] [2025-10-03T12:04:01.161Z] > refreshing access token with scopes: []
+[debug] [2025-10-03T12:04:01.181Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-10-03T12:04:01.182Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T12:04:01.524Z] Checked if tokens are valid: false, expires at: 1759491392049
+[debug] [2025-10-03T12:04:01.525Z] Checked if tokens are valid: false, expires at: 1759491392049
+[debug] [2025-10-03T12:04:01.525Z] > refreshing access token with scopes: []
+[debug] [2025-10-03T12:04:01.533Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-10-03T12:04:01.533Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T12:04:01.554Z] Checked if tokens are valid: false, expires at: 1759491392049
+[debug] [2025-10-03T12:04:01.555Z] Checked if tokens are valid: false, expires at: 1759491392049
+[debug] [2025-10-03T12:04:01.561Z] > refreshing access token with scopes: []
+[debug] [2025-10-03T12:04:01.578Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-10-03T12:04:01.579Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T12:04:01.598Z] Checked if tokens are valid: false, expires at: 1759491392049
+[debug] [2025-10-03T12:04:01.604Z] Checked if tokens are valid: false, expires at: 1759491392049
+[debug] [2025-10-03T12:04:01.605Z] > refreshing access token with scopes: []
+[debug] [2025-10-03T12:04:01.605Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-10-03T12:04:01.606Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T12:04:01.616Z] Checked if tokens are valid: false, expires at: 1759491392049
+[debug] [2025-10-03T12:04:01.618Z] Checked if tokens are valid: false, expires at: 1759491392049
+[debug] [2025-10-03T12:04:01.618Z] > refreshing access token with scopes: []
+[debug] [2025-10-03T12:04:01.619Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-10-03T12:04:01.623Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[error] Failed to fetch Firebase Project from Studio Workspace because WORKSPACE_SLUG environment variable is empty
+[error] Failed to fetch Firebase Project from Studio Workspace because WORKSPACE_SLUG environment variable is empty
+[debug] [2025-10-03T12:04:02.070Z] Checked if tokens are valid: false, expires at: 1759491392049
+[debug] [2025-10-03T12:04:02.070Z] Checked if tokens are valid: false, expires at: 1759491392049
+[debug] [2025-10-03T12:04:02.070Z] > refreshing access token with scopes: []
+[debug] [2025-10-03T12:04:02.071Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-10-03T12:04:02.071Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T12:04:02.075Z] Checked if tokens are valid: false, expires at: 1759491392049
+[debug] [2025-10-03T12:04:02.075Z] Checked if tokens are valid: false, expires at: 1759491392049
+[debug] [2025-10-03T12:04:02.075Z] > refreshing access token with scopes: []
+[debug] [2025-10-03T12:04:02.076Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-10-03T12:04:02.076Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T12:04:02.078Z] Checked if tokens are valid: false, expires at: 1759491392049
+[debug] [2025-10-03T12:04:02.078Z] Checked if tokens are valid: false, expires at: 1759491392049
+[debug] [2025-10-03T12:04:02.078Z] > refreshing access token with scopes: []
+[debug] [2025-10-03T12:04:02.079Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-10-03T12:04:02.079Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T12:04:02.080Z] Checked if tokens are valid: false, expires at: 1759491392049
+[debug] [2025-10-03T12:04:02.088Z] Checked if tokens are valid: false, expires at: 1759491392049
+[debug] [2025-10-03T12:04:02.088Z] > refreshing access token with scopes: []
+[debug] [2025-10-03T12:04:02.089Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-10-03T12:04:02.089Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T12:04:02.092Z] Checked if tokens are valid: false, expires at: 1759491392049
+[debug] [2025-10-03T12:04:02.092Z] Checked if tokens are valid: false, expires at: 1759491392049
+[debug] [2025-10-03T12:04:02.093Z] > refreshing access token with scopes: []
+[debug] [2025-10-03T12:04:02.093Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-10-03T12:04:02.094Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T12:04:02.126Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-10-03T12:04:02.127Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T12:04:02.149Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebasedataconnect.googleapis.com [none]
+[debug] [2025-10-03T12:04:02.149Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebasedataconnect.googleapis.com x-goog-quota-user=projects/direct-hope-473110-r0
+[debug] [2025-10-03T12:04:02.226Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-10-03T12:04:02.226Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T12:04:02.254Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebaseio.com [none]
+[debug] [2025-10-03T12:04:02.254Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebaseio.com x-goog-quota-user=projects/direct-hope-473110-r0
+[debug] [2025-10-03T12:04:02.275Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-10-03T12:04:02.276Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T12:04:02.295Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebaseapphosting.googleapis.com [none]
+[debug] [2025-10-03T12:04:02.297Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebaseapphosting.googleapis.com x-goog-quota-user=projects/direct-hope-473110-r0
+[debug] [2025-10-03T12:04:02.306Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-10-03T12:04:02.306Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T12:04:02.324Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebaseapphosting.googleapis.com [none]
+[debug] [2025-10-03T12:04:02.326Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebaseapphosting.googleapis.com x-goog-quota-user=projects/direct-hope-473110-r0
+[debug] [2025-10-03T12:04:02.337Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-10-03T12:04:02.338Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T12:04:02.356Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebasecrashlytics.googleapis.com [none]
+[debug] [2025-10-03T12:04:02.358Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebasecrashlytics.googleapis.com x-goog-quota-user=projects/direct-hope-473110-r0
+[debug] [2025-10-03T12:04:02.394Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-10-03T12:04:02.395Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T12:04:02.420Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/ [none]
+[debug] [2025-10-03T12:04:02.421Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/ x-goog-quota-user=projects/direct-hope-473110-r0
+[debug] [2025-10-03T12:04:02.544Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-10-03T12:04:02.544Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T12:04:02.570Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/ [none]
+[debug] [2025-10-03T12:04:02.571Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/ x-goog-quota-user=projects/direct-hope-473110-r0
+[debug] [2025-10-03T12:04:02.611Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-10-03T12:04:02.617Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T12:04:02.638Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebasecrashlytics.googleapis.com [none]
+[debug] [2025-10-03T12:04:02.640Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebasecrashlytics.googleapis.com x-goog-quota-user=projects/direct-hope-473110-r0
+[debug] [2025-10-03T12:04:02.706Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-10-03T12:04:02.707Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T12:04:02.735Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebaseio.com [none]
+[debug] [2025-10-03T12:04:02.735Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebaseio.com x-goog-quota-user=projects/direct-hope-473110-r0
+[debug] [2025-10-03T12:04:02.788Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-10-03T12:04:02.793Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T12:04:02.812Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebasedataconnect.googleapis.com [none]
+[debug] [2025-10-03T12:04:02.813Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebasedataconnect.googleapis.com x-goog-quota-user=projects/direct-hope-473110-r0
+[debug] [2025-10-03T12:04:03.283Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebasedataconnect.googleapis.com 200
+[debug] [2025-10-03T12:04:03.283Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebasedataconnect.googleapis.com [omitted]
+[debug] [2025-10-03T12:04:03.361Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebaseio.com 403
+[debug] [2025-10-03T12:04:03.362Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebaseio.com [omitted]
+[debug] [2025-10-03T12:04:03.510Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebasecrashlytics.googleapis.com 200
+[debug] [2025-10-03T12:04:03.510Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebasecrashlytics.googleapis.com [omitted]
+[debug] [2025-10-03T12:04:03.537Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebaseapphosting.googleapis.com 200
+[debug] [2025-10-03T12:04:03.543Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebaseapphosting.googleapis.com [omitted]
+[debug] [2025-10-03T12:04:03.578Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebaseapphosting.googleapis.com 200
+[debug] [2025-10-03T12:04:03.578Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebaseapphosting.googleapis.com [omitted]
+[debug] [2025-10-03T12:04:03.782Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebasecrashlytics.googleapis.com 200
+[debug] [2025-10-03T12:04:03.783Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebasecrashlytics.googleapis.com [omitted]
+[debug] [2025-10-03T12:04:03.820Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebaseio.com 403
+[debug] [2025-10-03T12:04:03.820Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebaseio.com [omitted]
+[debug] [2025-10-03T12:04:03.898Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebasedataconnect.googleapis.com 200
+[debug] [2025-10-03T12:04:03.899Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebasedataconnect.googleapis.com [omitted]
+[debug] [2025-10-03T12:04:03.928Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/ 200
+[debug] [2025-10-03T12:04:03.931Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/ [omitted]
+[error] Failed to fetch Firebase Project from Studio Workspace because WORKSPACE_SLUG environment variable is empty
+[error] Failed to fetch Firebase Project from Studio Workspace because WORKSPACE_SLUG environment variable is empty
+[debug] [2025-10-03T12:04:03.958Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform","https://www.googleapis.com/auth/userinfo.email"]
+[debug] [2025-10-03T12:04:03.960Z] > authorizing via signed-in user (flixtreend@gmail.com)
+[error] Failed to fetch Firebase Project from Studio Workspace because WORKSPACE_SLUG environment variable is empty
+[error] Failed to fetch Firebase Project from Studio Workspace because WORKSPACE_SLUG environment variable is empty
+[debug] [2025-10-03T12:04:04.014Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform","https://www.googleapis.com/auth/userinfo.email"]
+[debug] [2025-10-03T12:04:04.015Z] > authorizing via signed-in user (flixtreend@gmail.com)
+[error] Failed to fetch Firebase Project from Studio Workspace because WORKSPACE_SLUG environment variable is empty
+[error] Failed to fetch Firebase Project from Studio Workspace because WORKSPACE_SLUG environment variable is empty
+[debug] [2025-10-03T12:04:04.031Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform","https://www.googleapis.com/auth/userinfo.email"]
+[debug] [2025-10-03T12:04:04.032Z] > authorizing via signed-in user (flixtreend@gmail.com)
+[debug] [2025-10-03T12:04:04.057Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/ 200
+[debug] [2025-10-03T12:04:04.063Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/ [omitted]
+[error] Failed to fetch Firebase Project from Studio Workspace because WORKSPACE_SLUG environment variable is empty
+[error] Failed to fetch Firebase Project from Studio Workspace because WORKSPACE_SLUG environment variable is empty
+[debug] [2025-10-03T14:18:34.078Z] Checked if tokens are valid: false, expires at: 1759496641793
+[debug] [2025-10-03T14:18:34.079Z] Checked if tokens are valid: false, expires at: 1759496641793
+[debug] [2025-10-03T14:18:34.079Z] > refreshing access token with scopes: []
+[debug] [2025-10-03T14:18:34.082Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-10-03T14:18:34.083Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T14:18:34.153Z] Checked if tokens are valid: false, expires at: 1759496641793
+[debug] [2025-10-03T14:18:34.153Z] Checked if tokens are valid: false, expires at: 1759496641793
+[debug] [2025-10-03T14:18:34.154Z] > refreshing access token with scopes: []
+[debug] [2025-10-03T14:18:34.154Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-10-03T14:18:34.155Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T14:18:34.158Z] Checked if tokens are valid: false, expires at: 1759496641793
+[debug] [2025-10-03T14:18:34.159Z] Checked if tokens are valid: false, expires at: 1759496641793
+[debug] [2025-10-03T14:18:34.159Z] > refreshing access token with scopes: []
+[debug] [2025-10-03T14:18:34.160Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-10-03T14:18:34.160Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T14:18:34.162Z] Checked if tokens are valid: false, expires at: 1759496641793
+[debug] [2025-10-03T14:18:34.162Z] Checked if tokens are valid: false, expires at: 1759496641793
+[debug] [2025-10-03T14:18:34.163Z] > refreshing access token with scopes: []
+[debug] [2025-10-03T14:18:34.163Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-10-03T14:18:34.163Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T14:18:34.166Z] Checked if tokens are valid: false, expires at: 1759496641793
+[debug] [2025-10-03T14:18:34.166Z] Checked if tokens are valid: false, expires at: 1759496641793
+[debug] [2025-10-03T14:18:34.166Z] > refreshing access token with scopes: []
+[debug] [2025-10-03T14:18:34.167Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-10-03T14:18:34.167Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[error] Failed to fetch Firebase Project from Studio Workspace because WORKSPACE_SLUG environment variable is empty
+[error] Failed to fetch Firebase Project from Studio Workspace because WORKSPACE_SLUG environment variable is empty
+[debug] [2025-10-03T14:18:34.227Z] Checked if tokens are valid: false, expires at: 1759496641793
+[debug] [2025-10-03T14:18:34.228Z] Checked if tokens are valid: false, expires at: 1759496641793
+[debug] [2025-10-03T14:18:34.228Z] > refreshing access token with scopes: []
+[debug] [2025-10-03T14:18:34.228Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-10-03T14:18:34.229Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T14:18:34.231Z] Checked if tokens are valid: false, expires at: 1759496641793
+[debug] [2025-10-03T14:18:34.231Z] Checked if tokens are valid: false, expires at: 1759496641793
+[debug] [2025-10-03T14:18:34.232Z] > refreshing access token with scopes: []
+[debug] [2025-10-03T14:18:34.232Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-10-03T14:18:34.232Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T14:18:34.235Z] Checked if tokens are valid: false, expires at: 1759496641793
+[debug] [2025-10-03T14:18:34.235Z] Checked if tokens are valid: false, expires at: 1759496641793
+[debug] [2025-10-03T14:18:34.235Z] > refreshing access token with scopes: []
+[debug] [2025-10-03T14:18:34.235Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-10-03T14:18:34.236Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T14:18:34.238Z] Checked if tokens are valid: false, expires at: 1759496641793
+[debug] [2025-10-03T14:18:34.238Z] Checked if tokens are valid: false, expires at: 1759496641793
+[debug] [2025-10-03T14:18:34.238Z] > refreshing access token with scopes: []
+[debug] [2025-10-03T14:18:34.238Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-10-03T14:18:34.238Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T14:18:34.241Z] Checked if tokens are valid: false, expires at: 1759496641793
+[debug] [2025-10-03T14:18:34.241Z] Checked if tokens are valid: false, expires at: 1759496641793
+[debug] [2025-10-03T14:18:34.241Z] > refreshing access token with scopes: []
+[debug] [2025-10-03T14:18:34.242Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-10-03T14:18:34.242Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T14:18:34.294Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-10-03T14:18:34.294Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T14:18:34.381Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebasedataconnect.googleapis.com [none]
+[debug] [2025-10-03T14:18:34.382Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebasedataconnect.googleapis.com x-goog-quota-user=projects/direct-hope-473110-r0
+[debug] [2025-10-03T14:18:34.386Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-10-03T14:18:34.386Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T14:18:34.487Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebasecrashlytics.googleapis.com [none]
+[debug] [2025-10-03T14:18:34.487Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebasecrashlytics.googleapis.com x-goog-quota-user=projects/direct-hope-473110-r0
+[debug] [2025-10-03T14:18:34.491Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-10-03T14:18:34.491Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T14:18:34.577Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebaseapphosting.googleapis.com [none]
+[debug] [2025-10-03T14:18:34.577Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebaseapphosting.googleapis.com x-goog-quota-user=projects/direct-hope-473110-r0
+[debug] [2025-10-03T14:18:34.595Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-10-03T14:18:34.595Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T14:18:34.661Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/ [none]
+[debug] [2025-10-03T14:18:34.662Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/ x-goog-quota-user=projects/direct-hope-473110-r0
+[debug] [2025-10-03T14:18:34.667Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-10-03T14:18:34.668Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T14:18:34.733Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/ [none]
+[debug] [2025-10-03T14:18:34.734Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/ x-goog-quota-user=projects/direct-hope-473110-r0
+[debug] [2025-10-03T14:18:34.753Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-10-03T14:18:34.753Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T14:18:34.836Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebaseio.com [none]
+[debug] [2025-10-03T14:18:34.836Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebaseio.com x-goog-quota-user=projects/direct-hope-473110-r0
+[debug] [2025-10-03T14:18:34.851Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-10-03T14:18:34.852Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T14:18:34.897Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebaseio.com [none]
+[debug] [2025-10-03T14:18:34.897Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebaseio.com x-goog-quota-user=projects/direct-hope-473110-r0
+[debug] [2025-10-03T14:18:34.909Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-10-03T14:18:34.909Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T14:18:34.926Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebasecrashlytics.googleapis.com [none]
+[debug] [2025-10-03T14:18:34.926Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebasecrashlytics.googleapis.com x-goog-quota-user=projects/direct-hope-473110-r0
+[debug] [2025-10-03T14:18:34.936Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-10-03T14:18:34.936Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T14:18:34.990Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebasedataconnect.googleapis.com [none]
+[debug] [2025-10-03T14:18:34.991Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebasedataconnect.googleapis.com x-goog-quota-user=projects/direct-hope-473110-r0
+[debug] [2025-10-03T14:18:34.993Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-10-03T14:18:34.993Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-10-03T14:18:35.011Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebaseapphosting.googleapis.com [none]
+[debug] [2025-10-03T14:18:35.012Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebaseapphosting.googleapis.com x-goog-quota-user=projects/direct-hope-473110-r0
+[debug] [2025-10-03T14:18:35.789Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebaseapphosting.googleapis.com 200
+[debug] [2025-10-03T14:18:35.789Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebaseapphosting.googleapis.com [omitted]
+[debug] [2025-10-03T14:18:35.790Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebasedataconnect.googleapis.com 200
+[debug] [2025-10-03T14:18:35.790Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebasedataconnect.googleapis.com [omitted]
+[debug] [2025-10-03T14:18:35.796Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebasecrashlytics.googleapis.com 200
+[debug] [2025-10-03T14:18:35.796Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebasecrashlytics.googleapis.com [omitted]
+[debug] [2025-10-03T14:18:35.887Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebaseio.com 403
+[debug] [2025-10-03T14:18:35.887Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebaseio.com [omitted]
+[debug] [2025-10-03T14:18:35.912Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebaseio.com 403
+[debug] [2025-10-03T14:18:35.912Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebaseio.com [omitted]
+[debug] [2025-10-03T14:18:36.033Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebasecrashlytics.googleapis.com 200
+[debug] [2025-10-03T14:18:36.033Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebasecrashlytics.googleapis.com [omitted]
+[debug] [2025-10-03T14:18:36.059Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebasedataconnect.googleapis.com 200
+[debug] [2025-10-03T14:18:36.059Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebasedataconnect.googleapis.com [omitted]
+[debug] [2025-10-03T14:18:36.063Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebaseapphosting.googleapis.com 200
+[debug] [2025-10-03T14:18:36.064Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/firebaseapphosting.googleapis.com [omitted]
+[debug] [2025-10-03T14:18:36.244Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/ 200
+[debug] [2025-10-03T14:18:36.245Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/ [omitted]
+[debug] [2025-10-03T14:18:36.427Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/ 200
+[debug] [2025-10-03T14:18:36.427Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/direct-hope-473110-r0/services/ [omitted]
+[error] Failed to fetch Firebase Project from Studio Workspace because WORKSPACE_SLUG environment variable is empty
+[error] Failed to fetch Firebase Project from Studio Workspace because WORKSPACE_SLUG environment variable is empty
+[debug] [2025-10-03T14:18:36.432Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform","https://www.googleapis.com/auth/userinfo.email"]
+[debug] [2025-10-03T14:18:36.432Z] > authorizing via signed-in user (flixtreend@gmail.com)
