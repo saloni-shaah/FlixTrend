@@ -1,15 +1,29 @@
 
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { products } from '@/lib/products';
 import { ProductCard } from '@/components/store/ProductCard';
 import { CheckoutForm } from '@/components/store/CheckoutForm';
-import { ShoppingBag } from 'lucide-react';
+import { ShoppingBag, Loader } from 'lucide-react';
+import { getFirestore, collection, query, onSnapshot, orderBy } from 'firebase/firestore';
+import { app } from '@/utils/firebaseClient';
+
+const db = getFirestore(app);
 
 export default function StorePage() {
+    const [products, setProducts] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
     const [selectedProduct, setSelectedProduct] = useState<any>(null);
     const [orderComplete, setOrderComplete] = useState(false);
+
+    useEffect(() => {
+        const q = query(collection(db, "products"), orderBy("createdAt", "desc"));
+        const unsub = onSnapshot(q, (snapshot) => {
+            setProducts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            setLoading(false);
+        });
+        return () => unsub();
+    }, []);
 
     const handleSelectProduct = (product: any) => {
         setSelectedProduct(product);
@@ -65,11 +79,17 @@ export default function StorePage() {
                                 <p className="text-sm">Thank you for your purchase. A confirmation has been sent to your email.</p>
                             </motion.div>
                         )}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                            {products.map(product => (
-                                <ProductCard key={product.id} product={product} onBuyNow={handleSelectProduct} />
-                            ))}
-                        </div>
+                        {loading ? (
+                            <div className="flex justify-center items-center h-64">
+                                <Loader className="animate-spin text-accent-cyan" size={48} />
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                                {products.map(product => (
+                                    <ProductCard key={product.id} product={product} onBuyNow={handleSelectProduct} />
+                                ))}
+                            </div>
+                        )}
                     </motion.div>
                 )}
             </AnimatePresence>
