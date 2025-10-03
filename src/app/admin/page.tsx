@@ -164,7 +164,7 @@ export default function AdminPage() {
 
         try {
             const usersRef = collection(db, "users");
-            const q = query(usersRef, where("username", "==", onboardForm.username));
+            const q = query(usersRef, where("username", "==", onboardForm.username.toLowerCase()));
             const userQuerySnap = await getDocs(q);
 
             if (userQuerySnap.empty) {
@@ -174,13 +174,14 @@ export default function AdminPage() {
             }
 
             const userDoc = userQuerySnap.docs[0];
-            if (userDoc.data().email !== onboardForm.email) {
+            // CORRECTED: Make comparison case-insensitive
+            if (userDoc.data().email.toLowerCase() !== onboardForm.email.toLowerCase()) {
                  setError("The email does not match the username provided.");
                  setIsProcessing(false);
                  return;
             }
 
-            const isFounder = onboardForm.email === 'next181489111@gmail.com';
+            const isFounder = onboardForm.email.toLowerCase() === 'next181489111@gmail.com';
             
             const rolesToSet: string[] = isFounder ? ['founder', 'cto'] : ['developer'];
 
@@ -209,7 +210,7 @@ export default function AdminPage() {
         
         try {
              const usersRef = collection(db, "users");
-             const q = query(usersRef, where("username", "==", loginForm.username));
+             const q = query(usersRef, where("username", "==", loginForm.username.toLowerCase()));
              const userQuerySnap = await getDocs(q);
 
              if (userQuerySnap.empty) {
