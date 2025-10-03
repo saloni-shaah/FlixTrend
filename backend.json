@@ -59,13 +59,7 @@
     }
   },
   "auth": {
-    "providers": ["EMAIL_PASSWORD", "GOOGLE"],
-    "customClaims": {
-      "admin": {
-        "type": "boolean",
-        "description": "Grants administrative privileges across the application."
-      }
-    }
+    "providers": ["EMAIL_PASSWORD", "GOOGLE"]
   },
   "firestore": {
     "/users/{userId}": {

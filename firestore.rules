@@ -1,28 +1,82 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // A user's role is stored in their auth token as a custom claim.
-    // This function checks if the user has the 'admin' claim set to true.
-    function isAdmin() {
-      return request.auth.token.admin == true;
+    // --- Helper Functions ---
+    function isOwner(userId) {
+      return request.auth.uid == userId;
     }
 
-    match /users/{userId} {
-      // Anyone can read public user profiles.
-      allow read: if true;
-
-      // Users can only create or update their own profile.
-      // They cannot grant themselves a role.
-      allow create, update: if request.auth.uid == userId && !('role' in request.resource.data);
-
-      // An admin can update the 'role' field of any user.
-      // This is the rule that will allow your admin page to function.
-      allow update (role): if isAdmin();
+    // This is the key: Check the requesting user's EXISTING document in the database
+    // for an admin-level role. This is more secure than checking incoming data.
+    function isExistingAdmin() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['founder', 'cto', 'developer']);
     }
     
-    match /{document=**} {
-        allow read, write: if false;
+    match /users/{userId} {
+      // Anyone logged in can view user profiles.
+      allow read: if request.auth != null;
+      
+      // A user can create their own profile.
+      allow create: if isOwner(userId);
+
+      // A user can update their own profile, BUT they cannot change their own 'role'.
+      allow update: if isOwner(userId) && !('role' in request.resource.data);
+
+      // --- The Definitive Fix ---
+      // An existing admin is allowed to update the 'role' field of ANY user.
+      // This rule is specific and secure.
+      allow update: if isExistingAdmin() && request.resource.data.keys().hasOnly(['role']);
+    }
+
+    // Rules for other collections
+    match /posts/{postId} {
+      allow read: if true;
+      allow create, update, delete: if isOwner(request.resource.data.userId);
+
+      match /{allChildren=**} {
+        allow read, write: if request.auth != null;
+      }
+    }
+
+    match /flashes/{flashId} {
+      allow read: if true;
+      allow create, delete: if isOwner(request.resource.data.userId);
+    }
+    
+    match /groups/{groupId} {
+        allow read: if request.auth != null && resource.data.members.hasAny([request.auth.uid]);
+        allow create: if request.auth != null;
+        allow update: if request.auth != null && resource.data.admins.hasAny([request.auth.uid]);
+        allow delete: if request.auth != null && resource.data.admins.hasAny([request.auth.uid]);
+    }
+
+    match /chats/{chatId}/{messageId} {
+        // More complex logic would be needed here for group chats vs DMs
+        allow read, write: if request.auth != null;
+    }
+
+    match /notifications/{userId}/{allChildren=**} {
+      allow read, write: if isOwner(userId);
+    }
+
+    match /playlists/{playlistId} {
+        allow read, write: if isOwner(resource.data.ownerId);
+    }
+
+    match /collections/{collectionId} {
+        allow read, write: if isOwner(resource.data.ownerId);
+    }
+
+    match /songs/{songId} {
+        allow read: if true;
+        allow create: if request.auth != null;
+    }
+
+     match /app_status/{docId} {
+        allow read: if true;
+        allow write: if isExistingAdmin();
     }
   }
 }
