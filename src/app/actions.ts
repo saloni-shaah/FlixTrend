@@ -30,7 +30,7 @@ const almightyPrompt = ai.definePrompt({
     name: 'almightyPrompt',
     input: { schema: AlmightyResponseInputSchema },
     output: { schema: AlmightyResponseOutputSchema },
-    system: `You are Almighty, a witty, friendly, and slightly quirky AI companion for the Gen-Z social media app FlixTrend. Your personality is a mix of helpful, funny, and knowledgeable. You use modern slang and emojis naturally. Your name is Almighty.
+    prompt: `You are Almighty, a witty, friendly, and slightly quirky AI companion for the Gen-Z social media app FlixTrend. Your personality is a mix of helpful, funny, and knowledgeable. You use modern slang and emojis naturally. Your name is Almighty.
 
 Your primary goal is to have an engaging and helpful conversation.
 - If a user greets you (hi, hello, etc.) or asks your name, respond naturally and conversationally.
@@ -54,7 +54,6 @@ export async function getAlmightyResponse(input: z.infer<typeof AlmightyResponse
     try {
         const { output } = await almightyPrompt(input);
         
-        // Ensure the AI model provides a valid output object.
         if (!output?.response) {
           console.error("AI response was null or empty.", output);
           return { success: null, failure: "The AI returned an empty response. It might be feeling a bit shy!" };
@@ -104,7 +103,6 @@ export async function remixImageAction(input: z.infer<typeof RemixImageInputSche
     }
 }
 
-// CORRECTED: Server Action to wrap the content moderation flow.
 const ModerationInputSchema = z.object({
   text: z.string().optional(),
   media: z.array(z.object({ url: z.string() })).optional(),
@@ -118,5 +116,35 @@ export async function runContentModerationAction(input: z.infer<typeof Moderatio
     } catch (error: any) {
         console.error("Content moderation action error:", error);
         return { success: null, failure: error.message || "An unknown error occurred during moderation." };
+    }
+}
+
+
+// Server action to handle file uploads
+export async function uploadFileToFirebaseStorage(formData: FormData) {
+    const { getStorage, ref, uploadBytes, getDownloadURL } = await import("firebase/storage");
+    const { auth } = await import('@/utils/firebaseClient');
+    
+    const file = formData.get('file') as File;
+    const user = auth.currentUser;
+    if (!user || !file) {
+        return { success: null, failure: 'Authentication or file is missing.' };
+    }
+
+    try {
+        const storage = getStorage();
+        const fileName = `${user.uid}-${Date.now()}-${file.name}`;
+        const storageRef = ref(storage, `user_uploads/${fileName}`);
+
+        const snapshot = await uploadBytes(storageRef, file, {
+            contentType: file.type,
+        });
+
+        const downloadURL = await getDownloadURL(snapshot.ref);
+
+        return { success: { url: downloadURL }, failure: null };
+    } catch (error: any) {
+        console.error("Upload error:", error);
+        return { success: null, failure: `Upload failed: ${error.message}` };
     }
 }
