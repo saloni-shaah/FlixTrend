@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
@@ -48,7 +49,17 @@ export function Chat() {
             orderBy("createdAt", "asc")
         );
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            setMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            const fetchedMessages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            if (fetchedMessages.length === 0) {
+                 setMessages([{
+                    id: 'initial',
+                    sender: 'almighty-bot',
+                    text: 'Hi! I\'m Almighty, your AI companion. Ask me anything!',
+                    createdAt: { toDate: () => new Date() } // Mock date for sorting
+                }]);
+            } else {
+                setMessages(fetchedMessages);
+            }
         });
         return () => unsubscribe();
     }, [currentUser]);
@@ -63,6 +74,11 @@ export function Chat() {
 
         const textToSend = newMessage;
         setNewMessage("");
+
+        // Remove initial greeting if it's there
+        if(messages.length === 1 && messages[0].id === 'initial') {
+            setMessages([]);
+        }
 
         const chatId = `almighty-chat_${currentUser.uid}`;
         const userMessage = {
