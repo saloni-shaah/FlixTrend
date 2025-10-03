@@ -220,7 +220,7 @@ export default function AdminPage() {
              }
 
              const userToLogin = userQuerySnap.docs[0].data();
-             const userRoles = Array.isArray(userToLogin.role) ? userToLogin.role : [userToLogin.role];
+             const userRoles = Array.isArray(userToLogin.role) ? userToLogin.role : (userToLogin.role ? [userToLogin.role] : []);
 
              if (!userRoles.includes('developer') && !userRoles.includes('founder') && !userRoles.includes('cto')) {
                  setError("This account does not have developer privileges.");
