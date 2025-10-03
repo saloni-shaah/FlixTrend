@@ -100,7 +100,8 @@ export function Chat() {
                 context: currentContext,
             });
 
-            if (response.success) {
+            // DEFINITIVE FIX: Add a safety check here to prevent crash on undefined response.
+            if (response?.success?.response) {
                 const assistantMessage = {
                     sender: 'almighty-bot',
                     text: response.success.response,
@@ -109,7 +110,8 @@ export function Chat() {
                 };
                 await addDoc(collection(db, "chats", chatId, "messages"), assistantMessage);
             } else {
-                throw new Error(response.failure || "Unknown AI error");
+                // Use the failure message from the action, or a default error.
+                throw new Error(response?.failure || "The AI didn't provide a response.");
             }
         } catch (error) {
             console.error("AI Response Error:", error);
