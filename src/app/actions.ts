@@ -4,6 +4,8 @@ import { ai } from '@/ai/ai';
 import { z } from 'genkit';
 import { contentModerationFlow } from "@/ai/flows/content-moderation-flow";
 import { searchDuckDuckGo } from "@/ai/flows/search-flow";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { app } from '@/utils/firebaseClient'; // Import app for storage initialization
 
 const AlmightyResponseInputSchema = z.object({
     userName: z.string().describe("The name of the user who is interacting with the AI."),
@@ -69,7 +71,7 @@ export async function getAlmightyResponse(input: z.infer<typeof AlmightyResponse
 
 const RemixImageInputSchema = z.object({
   photoUrl: z.string().url().describe(
-      "A public URL of a photo."
+      "A public URL of a photo, accessible by the server."
   ),
   prompt: z.string().describe(
       'A text prompt describing the desired style transformation (e.g., "turn this into an anime character").'
@@ -80,13 +82,21 @@ const ImageOutputSchema = z.object({
   imageUrl: z.string().url().describe('The public URL of the generated or remixed image.'),
 });
 
+// This is a server-side helper now, not exported to client.
+async function uploadBufferToFirebaseStorage(buffer: Buffer, contentType: string, fileName: string) {
+    const storage = getStorage(app);
+    const storageRef = ref(storage, `ai_generated/${fileName}`);
+    const snapshot = await uploadBytes(storageRef, buffer, { contentType });
+    return await getDownloadURL(snapshot.ref);
+}
+
 export async function remixImageAction(input: z.infer<typeof RemixImageInputSchema>): Promise<{success: z.infer<typeof ImageOutputSchema> | null, failure: string | null}> {
     try {
         const { media } = await ai.generate({
-            model: 'googleai/gemini-1.5-flash-latest',
+            model: 'googleai/gemini-1.5-flash-latest', // Correct model for image-to-image
             prompt: [{ media: { url: input.photoUrl } }, { text: input.prompt }],
             config: {
-                responseModalities: ['TEXT', 'IMAGE'],
+                responseModalities: ['IMAGE'],
             },
         });
 
@@ -96,17 +106,11 @@ export async function remixImageAction(input: z.infer<typeof RemixImageInputSche
 
         const base64Data = media.url.split(',')[1];
         const buffer = Buffer.from(base64Data, 'base64');
+        const fileName = `remixed-${Date.now()}.png`;
+
+        const finalUrl = await uploadBufferToFirebaseStorage(buffer, 'image/png', fileName);
         
-        const blob = new Blob([buffer], { type: 'image/png' });
-        const formData = new FormData();
-        formData.append('file', blob, 'remixed-image.png');
-
-        const uploadResult = await uploadFileToFirebaseStorage(formData);
-        if (!uploadResult.success?.url) {
-            throw new Error(uploadResult.failure || 'Failed to upload remixed image.');
-        }
-
-        return { success: { imageUrl: uploadResult.success.url }, failure: null };
+        return { success: { imageUrl: finalUrl }, failure: null };
 
     } catch(err: any) {
         console.error("Remix image action error:", err);
@@ -121,11 +125,8 @@ const GenerateImageInputSchema = z.object({
 export async function generateImageAction(input: z.infer<typeof GenerateImageInputSchema>): Promise<{ success: z.infer<typeof ImageOutputSchema> | null; failure: string | null }> {
     try {
         const { media } = await ai.generate({
-            model: 'googleai/imagen-4.0-fast-generate-001', // Correct model for text-to-image
+            model: 'googleai/imagen-4.0-fast-generate-001', // Correct text-to-image model
             prompt: `Generate an image of: ${input.prompt}`,
-            config: {
-                responseModalities: ['IMAGE'],
-            },
         });
 
         if (!media?.url) {
@@ -134,17 +135,11 @@ export async function generateImageAction(input: z.infer<typeof GenerateImageInp
 
         const base64Data = media.url.split(',')[1];
         const buffer = Buffer.from(base64Data, 'base64');
+        const fileName = `generated-${Date.now()}.png`;
 
-        const blob = new Blob([buffer], { type: 'image/png' });
-        const formData = new FormData();
-        formData.append('file', blob, 'generated-image.png');
+        const finalUrl = await uploadBufferToFirebaseStorage(buffer, 'image/png', fileName);
 
-        const uploadResult = await uploadFileToFirebaseStorage(formData);
-        if (!uploadResult.success?.url) {
-            throw new Error(uploadResult.failure || 'Failed to upload generated image.');
-        }
-
-        return { success: { imageUrl: uploadResult.success.url }, failure: null };
+        return { success: { imageUrl: finalUrl }, failure: null };
     } catch (err: any) {
         console.error("Generate image action error:", err);
         return { success: null, failure: err.message || 'An unknown error occurred during image generation.' };
@@ -166,33 +161,4 @@ export async function runContentModerationAction(input: z.infer<typeof Moderatio
     }
 }
 
-
-// Server action to handle file uploads
-export async function uploadFileToFirebaseStorage(formData: FormData) {
-    const { getStorage, ref, uploadBytes, getDownloadURL } = await import("firebase/storage");
-    const { auth } = await import('@/utils/firebaseClient');
     
-    const file = formData.get('file') as File;
-    const user = auth.currentUser;
-    if (!user || !file) {
-        return { success: null, failure: 'Authentication or file is missing.' };
-    }
-
-    try {
-        const storage = getStorage();
-        const fileName = `${user.uid}-${Date.now()}-${file.name}`;
-        const storageRef = ref(storage, `user_uploads/${fileName}`);
-
-        const snapshot = await uploadBytes(storageRef, file, {
-            contentType: file.type,
-        });
-
-        const downloadURL = await getDownloadURL(snapshot.ref);
-
-        return { success: { url: downloadURL }, failure: null };
-    } catch (error: any) {
-        console.error("Upload error:", error);
-        return { success: null, failure: `Upload failed: ${error.message}` };
-    }
-}
-
