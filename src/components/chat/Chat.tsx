@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import Link from 'next/link';
 import { getFirestore, collection, query, onSnapshot, orderBy, addDoc, serverTimestamp } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { auth, db, app } from "@/utils/firebaseClient";
@@ -111,29 +112,29 @@ export function Chat() {
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
         if ((!newMessage.trim() && !imageFile) || !currentUser) return;
-
+    
         const textToSend = newMessage;
         const fileToSend = imageFile;
-
+    
         setNewMessage("");
         setImageFile(null);
         setImagePreview(null);
         if (fileInputRef.current) fileInputRef.current.value = "";
-
+    
         if(messages.length === 1 && messages[0].id === 'initial') {
             setMessages([]);
         }
-
+    
         const chatId = `almighty-chat_${currentUser.uid}`;
-        
+        const userMessage = { sender: currentUser.uid, text: textToSend, createdAt: serverTimestamp(), type: 'text' };
+    
         // --- TEXT TO IMAGE GENERATION ---
         if (textToSend.toLowerCase().startsWith('/imagine ')) {
-            const prompt = textToSend.substring(8).trim();
-            const userMessage = { sender: currentUser.uid, text: textToSend, createdAt: serverTimestamp(), type: 'text' };
             await addDoc(collection(db, "chats", chatId, "messages"), userMessage);
             setIsAlmightyLoading(true);
             try {
-                const response = await generateImageAction({ prompt });
+                const prompt = textToSend.substring(8).trim();
+                const response = await generateImageAction({ prompt, userId: currentUser.uid });
                 if (response.success?.imageUrl) {
                     const aiImageMessage = { sender: 'almighty-bot', text: `Here's your image for: "${prompt}"`, imageUrl: response.success.imageUrl, createdAt: serverTimestamp(), type: 'image' };
                     await addDoc(collection(db, "chats", chatId, "messages"), aiImageMessage);
@@ -150,17 +151,15 @@ export function Chat() {
         } else if (fileToSend) {
             setIsAlmightyLoading(true);
             try {
-                // First, save the user's message with the local preview
-                const userMessage = { sender: currentUser.uid, text: textToSend, imageUrl: imagePreview, createdAt: serverTimestamp(), type: 'image' };
-                await addDoc(collection(db, "chats", chatId, "messages"), userMessage);
-                
-                // Convert file to data URI for the AI
-                const photoDataUri = await fileToDataUri(fileToSend);
+                const imageUrl = await uploadFileToFirebaseStorageClient(fileToSend, currentUser);
+                const userMessageWithImage = { sender: currentUser.uid, text: textToSend, imageUrl: imageUrl, createdAt: serverTimestamp(), type: 'image' };
+                await addDoc(collection(db, "chats", chatId, "messages"), userMessageWithImage);
 
-                const remixResponse = await remixImageAction({ photoDataUri, prompt: textToSend });
+                const photoDataUri = await fileToDataUri(fileToSend);
+    
+                const remixResponse = await remixImageAction({ photoDataUri, prompt: textToSend, userId: currentUser.uid });
                 
                 if (remixResponse.success?.remixedPhotoDataUri) {
-                    // Upload the AI's remixed image (which is a data URI) to storage
                     const remixedBlob = await (await fetch(remixResponse.success.remixedPhotoDataUri)).blob();
                     const remixedFile = new File([remixedBlob], `remix-${Date.now()}.png`, { type: remixedBlob.type });
                     const finalImageUrl = await uploadFileToFirebaseStorageClient(remixedFile, currentUser);
@@ -170,7 +169,7 @@ export function Chat() {
                 } else {
                     throw new Error(remixResponse.failure || "The AI couldn't remix the image.");
                 }
-
+    
             } catch (error: any) {
                 const errorMessage = { sender: 'almighty-bot', text: `Sorry, I hit a snag while remixing: ${error.message}`, createdAt: serverTimestamp(), type: 'text' };
                 await addDoc(collection(db, "chats", chatId, "messages"), errorMessage);
@@ -179,7 +178,6 @@ export function Chat() {
             }
         // --- REGULAR CHAT ---
         } else {
-            const userMessage = { sender: currentUser.uid, text: textToSend, createdAt: serverTimestamp(), type: 'text' };
             await addDoc(collection(db, "chats", chatId, "messages"), userMessage);
             setIsAlmightyLoading(true);
             const currentContext = messages.map(m => `${m.sender === currentUser.uid ? 'User' : 'Almighty'}: ${m.text}`).join('\n');
@@ -189,17 +187,18 @@ export function Chat() {
                     userName: currentUser.displayName || 'User',
                     message: textToSend,
                     context: currentContext,
+                    userId: currentUser.uid,
                 });
 
-                if (!response) {
-                    throw new Error("The AI service returned an unexpected error.");
+                if (response.failure) {
+                    throw new Error(response.failure);
                 }
                 
                 if (response.success?.response) {
                     const assistantMessage = { sender: 'almighty-bot', text: response.success.response, createdAt: serverTimestamp(), type: 'text' };
                     await addDoc(collection(db, "chats", chatId, "messages"), assistantMessage);
                 } else {
-                    throw new Error(response.failure || "The AI didn't provide a response.");
+                     throw new Error("The AI didn't provide a response.");
                 }
             } catch (error: any) {
                 console.error("AI Response Error:", error);
@@ -222,6 +221,7 @@ export function Chat() {
                 <AnimatePresence>
                     {messages.map(msg => {
                         const isUser = msg.sender === currentUser?.uid;
+                        const isBot = msg.sender === 'almighty-bot';
                         return (
                             <motion.div
                                 key={msg.id}
@@ -236,7 +236,16 @@ export function Chat() {
                                 <div className={`chat-bubble ${isUser ? 'user-bubble' : 'bot-bubble'}`}>
                                     {msg.text && <p>{msg.text}</p>}
                                     {msg.imageUrl && (
-                                        <img src={msg.imageUrl} alt="chat content" className="mt-2 rounded-lg max-w-xs" />
+                                        <div className="relative group mt-2">
+                                            <img src={msg.imageUrl} alt="chat content" className="rounded-lg max-w-xs" />
+                                            {isBot && (
+                                                <Link href={`/create?type=media&imageUrl=${encodeURIComponent(msg.imageUrl)}`}>
+                                                    <div className="absolute top-2 right-2 bg-black/50 p-2 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                                                        <UploadCloud size={20} />
+                                                    </div>
+                                                </Link>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
                             </motion.div>
