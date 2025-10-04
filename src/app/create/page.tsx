@@ -13,11 +13,21 @@ function CreatePostPageContent() {
     const router = useRouter();
 
     const initialType = searchParams.get('type') as 'text' | 'media' | 'poll' | 'flash' | 'live' || undefined;
-    const initialSongId = searchParams.get('songId');
+    const initialImageUrl = searchParams.get('imageUrl');
+
+    // Initialize postData with imageUrl if it exists
+    const [postData, setPostData] = useState<any>({ 
+        postType: initialType, 
+        songId: searchParams.get('songId'),
+        // NEW: Check for imageUrl and pre-fill media data
+        ...(initialImageUrl && initialType === 'media' && { 
+            mediaPreviews: [initialImageUrl], 
+            mediaFiles: [] // We'll handle the 'File' object later
+        })
+    });
 
     const [step, setStep] = useState(1);
     const [postType, setPostType] = useState<'text' | 'media' | 'poll' | 'flash' | 'live' | undefined>(initialType);
-    const [postData, setPostData] = useState({ postType: initialType, songId: initialSongId });
     const [typeSelected, setTypeSelected] = useState(!!initialType);
 
     useEffect(() => {
@@ -25,37 +35,48 @@ function CreatePostPageContent() {
             handleTypeChange(initialType);
         }
     }, [initialType, typeSelected]);
+    
+    // NEW: Effect to convert the pre-filled URL to a File-like object for consistent form handling
+    useEffect(() => {
+        if (initialImageUrl && initialType === 'media' && postData.mediaFiles.length === 0) {
+            fetch(initialImageUrl)
+                .then(res => res.blob())
+                .then(blob => {
+                    const file = new File([blob], "ai-generated.png", { type: blob.type });
+                    setPostData((prev: any) => ({ ...prev, mediaFiles: [file] }));
+                })
+                .catch(console.error);
+        }
+    }, [initialImageUrl, initialType, postData.mediaFiles]);
 
-    // CORRECTED: The dangerous 'live' post bypass has been removed.
+
     const handleNext = (data: any) => {
         setPostData(prev => ({ ...prev, ...data }));
         setStep(s => s + 1);
     };
 
-    // CORRECTED: The 'live' post bypass has been removed from the back button as well.
     const handleBack = () => {
         setStep(s => s - 1);
     };
     
     const handleTypeChange = (type: 'text' | 'media' | 'poll' | 'flash' | 'live') => {
         setPostType(type);
-        setPostData({ postType: type, songId: initialSongId });
+        setPostData({ postType: type, songId: searchParams.get('songId') }); // Reset data on type change
         setStep(1);
         setTypeSelected(true);
-        router.push(`/create?type=${type}${initialSongId ? `&songId=${initialSongId}`: ''}`, { scroll: false });
+        router.push(`/create?type=${type}${searchParams.get('songId') ? `&songId=${searchParams.get('songId')}`: ''}`, { scroll: false });
     };
     
-    // CORRECTED: All post types now follow the same 3-step process.
     const steps = [
         <Step1 key="step1" onNext={handleNext} postType={postType!} postData={postData} />,
         <Step2 key="step2" onNext={handleNext} onBack={handleBack} postData={postData} />,
         <Step3 key="step3" onBack={handleBack} postData={postData} />,
     ];
     
-    const totalSteps = 3; // All posts have 3 steps.
+    const totalSteps = 3; 
     const currentStepLogic = step;
     
-    const stepLabels = ['Details', 'AI Check', 'Publish']; // Always show all 3 labels.
+    const stepLabels = ['Details', 'AI Check', 'Publish'];
 
 
     return (
