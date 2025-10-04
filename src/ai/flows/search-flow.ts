@@ -4,23 +4,22 @@
  */
 import { ai } from '@/ai/ai';
 import { z } from 'zod';
-import Tavily from 'tavily';
 
 const SearchInputSchema = z.object({
   query: z.string(),
 });
 
-// Initialize the Tavily client. It will automatically use the TAVILY_API_KEY from your .env file.
-const tavilyClient = new Tavily(process.env.TAVILY_API_KEY || '');
-
 async function performTavilySearch(query: string): Promise<string> {
   console.log(`Performing Tavily search for: ${query}`);
   try {
-    // Perform a basic search. You can also use 'advanced' for more complex queries.
+    // Dynamically import Tavily to prevent constructor issues at build time.
+    const Tavily = (await import('tavily')).default;
+    const tavilyClient = new Tavily(process.env.TAVILY_API_KEY || '');
+    
     const searchResult = await tavilyClient.search(query, {
         searchDepth: "basic"
     });
-    // We'll return a formatted string of the results for the AI to consume.
+    
     return JSON.stringify(searchResult.results, null, 2);
   } catch (error) {
     console.error("Tavily search failed:", error);
