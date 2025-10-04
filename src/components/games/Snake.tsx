@@ -30,6 +30,8 @@ export function Snake() {
     const [highScore, setHighScore] = useState(0);
 
     const gameLoopRef = useRef<NodeJS.Timeout | null>(null);
+    const touchStartRef = useRef<{ x: number, y: number } | null>(null);
+
 
     // Load high score from local storage
     useEffect(() => {
@@ -39,29 +41,51 @@ export function Snake() {
         }
     }, []);
 
+    const changeDirection = useCallback((newDir: Direction) => {
+        setDirection(currentDir => {
+             if (newDir === 'UP' && currentDir !== 'DOWN') return 'UP';
+             if (newDir === 'DOWN' && currentDir !== 'UP') return 'DOWN';
+             if (newDir === 'LEFT' && currentDir !== 'RIGHT') return 'LEFT';
+             if (newDir === 'RIGHT' && currentDir !== 'LEFT') return 'RIGHT';
+             return currentDir;
+        });
+    }, []);
+
     const handleKeyDown = useCallback((e: KeyboardEvent) => {
         e.preventDefault(); // Prevent page scrolling with arrow keys
         switch (e.key) {
-            case 'ArrowUp':
-                if (direction !== 'DOWN') setDirection('UP');
-                break;
-            case 'ArrowDown':
-                if (direction !== 'UP') setDirection('DOWN');
-                break;
-            case 'ArrowLeft':
-                if (direction !== 'RIGHT') setDirection('LEFT');
-                break;
-            case 'ArrowRight':
-                if (direction !== 'LEFT') setDirection('RIGHT');
-                break;
+            case 'ArrowUp': changeDirection('UP'); break;
+            case 'ArrowDown': changeDirection('DOWN'); break;
+            case 'ArrowLeft': changeDirection('LEFT'); break;
+            case 'ArrowRight': changeDirection('RIGHT'); break;
         }
-    }, [direction]);
+    }, [changeDirection]);
 
     useEffect(() => {
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [handleKeyDown]);
     
+    const handleTouchStart = (e: React.TouchEvent) => {
+        touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    };
+
+    const handleTouchEnd = (e: React.TouchEvent) => {
+        if (!touchStartRef.current) return;
+        const deltaX = e.changedTouches[0].clientX - touchStartRef.current.x;
+        const deltaY = e.changedTouches[0].clientY - touchStartRef.current.y;
+        
+        if (Math.abs(deltaX) > Math.abs(deltaY)) { // Horizontal swipe
+            if (deltaX > 30) changeDirection('RIGHT');
+            else if (deltaX < -30) changeDirection('LEFT');
+        } else { // Vertical swipe
+            if (deltaY > 30) changeDirection('DOWN');
+            else if (deltaY < -30) changeDirection('UP');
+        }
+        touchStartRef.current = null;
+    };
+
+
     const resetGame = () => {
         setSnake([{ x: 10, y: 10 }]);
         setFood(getRandomCoordinate([{ x: 10, y: 10 }]));
@@ -152,13 +176,15 @@ export function Snake() {
             </div>
 
             <div 
-                className="grid bg-black/30 border-2 border-accent-cyan/20 relative shadow-[0_0_15px_rgba(0,240,255,0.3)]"
+                className="grid bg-black/30 border-2 border-accent-cyan/20 relative shadow-[0_0_15px_rgba(0,240,255,0.3)] touch-none"
                 style={{
                     gridTemplateColumns: `repeat(${GRID_SIZE}, ${TILE_SIZE}px)`,
                     gridTemplateRows: `repeat(${GRID_SIZE}, ${TILE_SIZE}px)`,
                     width: `${GRID_SIZE * TILE_SIZE}px`,
                     height: `${GRID_SIZE * TILE_SIZE}px`,
                 }}
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
             >
                 {snake.map((segment, index) => (
                     <div 
@@ -195,13 +221,14 @@ export function Snake() {
             )}
             
             <div className="flex flex-col items-center gap-4">
-                <div className="grid grid-cols-3 gap-2">
+                {/* Hide controls on mobile, show on medium screens and up */}
+                <div className="hidden md:grid grid-cols-3 gap-2">
                     <div />
-                    <button className="btn-glass p-4" onClick={() => handleKeyDown({ key: 'ArrowUp', preventDefault: ()=>{} } as KeyboardEvent)}><ArrowUp/></button>
+                    <button className="btn-glass p-4" onClick={() => changeDirection('UP')}><ArrowUp/></button>
                     <div />
-                    <button className="btn-glass p-4" onClick={() => handleKeyDown({ key: 'ArrowLeft', preventDefault: ()=>{} } as KeyboardEvent)}><ArrowLeft/></button>
-                    <button className="btn-glass p-4" onClick={() => handleKeyDown({ key: 'ArrowDown', preventDefault: ()=>{} } as KeyboardEvent)}><ArrowDown/></button>
-                    <button className="btn-glass p-4" onClick={() => handleKeyDown({ key: 'ArrowRight', preventDefault: ()=>{} } as KeyboardEvent)}><ArrowRight/></button>
+                    <button className="btn-glass p-4" onClick={() => changeDirection('LEFT')}><ArrowLeft/></button>
+                    <button className="btn-glass p-4" onClick={() => changeDirection('DOWN')}><ArrowDown/></button>
+                    <button className="btn-glass p-4" onClick={() => changeDirection('RIGHT')}><ArrowRight/></button>
                 </div>
 
                 <button onClick={resetGame} className="btn-glass bg-accent-purple/20 text-accent-purple flex items-center gap-2 mt-4">
@@ -211,3 +238,4 @@ export function Snake() {
         </motion.div>
     );
 }
+
