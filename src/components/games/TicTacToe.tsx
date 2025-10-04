@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -5,6 +6,9 @@ import { X, Circle, RotateCcw, Users, Wifi, WifiOff } from 'lucide-react';
 import { auth, db } from '@/utils/firebaseClient';
 import { collection, addDoc, doc, onSnapshot, updateDoc, serverTimestamp, query, where, getDocs, limit } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
+import { FirestorePermissionError } from '@/firebase/errors';
+import { errorEmitter } from '@/firebase/error-emitter';
+
 
 const lines = [
     [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
@@ -131,18 +135,26 @@ function OnlineGame({ gameId, setGameId, user, username }: { gameId: string, set
     const [game, setGame] = useState<any>(null);
 
     useEffect(() => {
-        const unsub = onSnapshot(doc(db, "tictactoe", gameId), (doc) => {
+        const gameDocRef = doc(db, "tictactoe", gameId);
+        const unsub = onSnapshot(gameDocRef, (doc) => {
             if (doc.exists()) {
                 setGame({ id: doc.id, ...doc.data() });
             } else {
                 alert("Game not found or has been deleted.");
                 setGameId(null);
             }
+        }, async (serverError) => {
+            const permissionError = new FirestorePermissionError({
+              path: gameDocRef.path,
+              operation: 'get',
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            setGameId(null); // Go back to lobby on error
         });
         return () => unsub();
     }, [gameId, setGameId]);
 
-    const handlePlay = async (i: number) => {
+    const handlePlay = (i: number) => {
         if (!game || calculateWinner(game.squares)) return;
         
         const playerSymbol = game.players[user.uid].symbol;
@@ -153,11 +165,18 @@ function OnlineGame({ gameId, setGameId, user, username }: { gameId: string, set
         const newSquares = [...game.squares];
         newSquares[i] = playerSymbol;
 
-        await updateDoc(doc(db, "tictactoe", gameId), {
-            squares: newSquares,
-            xIsNext: !game.xIsNext,
-            lastMoveAt: serverTimestamp()
-        });
+        const gameDocRef = doc(db, "tictactoe", gameId);
+        const updatedData = { squares: newSquares, xIsNext: !game.xIsNext, lastMoveAt: serverTimestamp() };
+
+        updateDoc(gameDocRef, updatedData)
+            .catch(async (serverError) => {
+                const permissionError = new FirestorePermissionError({
+                  path: gameDocRef.path,
+                  operation: 'update',
+                  requestResourceData: updatedData
+                });
+                errorEmitter.emit('permission-error', permissionError);
+            });
     };
 
     const handleLeaveGame = async () => {
@@ -196,12 +215,18 @@ function Lobby({ setGameId, setMode, user, username }: { setGameId: (id: string)
         const q = query(collection(db, "tictactoe"), where("status", "==", "waiting"), limit(10));
         const unsub = onSnapshot(q, (snapshot) => {
             setOpenGames(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        }, async (serverError) => {
+            const permissionError = new FirestorePermissionError({
+              path: 'tictactoe',
+              operation: 'list',
+            });
+            errorEmitter.emit('permission-error', permissionError);
         });
         return () => unsub();
     }, []);
 
-    const handleCreateGame = async () => {
-        const newGame = {
+    const handleCreateGame = () => {
+        const newGameData = {
             players: { [user.uid]: { symbol: 'X', name: username } },
             squares: Array(9).fill(null),
             xIsNext: true,
@@ -209,18 +234,40 @@ function Lobby({ setGameId, setMode, user, username }: { setGameId: (id: string)
             createdAt: serverTimestamp(),
             host: username
         };
-        const docRef = await addDoc(collection(db, "tictactoe"), newGame);
-        setGameId(docRef.id);
-        setMode('online');
+        addDoc(collection(db, "tictactoe"), newGameData)
+            .then((docRef) => {
+                setGameId(docRef.id);
+                setMode('online');
+            })
+            .catch(async (serverError) => {
+                const permissionError = new FirestorePermissionError({
+                    path: 'tictactoe',
+                    operation: 'create',
+                    requestResourceData: newGameData,
+                });
+                errorEmitter.emit('permission-error', permissionError);
+            });
     };
 
-    const handleJoinGame = async (gameId: string) => {
-         await updateDoc(doc(db, "tictactoe", gameId), {
+    const handleJoinGame = (gameId: string) => {
+        const gameDocRef = doc(db, "tictactoe", gameId);
+        const updatedData = {
             [`players.${user.uid}`]: { symbol: 'O', name: username },
             status: 'playing'
-        });
-        setGameId(gameId);
-        setMode('online');
+        };
+        updateDoc(gameDocRef, updatedData)
+            .then(() => {
+                setGameId(gameId);
+                setMode('online');
+            })
+            .catch(async (serverError) => {
+                const permissionError = new FirestorePermissionError({
+                    path: gameDocRef.path,
+                    operation: 'update',
+                    requestResourceData: updatedData,
+                });
+                errorEmitter.emit('permission-error', permissionError);
+            });
     };
 
     return (
