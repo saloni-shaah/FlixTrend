@@ -53,10 +53,13 @@ User's latest message:
 
 export async function getAlmightyResponse(input: z.infer<typeof AlmightyResponseInputSchema>): Promise<{ success: z.infer<typeof AlmightyResponseOutputSchema> | null, failure: string | null }> {
     try {
+        if (!input.message) {
+            return { success: { response: "What's up?" }, failure: null };
+        }
+        
         const { output } = await almightyPrompt(input);
         
         if (!output?.response) {
-          console.error("AI response was null or empty.", output);
           return { success: null, failure: "The AI returned an empty response. It might be feeling a bit shy!" };
         }
         
@@ -68,10 +71,9 @@ export async function getAlmightyResponse(input: z.infer<typeof AlmightyResponse
     }
 }
 
-
 const RemixImageInputSchema = z.object({
-  photoUrl: z.string().url().describe(
-      "A public URL of a photo, accessible by the server."
+  photoDataUri: z.string().describe(
+      "A photo of an object, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
   ),
   prompt: z.string().describe(
       'A text prompt describing the desired style transformation (e.g., "turn this into an anime character").'
@@ -79,22 +81,15 @@ const RemixImageInputSchema = z.object({
 });
 
 const ImageOutputSchema = z.object({
-  imageUrl: z.string().url().describe('The public URL of the generated or remixed image.'),
+  remixedPhotoDataUri: z.string().describe('The data URI of the generated or remixed image.'),
 });
 
-// This is a server-side helper now, not exported to client.
-async function uploadBufferToFirebaseStorage(buffer: Buffer, contentType: string, fileName: string) {
-    const storage = getStorage(app);
-    const storageRef = ref(storage, `ai_generated/${fileName}`);
-    const snapshot = await uploadBytes(storageRef, buffer, { contentType });
-    return await getDownloadURL(snapshot.ref);
-}
 
 export async function remixImageAction(input: z.infer<typeof RemixImageInputSchema>): Promise<{success: z.infer<typeof ImageOutputSchema> | null, failure: string | null}> {
     try {
         const { media } = await ai.generate({
-            model: 'googleai/gemini-1.5-flash-latest', // Correct model for image-to-image
-            prompt: [{ media: { url: input.photoUrl } }, { text: input.prompt }],
+            model: 'googleai/gemini-1.5-pro-latest', // Vision model for image-to-image
+            prompt: [{ media: { url: input.photoDataUri } }, { text: input.prompt }],
             config: {
                 responseModalities: ['IMAGE'],
             },
@@ -104,13 +99,7 @@ export async function remixImageAction(input: z.infer<typeof RemixImageInputSche
             throw new Error('Image generation failed to produce an image.');
         }
 
-        const base64Data = media.url.split(',')[1];
-        const buffer = Buffer.from(base64Data, 'base64');
-        const fileName = `remixed-${Date.now()}.png`;
-
-        const finalUrl = await uploadBufferToFirebaseStorage(buffer, 'image/png', fileName);
-        
-        return { success: { imageUrl: finalUrl }, failure: null };
+        return { success: { remixedPhotoDataUri: media.url }, failure: null };
 
     } catch(err: any) {
         console.error("Remix image action error:", err);
@@ -122,10 +111,18 @@ const GenerateImageInputSchema = z.object({
   prompt: z.string().describe('A text prompt describing the desired image.'),
 });
 
-export async function generateImageAction(input: z.infer<typeof GenerateImageInputSchema>): Promise<{ success: z.infer<typeof ImageOutputSchema> | null; failure: string | null }> {
+// This is a server-side helper now, not exported to client.
+async function uploadBufferToFirebaseStorage(buffer: Buffer, contentType: string, fileName: string) {
+    const storage = getStorage(app);
+    const storageRef = ref(storage, `ai_generated/${fileName}`);
+    const snapshot = await uploadBytes(storageRef, buffer, { contentType });
+    return await getDownloadURL(snapshot.ref);
+}
+
+export async function generateImageAction(input: z.infer<typeof GenerateImageInputSchema>): Promise<{ success: { imageUrl: string } | null; failure: string | null }> {
     try {
         const { media } = await ai.generate({
-            model: 'googleai/imagen-4.0-fast-generate-001', // Correct text-to-image model
+            model: 'googleai/imagen-2-flash', // Correct text-to-image model
             prompt: `Generate an image of: ${input.prompt}`,
         });
 
@@ -146,6 +143,7 @@ export async function generateImageAction(input: z.infer<typeof GenerateImageInp
     }
 }
 
+
 const ModerationInputSchema = z.object({
   text: z.string().optional(),
   media: z.array(z.object({ url: z.string() })).optional(),
@@ -160,5 +158,3 @@ export async function runContentModerationAction(input: z.infer<typeof Moderatio
         return { success: null, failure: error.message || "An unknown error occurred during moderation." };
     }
 }
-
-    

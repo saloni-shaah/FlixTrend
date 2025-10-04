@@ -18,10 +18,21 @@ async function uploadFileToFirebaseStorageClient(file: File, user: any) {
         throw new Error('Authentication or file is missing for upload.');
     }
     const fileName = `${user.uid}-${Date.now()}-${file.name}`;
-    const storageRef = ref(storage, `user_uploads/${fileName}`);
+    const storageRef = ref(storage, `ai_generated_remix/${fileName}`); // Use a different folder for clarity
     const snapshot = await uploadBytes(storageRef, file, { contentType: file.type });
     return await getDownloadURL(snapshot.ref);
 }
+
+// Helper to convert File to Data URI
+const fileToDataUri = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = (error) => reject(error);
+        reader.readAsDataURL(file);
+    });
+};
+
 
 function ChatMessageLoading() {
   return (
@@ -137,22 +148,29 @@ export function Chat() {
             }
         // --- IMAGE REMIXING ---
         } else if (fileToSend) {
-             setIsAlmightyLoading(true);
+            setIsAlmightyLoading(true);
             try {
-                // Upload image from the client
-                const originalImageUrl = await uploadFileToFirebaseStorageClient(fileToSend, currentUser);
-
-                const userMessage = { sender: currentUser.uid, text: textToSend, imageUrl: originalImageUrl, createdAt: serverTimestamp(), type: 'image' };
+                // First, save the user's message with the local preview
+                const userMessage = { sender: currentUser.uid, text: textToSend, imageUrl: imagePreview, createdAt: serverTimestamp(), type: 'image' };
                 await addDoc(collection(db, "chats", chatId, "messages"), userMessage);
-
-                const remixResponse = await remixImageAction({ photoUrl: originalImageUrl, prompt: textToSend });
                 
-                if (remixResponse.success?.imageUrl) {
-                    const aiImageMessage = { sender: 'almighty-bot', text: 'Here is your remixed image!', imageUrl: remixResponse.success.imageUrl, createdAt: serverTimestamp(), type: 'image' };
+                // Convert file to data URI for the AI
+                const photoDataUri = await fileToDataUri(fileToSend);
+
+                const remixResponse = await remixImageAction({ photoDataUri, prompt: textToSend });
+                
+                if (remixResponse.success?.remixedPhotoDataUri) {
+                    // Upload the AI's remixed image (which is a data URI) to storage
+                    const remixedBlob = await (await fetch(remixResponse.success.remixedPhotoDataUri)).blob();
+                    const remixedFile = new File([remixedBlob], `remix-${Date.now()}.png`, { type: remixedBlob.type });
+                    const finalImageUrl = await uploadFileToFirebaseStorageClient(remixedFile, currentUser);
+
+                    const aiImageMessage = { sender: 'almighty-bot', text: 'Here is your remixed image!', imageUrl: finalImageUrl, createdAt: serverTimestamp(), type: 'image' };
                     await addDoc(collection(db, "chats", chatId, "messages"), aiImageMessage);
                 } else {
                     throw new Error(remixResponse.failure || "The AI couldn't remix the image.");
                 }
+
             } catch (error: any) {
                 const errorMessage = { sender: 'almighty-bot', text: `Sorry, I hit a snag while remixing: ${error.message}`, createdAt: serverTimestamp(), type: 'text' };
                 await addDoc(collection(db, "chats", chatId, "messages"), errorMessage);
@@ -161,7 +179,7 @@ export function Chat() {
             }
         // --- REGULAR CHAT ---
         } else {
-             const userMessage = { sender: currentUser.uid, text: textToSend, createdAt: serverTimestamp(), type: 'text' };
+            const userMessage = { sender: currentUser.uid, text: textToSend, createdAt: serverTimestamp(), type: 'text' };
             await addDoc(collection(db, "chats", chatId, "messages"), userMessage);
             setIsAlmightyLoading(true);
             const currentContext = messages.map(m => `${m.sender === currentUser.uid ? 'User' : 'Almighty'}: ${m.text}`).join('\n');
@@ -261,5 +279,3 @@ export function Chat() {
         </div>
     );
 }
-
-    
