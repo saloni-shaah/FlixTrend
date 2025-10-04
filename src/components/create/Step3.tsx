@@ -133,13 +133,13 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                 hashtags: (postData.caption?.match(/#\w+/g) || []).map((h:string) => h.replace('#', '')),
                 createdAt: serverTimestamp(),
                 publishAt: publishAt,
-                location: postData.location,
-                mood: postData.mood,
+                location: postData.location || null,
+                mood: postData.mood || null,
                 ...(postData.postType === 'text' && { backgroundColor: postData.backgroundColor, fontStyle: postData.fontStyle }),
-                ...(postData.postType === 'media' && { mediaUrl: finalMediaUrls.length > 0 ? (finalMediaUrls.length > 1 ? finalMediaUrls : finalMediaUrls[0]) : null, title: postData.title, description: postData.description, thumbnailUrl: finalThumbnailUrl }),
-                ...(postData.postType === 'flash' && { mediaUrl: finalMediaUrls.length > 0 ? finalMediaUrls[0] : null, song: postData.song, expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), caption: postData.caption || "" }),
+                ...(postData.postType === 'media' && { mediaUrl: finalMediaUrls.length > 0 ? (finalMediaUrls.length > 1 ? finalMediaUrls : finalMediaUrls[0]) : null, title: postData.title || "", description: postData.description || "", thumbnailUrl: finalThumbnailUrl }),
+                ...(postData.postType === 'flash' && { mediaUrl: finalMediaUrls.length > 0 ? finalMediaUrls[0] : null, song: postData.song || null, expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), caption: postData.caption || "" }),
                 ...(postData.postType === 'poll' && { pollOptions: postData.options.map((opt:any) => opt.text) }),
-                ...(postData.postType === 'live' && { livekitRoom: livekitRoomName }),
+                ...(postData.postType === 'live' && { livekitRoom: livekitRoomName, title: postData.title || "Live Stream" }),
             };
             
             await addDoc(collection(db, collectionName), finalPostData);
