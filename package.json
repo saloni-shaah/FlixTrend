@@ -71,6 +71,7 @@
     "regenerator-runtime": "^0.14.1",
     "tailwind-merge": "^3.0.1",
     "tailwindcss-animate": "^1.0.7",
+    "tavily": "latest",
     "zod": "latest"
   },
   "devDependencies": {
