@@ -83,7 +83,7 @@ export function Chat() {
                  setMessages([{
                     id: 'initial',
                     sender: 'almighty-bot',
-                    text: "Hi! I'm Almighty, your AI companion. Ask me anything, or try `/imagine a futuristic city` to generate an image!",
+                    text: "Hi! I'm Almighty, your AI companion. Ask me anything, or try `imagine a futuristic city` to generate an image!",
                     createdAt: { toDate: () => new Date() } // Mock date for sorting
                 }]);
             } else {
@@ -129,11 +129,13 @@ export function Chat() {
         const userMessage = { sender: currentUser.uid, text: textToSend, createdAt: serverTimestamp(), type: 'text' };
     
         // --- TEXT TO IMAGE GENERATION ---
-        if (textToSend.toLowerCase().startsWith('/imagine ')) {
+        const imagePromptMatch = textToSend.toLowerCase().match(/^(?:imagine|generate an image of)\s+(.*)/);
+        
+        if (imagePromptMatch && imagePromptMatch[1]) {
             await addDoc(collection(db, "chats", chatId, "messages"), userMessage);
             setIsAlmightyLoading(true);
             try {
-                const prompt = textToSend.substring(8).trim();
+                const prompt = imagePromptMatch[1].trim();
                 const response = await generateImageAction({ prompt, userId: currentUser.uid });
                 if (response.success?.imageUrl) {
                     const aiImageMessage = { sender: 'almighty-bot', text: `Here's your image for: "${prompt}"`, imageUrl: response.success.imageUrl, createdAt: serverTimestamp(), type: 'image' };
@@ -277,7 +279,7 @@ export function Chat() {
                         type="text"
                         value={newMessage}
                         onChange={e => setNewMessage(e.target.value)}
-                        placeholder={imageFile ? "Add a prompt to remix your image..." : "Ask or try '/imagine an astronaut...'"}
+                        placeholder={imageFile ? "Add a prompt to remix your image..." : "Ask or `imagine an astronaut...`"}
                         className="chat-input"
                     />
                     <button type="submit" className="chat-send-button" disabled={(!newMessage.trim() && !imageFile) || isAlmightyLoading}>
