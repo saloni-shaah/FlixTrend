@@ -122,7 +122,7 @@ async function uploadBufferToFirebaseStorage(buffer: Buffer, contentType: string
 export async function generateImageAction(input: z.infer<typeof GenerateImageInputSchema>): Promise<{ success: { imageUrl: string } | null; failure: string | null }> {
     try {
         const { media } = await ai.generate({
-            model: 'googleai/imagen-2-flash', // Correct text-to-image model
+            model: 'googleai/imagen-4.0-fast-generate-001', // Correct text-to-image model
             prompt: `Generate an image of: ${input.prompt}`,
         });
 
@@ -156,5 +156,26 @@ export async function runContentModerationAction(input: z.infer<typeof Moderatio
     } catch (error: any) {
         console.error("Content moderation action error:", error);
         return { success: null, failure: error.message || "An unknown error occurred during moderation." };
+    }
+}
+
+// Client-side action to upload files
+export async function uploadFileToFirebaseStorage(formData: FormData): Promise<{ success: { url: string } | null; failure: string | null }> {
+    const file = formData.get('file') as File;
+    const user = auth.currentUser;
+
+    if (!user || !file) {
+        return { success: null, failure: 'Authentication or file is missing.' };
+    }
+
+    try {
+        const fileName = `${user.uid}-${Date.now()}-${file.name}`;
+        const storageRef = ref(storage, `user_uploads/${fileName}`);
+        const snapshot = await uploadBytes(storageRef, file, { contentType: file.type });
+        const downloadURL = await getDownloadURL(snapshot.ref);
+        return { success: { url: downloadURL }, failure: null };
+    } catch (error: any) {
+        console.error('Upload failed:', error);
+        return { success: null, failure: error.message || 'File upload failed.' };
     }
 }
