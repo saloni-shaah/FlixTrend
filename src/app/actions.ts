@@ -22,7 +22,7 @@ const searchTool = ai.defineTool(
   {
     name: 'webSearch',
     description: 'Use this to search the web for real-time information, current events, or topics you are not an expert on.',
-    inputSchema: z.object({ query: z.string(), userId: z.string() }), // Add userId to the tool input
+    inputSchema: z.object({ query: z.string() }), 
     outputSchema: z.string(),
   },
   async (input) => {
@@ -61,12 +61,11 @@ export async function getAlmightyResponse(input: z.infer<typeof AlmightyResponse
             return { success: { response: "What's up?" }, failure: null };
         }
         
-        // REMOVED: Usage check is now handled on the client-side before calling this action.
-
-        const { output } = await almightyPrompt(
-            { userName: input.userName, message: input.message, context: input.context },
-            { tools: { webSearch: { userId: input.userId } } } // Pass userId to the tool
-        );
+        const { output } = await almightyPrompt({
+            userName: input.userName,
+            message: input.message,
+            context: input.context,
+        });
         
         if (!output?.response) {
           return { success: null, failure: "The AI returned an empty response. It might be feeling a bit shy!" };
@@ -193,3 +192,5 @@ export async function uploadFileToFirebaseStorage(formData: FormData): Promise<{
         return { success: null, failure: error.message || 'File upload failed.' };
     }
 }
+
+    
