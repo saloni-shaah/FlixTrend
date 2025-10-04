@@ -8,6 +8,19 @@ import Step1 from '@/components/create/Step1';
 import Step2 from '@/components/create/Step2';
 import Step3 from '@/components/create/Step3';
 
+function dataUriToBlob(dataUri: string) {
+    if (!dataUri.startsWith('data:')) return null;
+    const byteString = atob(dataUri.split(',')[1]);
+    const mimeString = dataUri.split(',')[0].split(':')[1].split(';')[0];
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+    }
+    return new Blob([ab], { type: mimeString });
+}
+
+
 function CreatePostPageContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -39,13 +52,11 @@ function CreatePostPageContent() {
     // NEW: Effect to convert the pre-filled URL to a File-like object for consistent form handling
     useEffect(() => {
         if (initialImageUrl && initialType === 'media' && postData.mediaFiles.length === 0) {
-            fetch(initialImageUrl)
-                .then(res => res.blob())
-                .then(blob => {
-                    const file = new File([blob], "ai-generated.png", { type: blob.type });
-                    setPostData((prev: any) => ({ ...prev, mediaFiles: [file] }));
-                })
-                .catch(console.error);
+            const blob = dataUriToBlob(initialImageUrl);
+            if (blob) {
+                const file = new File([blob], "ai-generated.png", { type: blob.type });
+                setPostData((prev: any) => ({ ...prev, mediaFiles: [file] }));
+            }
         }
     }, [initialImageUrl, initialType, postData.mediaFiles]);
 
