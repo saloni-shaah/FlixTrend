@@ -13,9 +13,8 @@ import {
   serverTimestamp,
   doc,
   getDoc,
-  runTransaction,
-  increment,
   writeBatch,
+  increment,
 } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { auth, db } from '@/utils/firebaseClient';
@@ -30,7 +29,6 @@ import './Chat.css';
 
 const storage = getStorage(db.app);
 
-// Moved from actions.ts to avoid "use server" violation
 const USAGE_LIMITS = {
     text: 60,
     image: 2,
@@ -254,7 +252,10 @@ export function Chat() {
 
     // --- REGULAR CHAT ---
     } else {
-        const usageCheck = await checkAndIncrementUsage(currentUser.uid, 'text');
+        const searchPromptMatch = textToSend.toLowerCase().match(/^(?:search for|what is|who is)\s+(.*)/);
+        const usageType = searchPromptMatch ? 'search' : 'text';
+
+        const usageCheck = await checkAndIncrementUsage(currentUser.uid, usageType);
         if (!usageCheck.allowed) {
             await addDoc(collection(db, 'chats', chatId, 'messages'), { sender: 'almighty-bot', text: usageCheck.message, createdAt: serverTimestamp(), type: 'text' });
             return;
@@ -402,3 +403,5 @@ export function Chat() {
     </div>
   );
 }
+
+    
