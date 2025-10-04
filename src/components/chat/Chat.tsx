@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -19,7 +20,6 @@ import {
   getAlmightyResponse,
   remixImageAction,
   generateImageAction,
-  uploadFileToFirebaseStorage,
 } from '@/app/actions';
 import './Chat.css';
 
@@ -138,11 +138,11 @@ export function Chat() {
       type: 'text',
     };
 
-    // --- TEXT TO IMAGE GENERATION ---
     const imagePromptMatch = textToSend
       .toLowerCase()
       .match(/^(?:imagine|generate an image of)\s+(.*)/);
-
+    
+    // --- TEXT TO IMAGE GENERATION ---
     if (imagePromptMatch && imagePromptMatch[1] && !fileToSend) {
       await addDoc(collection(db, 'chats', chatId, 'messages'), userMessage);
       setIsAlmightyLoading(true);
@@ -178,23 +178,16 @@ export function Chat() {
       } finally {
         setIsAlmightyLoading(false);
       }
-      // --- IMAGE REMIXING ---
+    // --- IMAGE REMIXING ---
     } else if (fileToSend) {
       setIsAlmightyLoading(true);
       try {
-        const formData = new FormData();
-        formData.append('file', fileToSend);
-        const uploadResult = await uploadFileToFirebaseStorage(formData);
-        if (!uploadResult.success?.url) {
-          throw new Error(
-            uploadResult.failure || 'Could not upload image for remixing.'
-          );
-        }
+        const photoDataUri = await fileToDataUri(fileToSend);
 
         const userMessageWithImage = {
           sender: currentUser.uid,
           text: textToSend,
-          imageUrl: uploadResult.success.url,
+          imageUrl: photoDataUri, // Show local preview immediately
           createdAt: serverTimestamp(),
           type: 'image',
         };
@@ -202,8 +195,6 @@ export function Chat() {
           collection(db, 'chats', chatId, 'messages'),
           userMessageWithImage
         );
-
-        const photoDataUri = await fileToDataUri(fileToSend);
 
         const remixResponse = await remixImageAction({
           photoDataUri,
@@ -236,7 +227,7 @@ export function Chat() {
       } finally {
         setIsAlmightyLoading(false);
       }
-      // --- REGULAR CHAT ---
+    // --- REGULAR CHAT ---
     } else {
       await addDoc(collection(db, 'chats', chatId, 'messages'), userMessage);
       setIsAlmightyLoading(true);
