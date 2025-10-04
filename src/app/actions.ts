@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { contentModerationFlow } from "@/ai/flows/content-moderation-flow";
 import { searchDuckDuckGo } from "@/ai/flows/search-flow";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { getFirestore, doc, getDoc, setDoc, serverTimestamp, increment } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc, serverTimestamp, increment, runTransaction } from "firebase/firestore";
 import { app, auth, db } from '@/utils/firebaseClient'; // Import app for storage initialization and db
 
 // --- USAGE LIMITS ---
@@ -19,7 +19,7 @@ type UsageType = keyof typeof USAGE_LIMITS;
 
 /**
  * Checks if the user has exceeded their monthly usage limit for a given AI feature.
- * If not, it increments their usage count.
+ * If not, it increments their usage count. This function uses a transaction.
  * @param userId - The ID of the user.
  * @param type - The type of feature being used ('text', 'image', 'search').
  * @returns An object indicating if the request is allowed and a message.
@@ -28,53 +28,59 @@ async function checkAndIncrementUsage(userId: string, type: UsageType): Promise<
     const userDocRef = doc(db, 'users', userId);
 
     try {
-        const docSnap = await getDoc(userDocRef);
-        if (!docSnap.exists()) {
-            return { allowed: false, message: "User profile not found." };
-        }
+        await runTransaction(db, async (transaction) => {
+            const userDoc = await transaction.get(userDocRef);
+            if (!userDoc.exists()) {
+                throw new Error("User profile not found.");
+            }
 
-        const userData = docSnap.data();
-        const isPremium = userData.isPremium && (!userData.premiumUntil || userData.premiumUntil.toDate() > new Date());
-        
-        // Premium users have unlimited access
-        if (isPremium) {
-            return { allowed: true, message: "Premium access." };
-        }
+            const userData = userDoc.data();
+            const isPremium = userData.isPremium && (!userData.premiumUntil || userData.premiumUntil.toDate() > new Date());
+            
+            // Premium users have unlimited access, no need to track.
+            if (isPremium) {
+                return; // Exit transaction successfully
+            }
 
-        const now = new Date();
-        const usage = userData.aiUsage || {};
-        const lastReset = usage.lastReset?.toDate() || new Date(0);
+            const now = new Date();
+            const usage = userData.aiUsage || {};
+            const lastReset = usage.lastReset?.toDate() || new Date(0);
+            
+            let needsReset = false;
+            if (now.getMonth() !== lastReset.getMonth() || now.getFullYear() !== lastReset.getFullYear()) {
+                needsReset = true;
+            }
+            
+            const currentCount = needsReset ? 0 : (usage[`${type}Count`] || 0);
+            const limit = USAGE_LIMITS[type];
 
-        // Check if it's a new month
-        if (now.getMonth() !== lastReset.getMonth() || now.getFullYear() !== lastReset.getFullYear()) {
-            // Reset counts for the new month
-            usage.textCount = 0;
-            usage.imageCount = 0;
-            usage.searchCount = 0;
-            usage.lastReset = serverTimestamp();
-        }
+            if (currentCount >= limit) {
+                throw new Error(`You have reached your monthly limit of ${limit} ${type} generations. Please upgrade to Premium for unlimited access.`);
+            }
 
-        const currentCount = usage[`${type}Count`] || 0;
-        const limit = USAGE_LIMITS[type];
-
-        if (currentCount >= limit) {
-            return { allowed: false, message: `You have reached your monthly limit of ${limit} ${type} generations. Please upgrade to Premium for unlimited access.` };
-        }
-
-        // Increment the count and proceed
-        await setDoc(userDocRef, {
-            aiUsage: {
+            // Prepare update data
+            const newUsageData = needsReset ? {
+                textCount: 0,
+                imageCount: 0,
+                searchCount: 0,
+                [`${type}Count`]: 1,
+                lastReset: serverTimestamp()
+            } : {
                 ...usage,
                 [`${type}Count`]: increment(1),
-                lastReset: usage.lastReset || serverTimestamp() // Ensure lastReset is set on first use
-            }
-        }, { merge: true });
+                lastReset: usage.lastReset || serverTimestamp()
+            };
 
+            transaction.set(userDocRef, { aiUsage: newUsageData }, { merge: true });
+        });
+
+        // If the transaction is successful
         return { allowed: true, message: "Usage tracked." };
 
     } catch (error: any) {
-        console.error("Error in checkAndIncrementUsage:", error);
-        return { allowed: false, message: "Could not verify usage limits." };
+        console.error("Error in checkAndIncrementUsage transaction:", error);
+        // The error message from the transaction (e.g., limit reached) will be passed through.
+        return { allowed: false, message: error.message || "Could not verify usage limits." };
     }
 }
 
@@ -103,7 +109,7 @@ const searchTool = ai.defineTool(
     if (!usageCheck.allowed) {
         return usageCheck.message;
     }
-    return searchDuckDuckGo(input.query);
+    return await searchDuckDuckGo(input.query);
   }
 );
 
