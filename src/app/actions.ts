@@ -121,7 +121,7 @@ const GenerateImageInputSchema = z.object({
 export async function generateImageAction(input: z.infer<typeof GenerateImageInputSchema>): Promise<{ success: z.infer<typeof ImageOutputSchema> | null; failure: string | null }> {
     try {
         const { media } = await ai.generate({
-            model: 'googleai/gemini-1.5-flash-latest', // Using the stable model
+            model: 'googleai/imagen-4.0-fast-generate-001', // Correct model for text-to-image
             prompt: `Generate an image of: ${input.prompt}`,
             config: {
                 responseModalities: ['IMAGE'],
@@ -195,3 +195,4 @@ export async function uploadFileToFirebaseStorage(formData: FormData) {
         return { success: null, failure: `Upload failed: ${error.message}` };
     }
 }
+
