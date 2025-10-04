@@ -15,6 +15,7 @@ import {
   getDoc,
   runTransaction,
   increment,
+  writeBatch,
 } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { auth, db } from '@/utils/firebaseClient';
@@ -24,12 +25,19 @@ import {
   getAlmightyResponse,
   remixImageAction,
   generateImageAction,
-  USAGE_LIMITS,
-  type UsageType,
 } from '@/app/actions';
 import './Chat.css';
 
 const storage = getStorage(db.app);
+
+// Moved from actions.ts to avoid "use server" violation
+const USAGE_LIMITS = {
+    text: 60,
+    image: 2,
+    search: 1,
+};
+type UsageType = keyof typeof USAGE_LIMITS;
+
 
 // Helper to convert File to Data URI
 const fileToDataUri = (file: File): Promise<string> => {
@@ -123,63 +131,54 @@ export function Chat() {
   /**
    * Client-side function to check usage limits before calling a server action.
    */
-  const checkUsage = async (userId: string, type: UsageType): Promise<{ allowed: boolean; message: string }> => {
+  const checkAndIncrementUsage = async (userId: string, type: UsageType): Promise<{ allowed: boolean; message: string }> => {
     const userDocRef = doc(db, 'users', userId);
 
     try {
-        let isAllowed = false;
-        let message = '';
-        
-        await runTransaction(db, async (transaction) => {
-            const userDoc = await transaction.get(userDocRef);
-            if (!userDoc.exists()) {
-                throw new Error("User profile not found.");
-            }
+      const userDoc = await getDoc(userDocRef);
+      if (!userDoc.exists()) {
+        throw new Error("User profile not found.");
+      }
 
-            const userData = userDoc.data();
-            const isPremium = userData.isPremium && (!userData.premiumUntil || userData.premiumUntil.toDate() > new Date());
-            
-            if (isPremium) {
-                isAllowed = true;
-                message = "Premium user, unlimited access.";
-                return;
-            }
+      const userData = userDoc.data();
+      const isPremium = userData.isPremium && (!userData.premiumUntil || userData.premiumUntil.toDate() > new Date());
 
-            const now = new Date();
-            const usage = userData.aiUsage || {};
-            const lastReset = usage.lastReset?.toDate() || new Date(0);
-            
-            const needsReset = now.getMonth() !== lastReset.getMonth() || now.getFullYear() !== lastReset.getFullYear();
-            
-            const currentCount = needsReset ? 0 : (usage[`${type}Count`] || 0);
-            const limit = USAGE_LIMITS[type];
+      if (isPremium) {
+        return { allowed: true, message: "Premium user, unlimited access." };
+      }
 
-            if (currentCount >= limit) {
-                isAllowed = false;
-                message = `You have reached your monthly limit of ${limit} ${type} generations. Please upgrade to Premium for unlimited access.`;
-                return;
-            }
+      const now = new Date();
+      const usage = userData.aiUsage || {};
+      const lastReset = usage.lastReset?.toDate() || new Date(0);
 
-            isAllowed = true;
-            message = "Usage allowed.";
-            const newUsageData = needsReset ? {
-                textCount: 0,
-                imageCount: 0,
-                searchCount: 0,
-                [`${type}Count`]: 1,
-                lastReset: serverTimestamp()
-            } : {
-                ...usage,
-                [`${type}Count`]: increment(1),
-                lastReset: usage.lastReset || serverTimestamp()
-            };
-            transaction.set(userDocRef, { aiUsage: newUsageData }, { merge: true });
-        });
+      const needsReset = now.getMonth() !== lastReset.getMonth() || now.getFullYear() !== lastReset.getFullYear();
 
-        return { allowed: isAllowed, message };
+      const currentCount = needsReset ? 0 : (usage[`${type}Count`] || 0);
+      const limit = USAGE_LIMITS[type];
+
+      if (currentCount >= limit) {
+        return { allowed: false, message: `You have reached your monthly limit of ${limit} ${type} generations. Please upgrade to Premium for unlimited access.` };
+      }
+
+      // Increment the count
+      const batch = writeBatch(db);
+      const newUsageData = needsReset ? {
+          textCount: 0,
+          imageCount: 0,
+          searchCount: 0,
+          [`${type}Count`]: 1,
+          lastReset: serverTimestamp()
+      } : {
+          ...usage,
+          [`${type}Count`]: increment(1),
+      };
+      batch.set(userDocRef, { aiUsage: newUsageData }, { merge: true });
+      await batch.commit();
+
+      return { allowed: true, message: "Usage allowed." };
 
     } catch (error: any) {
-        console.error("Error in client-side checkUsage transaction:", error);
+        console.error("Error in checkAndIncrementUsage:", error);
         return { allowed: false, message: error.message || "Could not verify usage limits." };
     }
   };
@@ -206,17 +205,13 @@ export function Chat() {
     
     // --- TEXT TO IMAGE GENERATION ---
     if (imagePromptMatch && imagePromptMatch[1] && !fileToSend) {
-        // 1. Add user's prompt message
-        await addDoc(collection(db, 'chats', chatId, 'messages'), { sender: currentUser.uid, text: textToSend, createdAt: serverTimestamp(), type: 'text' });
-        
-        // 2. Check usage on client
-        const usageCheck = await checkUsage(currentUser.uid, 'image');
+        const usageCheck = await checkAndIncrementUsage(currentUser.uid, 'image');
         if (!usageCheck.allowed) {
             await addDoc(collection(db, 'chats', chatId, 'messages'), { sender: 'almighty-bot', text: usageCheck.message, createdAt: serverTimestamp(), type: 'text' });
             return;
         }
 
-        // 3. Call server action
+        await addDoc(collection(db, 'chats', chatId, 'messages'), { sender: currentUser.uid, text: textToSend, createdAt: serverTimestamp(), type: 'text' });
         setIsAlmightyLoading(true);
         try {
             const prompt = imagePromptMatch[1].trim();
@@ -234,15 +229,14 @@ export function Chat() {
     
     // --- IMAGE REMIXING ---
     } else if (fileToSend) {
+        const usageCheck = await checkAndIncrementUsage(currentUser.uid, 'image');
+        if (!usageCheck.allowed) {
+            await addDoc(collection(db, 'chats', chatId, 'messages'), { sender: 'almighty-bot', text: usageCheck.message, createdAt: serverTimestamp(), type: 'text' });
+            return;
+        }
+        
         setIsAlmightyLoading(true);
         try {
-            const usageCheck = await checkUsage(currentUser.uid, 'image');
-            if (!usageCheck.allowed) {
-                await addDoc(collection(db, 'chats', chatId, 'messages'), { sender: 'almighty-bot', text: usageCheck.message, createdAt: serverTimestamp(), type: 'text' });
-                setIsAlmightyLoading(false);
-                return;
-            }
-
             const photoDataUri = await fileToDataUri(fileToSend);
             await addDoc(collection(db, 'chats', chatId, 'messages'), { sender: currentUser.uid, text: textToSend, imageUrl: photoDataUri, createdAt: serverTimestamp(), type: 'image' });
 
@@ -260,20 +254,22 @@ export function Chat() {
 
     // --- REGULAR CHAT ---
     } else {
-        await addDoc(collection(db, 'chats', chatId, 'messages'), { sender: currentUser.uid, text: textToSend, createdAt: serverTimestamp(), type: 'text' });
-        
-        const usageCheck = await checkUsage(currentUser.uid, 'text');
+        const usageCheck = await checkAndIncrementUsage(currentUser.uid, 'text');
         if (!usageCheck.allowed) {
             await addDoc(collection(db, 'chats', chatId, 'messages'), { sender: 'almighty-bot', text: usageCheck.message, createdAt: serverTimestamp(), type: 'text' });
             return;
         }
 
+        await addDoc(collection(db, 'chats', chatId, 'messages'), { sender: currentUser.uid, text: textToSend, createdAt: serverTimestamp(), type: 'text' });
         setIsAlmightyLoading(true);
         const currentContext = messages.map((m) => `${m.sender === currentUser.uid ? 'User' : 'Almighty'}: ${m.text}`).join('\n');
         
         try {
             const response = await getAlmightyResponse({ userName: currentUser.displayName || 'User', message: textToSend, context: currentContext, userId: currentUser.uid });
-            if (response.failure) throw new Error(response.failure);
+            if (response.failure) {
+              throw new Error(response.failure);
+            }
+
             if (response.success?.response) {
                 await addDoc(collection(db, 'chats', chatId, 'messages'), { sender: 'almighty-bot', text: response.success.response, createdAt: serverTimestamp(), type: 'text' });
             } else {
@@ -406,5 +402,3 @@ export function Chat() {
     </div>
   );
 }
-
-    

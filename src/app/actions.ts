@@ -5,17 +5,7 @@ import { z } from 'zod';
 import { contentModerationFlow } from "@/ai/flows/content-moderation-flow";
 import { searchDuckDuckGo } from "@/ai/flows/search-flow";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { getFirestore, doc, getDoc, setDoc, serverTimestamp, increment, runTransaction } from "firebase/firestore";
 import { app, auth, db } from '@/utils/firebaseClient'; // Import app for storage initialization and db
-
-// --- USAGE LIMITS ---
-export const USAGE_LIMITS = {
-    text: 60,
-    image: 2,
-    search: 1,
-};
-
-export type UsageType = keyof typeof USAGE_LIMITS;
 
 const AlmightyResponseInputSchema = z.object({
     userName: z.string().describe("The name of the user who is interacting with the AI."),
@@ -203,5 +193,3 @@ export async function uploadFileToFirebaseStorage(formData: FormData): Promise<{
         return { success: null, failure: error.message || 'File upload failed.' };
     }
 }
-
-    
