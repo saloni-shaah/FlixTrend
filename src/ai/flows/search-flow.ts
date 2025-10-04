@@ -1,18 +1,17 @@
-
 'use server';
 /**
  * @fileOverview A Genkit flow for performing a web search using the Tavily API.
  */
 import { ai } from '@/ai/ai';
 import { z } from 'zod';
-import * as Tavily from 'tavily';
+import Tavily from 'tavily';
 
 const SearchInputSchema = z.object({
   query: z.string(),
 });
 
 // Initialize the Tavily client. It will automatically use the TAVILY_API_KEY from your .env file.
-const tavilyClient = new (Tavily as any)(process.env.TAVILY_API_KEY || '');
+const tavilyClient = new Tavily(process.env.TAVILY_API_KEY || '');
 
 async function performTavilySearch(query: string): Promise<string> {
   console.log(`Performing Tavily search for: ${query}`);
