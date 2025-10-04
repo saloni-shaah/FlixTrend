@@ -1,7 +1,8 @@
+
 "use client";
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { RotateCcw, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Apple } from 'lucide-react';
+import { RotateCcw, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Apple, Trophy } from 'lucide-react';
 
 const GRID_SIZE = 20;
 const TILE_SIZE = 20; // in pixels
@@ -26,10 +27,20 @@ export function Snake() {
     const [speed, setSpeed] = useState<number | null>(200);
     const [gameOver, setGameOver] = useState(false);
     const [score, setScore] = useState(0);
+    const [highScore, setHighScore] = useState(0);
 
     const gameLoopRef = useRef<NodeJS.Timeout | null>(null);
 
+    // Load high score from local storage
+    useEffect(() => {
+        const storedHighScore = localStorage.getItem('snakeHighScore');
+        if (storedHighScore) {
+            setHighScore(parseInt(storedHighScore, 10));
+        }
+    }, []);
+
     const handleKeyDown = useCallback((e: KeyboardEvent) => {
+        e.preventDefault(); // Prevent page scrolling with arrow keys
         switch (e.key) {
             case 'ArrowUp':
                 if (direction !== 'DOWN') setDirection('UP');
@@ -94,7 +105,12 @@ export function Snake() {
 
             // Food collision
             if (head.x === food.x && head.y === food.y) {
-                setScore(s => s + 10);
+                const newScore = score + 10;
+                setScore(newScore);
+                if (newScore > highScore) {
+                    setHighScore(newScore);
+                    localStorage.setItem('snakeHighScore', newScore.toString());
+                }
                 setFood(getRandomCoordinate(newSnake));
                 // Increase speed slightly
                 setSpeed(s => Math.max(50, s! * 0.95));
@@ -104,7 +120,7 @@ export function Snake() {
 
             return newSnake;
         });
-    }, [direction, food, gameOver]);
+    }, [direction, food, gameOver, score, highScore]);
 
 
     useEffect(() => {
@@ -129,12 +145,14 @@ export function Snake() {
              <h2 className="text-3xl font-headline text-accent-green">Snake</h2>
 
             <div className="flex justify-between w-full font-bold">
-                <span className="text-accent-cyan">Score: {score}</span>
-                <span className="text-accent-pink">Length: {snake.length}</span>
+                <motion.span animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 0.3, times: [0, 0.5, 1] }} key={score} className="text-accent-cyan text-lg">
+                    Score: {score}
+                </motion.span>
+                <span className="text-accent-pink text-lg">High Score: {highScore}</span>
             </div>
 
             <div 
-                className="grid bg-black/30 border-2 border-accent-cyan/20"
+                className="grid bg-black/30 border-2 border-accent-cyan/20 relative shadow-[0_0_15px_rgba(0,240,255,0.3)]"
                 style={{
                     gridTemplateColumns: `repeat(${GRID_SIZE}, ${TILE_SIZE}px)`,
                     gridTemplateRows: `repeat(${GRID_SIZE}, ${TILE_SIZE}px)`,
@@ -145,7 +163,7 @@ export function Snake() {
                 {snake.map((segment, index) => (
                     <div 
                         key={index} 
-                        className={`transition-colors duration-200 ${index === 0 ? 'bg-accent-green' : 'bg-green-400/80'}`} 
+                        className={`w-full h-full rounded-sm transition-colors duration-200 ${index === 0 ? 'bg-accent-green shadow-[0_0_8px_rgba(57,255,20,0.7)]' : 'bg-green-400/80'}`} 
                         style={{
                             gridColumnStart: segment.x + 1,
                             gridRowStart: segment.y + 1,
@@ -159,31 +177,31 @@ export function Snake() {
                         gridRowStart: food.y + 1,
                     }}
                  >
-                    <Apple className="animate-pulse"/>
+                    <Apple className="animate-pulse drop-shadow-[0_0_5px_rgba(255,50,50,0.8)]"/>
                  </div>
             </div>
 
             {gameOver && (
-                <div className="text-center">
+                <motion.div 
+                    initial={{opacity: 0, y: 10}} 
+                    animate={{opacity: 1, y: 0}}
+                    className="text-center bg-red-500/10 p-4 rounded-xl border border-red-500/30"
+                >
+                    <Trophy className="mx-auto text-brand-gold mb-2" size={32}/>
                     <h3 className="text-2xl font-bold text-red-500">Game Over!</h3>
                     <p className="text-gray-300">Your final score is {score}.</p>
-                </div>
+                    {score > 0 && score === highScore && <p className="font-bold text-brand-gold animate-pulse">New High Score!</p>}
+                </motion.div>
             )}
             
             <div className="flex flex-col items-center gap-4">
-                <div className="hidden md:flex gap-2">
-                    <kbd className="px-2 py-1.5 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">↑</kbd>
-                    <kbd className="px-2 py-1.5 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">↓</kbd>
-                    <kbd className="px-2 py-1.5 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">←</kbd>
-                    <kbd className="px-2 py-1.5 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg">→</kbd>
-                </div>
-                <div className="grid grid-cols-3 gap-2 md:hidden">
+                <div className="grid grid-cols-3 gap-2">
                     <div />
-                    <button className="btn-glass p-3" onClick={() => handleKeyDown({ key: 'ArrowUp' } as KeyboardEvent)}><ArrowUp/></button>
+                    <button className="btn-glass p-4" onClick={() => handleKeyDown({ key: 'ArrowUp', preventDefault: ()=>{} } as KeyboardEvent)}><ArrowUp/></button>
                     <div />
-                    <button className="btn-glass p-3" onClick={() => handleKeyDown({ key: 'ArrowLeft' } as KeyboardEvent)}><ArrowLeft/></button>
-                    <button className="btn-glass p-3" onClick={() => handleKeyDown({ key: 'ArrowDown' } as KeyboardEvent)}><ArrowDown/></button>
-                    <button className="btn-glass p-3" onClick={() => handleKeyDown({ key: 'ArrowRight' } as KeyboardEvent)}><ArrowRight/></button>
+                    <button className="btn-glass p-4" onClick={() => handleKeyDown({ key: 'ArrowLeft', preventDefault: ()=>{} } as KeyboardEvent)}><ArrowLeft/></button>
+                    <button className="btn-glass p-4" onClick={() => handleKeyDown({ key: 'ArrowDown', preventDefault: ()=>{} } as KeyboardEvent)}><ArrowDown/></button>
+                    <button className="btn-glass p-4" onClick={() => handleKeyDown({ key: 'ArrowRight', preventDefault: ()=>{} } as KeyboardEvent)}><ArrowRight/></button>
                 </div>
 
                 <button onClick={resetGame} className="btn-glass bg-accent-purple/20 text-accent-purple flex items-center gap-2 mt-4">
