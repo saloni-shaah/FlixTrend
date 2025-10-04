@@ -3,11 +3,25 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { getFirestore, collection, query, onSnapshot, orderBy, addDoc, serverTimestamp } from "firebase/firestore";
-import { auth, db } from "@/utils/firebaseClient";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { auth, db, app } from "@/utils/firebaseClient";
 import { Send, Bot, User, UploadCloud, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getAlmightyResponse, remixImageAction, generateImageAction, uploadFileToFirebaseStorage } from "@/app/actions";
+import { getAlmightyResponse, remixImageAction, generateImageAction } from "@/app/actions";
 import './Chat.css';
+
+const storage = getStorage(app);
+
+// This function now runs on the client!
+async function uploadFileToFirebaseStorageClient(file: File, user: any) {
+    if (!user || !file) {
+        throw new Error('Authentication or file is missing for upload.');
+    }
+    const fileName = `${user.uid}-${Date.now()}-${file.name}`;
+    const storageRef = ref(storage, `user_uploads/${fileName}`);
+    const snapshot = await uploadBytes(storageRef, file, { contentType: file.type });
+    return await getDownloadURL(snapshot.ref);
+}
 
 function ChatMessageLoading() {
   return (
@@ -125,11 +139,8 @@ export function Chat() {
         } else if (fileToSend) {
              setIsAlmightyLoading(true);
             try {
-                const formData = new FormData();
-                formData.append('file', fileToSend);
-                const uploadResult = await uploadFileToFirebaseStorage(formData);
-                if (!uploadResult.success?.url) throw new Error(uploadResult.failure || 'File upload failed.');
-                const originalImageUrl = uploadResult.success.url;
+                // Upload image from the client
+                const originalImageUrl = await uploadFileToFirebaseStorageClient(fileToSend, currentUser);
 
                 const userMessage = { sender: currentUser.uid, text: textToSend, imageUrl: originalImageUrl, createdAt: serverTimestamp(), type: 'image' };
                 await addDoc(collection(db, "chats", chatId, "messages"), userMessage);
@@ -250,3 +261,5 @@ export function Chat() {
         </div>
     );
 }
+
+    
