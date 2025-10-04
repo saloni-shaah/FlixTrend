@@ -3,13 +3,20 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Gamepad2 } from 'lucide-react';
 import { TicTacToe } from './games/TicTacToe';
+import { Snake } from './games/Snake';
 
 const games = [
-    { 
-        id: 'tic-tac-toe', 
-        name: "Tic-Tac-Toe", 
-        description: "The classic offline game. Challenge a friend to a match.", 
-        component: TicTacToe 
+    {
+        id: 'tic-tac-toe',
+        name: "Tic-Tac-Toe",
+        description: "The classic offline and online game. Challenge a friend to a match.",
+        component: TicTacToe
+    },
+    {
+        id: 'snake',
+        name: "Snake",
+        description: "A timeless arcade classic. Guide the snake to eat the food and grow longer, but don't hit the walls or yourself!",
+        component: Snake
     },
 ];
 
@@ -40,21 +47,21 @@ export function GamesHub() {
             <h2 className="text-3xl font-headline bg-gradient-to-r from-accent-pink to-accent-green bg-clip-text text-transparent mb-8">
                 Community Games
             </h2>
-            
+
             <p className="text-center text-gray-400 mb-12 max-w-2xl">
                 Challenge a friend or play a quick game solo. More games coming soon!
             </p>
 
             <div className="w-full space-y-12">
-                <motion.section 
+                <motion.section
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.1 }}
                 >
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {games.map(game => (
-                            <motion.div 
-                                key={game.id} 
+                            <motion.div
+                                key={game.id}
                                 className="glass-card p-6 flex flex-col gap-3 hover:border-accent-cyan transition-colors duration-300 cursor-pointer"
                                 whileHover={{ y: -5 }}
                                 onClick={() => handleSelectGame(game)}
