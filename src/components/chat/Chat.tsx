@@ -11,19 +11,25 @@ import {
   orderBy,
   addDoc,
   serverTimestamp,
+  doc,
+  getDoc,
+  runTransaction,
+  increment,
 } from 'firebase/firestore';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { auth, db, app } from '@/utils/firebaseClient';
+import { getStorage } from 'firebase/storage';
+import { auth, db } from '@/utils/firebaseClient';
 import { Send, Bot, User, UploadCloud, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   getAlmightyResponse,
   remixImageAction,
   generateImageAction,
+  USAGE_LIMITS,
+  type UsageType,
 } from '@/app/actions';
 import './Chat.css';
 
-const storage = getStorage(app);
+const storage = getStorage(db.app);
 
 // Helper to convert File to Data URI
 const fileToDataUri = (file: File): Promise<string> => {
@@ -114,6 +120,70 @@ export function Chat() {
     }
   };
 
+  /**
+   * Client-side function to check usage limits before calling a server action.
+   */
+  const checkUsage = async (userId: string, type: UsageType): Promise<{ allowed: boolean; message: string }> => {
+    const userDocRef = doc(db, 'users', userId);
+
+    try {
+        let isAllowed = false;
+        let message = '';
+        
+        await runTransaction(db, async (transaction) => {
+            const userDoc = await transaction.get(userDocRef);
+            if (!userDoc.exists()) {
+                throw new Error("User profile not found.");
+            }
+
+            const userData = userDoc.data();
+            const isPremium = userData.isPremium && (!userData.premiumUntil || userData.premiumUntil.toDate() > new Date());
+            
+            if (isPremium) {
+                isAllowed = true;
+                message = "Premium user, unlimited access.";
+                return;
+            }
+
+            const now = new Date();
+            const usage = userData.aiUsage || {};
+            const lastReset = usage.lastReset?.toDate() || new Date(0);
+            
+            const needsReset = now.getMonth() !== lastReset.getMonth() || now.getFullYear() !== lastReset.getFullYear();
+            
+            const currentCount = needsReset ? 0 : (usage[`${type}Count`] || 0);
+            const limit = USAGE_LIMITS[type];
+
+            if (currentCount >= limit) {
+                isAllowed = false;
+                message = `You have reached your monthly limit of ${limit} ${type} generations. Please upgrade to Premium for unlimited access.`;
+                return;
+            }
+
+            isAllowed = true;
+            message = "Usage allowed.";
+            const newUsageData = needsReset ? {
+                textCount: 0,
+                imageCount: 0,
+                searchCount: 0,
+                [`${type}Count`]: 1,
+                lastReset: serverTimestamp()
+            } : {
+                ...usage,
+                [`${type}Count`]: increment(1),
+                lastReset: usage.lastReset || serverTimestamp()
+            };
+            transaction.set(userDocRef, { aiUsage: newUsageData }, { merge: true });
+        });
+
+        return { allowed: isAllowed, message };
+
+    } catch (error: any) {
+        console.error("Error in client-side checkUsage transaction:", error);
+        return { allowed: false, message: error.message || "Could not verify usage limits." };
+    }
+  };
+
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if ((!newMessage.trim() && !imageFile) || !currentUser) return;
@@ -125,156 +195,98 @@ export function Chat() {
     setImageFile(null);
     setImagePreview(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
-
+    
     if (messages.length === 1 && messages[0].id === 'initial') {
-      setMessages([]);
+        setMessages([]);
     }
 
     const chatId = `almighty-chat_${currentUser.uid}`;
-    const userMessage = {
-      sender: currentUser.uid,
-      text: textToSend,
-      createdAt: serverTimestamp(),
-      type: 'text',
-    };
-
-    const imagePromptMatch = textToSend
-      .toLowerCase()
-      .match(/^(?:imagine|generate an image of)\s+(.*)/);
+    
+    const imagePromptMatch = textToSend.toLowerCase().match(/^(?:imagine|generate an image of)\s+(.*)/);
     
     // --- TEXT TO IMAGE GENERATION ---
     if (imagePromptMatch && imagePromptMatch[1] && !fileToSend) {
-      await addDoc(collection(db, 'chats', chatId, 'messages'), userMessage);
-      setIsAlmightyLoading(true);
-      try {
-        const prompt = imagePromptMatch[1].trim();
-        const response = await generateImageAction({
-          prompt,
-          userId: currentUser.uid,
-        });
-        if (response.success?.imageUrl) {
-          const aiImageMessage = {
-            sender: 'almighty-bot',
-            text: `Here's your image for: "${prompt}"`,
-            imageUrl: response.success.imageUrl,
-            createdAt: serverTimestamp(),
-            type: 'image',
-          };
-          await addDoc(collection(db, 'chats', chatId, 'messages'), aiImageMessage);
-        } else {
-          throw new Error(
-            response.failure ||
-              "The AI couldn't generate an image for that prompt."
-          );
+        // 1. Add user's prompt message
+        await addDoc(collection(db, 'chats', chatId, 'messages'), { sender: currentUser.uid, text: textToSend, createdAt: serverTimestamp(), type: 'text' });
+        
+        // 2. Check usage on client
+        const usageCheck = await checkUsage(currentUser.uid, 'image');
+        if (!usageCheck.allowed) {
+            await addDoc(collection(db, 'chats', chatId, 'messages'), { sender: 'almighty-bot', text: usageCheck.message, createdAt: serverTimestamp(), type: 'text' });
+            return;
         }
-      } catch (error: any) {
-        const errorMessage = {
-          sender: 'almighty-bot',
-          text: `Sorry, I hit a snag: ${error.message}`,
-          createdAt: serverTimestamp(),
-          type: 'text',
-        };
-        await addDoc(collection(db, 'chats', chatId, 'messages'), errorMessage);
-      } finally {
-        setIsAlmightyLoading(false);
-      }
+
+        // 3. Call server action
+        setIsAlmightyLoading(true);
+        try {
+            const prompt = imagePromptMatch[1].trim();
+            const response = await generateImageAction({ prompt, userId: currentUser.uid });
+            if (response.success?.imageUrl) {
+                await addDoc(collection(db, 'chats', chatId, 'messages'), { sender: 'almighty-bot', text: `Here's your image for: "${prompt}"`, imageUrl: response.success.imageUrl, createdAt: serverTimestamp(), type: 'image' });
+            } else {
+                throw new Error(response.failure || "The AI couldn't generate an image for that prompt.");
+            }
+        } catch (error: any) {
+             await addDoc(collection(db, 'chats', chatId, 'messages'), { sender: 'almighty-bot', text: `Sorry, I hit a snag: ${error.message}`, createdAt: serverTimestamp(), type: 'text' });
+        } finally {
+            setIsAlmightyLoading(false);
+        }
+    
     // --- IMAGE REMIXING ---
     } else if (fileToSend) {
-      setIsAlmightyLoading(true);
-      try {
-        const photoDataUri = await fileToDataUri(fileToSend);
+        setIsAlmightyLoading(true);
+        try {
+            const usageCheck = await checkUsage(currentUser.uid, 'image');
+            if (!usageCheck.allowed) {
+                await addDoc(collection(db, 'chats', chatId, 'messages'), { sender: 'almighty-bot', text: usageCheck.message, createdAt: serverTimestamp(), type: 'text' });
+                setIsAlmightyLoading(false);
+                return;
+            }
 
-        const userMessageWithImage = {
-          sender: currentUser.uid,
-          text: textToSend,
-          imageUrl: photoDataUri, // Show local preview immediately
-          createdAt: serverTimestamp(),
-          type: 'image',
-        };
-        await addDoc(
-          collection(db, 'chats', chatId, 'messages'),
-          userMessageWithImage
-        );
+            const photoDataUri = await fileToDataUri(fileToSend);
+            await addDoc(collection(db, 'chats', chatId, 'messages'), { sender: currentUser.uid, text: textToSend, imageUrl: photoDataUri, createdAt: serverTimestamp(), type: 'image' });
 
-        const remixResponse = await remixImageAction({
-          photoDataUri,
-          prompt: textToSend,
-          userId: currentUser.uid,
-        });
-
-        if (remixResponse.success?.imageUrl) {
-          const aiImageMessage = {
-            sender: 'almighty-bot',
-            text: 'Here is your remixed image!',
-            imageUrl: remixResponse.success.imageUrl,
-            createdAt: serverTimestamp(),
-            type: 'image',
-          };
-          await addDoc(collection(db, 'chats', chatId, 'messages'), aiImageMessage);
-        } else {
-          throw new Error(
-            remixResponse.failure || "The AI couldn't remix the image."
-          );
+            const remixResponse = await remixImageAction({ photoDataUri, prompt: textToSend, userId: currentUser.uid });
+            if (remixResponse.success?.remixedPhotoDataUri) {
+                await addDoc(collection(db, 'chats', chatId, 'messages'), { sender: 'almighty-bot', text: 'Here is your remixed image!', imageUrl: remixResponse.success.remixedPhotoDataUri, createdAt: serverTimestamp(), type: 'image' });
+            } else {
+                throw new Error(remixResponse.failure || "The AI couldn't remix the image.");
+            }
+        } catch (error: any) {
+            await addDoc(collection(db, 'chats', chatId, 'messages'), { sender: 'almighty-bot', text: `Sorry, I hit a snag while remixing: ${error.message}`, createdAt: serverTimestamp(), type: 'text' });
+        } finally {
+            setIsAlmightyLoading(false);
         }
-      } catch (error: any) {
-        const errorMessage = {
-          sender: 'almighty-bot',
-          text: `Sorry, I hit a snag while remixing: ${error.message}`,
-          createdAt: serverTimestamp(),
-          type: 'text',
-        };
-        await addDoc(collection(db, 'chats', chatId, 'messages'), errorMessage);
-      } finally {
-        setIsAlmightyLoading(false);
-      }
+
     // --- REGULAR CHAT ---
     } else {
-      await addDoc(collection(db, 'chats', chatId, 'messages'), userMessage);
-      setIsAlmightyLoading(true);
-      const currentContext = messages
-        .map((m) => `${m.sender === currentUser.uid ? 'User' : 'Almighty'}: ${m.text}`)
-        .join('\n');
-
-      try {
-        const response = await getAlmightyResponse({
-          userName: currentUser.displayName || 'User',
-          message: textToSend,
-          context: currentContext,
-          userId: currentUser.uid,
-        });
-
-        if (response.failure) {
-          throw new Error(response.failure);
+        await addDoc(collection(db, 'chats', chatId, 'messages'), { sender: currentUser.uid, text: textToSend, createdAt: serverTimestamp(), type: 'text' });
+        
+        const usageCheck = await checkUsage(currentUser.uid, 'text');
+        if (!usageCheck.allowed) {
+            await addDoc(collection(db, 'chats', chatId, 'messages'), { sender: 'almighty-bot', text: usageCheck.message, createdAt: serverTimestamp(), type: 'text' });
+            return;
         }
 
-        if (response.success?.response) {
-          const assistantMessage = {
-            sender: 'almighty-bot',
-            text: response.success.response,
-            createdAt: serverTimestamp(),
-            type: 'text',
-          };
-          await addDoc(
-            collection(db, 'chats', chatId, 'messages'),
-            assistantMessage
-          );
-        } else {
-          throw new Error("The AI didn't provide a response.");
+        setIsAlmightyLoading(true);
+        const currentContext = messages.map((m) => `${m.sender === currentUser.uid ? 'User' : 'Almighty'}: ${m.text}`).join('\n');
+        
+        try {
+            const response = await getAlmightyResponse({ userName: currentUser.displayName || 'User', message: textToSend, context: currentContext, userId: currentUser.uid });
+            if (response.failure) throw new Error(response.failure);
+            if (response.success?.response) {
+                await addDoc(collection(db, 'chats', chatId, 'messages'), { sender: 'almighty-bot', text: response.success.response, createdAt: serverTimestamp(), type: 'text' });
+            } else {
+                throw new Error("The AI didn't provide a response.");
+            }
+        } catch (error: any) {
+            await addDoc(collection(db, 'chats', chatId, 'messages'), { sender: 'almighty-bot', text: `Yikes, my brain just glitched. Try that again? 😅 Error: ${error.message}`, createdAt: serverTimestamp(), type: 'text' });
+        } finally {
+            setIsAlmightyLoading(false);
         }
-      } catch (error: any) {
-        console.error('AI Response Error:', error);
-        const errorMessage = {
-          sender: 'almighty-bot',
-          text: 'Yikes, my brain just glitched. Try that again? 😅',
-          createdAt: serverTimestamp(),
-          type: 'text',
-        };
-        await addDoc(collection(db, 'chats', chatId, 'messages'), errorMessage);
-      } finally {
-        setIsAlmightyLoading(false);
-      }
     }
   };
+
 
   return (
     <div className="chat-container">
@@ -394,3 +406,5 @@ export function Chat() {
     </div>
   );
 }
+
+    
