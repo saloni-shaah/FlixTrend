@@ -9,81 +9,13 @@ import { getFirestore, doc, getDoc, setDoc, serverTimestamp, increment, runTrans
 import { app, auth, db } from '@/utils/firebaseClient'; // Import app for storage initialization and db
 
 // --- USAGE LIMITS ---
-const USAGE_LIMITS = {
+export const USAGE_LIMITS = {
     text: 60,
     image: 2,
     search: 1,
 };
 
-type UsageType = keyof typeof USAGE_LIMITS;
-
-/**
- * Checks if the user has exceeded their monthly usage limit for a given AI feature.
- * If not, it increments their usage count. This function uses a transaction.
- * @param userId - The ID of the user.
- * @param type - The type of feature being used ('text', 'image', 'search').
- * @returns An object indicating if the request is allowed and a message.
- */
-async function checkAndIncrementUsage(userId: string, type: UsageType): Promise<{ allowed: boolean; message: string }> {
-    const userDocRef = doc(db, 'users', userId);
-
-    try {
-        await runTransaction(db, async (transaction) => {
-            const userDoc = await transaction.get(userDocRef);
-            if (!userDoc.exists()) {
-                throw new Error("User profile not found.");
-            }
-
-            const userData = userDoc.data();
-            const isPremium = userData.isPremium && (!userData.premiumUntil || userData.premiumUntil.toDate() > new Date());
-            
-            // Premium users have unlimited access, no need to track.
-            if (isPremium) {
-                return; // Exit transaction successfully
-            }
-
-            const now = new Date();
-            const usage = userData.aiUsage || {};
-            const lastReset = usage.lastReset?.toDate() || new Date(0);
-            
-            let needsReset = false;
-            if (now.getMonth() !== lastReset.getMonth() || now.getFullYear() !== lastReset.getFullYear()) {
-                needsReset = true;
-            }
-            
-            const currentCount = needsReset ? 0 : (usage[`${type}Count`] || 0);
-            const limit = USAGE_LIMITS[type];
-
-            if (currentCount >= limit) {
-                throw new Error(`You have reached your monthly limit of ${limit} ${type} generations. Please upgrade to Premium for unlimited access.`);
-            }
-
-            // Prepare update data
-            const newUsageData = needsReset ? {
-                textCount: 0,
-                imageCount: 0,
-                searchCount: 0,
-                [`${type}Count`]: 1,
-                lastReset: serverTimestamp()
-            } : {
-                ...usage,
-                [`${type}Count`]: increment(1),
-                lastReset: usage.lastReset || serverTimestamp()
-            };
-
-            transaction.set(userDocRef, { aiUsage: newUsageData }, { merge: true });
-        });
-
-        // If the transaction is successful
-        return { allowed: true, message: "Usage tracked." };
-
-    } catch (error: any) {
-        console.error("Error in checkAndIncrementUsage transaction:", error);
-        // The error message from the transaction (e.g., limit reached) will be passed through.
-        return { allowed: false, message: error.message || "Could not verify usage limits." };
-    }
-}
-
+export type UsageType = keyof typeof USAGE_LIMITS;
 
 const AlmightyResponseInputSchema = z.object({
     userName: z.string().describe("The name of the user who is interacting with the AI."),
@@ -104,11 +36,7 @@ const searchTool = ai.defineTool(
     outputSchema: z.string(),
   },
   async (input) => {
-    // Check usage limit for search
-    const usageCheck = await checkAndIncrementUsage(input.userId, 'search');
-    if (!usageCheck.allowed) {
-        return usageCheck.message;
-    }
+    // Usage check for search must be handled client-side before calling the parent action.
     return await searchDuckDuckGo(input.query);
   }
 );
@@ -143,11 +71,7 @@ export async function getAlmightyResponse(input: z.infer<typeof AlmightyResponse
             return { success: { response: "What's up?" }, failure: null };
         }
         
-        // Check usage limit for text
-        const usageCheck = await checkAndIncrementUsage(input.userId, 'text');
-        if (!usageCheck.allowed) {
-            return { success: null, failure: usageCheck.message };
-        }
+        // REMOVED: Usage check is now handled on the client-side before calling this action.
 
         const { output } = await almightyPrompt(
             { userName: input.userName, message: input.message, context: input.context },
@@ -180,12 +104,8 @@ const ImageOutputSchema = z.object({
   remixedPhotoDataUri: z.string().describe('The data URI of the generated or remixed image.'),
 });
 
-export async function remixImageAction(input: z.infer<typeof RemixImageInputSchema>): Promise<{success: z.infer<typeof ImageOutputSchema> | null, failure: string | null}> {
-    const usageCheck = await checkAndIncrementUsage(input.userId, 'image');
-    if (!usageCheck.allowed) {
-        return { success: null, failure: usageCheck.message };
-    }
-    
+export async function remixImageAction(input: z.infer<typeof RemixImageInputSchema>): Promise<{success: { remixedPhotoDataUri: string } | null, failure: string | null}> {
+    // Usage check for 'image' needs to be done on the client before calling this.
     try {
         const { media } = await ai.generate({
             model: 'googleai/gemini-1.5-pro-latest',
@@ -199,6 +119,7 @@ export async function remixImageAction(input: z.infer<typeof RemixImageInputSche
             throw new Error('Image generation failed to produce an image.');
         }
 
+        // Return the data URI directly for client-side handling
         return { success: { remixedPhotoDataUri: media.url }, failure: null };
 
     } catch(err: any) {
@@ -221,11 +142,7 @@ async function uploadBufferToFirebaseStorage(buffer: Buffer, contentType: string
 }
 
 export async function generateImageAction(input: z.infer<typeof GenerateImageInputSchema>): Promise<{ success: { imageUrl: string } | null; failure: string | null }> {
-    const usageCheck = await checkAndIncrementUsage(input.userId, 'image');
-    if (!usageCheck.allowed) {
-        return { success: null, failure: usageCheck.message };
-    }
-
+    // Usage check for 'image' needs to be done on the client before calling this.
     try {
         const { media } = await ai.generate({
             model: 'googleai/imagen-4.0-fast-generate-001',
@@ -286,3 +203,5 @@ export async function uploadFileToFirebaseStorage(formData: FormData): Promise<{
         return { success: null, failure: error.message || 'File upload failed.' };
     }
 }
+
+    
