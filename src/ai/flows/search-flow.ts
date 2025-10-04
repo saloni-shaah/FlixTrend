@@ -1,23 +1,32 @@
 
 'use server';
 /**
- * @fileOverview A Genkit flow for performing a web search using DuckDuckGo.
+ * @fileOverview A Genkit flow for performing a web search using the Tavily API.
  */
 import { ai } from '@/ai/ai';
 import { z } from 'zod';
+import Tavily from 'tavily';
 
 const SearchInputSchema = z.object({
   query: z.string(),
 });
 
-// This will just return a placeholder for now.
-// You would replace this with a real call to the DuckDuckGo API.
-async function performDuckDuckGoSearch(query: string): Promise<string> {
-  console.log(`Performing search for: ${query}`);
-  // In a real implementation, you would use 'node-fetch' or similar
-  // to call the DuckDuckGo API and parse the results.
-  // For now, we return a mock result.
-  return `Search results for "${query}" are not yet implemented. This is a placeholder response.`;
+// Initialize the Tavily client. It will automatically use the TAVILY_API_KEY from your .env file.
+const tavilyClient = new Tavily(process.env.TAVILY_API_KEY || '');
+
+async function performTavilySearch(query: string): Promise<string> {
+  console.log(`Performing Tavily search for: ${query}`);
+  try {
+    // Perform a basic search. You can also use 'advanced' for more complex queries.
+    const searchResult = await tavilyClient.search(query, {
+        searchDepth: "basic"
+    });
+    // We'll return a formatted string of the results for the AI to consume.
+    return JSON.stringify(searchResult.results, null, 2);
+  } catch (error) {
+    console.error("Tavily search failed:", error);
+    return `The web search failed with an error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+  }
 }
 
 const searchFlow = ai.defineFlow(
@@ -27,7 +36,7 @@ const searchFlow = ai.defineFlow(
     outputSchema: z.string(),
   },
   async (input) => {
-    return await performDuckDuckGoSearch(input.query);
+    return await performTavilySearch(input.query);
   }
 );
 
