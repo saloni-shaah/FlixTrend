@@ -22,7 +22,6 @@ const createInitialBoard = () => {
         }
     }
     // Prevent initial matches
-    // This is a simplified check; a more robust solution would be more complex
     if (hasMatches(newBoard)) {
         return createInitialBoard(); // Recurse until a match-free board is made
     }
@@ -32,8 +31,8 @@ const createInitialBoard = () => {
 const hasMatches = (board: (number | null)[][]) => {
     for (let r = 0; r < GRID_SIZE; r++) {
         for (let c = 0; c < GRID_SIZE; c++) {
-            if (c < GRID_SIZE - 2 && board[r][c] === board[r][c + 1] && board[r][c] === board[r][c + 2]) return true;
-            if (r < GRID_SIZE - 2 && board[r][c] === board[r + 1][c] && board[r][c] === board[r + 2][c]) return true;
+            if (c < GRID_SIZE - 2 && board[r][c] !== null && board[r][c] === board[r][c + 1] && board[r][c] === board[r][c + 2]) return true;
+            if (r < GRID_SIZE - 2 && board[r][c] !== null && board[r][c] === board[r + 1][c] && board[r][c] === board[r + 2][c]) return true;
         }
     }
     return false;
@@ -99,7 +98,7 @@ export function Match3() {
         return newBoard;
     }, []);
 
-    const processMatches = useCallback((currentBoard: (number | null)[][]) => {
+    const processMatches = useCallback((currentBoard: (number | null)[][]): { newBoard: (number | null)[][], scoreGained: number, clearedColors: {[key: number]: number} } => {
         let matches = checkMatches(currentBoard);
         if (matches.size === 0) return { newBoard: currentBoard, scoreGained: 0, clearedColors: {} };
 
@@ -122,16 +121,26 @@ export function Match3() {
         // Chain reaction
         const chainedResult = processMatches(refilledBoard);
         
+        let finalClearedColors = { ...clearedColors };
+        for (const color in chainedResult.clearedColors) {
+            finalClearedColors[color] = (finalClearedColors[color] || 0) + chainedResult.clearedColors[color];
+        }
+        
         return {
             newBoard: chainedResult.newBoard,
             scoreGained: scoreGained + chainedResult.scoreGained,
-            clearedColors: { ...clearedColors, ...chainedResult.clearedColors }
+            clearedColors: finalClearedColors
         };
 
     }, [checkMatches, dropAndRefill]);
 
     const handleSwap = (r1: number, c1: number, r2: number, c2: number) => {
         if (gameState !== 'playing' || movesLeft <= 0) return;
+        
+        const dr = Math.abs(r1 - r2);
+        const dc = Math.abs(c1 - c2);
+
+        if (dr + dc !== 1) return; // Not an adjacent swap
 
         const newBoard = board.map(row => [...row]);
         [newBoard[r1][c1], newBoard[r2][c2]] = [newBoard[r2][c2], newBoard[r1][c1]];
@@ -156,12 +165,9 @@ export function Match3() {
             
             setMovesLeft(moves => moves - 1);
 
-        } else {
-            // Invalid move, maybe add a quick animation to show it's invalid
         }
     };
     
-    // Check for win/loss conditions
     useEffect(() => {
         if (gameState !== 'playing') return;
         
@@ -182,25 +188,23 @@ export function Match3() {
     const resetGame = (levelIndex = 0) => {
         setCurrentLevel(levelIndex);
         setBoard(createInitialBoard());
-        setScore(levelIndex > 0 ? score : 0); // Keep score if advancing
+        setScore(levelIndex > 0 ? score : 0);
         setMovesLeft(levels[levelIndex].moves);
         setGameState('playing');
         setGoalProgress(0);
     };
-    
-    const handleDragEnd = (r: number, c: number) => {
-        if (!dragStart) return;
 
-        const dr = r - dragStart.r;
-        const dc = c - dragStart.c;
+    const handleDragStart = (e: React.DragEvent<HTMLDivElement>, r: number, c: number) => {
+        e.dataTransfer.setData("text/plain", `${r},${c}`);
+    };
 
-        if (Math.abs(dr) + Math.abs(dc) !== 1) { // Not an adjacent swipe
-            setDragStart(null);
-            return;
+    const handleDrop = (e: React.DragEvent<HTMLDivElement>, r: number, c: number) => {
+        e.preventDefault();
+        const startData = e.dataTransfer.getData("text/plain");
+        if (startData) {
+            const [startR, startC] = startData.split(',').map(Number);
+            handleSwap(startR, startC, r, c);
         }
-        
-        handleSwap(dragStart.r, dragStart.c, r, c);
-        setDragStart(null);
     };
     
     const level = levels[currentLevel];
@@ -222,7 +226,7 @@ export function Match3() {
                 }</p>
                 {level.goal.type === 'clearColor' && (
                     <div className="w-full bg-gray-600 rounded-full h-2.5 mt-1">
-                        <div className="bg-accent-green h-2.5 rounded-full" style={{ width: `${Math.min(100, (goalProgress / level.goal.value) * 100)}%` }}></div>
+                        <div className="bg-green-400 h-2.5 rounded-full" style={{ width: `${Math.min(100, (goalProgress / level.goal.value) * 100)}%` }}></div>
                     </div>
                 )}
             </div>
@@ -230,6 +234,7 @@ export function Match3() {
             <div 
                 className="grid gap-1 bg-black/30 border-2 border-accent-cyan/20 p-1 rounded-lg relative"
                 style={{ gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)`}}
+                onDragOver={(e) => e.preventDefault()}
             >
                 <AnimatePresence>
                 {board.map((row, r) => row.map((colorIndex, c) => (
@@ -242,10 +247,9 @@ export function Match3() {
                         transition={{ duration: 0.3 }}
                         className="w-full aspect-square rounded-md flex items-center justify-center cursor-pointer"
                         style={{ backgroundColor: colorIndex !== null ? TILE_COLORS[colorIndex] : 'transparent' }}
-                        onMouseDown={() => setDragStart({ r, c })}
-                        onMouseUp={() => handleDragEnd(r, c)}
-                        onTouchStart={() => setDragStart({ r, c })}
-                        onTouchEnd={() => handleDragEnd(r, c)}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, r, c)}
+                        onDrop={(e) => handleDrop(e, r, c)}
                     >
                        <Gem className="text-white/50" />
                     </motion.div>
@@ -271,7 +275,6 @@ export function Match3() {
                     </motion.div>
                 )}
             </div>
-            
         </motion.div>
     );
 }
