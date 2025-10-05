@@ -67,7 +67,9 @@ export function TextPostForm({ data, onDataChange }: { data: any, onDataChange: 
                 }
             }, (error) => {
                 console.error("Geolocation error:", error.message);
-                alert("Could not get location. Please enable location services for this site.");
+                if (error.code !== error.PERMISSION_DENIED) {
+                    alert("Could not get location. Please enable location services for this site.");
+                }
                 setIsFetchingLocation(false);
             });
         } else {
