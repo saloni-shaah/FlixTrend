@@ -8,7 +8,7 @@ import { getFirestore, doc, setDoc, collection, query, where, getDocs, serverTim
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, ArrowLeft, Camera, UploadCloud } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Camera, UploadCloud, Gift } from 'lucide-react';
 
 const db = getFirestore(app);
 const storage = getStorage(app);
@@ -94,7 +94,6 @@ export default function SignupPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError("");
-        setSuccess("");
         
         if(step !== 3) {
             nextStep();
@@ -103,10 +102,11 @@ export default function SignupPage() {
 
         setLoading(true);
         try {
-            // 1. Create User in Auth
+            // User creation will now be handled by the Cloud Function, 
+            // but we still create the auth user here to trigger the function.
             const userCredential = await createUserWithEmailAndPassword(auth, form.email, form.password);
             
-            // 2. Upload files to Firebase Storage
+            // Upload files to Firebase Storage
             let avatarUrl = `https://api.dicebear.com/8.x/bottts-neutral/svg?seed=${form.username}`;
             let bannerUrl = "";
 
@@ -124,16 +124,14 @@ export default function SignupPage() {
                 bannerUrl = await uploadFile(bannerFile);
             }
 
-            // 3. Update Auth Profile
+            // Update Auth Profile
             await updateProfile(userCredential.user, {
                 displayName: form.name,
                 photoURL: avatarUrl,
             });
 
-            // 4. Store user profile in Firestore
+            // Update user profile in Firestore (the cloud function will add premium details)
             await setDoc(doc(db, "users", userCredential.user.uid), {
-                uid: userCredential.user.uid,
-                email: form.email.toLowerCase(),
                 name: form.name,
                 username: form.username.toLowerCase(),
                 bio: form.bio,
@@ -144,14 +142,13 @@ export default function SignupPage() {
                 accountType: form.accountType,
                 avatar_url: avatarUrl,
                 banner_url: bannerUrl,
-                createdAt: serverTimestamp(),
                 profileComplete: !!(form.dob && form.gender && form.location),
-            });
+            }, { merge: true });
 
-            // 5. Send verification email
+            // Send verification email
             await sendEmailVerification(userCredential.user);
 
-            setSuccess("Signup successful! Please check your email to verify your account. Redirecting...");
+            setSuccess("Welcome to the Vibe! Your account is created & premium access is activated. Redirecting...");
             setTimeout(() => router.push("/home"), 3000);
         } catch (err: any) {
             if(err.code === 'auth/email-already-in-use') {
@@ -229,42 +226,48 @@ export default function SignupPage() {
         onSubmit={handleSubmit}
         className="glass-card p-8 w-full max-w-lg flex flex-col gap-4"
       >
-        <h2 className="text-3xl font-headline font-bold text-accent-pink mb-2 text-center">Join FlixTrend</h2>
-        
-        {/* Progress Bar */}
-        <div className="w-full bg-black/20 rounded-full h-2.5 mb-4">
-            <motion.div 
-                className="bg-gradient-to-r from-accent-pink to-accent-cyan h-2.5 rounded-full"
-                animate={{ width: `${(step / 3) * 100}%` }}
-                transition={{ duration: 0.5, ease: 'easeInOut' }}
-            />
-        </div>
-        
         <AnimatePresence mode="wait">
             {success ? (
-                <motion.div initial={{ opacity: 0}} animate={{ opacity: 1}} className="text-center flex flex-col items-center gap-4">
-                     <CheckCircle className="text-green-400" size={48} />
+                <motion.div key="success" initial={{ opacity: 0}} animate={{ opacity: 1}} className="text-center flex flex-col items-center gap-4">
+                     <Gift className="text-brand-gold animate-bounce" size={48} />
+                     <h2 className="text-2xl font-headline font-bold text-brand-gold">Welcome to Premium!</h2>
                      <p className="text-accent-cyan mt-2">{success}</p>
                 </motion.div>
-            ) : renderStep()}
+            ) : (
+                <motion.div key="form">
+                    <h2 className="text-3xl font-headline font-bold text-accent-pink mb-2 text-center">Join FlixTrend</h2>
+                    <p className="text-center text-brand-gold font-bold mb-4 text-sm">Every new user gets free premium access!</p>
+                    
+                    {/* Progress Bar */}
+                    <div className="w-full bg-black/20 rounded-full h-2.5 mb-4">
+                        <motion.div 
+                            className="bg-gradient-to-r from-accent-pink to-accent-cyan h-2.5 rounded-full"
+                            animate={{ width: `${(step / 3) * 100}%` }}
+                            transition={{ duration: 0.5, ease: 'easeInOut' }}
+                        />
+                    </div>
+                    
+                    <AnimatePresence mode="wait">
+                        {renderStep()}
+                    </AnimatePresence>
+
+                    {error && <div className="text-red-400 text-center animate-bounce mt-2">{error}</div>}
+                    
+                    <div className="flex justify-between items-center mt-6">
+                        {step > 1 ? (
+                            <button type="button" className="btn-glass flex items-center gap-2" onClick={prevStep} disabled={loading}>
+                                <ArrowLeft size={16} /> Back
+                            </button>
+                        ) : <div />}
+
+                        <button type="submit" className="btn-glass bg-accent-pink flex items-center gap-2" disabled={loading}>
+                            {loading ? 'Processing...' : step === 3 ? 'Finish & Sign Up' : 'Next'}
+                            {step < 3 && <ArrowRight size={16} />}
+                        </button>
+                    </div>
+                </motion.div>
+            )}
         </AnimatePresence>
-
-        {error && <div className="text-red-400 text-center animate-bounce mt-2">{error}</div>}
-        
-        {!success && (
-            <div className="flex justify-between items-center mt-6">
-                {step > 1 ? (
-                    <button type="button" className="btn-glass flex items-center gap-2" onClick={prevStep} disabled={loading}>
-                        <ArrowLeft size={16} /> Back
-                    </button>
-                ) : <div />}
-
-                <button type="submit" className="btn-glass bg-accent-pink flex items-center gap-2" disabled={loading}>
-                    {loading ? 'Processing...' : step === 3 ? 'Finish & Sign Up' : 'Next'}
-                    {step < 3 && <ArrowRight size={16} />}
-                </button>
-            </div>
-        )}
 
         <div className="text-center mt-4">
           <span className="text-gray-400">Already have an account? </span>
