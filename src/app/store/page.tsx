@@ -1,17 +1,11 @@
-
 "use client";
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ProductCard } from '@/components/store/ProductCard';
 import { CheckoutForm } from '@/components/store/CheckoutForm';
 import { ShoppingBag, Loader } from 'lucide-react';
-import { getFirestore, collection, query, onSnapshot, orderBy } from 'firebase/firestore';
-import { app } from '@/utils/firebaseClient';
-import { FirestorePermissionError } from '@/firebase/errors';
-import { errorEmitter } from '@/firebase/error-emitter';
+import productsData from '@/lib/products.json';
 
-
-const db = getFirestore(app);
 
 export default function StorePage() {
     const [products, setProducts] = useState<any[]>([]);
@@ -20,21 +14,8 @@ export default function StorePage() {
     const [orderComplete, setOrderComplete] = useState(false);
 
     useEffect(() => {
-        const q = query(collection(db, "products"), orderBy("createdAt", "desc"));
-        const unsub = onSnapshot(q, (snapshot) => {
-            setProducts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-            setLoading(false);
-        },
-        async (serverError) => {
-            console.error("Firestore onSnapshot error:", serverError);
-            const permissionError = new FirestorePermissionError({
-              path: 'products',
-              operation: 'list',
-            });
-            errorEmitter.emit('permission-error', permissionError);
-            setLoading(false);
-        });
-        return () => unsub();
+        setProducts(productsData);
+        setLoading(false);
     }, []);
 
     const handleSelectProduct = (product: any) => {
