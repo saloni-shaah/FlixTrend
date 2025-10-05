@@ -1,26 +1,20 @@
 
 "use client";
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { ChevronDown, UploadCloud, X, MapPin, Smile, Music } from 'lucide-react';
+import { ChevronDown, UploadCloud, X, MapPin, Smile, Music, Hash, AtSign } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange: (data: any) => void }) {
-    // Media previews can now come from the initial `data` prop
     const [mediaPreviews, setMediaPreviews] = useState<string[]>(data.mediaPreviews || []);
-    // Media files might be populated async, so we sync with the parent `data` prop
     const mediaFiles = data.mediaFiles || [];
-
     const [isDragging, setIsDragging] = useState(false);
-
     const fileInputRef = useRef<HTMLInputElement>(null);
     
-    // NEW: If there's an initial image URL, we don't need to show the upload box at first
     useEffect(() => {
         if (data.mediaPreviews && data.mediaPreviews.length > 0) {
             setMediaPreviews(data.mediaPreviews);
         }
     }, [data.mediaPreviews]);
-
 
     const processFiles = (files: File[]) => {
         const imageVideoAudioFiles = files.filter(file => 
@@ -28,13 +22,10 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
             file.type.startsWith('video/') || 
             file.type.startsWith('audio/')
         );
-
         if (imageVideoAudioFiles.length === 0) return;
-
         const urls = imageVideoAudioFiles.map(file => URL.createObjectURL(file));
         const newFiles = [...mediaFiles, ...imageVideoAudioFiles];
         const newPreviews = [...mediaPreviews, ...urls];
-
         setMediaPreviews(newPreviews);
         onDataChange({ ...data, mediaFiles: newFiles, mediaPreviews: newPreviews });
     };
@@ -89,7 +80,7 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
             processFiles(Array.from(e.dataTransfer.files));
             e.dataTransfer.clearData();
         }
-    }, [mediaFiles, mediaPreviews, data]); 
+    }, [mediaFiles, mediaPreviews, data, processFiles]); 
 
     const hasVideo = mediaFiles.some((f: File) => f.type.startsWith('video/'));
 
@@ -99,19 +90,21 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
             
             <textarea
                 name="caption"
-                className="input-glass w-full rounded-2xl min-h-[100px]"
-                placeholder="Add a caption, #hashtags, and mention @friends..."
+                className="input-glass w-full rounded-2xl"
+                placeholder="What's this post about?"
                 value={data.caption || ''}
                 onChange={handleTextChange}
             />
 
-             <textarea
-                name="description"
-                placeholder="Add a detailed description (e.g., your video script, story behind the photo, or more info). This helps us feature your content!"
-                className="input-glass w-full rounded-2xl min-h-[120px]"
-                value={data.description || ''}
-                onChange={handleTextChange}
-            />
+            <div className="relative">
+                <Hash className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                <input type="text" name="hashtags" placeholder="#trending #vibes" className="input-glass w-full pl-10" value={data.hashtags || ''} onChange={handleTextChange} />
+            </div>
+            
+            <div className="relative">
+                <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                <input type="text" name="mentions" placeholder="@friend1 @friend2" className="input-glass w-full pl-10" value={data.mentions || ''} onChange={handleTextChange} />
+            </div>
 
             <div 
                 className={`p-4 border-2 border-dashed rounded-2xl text-center transition-colors duration-300 ${isDragging ? 'border-accent-pink bg-accent-pink/10' : 'border-accent-cyan/30'}`}
@@ -138,7 +131,7 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
 
                             if (file?.type?.startsWith("video")) {
                                 previewContent = <video src={url} className="w-full h-full object-cover rounded-lg" />;
-                            } else if (file?.type?.startsWith("image") || url.startsWith('http')) { // Also handle http urls
+                            } else if (file?.type?.startsWith("image") || url.startsWith('http')) { 
                                 previewContent = <img src={url} alt={`preview ${index}`} className="w-full h-full object-cover rounded-lg" />;
                             } else if (file?.type?.startsWith("audio")) {
                                 previewContent = (
@@ -161,6 +154,14 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
                     </div>
                 )}
             </div>
+
+            <textarea
+                name="description"
+                placeholder="Add a detailed description (e.g., your video script, story behind the photo, or more info). This helps us feature your content!"
+                className="input-glass w-full rounded-2xl min-h-[120px]"
+                value={data.description || ''}
+                onChange={handleTextChange}
+            />
             
             <div className="relative">
                 <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
