@@ -14,6 +14,16 @@ const levels = [
   { level: 3, goal: { type: 'clearColor', colorIndex: 2, value: 15 }, moves: 30 }, // Clear 15 green gems
 ];
 
+const hasMatches = (board: (number | null)[][]) => {
+    for (let r = 0; r < GRID_SIZE; r++) {
+        for (let c = 0; c < GRID_SIZE; c++) {
+            if (c < GRID_SIZE - 2 && board[r][c] !== null && board[r][c] === board[r][c + 1] && board[r][c] === board[r][c + 2]) return true;
+            if (r < GRID_SIZE - 2 && board[r][c] !== null && board[r][c] === board[r + 1][c] && board[r][c] === board[r + 2][c]) return true;
+        }
+    }
+    return false;
+}
+
 const createInitialBoard = () => {
     const newBoard = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(null));
     for (let r = 0; r < GRID_SIZE; r++) {
@@ -28,15 +38,6 @@ const createInitialBoard = () => {
     return newBoard;
 };
 
-const hasMatches = (board: (number | null)[][]) => {
-    for (let r = 0; r < GRID_SIZE; r++) {
-        for (let c = 0; c < GRID_SIZE; c++) {
-            if (c < GRID_SIZE - 2 && board[r][c] !== null && board[r][c] === board[r][c + 1] && board[r][c] === board[r][c + 2]) return true;
-            if (r < GRID_SIZE - 2 && board[r][c] !== null && board[r][c] === board[r + 1][c] && board[r][c] === board[r + 2][c]) return true;
-        }
-    }
-    return false;
-}
 
 export function Match3() {
     const [currentLevel, setCurrentLevel] = useState(0);
@@ -47,7 +48,7 @@ export function Match3() {
     const [gameState, setGameState] = useState<'playing' | 'won' | 'lost'>('playing');
     const [goalProgress, setGoalProgress] = useState(0);
 
-    const [dragStart, setDragStart] = useState<{r: number, c: number} | null>(null);
+    const [selectedTile, setSelectedTile] = useState<{r: number, c: number} | null>(null);
 
     useEffect(() => {
         const storedHighScore = localStorage.getItem('match3HighScore');
@@ -164,7 +165,18 @@ export function Match3() {
             }
             
             setMovesLeft(moves => moves - 1);
+        }
+        // If swap is invalid, we could swap them back visually, but for simplicity, we do nothing.
+    };
 
+    const handleTileClick = (r: number, c: number) => {
+        if (gameState !== 'playing') return;
+
+        if (!selectedTile) {
+            setSelectedTile({ r, c });
+        } else {
+            handleSwap(selectedTile.r, selectedTile.c, r, c);
+            setSelectedTile(null); // Reset selection after attempting a swap
         }
     };
     
@@ -192,21 +204,9 @@ export function Match3() {
         setMovesLeft(levels[levelIndex].moves);
         setGameState('playing');
         setGoalProgress(0);
+        setSelectedTile(null);
     };
 
-    const handleDragStart = (e: React.DragEvent<HTMLDivElement>, r: number, c: number) => {
-        e.dataTransfer.setData("text/plain", `${r},${c}`);
-    };
-
-    const handleDrop = (e: React.DragEvent<HTMLDivElement>, r: number, c: number) => {
-        e.preventDefault();
-        const startData = e.dataTransfer.getData("text/plain");
-        if (startData) {
-            const [startR, startC] = startData.split(',').map(Number);
-            handleSwap(startR, startC, r, c);
-        }
-    };
-    
     const level = levels[currentLevel];
 
     return (
@@ -234,7 +234,6 @@ export function Match3() {
             <div 
                 className="grid gap-1 bg-black/30 border-2 border-accent-cyan/20 p-1 rounded-lg relative"
                 style={{ gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)`}}
-                onDragOver={(e) => e.preventDefault()}
             >
                 <AnimatePresence>
                 {board.map((row, r) => row.map((colorIndex, c) => (
@@ -245,11 +244,9 @@ export function Match3() {
                         animate={{ scale: 1 }}
                         exit={{ scale: 0 }}
                         transition={{ duration: 0.3 }}
-                        className="w-full aspect-square rounded-md flex items-center justify-center cursor-pointer"
+                        className={`w-full aspect-square rounded-md flex items-center justify-center cursor-pointer transition-all ${selectedTile?.r === r && selectedTile?.c === c ? 'ring-2 ring-white scale-110' : ''}`}
                         style={{ backgroundColor: colorIndex !== null ? TILE_COLORS[colorIndex] : 'transparent' }}
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, r, c)}
-                        onDrop={(e) => handleDrop(e, r, c)}
+                        onClick={() => handleTileClick(r, c)}
                     >
                        <Gem className="text-white/50" />
                     </motion.div>
@@ -275,6 +272,9 @@ export function Match3() {
                     </motion.div>
                 )}
             </div>
+            <button onClick={() => resetGame(currentLevel)} className="btn-glass bg-accent-purple/20 text-accent-purple flex items-center gap-2 mt-4">
+                <RotateCcw size={16}/> Reset Game
+            </button>
         </motion.div>
     );
 }
