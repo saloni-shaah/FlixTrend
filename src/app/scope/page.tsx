@@ -6,7 +6,7 @@ import { app, auth } from "@/utils/firebaseClient";
 import { ShortVibesPlayer } from "@/components/ShortVibesPlayer";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Compass, Music, Gamepad2, Flame, User, Heart, Mic } from "lucide-react";
+import { Compass, Music, Gamepad2, Flame, User, Heart, Mic, ShoppingBag } from "lucide-react";
 import { MusicDiscovery } from "@/components/MusicDiscovery";
 import { GamesHub } from "@/components/GamesHub";
 
@@ -222,6 +222,23 @@ export default function ScopePage() {
   return (
     <div className={`fixed inset-0 top-0 left-0 w-full h-full z-0 transition-colors duration-300 ${isFullScreen ? 'bg-black' : 'bg-background pt-6'}`}>
       
+      <AnimatePresence>
+        {!isFullScreen && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, y: 20 }}
+              className="fixed top-20 right-4 z-50"
+            >
+                <Link href="/store">
+                    <span className="btn-glass-icon w-16 h-16 bg-brand-gold/20 text-brand-gold">
+                        <ShoppingBag size={32} />
+                    </span>
+                </Link>
+            </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* This container manages the layout switch */}
       <div className={`w-full h-full relative transition-all duration-300 ${isFullScreen ? 'flex items-center' : 'overflow-y-auto'}`}>
         
