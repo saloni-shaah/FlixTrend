@@ -7,6 +7,7 @@ import { TicTacToe } from './games/TicTacToe';
 import { Snake } from './games/Snake';
 import { Game2048 } from './games/2048';
 import { Match3 } from './games/Match3';
+import { BrickBreaker } from './games/BrickBreaker';
 
 const games = [
     {
@@ -32,6 +33,12 @@ const games = [
         name: "Match-3 Madness",
         description: "A colorful and addictive gem-matching puzzle game with levels and objectives.",
         component: Match3
+    },
+    {
+        id: 'brick-breaker',
+        name: "Brick Breaker",
+        description: "A classic arcade challenge. Break all the bricks with the ball and paddle to clear levels.",
+        component: BrickBreaker
     }
 ];
 
