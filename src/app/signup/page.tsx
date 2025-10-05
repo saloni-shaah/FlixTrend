@@ -34,6 +34,7 @@ export default function SignupPage() {
         location: "",
         phoneNumber: "",
         accountType: "user",
+        referredBy: "", // New field for referral code
     });
     const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
     const [profilePicturePreview, setProfilePicturePreview] = useState<string | null>(null);
@@ -129,6 +130,9 @@ export default function SignupPage() {
                 displayName: form.name,
                 photoURL: avatarUrl,
             });
+            
+            const randomSuffix = Math.floor(100 + Math.random() * 900);
+            const referralCode = `${form.username.toLowerCase().replace(/\s/g, '')}${randomSuffix}`;
 
             // Update user profile in Firestore (the cloud function will add premium details)
             await setDoc(doc(db, "users", userCredential.user.uid), {
@@ -143,6 +147,8 @@ export default function SignupPage() {
                 avatar_url: avatarUrl,
                 banner_url: bannerUrl,
                 profileComplete: !!(form.dob && form.gender && form.location),
+                referredBy: form.referredBy || null,
+                referralCode: referralCode,
             }, { merge: true });
 
             // Send verification email
@@ -170,6 +176,7 @@ export default function SignupPage() {
                         <input type="text" name="username" placeholder="Username" className="input-glass w-full" value={form.username} onChange={handleChange} required />
                         <input type="password" name="password" placeholder="Password (min. 6 characters)" className="input-glass w-full" value={form.password} onChange={handleChange} required />
                         <input type="password" name="confirmPassword" placeholder="Confirm Password" className="input-glass w-full" value={form.confirmPassword} onChange={handleChange} required />
+                         <input type="text" name="referredBy" placeholder="Referral Code (Optional)" className="input-glass w-full" value={form.referredBy} onChange={handleChange} />
                     </motion.div>
                 );
             case 2:

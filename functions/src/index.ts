@@ -1,6 +1,6 @@
 
 import { initializeApp } from "firebase-admin/app";
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 import * as functions from "firebase-functions";
 import * as logger from "firebase-functions/logger";
@@ -16,44 +16,69 @@ const messaging = getMessaging();
 /**
  * Grants free premium access to new users and tracks the total user count.
  * First 1 million users get 2 months, others get 1 month.
+ * Also handles referral rewards.
  */
 export const onNewUserCreate = functions.auth.user().onCreate(async (user) => {
-    const userRef = db.collection('users').doc(user.uid);
-    const appStatusRef = db.collection('app_status').doc('user_stats');
+    const userRef = doc(db, 'users', user.uid);
+    const appStatusRef = doc(db, 'app_status', 'user_stats');
 
     try {
-        const userCount = (await appStatusRef.get()).data()?.totalUsers || 0;
+        const batch = db.batch();
+
+        // --- Grant Initial Premium ---
+        const appStatusSnap = await appStatusRef.get();
+        const userCount = appStatusSnap.data()?.totalUsers || 0;
         const newUserCount = userCount + 1;
         
-        let premiumDurationMonths: number;
-        if (newUserCount <= 1000000) {
-            premiumDurationMonths = 2; // 2 months for the first million
-        } else {
-            premiumDurationMonths = 1; // 1 month for everyone else
-        }
-
+        const premiumDurationMonths = newUserCount <= 1000000 ? 2 : 1;
         const premiumUntil = new Date();
         premiumUntil.setMonth(premiumUntil.getMonth() + premiumDurationMonths);
 
-        const batch = db.batch();
-        
-        // Update user profile with premium status
         batch.set(userRef, {
             isPremium: true,
-            premiumUntil: premiumUntil,
-            // also ensure other fields are set on creation
-            uid: user.uid,
-            email: user.email,
-            name: user.displayName || 'New User',
-            username: user.email?.split('@')[0] || `user${user.uid.slice(0, 5)}`,
+            premiumUntil: Timestamp.fromDate(premiumUntil),
             createdAt: FieldValue.serverTimestamp(),
         }, { merge: true });
 
         // Update the global user count
         batch.set(appStatusRef, { totalUsers: FieldValue.increment(1) }, { merge: true });
+        logger.info(`User ${user.uid} created. Granted ${premiumDurationMonths} months premium. Total users: ${newUserCount}`);
+
+        // --- Handle Referral Logic ---
+        const newUserDoc = await userRef.get(); // Get the user doc to check for referredBy field
+        const newUserData = newUserDoc.data();
+
+        if (newUserData?.referredBy) {
+            const referralCode = newUserData.referredBy;
+            logger.info(`New user was referred by code: ${referralCode}`);
+
+            const usersRef = collection(db, 'users');
+            const q = query(usersRef, where('referralCode', '==', referralCode), limit(1));
+            const referrerSnap = await getDocs(q);
+
+            if (!referrerSnap.empty) {
+                const referrerDoc = referrerSnap.docs[0];
+                const referrerRef = referrerDoc.ref;
+                const referrerData = referrerDoc.data();
+                
+                logger.info(`Found referrer: ${referrerData.username} (${referrerRef.id})`);
+
+                const currentPremiumUntil = referrerData.premiumUntil?.toDate() || new Date();
+                const newPremiumUntil = new Date(Math.max(new Date().getTime(), currentPremiumUntil.getTime()));
+                newPremiumUntil.setMonth(newPremiumUntil.getMonth() + 1);
+
+                batch.update(referrerRef, {
+                    premiumUntil: Timestamp.fromDate(newPremiumUntil),
+                    isPremium: true
+                });
+
+                logger.info(`Extended premium for referrer ${referrerRef.id} until ${newPremiumUntil.toISOString()}`);
+            } else {
+                 logger.warn(`Referral code "${referralCode}" used, but no matching referrer was found.`);
+            }
+        }
 
         await batch.commit();
-        logger.info(`User ${user.uid} created. Granted ${premiumDurationMonths} months premium. Total users: ${newUserCount}`);
 
     } catch (error) {
         logger.error(`Error processing new user ${user.uid}:`, error);
