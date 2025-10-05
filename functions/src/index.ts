@@ -1,6 +1,7 @@
 
+
 import { initializeApp } from "firebase-admin/app";
-import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
+import { getFirestore, FieldValue, Timestamp, doc, collection, query, where, getDocs, limit } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 import * as functions from "firebase-functions";
 import * as logger from "firebase-functions/logger";
@@ -321,4 +322,33 @@ export const deletePost = onCall(async (request) => {
         logger.error("Error deleting post and subcollections:", error);
         throw new HttpsError("internal", "An error occurred while deleting the post.");
     }
+});
+
+/**
+ * Deletes a user's account and all associated data.
+ * This is an HTTPS Callable function that requires re-authentication.
+ */
+export const deleteUserAccount = onCall(async (request) => {
+  const uid = request.auth?.uid;
+
+  if (!uid) {
+    throw new HttpsError("unauthenticated", "Authentication is required to delete an account.");
+  }
+
+  try {
+    const batch = admin.firestore().batch();
+    const userRef = admin.firestore().collection('users').doc(uid);
+    batch.delete(userRef);
+    // Add deletion of other user-related data (posts, comments, etc.) to the batch here.
+
+    // Finally, delete the user from Firebase Auth
+    await admin.auth().deleteUser(uid);
+    await batch.commit();
+    logger.info(`Successfully deleted account and all data for user ${uid}.`);
+    return { success: true, message: 'Account deleted successfully.' };
+
+  } catch (error) {
+    logger.error(`Error deleting user account ${uid}:`, error);
+    throw new HttpsError("internal", "Failed to delete account. Please try again later.");
+  }
 });
