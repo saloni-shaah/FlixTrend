@@ -77,6 +77,7 @@
     "zod": "latest"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.0-alpha.13",
     "@types/dom-mediacapture-record": "^1.0.22",
     "@types/node": "^20",
     "@types/react": "^19",
