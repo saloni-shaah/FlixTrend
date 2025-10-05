@@ -130,6 +130,8 @@ export default function UserProfilePage() {
   
   const initials = profile.name?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || profile.username?.slice(0, 2).toUpperCase() || "U";
   const isPremium = profile.isPremium && (!profile.premiumUntil || profile.premiumUntil.toDate() > new Date());
+  const isDeveloper = Array.isArray(profile.role) && (profile.role.includes('developer') || profile.role.includes('founder'));
+
   
   return (
     <div className="flex flex-col w-full pb-24">
@@ -159,6 +161,9 @@ export default function UserProfilePage() {
             <h2 className="text-2xl font-headline font-bold text-center">{profile.name}</h2>
              {isPremium && (
                 <CheckCircle className="w-6 h-6 text-blue-500" title="Premium User"/>
+            )}
+             {isDeveloper && (
+                <ShieldCheck className="w-6 h-6 text-accent-purple" title="FlixTrend Developer"/>
             )}
         </div>
         <p className="text-accent-cyan font-semibold mb-1 text-center">@{profile.username || "username"}</p>
@@ -245,4 +250,3 @@ export default function UserProfilePage() {
     </div>
   );
 }
-
