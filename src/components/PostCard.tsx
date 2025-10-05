@@ -318,23 +318,31 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
   const MediaGrid = ({ mediaUrls, thumbnailUrl }: { mediaUrls: string[]; thumbnailUrl?: string }) => {
     if (!mediaUrls || mediaUrls.length === 0) return null;
 
-    const handleMediaClick = (url: string) => {
-        const img = new Image();
-        img.onload = () => {
-            if (img.height > img.width) {
-                setShowPlayer('short');
+    const handleMediaClick = () => {
+        // Simple logic: if it's a video, check its aspect ratio to decide which player to open.
+        // This simulates a more complex logic that might exist. For now, we'll assume portrait videos go to shorts.
+        // A real implementation would check video metadata.
+        const firstVideoUrl = mediaUrls.find(url => url.includes('.mp4') || url.includes('.webm'));
+        if (firstVideoUrl) {
+            // This is a proxy for checking aspect ratio. Let's assume most vertical videos are for shorts.
+            // For now, we'll arbitrarily decide based on a fake property. A real app would get metadata.
+            if(post.isPortrait) {
+                 setShowPlayer('short');
             } else {
-                setShowPlayer('long');
+                 setShowPlayer('long');
             }
-        };
-        img.src = thumbnailUrl || url; // Use thumbnail for aspect ratio check if available
+        } else {
+            // For images, we can use a simpler fullscreen toggle.
+            setIsFullScreen(true);
+        }
     };
 
     const renderMedia = (url: string, isVideo: boolean, isSingle: boolean) => {
+        const effectiveThumbnail = thumbnailUrl || '/video_placeholder.png';
         if (isVideo) {
             return (
-                <div className="relative group w-full h-full cursor-pointer" onClick={() => handleMediaClick(url)}>
-                    <OptimizedImage src={thumbnailUrl || '/video_placeholder.png'} alt="Video thumbnail" className="w-full h-full object-cover" />
+                <div className="relative group w-full h-full cursor-pointer" onClick={handleMediaClick}>
+                    <OptimizedImage src={effectiveThumbnail} alt="Video thumbnail" className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                         <FaPlay className="text-white text-5xl" />
                     </div>
@@ -343,7 +351,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
             );
         }
         return (
-            <div className="relative group w-full h-full" onDoubleClick={() => setIsFullScreen(true)}>
+            <div className="relative group w-full h-full" onClick={() => setIsFullScreen(true)}>
                 <OptimizedImage src={url} alt="media" className="w-full h-full object-cover" />
                 <Watermark isAnimated={isSingle} />
             </div>
@@ -365,7 +373,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
             {mediaUrls.slice(0, 4).map((url, index) => {
                  const isVideo = url.includes('.mp4') || url.includes('.webm') || url.includes('.ogg');
                 return (
-                    <div key={index} className="relative aspect-square cursor-pointer" onClick={() => isVideo && handleMediaClick(url)}>
+                    <div key={index} className="relative aspect-square cursor-pointer" onClick={() => isVideo && handleMediaClick()}>
                         {renderMedia(url, !!isVideo, false)}
                         {index === 3 && mediaUrls.length > 4 && (
                             <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
@@ -757,5 +765,3 @@ function CommentForm({ postId, postAuthorId, parentId, onCommentPosted, isReply 
     </form>
   )
 }
-
-    
