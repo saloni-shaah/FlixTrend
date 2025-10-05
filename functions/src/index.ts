@@ -7,12 +7,14 @@ import * as functions from "firebase-functions";
 import * as logger from "firebase-functions/logger";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
+import { getStorage } from "firebase-admin/storage";
 
 
 // Initialize Firebase Admin SDK
 initializeApp();
 const db = getFirestore();
 const messaging = getMessaging();
+const storage = getStorage();
 
 /**
  * Grants free premium access to new users and tracks the total user count.
@@ -352,3 +354,60 @@ export const deleteUserAccount = onCall(async (request) => {
     throw new HttpsError("internal", "Failed to delete account. Please try again later.");
   }
 });
+
+
+/**
+ * Automatically cleans up expired flashes from Firestore and Firebase Storage.
+ * This function is scheduled to run periodically.
+ */
+export const cleanupExpiredFlashes = functions.pubsub.schedule('every 1 hours').onRun(async (context) => {
+    logger.info('Running expired flashes cleanup job.');
+    const now = Timestamp.now();
+    
+    // 1. Query for expired flash documents
+    const expiredFlashesQuery = query(collection(db, 'flashes'), where('expiresAt', '<=', now));
+    const expiredFlashesSnap = await getDocs(expiredFlashesQuery);
+
+    if (expiredFlashesSnap.empty) {
+        logger.info('No expired flashes to clean up.');
+        return null;
+    }
+
+    const batch = db.batch();
+    const deletePromises: Promise<any>[] = [];
+
+    expiredFlashesSnap.forEach(docSnap => {
+        logger.info(`Processing expired flash: ${docSnap.id}`);
+        const flashData = docSnap.data();
+
+        // 2. Delete the flash document from Firestore
+        batch.delete(docSnap.ref);
+
+        // 3. Delete the associated media file from Storage
+        if (flashData.mediaUrl) {
+            try {
+                // Extract file path from the full URL
+                const fileUrl = new URL(flashData.mediaUrl);
+                const filePath = decodeURIComponent(fileUrl.pathname.split('/').pop() || '');
+                if (filePath) {
+                    const fileRef = storage.bucket().file(filePath);
+                    deletePromises.push(fileRef.delete().catch(err => {
+                        // Log error but don't stop the batch
+                        logger.error(`Failed to delete storage file ${filePath} for flash ${docSnap.id}:`, err);
+                    }));
+                }
+            } catch (error) {
+                 logger.error(`Invalid mediaUrl for flash ${docSnap.id}: ${flashData.mediaUrl}`, error);
+            }
+        }
+    });
+
+    // 4. Commit all deletions
+    deletePromises.push(batch.commit());
+    
+    await Promise.all(deletePromises);
+    
+    logger.info(`Cleanup complete. Deleted ${expiredFlashesSnap.size} expired flashes.`);
+    return null;
+});
+
