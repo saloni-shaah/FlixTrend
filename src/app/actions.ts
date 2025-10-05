@@ -96,11 +96,8 @@ export async function generateImageAction(input: z.infer<typeof GenerateImageInp
     // Usage check for 'image' needs to be done on the client before calling this.
     try {
         const { media } = await ai.generate({
-            model: 'googleai/gemini-1.5-flash-latest',
+            model: 'googleai/imagen-4.0-fast-generate-001',
             prompt: `Generate an image of: ${input.prompt}`,
-            config: {
-                responseModalities: ['IMAGE'],
-            },
         });
 
         if (!media?.url) {

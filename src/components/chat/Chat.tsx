@@ -29,22 +29,12 @@ import './Chat.css';
 const storage = getStorage(db.app);
 
 const USAGE_LIMITS = {
-    text: 60,
-    image: 2,
-    search: 1,
+    text: { free: 30, premium: 90 },
+    image: { free: 0, premium: 10 },
+    search: { free: 1, premium: 5 }, // Example limit for search
 };
 type UsageType = keyof typeof USAGE_LIMITS;
 
-
-// Helper to convert File to Data URI
-const fileToDataUri = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = (error) => reject(error);
-    reader.readAsDataURL(file);
-  });
-};
 
 function ChatMessageLoading() {
   return (
@@ -125,25 +115,26 @@ export function Chat() {
 
       const userData = userDoc.data();
       const isPremium = userData.isPremium && (!userData.premiumUntil || userData.premiumUntil.toDate() > new Date());
-
-      if (isPremium) {
-        return { allowed: true, message: "Premium user, unlimited access." };
-      }
+      const userTier = isPremium ? 'premium' : 'free';
 
       const now = new Date();
       const usage = userData.aiUsage || {};
       const lastReset = usage.lastReset?.toDate() || new Date(0);
-
+      
       const needsReset = now.getMonth() !== lastReset.getMonth() || now.getFullYear() !== lastReset.getFullYear();
-
+      
       const currentCount = needsReset ? 0 : (usage[`${type}Count`] || 0);
-      const limit = USAGE_LIMITS[type];
-
-      if (currentCount >= limit) {
-        return { allowed: false, message: `You have reached your monthly limit of ${limit} ${type} generations. Please upgrade to Premium for unlimited access.` };
+      const limit = USAGE_LIMITS[type][userTier];
+      
+      if (limit === 0) {
+          return { allowed: false, message: `This feature is for Premium users only. Please upgrade to unlock.` };
       }
 
-      // Increment the count
+      if (currentCount >= limit) {
+        return { allowed: false, message: `You have reached your monthly limit of ${limit} ${type} generations. Please upgrade to Premium for more.` };
+      }
+
+      // Increment the count in a transaction
       const batch = writeBatch(db);
       const newUsageData = needsReset ? {
           textCount: 0,
@@ -320,5 +311,3 @@ export function Chat() {
     </div>
   );
 }
-
-    

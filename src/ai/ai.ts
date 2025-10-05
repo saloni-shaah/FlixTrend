@@ -16,8 +16,8 @@ export const ai = genkit({
     }),
   ],
   // Set a default model for all generate calls.
-  // Using gemini-1.5-flash-latest as the most cost-effective public model.
-  model: 'googleai/gemini-1.5-flash-latest',
+  // Using a fast, reliable, and cost-effective model for chat.
+  model: 'googleai/gemini-2.0-flash-lite-001',
   // Enable tracing to monitor the performance and behavior of AI flows in production.
   enableTracing: true,
 });
