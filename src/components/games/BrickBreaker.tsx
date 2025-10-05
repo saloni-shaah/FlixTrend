@@ -196,23 +196,24 @@ export function BrickBreaker() {
         };
     }, [ball, bricks, gameState, paddle, resetBallAndPaddle, score, highScore, lives]);
 
-    const handleMouseMove = (e: React.MouseEvent) => {
+    const handleMouseMove = useCallback((e: React.MouseEvent) => {
         const canvas = canvasRef.current;
         if (!canvas) return;
         const relativeX = e.clientX - canvas.getBoundingClientRect().left;
         if (relativeX > 0 && relativeX < canvas.width) {
             setPaddle({ x: Math.min(Math.max(relativeX - PADDLE_WIDTH / 2, 0), canvas.width - PADDLE_WIDTH) });
         }
-    };
+    }, []);
     
-    const handleTouchMove = (e: React.TouchEvent) => {
+    const handleTouchMove = useCallback((e: React.TouchEvent) => {
+        e.preventDefault();
         const canvas = canvasRef.current;
         if (!canvas) return;
         const relativeX = e.touches[0].clientX - canvas.getBoundingClientRect().left;
          if (relativeX > 0 && relativeX < canvas.width) {
             setPaddle({ x: Math.min(Math.max(relativeX - PADDLE_WIDTH / 2, 0), canvas.width - PADDLE_WIDTH) });
         }
-    }
+    }, []);
     
     const startGame = () => {
         if (gameState === 'start' || gameState === 'paused') {
@@ -250,6 +251,7 @@ export function BrickBreaker() {
                     onMouseMove={handleMouseMove}
                     onTouchMove={handleTouchMove}
                     onClick={startGame}
+                    onTouchStart={startGame}
                 />
                  <AnimatePresence>
                 {(gameState !== 'playing') && (
@@ -268,7 +270,7 @@ export function BrickBreaker() {
                                <Trophy className="mx-auto mb-2 text-gray-500" size={32}/>
                                <h3 className="text-2xl font-bold text-red-500">Game Over!</h3>
                                <p className="text-gray-300">Your final score is {score}.</p>
-                               <button onClick={() => resetLevel(level)} className="btn-glass bg-accent-purple/20 text-accent-purple flex items-center gap-2 mt-4">
+                               <button onClick={(e) => {e.stopPropagation(); resetLevel(level)}} className="btn-glass bg-accent-purple/20 text-accent-purple flex items-center gap-2 mt-4">
                                    <RotateCcw size={16}/> Try Again
                                </button>
                            </>
@@ -278,7 +280,7 @@ export function BrickBreaker() {
                                <Trophy className="mx-auto mb-2 text-brand-gold" size={32}/>
                                <h3 className="text-2xl font-bold text-green-400">Level Complete!</h3>
                                <p className="text-gray-300">Final Score: {score}</p>
-                               <button onClick={goToNextLevel} className="btn-glass bg-green-500/20 text-green-400 flex items-center gap-2 mt-4">
+                               <button onClick={(e) => {e.stopPropagation(); goToNextLevel()}} className="btn-glass bg-green-500/20 text-green-400 flex items-center gap-2 mt-4">
                                    Next Level
                                </button>
                            </>
