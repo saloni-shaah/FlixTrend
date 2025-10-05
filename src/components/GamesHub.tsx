@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
@@ -44,7 +43,7 @@ const games = [
     {
         id: 'cricket-challenge',
         name: "Super Over Challenge",
-        description: "A fast-paced cricket batting game. Score as many runs as you can in one over!",
+        description: "A fast-paced cricket batting game. Choose your team and format, and score as many runs as you can!",
         component: CricketChallenge
     }
 ];
