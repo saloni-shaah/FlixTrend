@@ -80,32 +80,44 @@ export default function AppNavBar() {
   const pathname = usePathname();
   const { isCalling, selectedChat, setSelectedChat } = useAppState();
   const [isMobile, setIsMobile] = useState(false);
+  const [isOffline, setIsOffline] = useState(false);
 
   useEffect(() => {
     const checkIsMobile = () => setIsMobile(window.innerWidth < 768);
     checkIsMobile();
     window.addEventListener('resize', checkIsMobile);
-    return () => window.removeEventListener('resize', checkIsMobile);
+
+    const goOnline = () => setIsOffline(false);
+    const goOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', goOnline);
+    window.addEventListener('offline', goOffline);
+
+    // Set initial state
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        goOffline();
+    }
+
+    return () => {
+        window.removeEventListener('resize', checkIsMobile);
+        window.removeEventListener('online', goOnline);
+        window.removeEventListener('offline', goOffline);
+    };
   }, []);
 
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
   const [hasUnreadNotifs, setHasUnreadNotifs] = useState(false);
-  const [isOffline, setIsOffline] = useState(false);
-  const [downloadedPosts, setDownloadedPosts] = useState<any[]>([]);
   const currentUser = auth.currentUser;
-  const router = useRouter();
   
-  // *** ADDED THIS NEW HOOK FOR NOTIFICATION PERMISSIONS ***
   useEffect(() => {
     if (currentUser) {
-      console.log("User is logged in. Requesting notification permission...");
       requestNotificationPermission(currentUser.uid);
     }
-  }, [currentUser]); // This runs once when the user's status is known
+  }, [currentUser]);
 
   // Listener for unread messages
   useEffect(() => {
-    if (!currentUser) {
+    if (!currentUser || isOffline) {
         setHasUnreadMessages(false);
         return;
     }
@@ -162,11 +174,11 @@ export default function AppNavBar() {
     fetchMutualsAndListen();
     return () => unsubGroups();
 
-  }, [currentUser]);
+  }, [currentUser, isOffline]);
 
   // Listener for general notifications
   useEffect(() => {
-    if (!currentUser) {
+    if (!currentUser || isOffline) {
         setHasUnreadNotifs(false);
         return;
     }
@@ -175,64 +187,38 @@ export default function AppNavBar() {
         setHasUnreadNotifs(!snapshot.empty);
     });
     return () => unsub();
-  }, [currentUser]);
-
-  // Listener for offline status
-    useEffect(() => {
-        const goOnline = () => setIsOffline(false);
-        const goOffline = async () => {
-            setIsOffline(true);
-            const posts = await getDownloadedPosts();
-            setDownloadedPosts(posts);
-            if (currentUser) {
-                router.push('/squad?tab=downloads');
-            }
-        };
-
-        window.addEventListener('online', goOnline);
-        window.addEventListener('offline', goOffline);
-
-        if (typeof navigator !== 'undefined' && !navigator.onLine) {
-            goOffline();
-        }
-
-        return () => {
-            window.removeEventListener('online', goOnline);
-            window.removeEventListener('offline', goOffline);
-        };
-    }, [currentUser, router]);
+  }, [currentUser, isOffline]);
 
 
   const hideNav = pathname === "/login" || pathname === "/signup" || pathname === "/" || isCalling || pathname === "/guest" || pathname === "/about";
 
   if (hideNav) return null;
 
-  if (isOffline) {
-    return (
-        <div className="fixed bottom-0 left-0 w-full z-40 bg-yellow-500/80 backdrop-blur-lg text-black font-bold p-4 text-center">
-            You are offline. Showing downloaded content.
-        </div>
-    );
-  }
-
   const isSignalChatView = isMobile && pathname === '/signal' && selectedChat;
 
   return (
-    <nav className="fixed bottom-0 left-0 w-full z-40 bg-background/50 backdrop-blur-lg border-t border-glass-border flex justify-around items-center py-2">
-      {isSignalChatView ? (
-        <button onClick={() => setSelectedChat(null)} className="flex flex-col items-center gap-1 px-2 py-1 text-foreground">
-          <ArrowLeft />
-          <span className="text-xs font-semibold">Back</span>
-        </button>
-      ) : (
-        <>
-          <NavButton href="/home" icon={VibeSpaceIcon} label="VibeSpace" />
-          <NavButton href="/scope" icon={ScopeIcon} label="Scope" />
-          <NavButton href="/store" icon={ShoppingBag} label="Store" />
-          <NavButton href="/squad" icon={SquadIcon} label="Squad" />
-          <NavButton href="/signal" icon={MessageSquare} label="Signal" hasNotification={hasUnreadMessages} />
-        </>
+    <>
+      {isOffline && (
+        <div className="fixed bottom-0 left-0 w-full z-50 bg-yellow-500/90 backdrop-blur-md text-black font-bold p-2 text-center text-sm">
+            You are offline. Some features may be limited.
+        </div>
       )}
-    </nav>
+      <nav className={`fixed left-0 w-full z-40 bg-background/50 backdrop-blur-lg border-t border-glass-border flex justify-around items-center py-2 transition-all ${isOffline ? 'bottom-8' : 'bottom-0'}`}>
+        {isSignalChatView ? (
+          <button onClick={() => setSelectedChat(null)} className="flex flex-col items-center gap-1 px-2 py-1 text-foreground">
+            <ArrowLeft />
+            <span className="text-xs font-semibold">Back</span>
+          </button>
+        ) : (
+          <>
+            <NavButton href="/home" icon={VibeSpaceIcon} label="VibeSpace" />
+            <NavButton href="/scope" icon={ScopeIcon} label="Scope" />
+            <NavButton href="/store" icon={ShoppingBag} label="Store" />
+            <NavButton href="/squad" icon={SquadIcon} label="Squad" />
+            <NavButton href="/signal" icon={MessageSquare} label="Signal" hasNotification={hasUnreadMessages} />
+          </>
+        )}
+      </nav>
+    </>
   );
 }
