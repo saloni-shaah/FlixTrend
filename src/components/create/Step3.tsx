@@ -9,7 +9,6 @@ import { getFirestore, collection, addDoc, serverTimestamp, Timestamp, doc, getD
 import { auth, app } from '@/utils/firebaseClient';
 import { useRouter } from 'next/navigation';
 import { uploadFileToFirebaseStorage, runContentModerationAction } from '@/app/actions';
-import { categorizePost } from '@/ai/flows/categorize-post-flow';
 
 const db = getFirestore(app);
 
@@ -42,27 +41,18 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
         }
 
         try {
-            // --- AI CONTENT MODERATION --- //
-            const textToModerate = [
+            // --- AI CONTENT MODERATION & CATEGORIZATION --- //
+            const textToProcess = [
                 postData.title, postData.caption, postData.content, postData.description,
                 postData.mood, postData.location, postData.question,
             ].filter(Boolean).join(' \n ');
 
-            const mediaToModerate: { url: string }[] = [];
-            const filesToProcess: File[] = [];
-            if (postData.thumbnailFile) filesToProcess.push(postData.thumbnailFile);
-            if (postData.mediaFiles) filesToProcess.push(...postData.mediaFiles);
-
-            for (const file of filesToProcess) {
-                if (file instanceof File && file.type.startsWith('image/')) {
-                    const dataUri = await fileToDataUri(file);
-                    mediaToModerate.push({ url: dataUri });
-                }
-            }
+            // Note: Media moderation is disabled for now to save costs.
+            // const mediaToModerate: { url: string }[] = []; 
             
             const moderationResult = await runContentModerationAction({
-                text: textToModerate,
-                media: mediaToModerate,
+                text: textToProcess,
+                // media: mediaToModerate,
             });
 
             if (moderationResult.failure) {
@@ -75,10 +65,9 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                 return; // STOP execution
             }
             
-            // --- AI CATEGORIZATION --- //
-            const category = await categorizePost(textToModerate);
+            const category = moderationResult.success?.category || 'Other';
 
-            // --- MODERATION PASSED - PROCEED --- //
+            // --- MODERATION PASSED - PROCEED TO UPLOAD & PUBLISH --- //
 
             const userDocRef = doc(db, 'users', user.uid);
             const userDocSnap = await getDoc(userDocRef);
@@ -157,7 +146,7 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
 
         } catch (error: any) {
             console.error("Error publishing post:", error);
-            if (error.message.includes("moderation")) {
+            if (error.message.includes("violates our content guidelines")) {
                  setModerationError(error.message);
             } else {
                 alert("Failed to publish post. Please try again.");
