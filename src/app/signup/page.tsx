@@ -194,6 +194,11 @@ export default function SignupPage() {
                             <input type="text" name="location" placeholder="Location (e.g., City, Country)" className="input-glass w-full" value={form.location} onChange={handleChange} />
                             <input type="tel" name="phoneNumber" placeholder="Phone Number (Optional)" className="input-glass w-full" value={form.phoneNumber} onChange={handleChange} />
                          </div>
+                         <select name="accountType" className="input-glass w-full" value={form.accountType} onChange={handleChange}>
+                            <option value="user">I'm a User</option>
+                            <option value="creator">I'm a Creator</option>
+                            <option value="business">I'm a Business</option>
+                        </select>
                      </motion.div>
                 );
             case 3:
@@ -236,24 +241,30 @@ export default function SignupPage() {
         </div>
         
         <AnimatePresence mode="wait">
-            {renderStep()}
+            {success ? (
+                <motion.div initial={{ opacity: 0}} animate={{ opacity: 1}} className="text-center flex flex-col items-center gap-4">
+                     <CheckCircle className="text-green-400" size={48} />
+                     <p className="text-accent-cyan mt-2">{success}</p>
+                </motion.div>
+            ) : renderStep()}
         </AnimatePresence>
 
         {error && <div className="text-red-400 text-center animate-bounce mt-2">{error}</div>}
-        {success && <div className="text-accent-cyan text-center mt-2">{success}</div>}
+        
+        {!success && (
+            <div className="flex justify-between items-center mt-6">
+                {step > 1 ? (
+                    <button type="button" className="btn-glass flex items-center gap-2" onClick={prevStep} disabled={loading}>
+                        <ArrowLeft size={16} /> Back
+                    </button>
+                ) : <div />}
 
-        <div className="flex justify-between items-center mt-6">
-            {step > 1 ? (
-                <button type="button" className="btn-glass flex items-center gap-2" onClick={prevStep} disabled={loading}>
-                    <ArrowLeft size={16} /> Back
+                <button type="submit" className="btn-glass bg-accent-pink flex items-center gap-2" disabled={loading}>
+                    {loading ? 'Processing...' : step === 3 ? 'Finish & Sign Up' : 'Next'}
+                    {step < 3 && <ArrowRight size={16} />}
                 </button>
-            ) : <div />}
-
-            <button type="submit" className="btn-glass bg-accent-pink flex items-center gap-2" disabled={loading}>
-                {loading ? 'Processing...' : step === 3 ? 'Finish & Sign Up' : 'Next'}
-                {step < 3 && <ArrowRight size={16} />}
-            </button>
-        </div>
+            </div>
+        )}
 
         <div className="text-center mt-4">
           <span className="text-gray-400">Already have an account? </span>

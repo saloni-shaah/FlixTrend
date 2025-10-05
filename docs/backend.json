@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "UserProfile": {
@@ -45,6 +44,11 @@
           },
           "description": "The roles of the user within the application."
         },
+        "accountType": {
+          "type": "string",
+          "enum": ["user", "creator", "business"],
+          "description": "The type of account, which determines their platform access."
+        },
         "createdAt": {
           "type": "string",
           "format": "date-time",
@@ -74,6 +78,25 @@
                     "type": "string",
                     "format": "date-time",
                     "description": "Timestamp of the last time usage counts were reset."
+                }
+            }
+        },
+        "businessProfile": {
+            "type": "object",
+            "description": "Additional profile information for business accounts.",
+            "properties": {
+                "companyName": { "type": "string" },
+                "companyWebsite": { "type": "string", "format": "uri" },
+                "industry": { "type": "string" },
+                "companyAddress": { "type": "string" },
+                "companyCity": { "type": "string" },
+                "companyState": { "type": "string" },
+                "companyZip": { "type": "string" },
+                "companyCountry": { "type": "string" },
+                "userRoleInCompany": { "type": "string" },
+                "campaignGoals": {
+                    "type": "array",
+                    "items": { "type": "string" }
                 }
             }
         }
