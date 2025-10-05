@@ -7,7 +7,7 @@ import { RotateCcw, Play, Trophy } from 'lucide-react';
 // --- GAME CONFIGURATION ---
 const PITCH_HEIGHT = 450;
 const PITCH_WIDTH = 350;
-const BAT_WIDTH = 20; // Adjusted for a better bat shape
+const BAT_WIDTH = 20;
 const BAT_HEIGHT = 80;
 const BALL_SIZE = 15;
 const SWEET_SPOT_Y = PITCH_HEIGHT - BAT_HEIGHT - 35;
