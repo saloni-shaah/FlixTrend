@@ -1,8 +1,8 @@
 
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, ArrowLeft, Building, User, Mail, Briefcase, Target, CheckCircle } from "lucide-react";
+import { ArrowRight, ArrowLeft, Building, User, Mail, Briefcase, Target, CheckCircle, DollarSign } from "lucide-react";
 import Link from "next/link";
 import { auth, db } from "@/utils/firebaseClient";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { VibeSpaceLoader } from "@/components/VibeSpaceLoader";
 
-const AdStudioDashboard = ({ user }: { user: any }) => {
+const AdStudioDashboard = ({ user, userProfile }: { user: any, userProfile: any }) => {
     const router = useRouter();
 
     return (
@@ -19,16 +19,29 @@ const AdStudioDashboard = ({ user }: { user: any }) => {
              <h2 className="text-3xl font-headline font-bold text-accent-pink mb-2 text-center">Ad Studio Dashboard</h2>
              <p className="text-center text-gray-400 mb-8">Welcome back, {user.displayName}!</p>
 
-             <div className="w-full glass-card p-8 text-center">
-                <h3 className="text-2xl font-bold text-accent-cyan mb-4">Your Campaigns</h3>
-                <p className="text-gray-400 mb-6">You don't have any active campaigns yet.</p>
-                <button 
-                    onClick={() => router.push('/ad-studio/create')}
-                    className="btn-glass bg-accent-pink text-white"
-                >
-                    Create Your First Ad
-                </button>
-             </div>
+            <div className="w-full grid md:grid-cols-2 gap-6 mb-6">
+                 <div className="glass-card p-6">
+                    <h3 className="text-xl font-bold text-accent-cyan flex items-center gap-2"><DollarSign/> Ad Credits</h3>
+                    <p className="text-4xl font-bold mt-2">₹{userProfile?.credits?.toLocaleString('en-IN') || '800'}</p>
+                    <p className="text-xs text-gray-400">Your remaining ad balance.</p>
+                     <button 
+                        onClick={() => router.push('/ad-studio/billing')}
+                        className="btn-glass bg-accent-green text-black mt-4 text-sm"
+                    >
+                        Add Funds
+                    </button>
+                </div>
+                 <div className="glass-card p-6">
+                    <h3 className="text-2xl font-bold text-accent-cyan mb-4">Your Campaigns</h3>
+                    <p className="text-gray-400 mb-6">You don't have any active campaigns yet.</p>
+                    <button 
+                        onClick={() => router.push('/ad-studio/create')}
+                        className="btn-glass bg-accent-pink text-white"
+                    >
+                        Create Your First Ad
+                    </button>
+                </div>
+            </div>
         </div>
     )
 }
@@ -112,6 +125,7 @@ const AdStudioSignupPage = () => {
                 email: formData.email,
                 username: formData.email.split('@')[0], // Create a simple username
                 accountType: 'business',
+                credits: 800, // Free starting credit
                 createdAt: new Date(),
                 businessProfile: {
                     userRoleInCompany: formData.userRoleInCompany,
@@ -200,7 +214,7 @@ const AdStudioSignupPage = () => {
                     <CheckCircle className="text-green-400" size={64}/>
                 </motion.div>
                 <h2 className="text-2xl font-headline font-bold text-green-400">Welcome to Ad Studio!</h2>
-                <p className="text-gray-300">Your business account has been created. Redirecting you to the dashboard...</p>
+                <p className="text-gray-300">Your business account has been created with ₹800 in free credits! Redirecting you to the dashboard...</p>
             </div>
         )
     }
@@ -295,6 +309,7 @@ const AdStudioUpgradePage = ({ user }: { user: any }) => {
             const userDocRef = doc(db, "users", user.uid);
             await updateDoc(userDocRef, {
                 accountType: 'business',
+                credits: 800, // Free starting credit for upgrading users
                 businessProfile: formData
             });
 
@@ -394,7 +409,7 @@ export default function AdStudioPage() {
     const [userProfile, setUserProfile] = useState<any>(null);
     const [profileLoading, setProfileLoading] = useState(true);
     
-    React.useEffect(() => {
+    useEffect(() => {
         if (user) {
             const userDocRef = doc(db, 'users', user.uid);
             const unsub = onSnapshot(userDocRef, (doc) => {
@@ -404,10 +419,10 @@ export default function AdStudioPage() {
                 setProfileLoading(false);
             });
             return () => unsub();
-        } else {
+        } else if (!authLoading) {
             setProfileLoading(false);
         }
-    }, [user]);
+    }, [user, authLoading]);
 
     if (authLoading || profileLoading) {
         return <VibeSpaceLoader />;
@@ -415,7 +430,7 @@ export default function AdStudioPage() {
 
     if (user && userProfile) {
         if (userProfile.accountType === 'business') {
-            return <AdStudioDashboard user={user} />;
+            return <AdStudioDashboard user={user} userProfile={userProfile} />;
         } else {
             return <AdStudioUpgradePage user={user} />;
         }

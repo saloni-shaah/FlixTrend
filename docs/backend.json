@@ -59,6 +59,10 @@
           "type": "boolean",
           "description": "Indicates if the user has a premium subscription."
         },
+        "credits": {
+            "type": "number",
+            "description": "The user's advertising credit balance in INR."
+        },
         "aiUsage": {
             "type": "object",
             "description": "Tracks the user's monthly AI feature usage.",
