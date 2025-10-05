@@ -10,7 +10,9 @@ import { ShareModal } from './ShareModal';
 import { app } from '@/utils/firebaseClient';
 import { OptimizedImage } from './OptimizedImage';
 import { FlixTrendLogo } from './FlixTrendLogo';
-import { FaMusic } from "react-icons/fa";
+import { FaMusic, FaPlay } from "react-icons/fa";
+import { OptimizedVideo } from './OptimizedVideo';
+import AdModal from './AdModal';
 
 const db = getFirestore(app);
 
@@ -29,6 +31,10 @@ const Watermark = ({ isAnimated = false }: { isAnimated?: boolean }) => (
 export function GuestPostCard({ post }: { post: any }) {
   const [showShareModal, setShowShareModal] = React.useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = React.useState(false);
+  const [showAd, setShowAd] = React.useState(false);
+  const [playVideoAfterAd, setPlayVideoAfterAd] = React.useState(false);
+  const videoRef = React.useRef<HTMLVideoElement>(null);
+
 
   const handleInteraction = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -36,6 +42,24 @@ export function GuestPostCard({ post }: { post: any }) {
     setShowLoginPrompt(true);
   };
   
+  React.useEffect(() => {
+    if (playVideoAfterAd && videoRef.current) {
+      videoRef.current.play();
+      setPlayVideoAfterAd(false);
+    }
+  }, [playVideoAfterAd]);
+
+  const handlePlayVideo = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowAd(true);
+  };
+
+  const onAdComplete = () => {
+    setShowAd(false);
+    setPlayVideoAfterAd(true);
+  };
+
   const LoginPrompt = () => (
     <div className="fixed inset-0 z-[102] flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={() => setShowLoginPrompt(false)}>
         <motion.div 
@@ -61,6 +85,7 @@ export function GuestPostCard({ post }: { post: any }) {
     
     return (
         <>
+            {showAd && <AdModal onComplete={onAdComplete} />}
             <div className="flex items-center gap-3 mb-2">
                 <div className="flex items-center gap-2 group cursor-pointer" onClick={handleInteraction}>
                     <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green flex items-center justify-center font-bold text-lg overflow-hidden border-2 border-accent-green group-hover:scale-105 transition-transform">
@@ -108,11 +133,29 @@ export function GuestPostCard({ post }: { post: any }) {
                         <div className="relative">
                             {(() => {
                                 const isVideo = contentPost.mediaUrl.includes('.mp4') || contentPost.mediaUrl.includes('.webm') || contentPost.mediaUrl.includes('.ogg');
-                                return isVideo ? <video src={contentPost.mediaUrl} controls className="w-full rounded-xl" /> : 
+                                const videoElement = <OptimizedVideo ref={videoRef} src={contentPost.mediaUrl} thumbnailUrl={contentPost.thumbnailUrl} className="w-full rounded-xl" controls={playVideoAfterAd}/>;
+
+                                if (isVideo) {
+                                    return (
+                                        <div className="relative group w-full cursor-pointer" onClick={playVideoAfterAd ? undefined : handlePlayVideo}>
+                                            {playVideoAfterAd ? videoElement : (
+                                                <>
+                                                    <OptimizedImage src={contentPost.thumbnailUrl || '/video_placeholder.png'} alt="Video thumbnail" className="w-full rounded-xl" />
+                                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                                        <FaPlay className="text-white text-5xl" />
+                                                    </div>
+                                                </>
+                                            )}
+                                             <Watermark isAnimated={true} />
+                                        </div>
+                                    )
+                                }
+                                return (
                                     <div className="relative">
                                         <OptimizedImage src={contentPost.mediaUrl} alt="media" className="w-full rounded-xl" />
                                         <Watermark isAnimated={true} />
-                                    </div>;
+                                    </div>
+                                );
                             })()}
                         </div>
                     )}
@@ -174,7 +217,7 @@ export function GuestPostCard({ post }: { post: any }) {
         <ShareModal 
             url={`${window.location.origin}/post/${post.id}`}
             title={post.content}
-            onSignalShare={() => { setShowShareModal(false); /*setShowSignalShare(true);*/ }}
+            onSignalShare={() => { setShowShareModal(false); setShowLoginPrompt(true); }}
             onClose={() => setShowShareModal(false)}
         />
       )}

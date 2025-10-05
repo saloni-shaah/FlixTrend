@@ -192,7 +192,7 @@ export default function GuestPage() {
               {filteredPosts.map((post, index) => (
                 <React.Fragment key={post.id}>
                   <GuestPostCard post={post} />
-                  {(index + 1) % 3 === 0 && <AdBanner key={`ad-${post.id}`} />}
+                  {(index + 1) % 2 === 0 && <AdBanner key={`ad-${post.id}`} />}
                 </React.Fragment>
               ))}
 
