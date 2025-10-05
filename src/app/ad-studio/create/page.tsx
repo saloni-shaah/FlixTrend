@@ -103,8 +103,8 @@ export default function CreateAdPage() {
         setIsProcessing(true);
         setError('');
 
-        if (!mediaFile) {
-            setError("Ad creative (image or video) is required.");
+        if (!mediaFile || !user) {
+            setError("Ad creative (image or video) and user authentication are required.");
             setIsProcessing(false);
             return;
         }
@@ -113,6 +113,7 @@ export default function CreateAdPage() {
             // 1. Upload media file
             const formData = new FormData();
             formData.append('file', mediaFile);
+            formData.append('userId', user.uid); // Pass the user's ID to the action
             const uploadResult = await uploadFileToFirebaseStorage(formData);
             if (!uploadResult.success?.url) {
                 throw new Error(uploadResult.failure || "Failed to upload ad creative.");
@@ -262,4 +263,3 @@ export default function CreateAdPage() {
         </div>
     );
 }
-
