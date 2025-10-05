@@ -110,8 +110,8 @@ export function GuestPostCard({ post }: { post: any }) {
                 </div>
             )}
 
-            {contentPost.type === "media" && contentPost.mediaUrl && (
-                <div className="w-full rounded-xl overflow-hidden relative">
+           {contentPost.type === "media" && contentPost.mediaUrl && (
+                 <div className="w-full rounded-xl overflow-hidden mt-2 relative">
                      {(() => {
                         const mediaUrls = Array.isArray(contentPost.mediaUrl) ? contentPost.mediaUrl : [contentPost.mediaUrl];
                         const effectiveThumbnail = contentPost.thumbnailUrl || '/video_placeholder.png';
@@ -121,7 +121,7 @@ export function GuestPostCard({ post }: { post: any }) {
                             const isVideo = url.includes('.mp4') || url.includes('.webm') || url.includes('.ogg');
                             if (isVideo) {
                                 return (
-                                    <div className="relative group w-full cursor-pointer aspect-video bg-black flex items-center justify-center" onClick={playVideoAfterAd ? undefined : handlePlayVideo}>
+                                    <div className="relative group w-full cursor-pointer bg-black flex items-center justify-center" onClick={playVideoAfterAd ? undefined : handlePlayVideo}>
                                         {playVideoAfterAd ? 
                                             <OptimizedVideo ref={videoRef} src={url} thumbnailUrl={effectiveThumbnail} className="w-full h-full object-contain" controls />
                                             : 
@@ -230,5 +230,3 @@ export function GuestPostCard({ post }: { post: any }) {
     </motion.div>
   );
 }
-
-    

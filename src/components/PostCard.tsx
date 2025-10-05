@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState, useRef } from 'react';
@@ -22,6 +21,7 @@ import { cn } from "@/lib/utils"
 import AdModal from './AdModal';
 import { PlayerModal } from './video/PlayerModal';
 import { ShortsPlayer } from './ShortsPlayer';
+import { OptimizedVideo } from './OptimizedVideo';
 
 
 // START: Copied DropdownMenu components
@@ -330,13 +330,13 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
             setIsFullScreen(true);
         }
     };
-
+    
     const renderMedia = (url: string, isVideo: boolean, isSingle: boolean) => {
         const effectiveThumbnail = thumbnailUrl || '/video_placeholder.png';
         if (isVideo) {
             return (
-                <div className="relative group w-full h-full cursor-pointer" onClick={handleMediaClick}>
-                     <OptimizedImage src={effectiveThumbnail} alt="Video thumbnail" className="w-full h-full object-cover" />
+                <div className="relative group w-full h-full cursor-pointer bg-black flex items-center justify-center" onClick={handleMediaClick}>
+                    <OptimizedImage src={effectiveThumbnail} alt="Video thumbnail" className="w-full h-full object-contain" />
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                         <FaPlay className="text-white text-5xl" />
                     </div>
@@ -759,5 +759,3 @@ function CommentForm({ postId, postAuthorId, parentId, onCommentPosted, isReply 
     </form>
   )
 }
-
-    
