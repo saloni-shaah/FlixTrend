@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { getFirestore, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, deleteDoc, updateDoc, doc as fsDoc, setDoc, getDoc, runTransaction } from "firebase/firestore";
 import { FaPlay, FaRegComment, FaExclamationTriangle, FaVolumeMute, FaUserSlash, FaLink, FaMusic } from "react-icons/fa";
 import { Repeat2, Star, Share, MessageCircle, Bookmark, MapPin, Smile, Download, X, MoreVertical, Check, ChevronRight, Circle, ThumbsUp, ThumbsDown } from "lucide-react";
@@ -11,7 +11,6 @@ import { ShareModal } from './ShareModal';
 import { SignalShareModal } from './SignalShareModal';
 import { AddToCollectionModal } from './AddToCollectionModal';
 import { OptimizedImage } from './OptimizedImage';
-import { OptimizedVideo } from './OptimizedVideo';
 import { FlixTrendLogo } from './FlixTrendLogo';
 import { trackInteraction } from '@/vibe-engine/interactionTracker';
 import { savePostForOffline, isPostDownloaded, removeDownloadedPost } from '@/utils/offline-db';
@@ -21,6 +20,7 @@ import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu"
 import { cn } from "@/lib/utils"
 import AdModal from './AdModal';
 import { PlayerModal } from './video/PlayerModal';
+import { ShortsPlayer } from './ShortsPlayer';
 
 
 // START: Copied DropdownMenu components
@@ -98,16 +98,8 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const deletePostCallable = httpsCallable(functions, 'deletePost');
   const [isFullScreen, setIsFullScreen] = React.useState(false);
-  const [showPlayer, setShowPlayer] = React.useState(false);
-
-
-  const handleDoubleClick = () => {
-    // Only enable full-screen for single media posts (not relays with media, or multi-image posts)
-    if (post.type === 'media' && post.mediaUrl && !Array.isArray(post.mediaUrl)) {
-        setIsFullScreen(prev => !prev);
-    }
-  };
-
+  
+  const [showPlayer, setShowPlayer] = useState<'long' | 'short' | null>(null);
 
   React.useEffect(() => {
     if (!currentUser) return;
@@ -325,20 +317,32 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
   const MediaGrid = ({ mediaUrls, thumbnailUrl }: { mediaUrls: string[]; thumbnailUrl?: string }) => {
     if (!mediaUrls || mediaUrls.length === 0) return null;
 
+    const handleMediaClick = (url: string) => {
+        const img = new Image();
+        img.onload = () => {
+            if (img.height > img.width) {
+                setShowPlayer('short');
+            } else {
+                setShowPlayer('long');
+            }
+        };
+        img.src = thumbnailUrl || url; // Use thumbnail for aspect ratio check if available
+    };
+
     const renderMedia = (url: string, isVideo: boolean, isSingle: boolean) => {
         if (isVideo) {
             return (
-                <div className="relative group w-full h-full cursor-pointer" onClick={() => setShowPlayer(true)}>
+                <div className="relative group w-full h-full cursor-pointer" onClick={() => handleMediaClick(url)}>
                     <OptimizedImage src={thumbnailUrl || '/video_placeholder.png'} alt="Video thumbnail" className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                         <FaPlay className="text-white text-5xl" />
                     </div>
                     <Watermark isAnimated={true} />
                 </div>
-            )
+            );
         }
         return (
-            <div className="relative group w-full h-full">
+            <div className="relative group w-full h-full" onDoubleClick={() => setIsFullScreen(true)}>
                 <OptimizedImage src={url} alt="media" className="w-full h-full object-cover" />
                 <Watermark isAnimated={isSingle} />
             </div>
@@ -360,7 +364,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
             {mediaUrls.slice(0, 4).map((url, index) => {
                  const isVideo = url.includes('.mp4') || url.includes('.webm') || url.includes('.ogg');
                 return (
-                    <div key={index} className="relative aspect-square">
+                    <div key={index} className="relative aspect-square cursor-pointer" onClick={() => isVideo && handleMediaClick(url)}>
                         {renderMedia(url, !!isVideo, false)}
                         {index === 3 && mediaUrls.length > 4 && (
                             <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
@@ -539,13 +543,13 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
 
   return (
     <>
-    {showPlayer && <PlayerModal post={post} onClose={() => setShowPlayer(false)} />}
+    {showPlayer === 'long' && <PlayerModal post={post} onClose={() => setShowPlayer(null)} />}
+    {showPlayer === 'short' && <ShortsPlayer initialPost={post} onClose={() => setShowPlayer(null)} />}
     <motion.div 
       className="glass-card p-5 flex flex-col gap-3 relative animate-fade-in"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      onDoubleClick={handleDoubleClick}
     >
       {post.type === 'relay' && (
           <div className="text-xs text-muted-foreground font-bold mb-2 flex items-center gap-2">
@@ -593,7 +597,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
     {isFullScreen && post.mediaUrl && !Array.isArray(post.mediaUrl) && (
         <div 
             className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-sm flex items-center justify-center"
-            onClick={handleDoubleClick}
+            onClick={() => setIsFullScreen(false)}
         >
             <button onClick={() => setIsFullScreen(false)} className="absolute top-4 right-4 text-white z-10">
                 <X size={32} />
