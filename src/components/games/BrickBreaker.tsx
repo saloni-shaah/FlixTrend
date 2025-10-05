@@ -51,7 +51,7 @@ export function BrickBreaker() {
     }, []);
 
     const resetLevel = useCallback((levelIndex: number) => {
-        setBricks(levelLayouts[levelIndex]);
+        setBricks(levelLayouts[levelIndex].map(row => row.map(cell => ({...cell})))); // Deep copy
         setLives(INITIAL_LIVES);
         setScore(0);
         resetBallAndPaddle();
@@ -257,10 +257,12 @@ export function BrickBreaker() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center text-center p-4 rounded-lg z-10"
+                        className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center text-center p-4 rounded-lg z-10 cursor-pointer"
+                        onClick={startGame}
+                        onTouchStart={startGame}
                     >
-                       {gameState === 'start' && <h3 className="text-2xl font-bold text-green-400">Click to Start</h3>}
-                       {gameState === 'paused' && <h3 className="text-2xl font-bold text-yellow-400">Paused - Click to Resume</h3>}
+                       {gameState === 'start' && <h3 className="text-2xl font-bold text-green-400 animate-pulse">Tap to Start</h3>}
+                       {gameState === 'paused' && <h3 className="text-2xl font-bold text-yellow-400">Paused - Tap to Resume</h3>}
                        {gameState === 'lost' && (
                            <>
                                <Trophy className="mx-auto mb-2 text-gray-500" size={32}/>
