@@ -114,6 +114,7 @@ export function GuestPostCard({ post }: { post: any }) {
                 <div className="w-full rounded-xl overflow-hidden relative">
                      {(() => {
                         const mediaUrls = Array.isArray(contentPost.mediaUrl) ? contentPost.mediaUrl : [contentPost.mediaUrl];
+                        const effectiveThumbnail = contentPost.thumbnailUrl || '/video_placeholder.png';
                         
                         if (mediaUrls.length === 1) {
                             const url = mediaUrls[0];
@@ -122,10 +123,10 @@ export function GuestPostCard({ post }: { post: any }) {
                                 return (
                                     <div className="relative group w-full cursor-pointer" onClick={playVideoAfterAd ? undefined : handlePlayVideo}>
                                         {playVideoAfterAd ? 
-                                            <OptimizedVideo ref={videoRef} src={url} thumbnailUrl={contentPost.thumbnailUrl} className="w-full rounded-xl" controls />
+                                            <OptimizedVideo ref={videoRef} src={url} thumbnailUrl={effectiveThumbnail} className="w-full rounded-xl" controls />
                                             : 
                                             <>
-                                                <OptimizedImage src={contentPost.thumbnailUrl || '/video_placeholder.png'} alt="Video thumbnail" className="w-full rounded-xl" />
+                                                <OptimizedImage src={effectiveThumbnail} alt="Video thumbnail" className="w-full rounded-xl" />
                                                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                                                     <FaPlay className="text-white text-5xl" />
                                                 </div>
@@ -220,6 +221,7 @@ export function GuestPostCard({ post }: { post: any }) {
         <ShareModal 
             url={`${window.location.origin}/post/${post.id}`}
             title={post.content}
+            isVideo={post.type === 'media'}
             onSignalShare={() => { setShowShareModal(false); setShowLoginPrompt(true); }}
             onClose={() => setShowShareModal(false)}
         />
@@ -228,5 +230,3 @@ export function GuestPostCard({ post }: { post: any }) {
     </motion.div>
   );
 }
-
-    
