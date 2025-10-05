@@ -1,9 +1,11 @@
+
 "use client";
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Gamepad2 } from 'lucide-react';
 import { TicTacToe } from './games/TicTacToe';
 import { Snake } from './games/Snake';
+import { Game2048 } from './games/2048';
 
 const games = [
     {
@@ -18,6 +20,12 @@ const games = [
         description: "A timeless arcade classic. Guide the snake to eat the food and grow longer, but don't hit the walls or yourself!",
         component: Snake
     },
+    {
+        id: '2048',
+        name: "2048",
+        description: "An addictive puzzle game. Swipe to slide tiles and combine them to reach the 2048 tile!",
+        component: Game2048
+    }
 ];
 
 export function GamesHub() {
