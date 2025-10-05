@@ -1,8 +1,9 @@
+
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, SkipForward, RotateCcw, Settings, FastForward } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, SkipForward, RotateCcw, Settings, FastForward, X } from 'lucide-react';
 import { PostCard } from '../PostCard';
 import { VideoSuggestions } from './VideoSuggestions';
 import { cn } from '@/lib/utils';
