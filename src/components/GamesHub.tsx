@@ -6,6 +6,7 @@ import { ArrowLeft, Gamepad2 } from 'lucide-react';
 import { TicTacToe } from './games/TicTacToe';
 import { Snake } from './games/Snake';
 import { Game2048 } from './games/2048';
+import { Match3 } from './games/Match3';
 
 const games = [
     {
@@ -25,6 +26,12 @@ const games = [
         name: "2048",
         description: "An addictive puzzle game. Swipe to slide tiles and combine them to reach the 2048 tile!",
         component: Game2048
+    },
+    {
+        id: 'match3',
+        name: "Match-3 Madness",
+        description: "A colorful and addictive gem-matching puzzle game with levels and objectives.",
+        component: Match3
     }
 ];
 
