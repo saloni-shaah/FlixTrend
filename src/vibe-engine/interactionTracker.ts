@@ -8,10 +8,12 @@ const db = getFirestore(app);
 // Define weight for different interactions
 const INTERACTION_WEIGHTS = {
     like: 1,
-    save: 3, // Saving is a stronger signal of interest
+    save: 3, 
     relay: 2,
     comment: 2,
     profile_visit: 1,
+    show_more: 5, // Strong positive signal
+    show_less: -5, // Strong negative signal
 };
 
 /**
