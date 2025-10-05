@@ -14,9 +14,6 @@ export const metadata: Metadata = {
   title: "FlixTrend",
   description: "Where Trends Find You First",
   manifest: "/manifest.json",
-  other: {
-    "google-adsense-account": "ca-pub-4402800926226975",
-  },
 };
 
 export default function RootLayout({
@@ -43,12 +40,6 @@ export default function RootLayout({
           <GlobalMusicPlayer />
           <AppNavBar />
         </AppStateProvider>
-        <Script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4402800926226975"
-          crossOrigin="anonymous"
-          strategy="lazyOnload"
-        />
         {/* Load our custom payment logic script */}
         <Script src="/payment.js" strategy="lazyOnload" />
       </body>

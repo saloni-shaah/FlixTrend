@@ -8,38 +8,9 @@ import Link from 'next/link';
 
 const db = getFirestore(app);
 
-// Fallback Google AdSense component
-const AdSenseBanner = () => {
-    const adPushed = useRef(false);
-
-    useEffect(() => {
-        if (typeof window !== 'undefined' && !adPushed.current) {
-            try {
-                (window.adsbygoogle = window.adsbygoogle || []).push({});
-                adPushed.current = true;
-            } catch (err) {
-                console.error("AdSense Error:", err);
-            }
-        }
-    }, []);
-
-    return (
-        <div className="w-full min-w-[250px] glass-card p-4 text-center my-4">
-            <ins className="adsbygoogle"
-                style={{ display: 'block' }}
-                data-ad-client="ca-pub-4402800926226975"
-                data-ad-slot="3640779681"
-                data-ad-format="fluid"
-                data-ad-layout-key="-dv+6x-3g-hy+19g"></ins>
-            <p className="text-xs text-muted-foreground mt-2">Advertisement</p>
-        </div>
-    );
-};
-
-
 const FlixTrendAd = ({ ad }: { ad: any }) => {
     if (!ad?.creative) {
-        return <AdSenseBanner />; // Fallback if creative is missing
+        return null; // Don't render if creative is missing
     }
 
     const { creative } = ad;
@@ -75,7 +46,6 @@ const FlixTrendAd = ({ ad }: { ad: any }) => {
 
 export default function AdBanner() {
     const [ad, setAd] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchAd = async () => {
@@ -87,8 +57,7 @@ export default function AdBanner() {
                 const campaignSnap = await getDocs(q);
 
                 if (campaignSnap.empty) {
-                    setLoading(false);
-                    return; // No active campaigns, will fallback to AdSense
+                    return; // No active campaigns
                 }
 
                 const campaigns = campaignSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -99,33 +68,24 @@ export default function AdBanner() {
                 const creativeSnap = await getDocs(query(creativesRef, limit(1)));
                 
                 if (creativeSnap.empty) {
-                     setLoading(false);
-                     return; // No creative found, will fallback
+                     return; // No creative found
                 }
 
                 const randomCreative = { id: creativeSnap.docs[0].id, ...creativeSnap.docs[0].data() };
 
                 setAd({ campaign: randomCampaign, creative: randomCreative });
-                setLoading(false);
 
             } catch (error) {
                 console.error("Error fetching FlixTrend ad:", error);
-                setLoading(false); // Fallback to AdSense on error
             }
         }
         fetchAd();
     }, []);
     
-    // If there's no direct-sold ad, render the AdSense fallback
-    if (!loading && !ad) {
-        return <AdSenseBanner />;
-    }
-    
-    // If we have a direct-sold ad, render it
+    // If we have a direct-sold ad, render it. Otherwise, render nothing.
     if (ad) {
         return <FlixTrendAd ad={ad} />;
     }
 
-    // While loading, we can show a placeholder or nothing
     return null;
 }
