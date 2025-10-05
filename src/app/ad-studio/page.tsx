@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -5,7 +6,7 @@ import { ArrowRight, ArrowLeft, Building, User, Mail, Briefcase, Target, CheckCi
 import Link from "next/link";
 import { auth, db } from "@/utils/firebaseClient";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { doc, setDoc, getDoc, serverTimestamp, onSnapshot, updateDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, onSnapshot, updateDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { VibeSpaceLoader } from "@/components/VibeSpaceLoader";
@@ -111,7 +112,7 @@ const AdStudioSignupPage = () => {
                 email: formData.email,
                 username: formData.email.split('@')[0], // Create a simple username
                 accountType: 'business',
-                createdAt: serverTimestamp(),
+                createdAt: new Date(),
                 businessProfile: {
                     userRoleInCompany: formData.userRoleInCompany,
                     companyName: formData.companyName,

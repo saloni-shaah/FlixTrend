@@ -113,7 +113,7 @@ export default function CreateAdPage() {
             // 1. Upload media file
             const formData = new FormData();
             formData.append('file', mediaFile);
-            formData.append('userId', user.uid); // Pass the user's ID to the action
+            formData.append('userId', user.uid);
             const uploadResult = await uploadFileToFirebaseStorage(formData);
             if (!uploadResult.success?.url) {
                 throw new Error(uploadResult.failure || "Failed to upload ad creative.");
