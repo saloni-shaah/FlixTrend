@@ -213,7 +213,7 @@ function CompleteProfileModal({ profile, onClose }: { profile: any, onClose: () 
                 
                 {step === 3 && (
                     <div className="flex flex-col gap-4">
-                        <p className="text-sm text-gray-300 mb-4">We've sent a code to ${`formData.phoneNumber`}. Please enter it below.</p>
+                        <p className="text-sm text-gray-300 mb-4">We've sent a code to ${`form.phoneNumber`}. Please enter it below.</p>
                         <input type="text" name="code" placeholder="6-digit code" className="input-glass w-full" value={code} onChange={(e) => setCode(e.target.value)} required />
                         <button type="button" className="btn-glass bg-green-500 text-white mt-2" disabled={loading} onClick={onVerifyCode}>
                             {loading ? "Verifying..." : "Verify & Complete Profile"}
