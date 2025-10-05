@@ -23,7 +23,6 @@ const AddMusicModal = dynamic(() => import('@/components/MusicDiscovery').then(m
 const FlashModal = dynamic(() => import('@/components/FlashModal'), { ssr: false });
 const NotificationPanel = dynamic(() => import('@/components/NotificationPanel'), { ssr: false });
 const ShortsPlayer = dynamic(() => import('@/components/ShortsPlayer').then(mod => mod.ShortsPlayer), { ssr: false });
-const PremiumUpgradeBanner = dynamic(() => import('@/components/PremiumUpgradeBanner'), { ssr: false });
 
 
 const db = getFirestore(app);
