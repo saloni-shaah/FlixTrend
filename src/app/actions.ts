@@ -174,15 +174,15 @@ export async function runContentModerationAction(input: z.infer<typeof Moderatio
 // Client-side action to upload files
 export async function uploadFileToFirebaseStorage(formData: FormData): Promise<{ success: { url: string } | null; failure: string | null }> {
     const file = formData.get('file') as File;
-    const user = auth.currentUser;
+    const userId = formData.get('userId') as string;
 
-    if (!user || !file) {
+    if (!userId || !file) {
         return { success: null, failure: 'Authentication or file is missing.' };
     }
 
     try {
         const storageInstance = getStorage(app);
-        const fileName = `${user.uid}-${Date.now()}-${file.name}`;
+        const fileName = `${userId}-${Date.now()}-${file.name}`;
         const storageRef = ref(storageInstance, `user_uploads/${fileName}`);
         const snapshot = await uploadBytes(storageRef, file, { contentType: file.type });
         const downloadURL = await getDownloadURL(snapshot.ref);
