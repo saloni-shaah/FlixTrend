@@ -19,15 +19,15 @@ const INTERACTION_WEIGHTS = {
  * This is the core of the VibeEngine's personalization capabilities.
  *
  * @param userId The ID of the user performing the action.
- * @param hashtags An array of hashtags associated with the content.
+ * @param category The category of the content being interacted with.
  * @param interactionType The type of interaction (e.g., 'like', 'save').
  */
 export async function trackInteraction(
     userId: string,
-    hashtags: string[] | null,
+    category: string | null,
     interactionType: keyof typeof INTERACTION_WEIGHTS
 ) {
-    if (!userId || !hashtags || hashtags.length === 0) {
+    if (!userId || !category) {
         return;
     }
 
@@ -46,19 +46,14 @@ export async function trackInteraction(
             
             let currentInterests: { [tag: string]: number } = {};
             if (interestsDoc.exists()) {
-                currentInterests = interestsDoc.data().tags || {};
+                currentInterests = interestsDoc.data().scores || {};
             }
 
-            // Update scores for each hashtag
-            hashtags.forEach(tag => {
-                const cleanTag = tag.toLowerCase().trim();
-                currentInterests[cleanTag] = (currentInterests[cleanTag] || 0) + weight;
-            });
+            // Update score for the category
+            const cleanCategory = category.toLowerCase().trim();
+            currentInterests[cleanCategory] = (currentInterests[cleanCategory] || 0) + weight;
             
-            // For simplicity, we're not pruning old interests here, but in a production
-            // system, we might decay scores over time or keep only the top N interests.
-
-            transaction.set(userInterestsRef, { tags: currentInterests }, { merge: true });
+            transaction.set(userInterestsRef, { scores: currentInterests }, { merge: true });
         });
     } catch (error) {
         console.error("Error tracking interaction:", error);
