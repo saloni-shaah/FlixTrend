@@ -9,7 +9,7 @@ import { app } from '@/utils/firebaseClient';
 
 const db = getFirestore(app);
 
-export function FollowListModal({ userId, type, onClose, currentUser }: { userId: string, type: 'followers' | 'following', onClose: () => void, currentUser: any }) {
+export function FollowListModal({ userId, type, onClose, currentUser }: { userId: string, type: 'followers' | 'following' | 'friends', onClose: () => void, currentUser: any }) {
     const [users, setUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -17,15 +17,29 @@ export function FollowListModal({ userId, type, onClose, currentUser }: { userId
         async function fetchUsers() {
             setLoading(true);
             try {
-                const listCollectionRef = collection(db, "users", userId, type);
-                const listSnap = await getDocs(listCollectionRef);
-                const userIds = listSnap.docs.map(d => d.id);
-                
-                const userPromises = userIds.map(id => getDoc(doc(db, "users", id)));
-                const userDocs = await Promise.all(userPromises);
+                let userIds: string[] = [];
 
-                const usersData = userDocs.map(docSnap => docSnap.exists() ? { uid: docSnap.id, ...docSnap.data() } : null).filter(Boolean);
-                setUsers(usersData);
+                if (type === 'friends') {
+                    const followersSnap = await getDocs(collection(db, "users", userId, "followers"));
+                    const followingSnap = await getDocs(collection(db, "users", userId, "following"));
+                    const followerIds = followersSnap.docs.map(d => d.id);
+                    const followingIds = followingSnap.docs.map(d => d.id);
+                    userIds = followerIds.filter(id => followingIds.includes(id));
+                } else {
+                    const listCollectionRef = collection(db, "users", userId, type);
+                    const listSnap = await getDocs(listCollectionRef);
+                    userIds = listSnap.docs.map(d => d.id);
+                }
+                
+                if (userIds.length > 0) {
+                    const userPromises = userIds.map(id => getDoc(doc(db, "users", id)));
+                    const userDocs = await Promise.all(userPromises);
+                    const usersData = userDocs.map(docSnap => docSnap.exists() ? { uid: docSnap.id, ...docSnap.data() } : null).filter(Boolean);
+                    setUsers(usersData);
+                } else {
+                    setUsers([]);
+                }
+
             } catch (error) {
                 console.error(`Error fetching ${type}:`, error);
             }
@@ -78,5 +92,3 @@ export function FollowListModal({ userId, type, onClose, currentUser }: { userId
         </div>
     );
 }
-
-    
