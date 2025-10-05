@@ -1,7 +1,7 @@
 
 "use client";
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { getFirestore, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, deleteDoc, updateDoc, doc as fsDoc, setDoc, getDoc, runTransaction } from "firebase/firestore";
 import { FaPlay, FaRegComment, FaExclamationTriangle, FaVolumeMute, FaUserSlash, FaLink, FaMusic } from "react-icons/fa";
 import { Repeat2, Star, Share, MessageCircle, Bookmark, MapPin, Smile, Download, X, MoreVertical, Check, ChevronRight, Circle } from "lucide-react";
