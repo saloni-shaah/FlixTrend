@@ -1,12 +1,12 @@
 
 "use client";
 import React, { useState, useRef, useEffect } from 'react';
-import { X, UploadCloud, Music as MusicIcon, MapPin, Smile, Camera, Image as ImageIcon, Zap, Locate } from 'lucide-react';
+import { X, UploadCloud, Music as MusicIcon, MapPin, Smile, Camera, Image as ImageIcon, Zap, Locate, Loader } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getFirestore, collection, onSnapshot, query, orderBy, getDoc, doc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { app } from '@/utils/firebaseClient';
-import { Wand2, Loader } from 'lucide-react';
+import { Wand2 } from 'lucide-react';
 
 
 const db = getFirestore(app);
@@ -147,7 +147,7 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
                     setIsFetchingLocation(false);
                 }
             }, (error) => {
-                console.error("Geolocation error:", error);
+                console.error("Geolocation error:", error.message);
                 alert("Could not get location. Please enable location services for this site.");
                 setIsFetchingLocation(false);
             });

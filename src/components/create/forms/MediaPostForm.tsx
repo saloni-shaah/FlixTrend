@@ -107,7 +107,7 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
                     setIsFetchingLocation(false);
                 }
             }, (error) => {
-                console.error("Geolocation error:", error);
+                console.error("Geolocation error:", error.message);
                 alert("Could not get location. Please enable location services for this site.");
                 setIsFetchingLocation(false);
             });
