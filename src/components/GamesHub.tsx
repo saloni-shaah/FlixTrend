@@ -8,6 +8,7 @@ import { Snake } from './games/Snake';
 import { Game2048 } from './games/2048';
 import { Match3 } from './games/Match3';
 import { BrickBreaker } from './games/BrickBreaker';
+import { CricketChallenge } from './games/CricketChallenge';
 
 const games = [
     {
@@ -39,6 +40,12 @@ const games = [
         name: "Brick Breaker",
         description: "A classic arcade challenge. Break all the bricks with the ball and paddle to clear levels.",
         component: BrickBreaker
+    },
+    {
+        id: 'cricket-challenge',
+        name: "Super Over Challenge",
+        description: "A fast-paced cricket batting game. Score as many runs as you can in one over!",
+        component: CricketChallenge
     }
 ];
 
