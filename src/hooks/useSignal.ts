@@ -1,19 +1,9 @@
 
 import { useEffect, useRef, useState } from 'react';
-import { getFirestore } from 'firebase/firestore'; // Import getFirestore
-import { app } from '@/utils/firebaseClient'; // Import your firebase app
-import {
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  onSnapshot,
-  collection,
-  addDoc,
-  deleteDoc,
-} from 'firebase/firestore';
+import { getFirestore, doc, onSnapshot, updateDoc, collection, addDoc, deleteDoc } from 'firebase/firestore';
+import { app } from '@/utils/firebaseClient';
 
-const firestore = getFirestore(app); // Initialize firestore
+const firestore = getFirestore(app);
 
 const servers = {
   iceServers: [
@@ -81,7 +71,7 @@ export const useSignal = ({ callId, isCaller }: { callId: string; isCaller: bool
           type: offerDescription?.type,
         };
 
-        await setDoc(callDoc, { offer });
+        await updateDoc(callDoc, { offer });
       };
 
       createOffer();
@@ -103,45 +93,7 @@ export const useSignal = ({ callId, isCaller }: { callId: string; isCaller: bool
         });
       });
     } else {
-      const offerCandidates = collection(callDoc, 'offerCandidates');
-      const answerCandidates = collection(callDoc, 'answerCandidates');
-
-      pc.current.onicecandidate = (event) => {
-        event.candidate && addDoc(answerCandidates, event.candidate.toJSON());
-      };
-
-      const answerCall = async () => {
-        const callSnapshot = await getDoc(callDoc);
-        if (callSnapshot.exists()) {
-          const callData = callSnapshot.data();
-          if (callData.offer) {
-            await pc.current?.setRemoteDescription(
-              new RTCSessionDescription(callData.offer)
-            );
-
-            const answerDescription = await pc.current?.createAnswer();
-            await pc.current?.setLocalDescription(answerDescription);
-
-            const answer = {
-              type: answerDescription?.type,
-              sdp: answerDescription?.sdp,
-            };
-
-            await updateDoc(callDoc, { answer });
-          }
-        }
-      };
-
-      answerCall();
-
-      onSnapshot(offerCandidates, (snapshot) => {
-        snapshot.docChanges().forEach((change) => {
-          if (change.type === 'added') {
-            let data = change.doc.data();
-            pc.current?.addIceCandidate(new RTCIceCandidate(data));
-          }
-        });
-      });
+      // This logic will be moved to the AppStateProvider's answerCall function
     }
 
     setIsConnecting(false);

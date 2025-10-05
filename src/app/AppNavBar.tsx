@@ -6,7 +6,7 @@ import { MessageSquare, ArrowLeft, ShoppingBag } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { getFirestore, collection, query, where, onSnapshot, getDocs } from "firebase/firestore";
-import { auth, app, requestNotificationPermission } from "@/utils/firebaseClient"; // Import the new function
+import { auth, app, requestNotificationPermission } from "@/utils/firebaseClient";
 import { getDownloadedPosts } from "@/utils/offline-db";
 
 const db = getFirestore(app);
@@ -78,7 +78,7 @@ function NavButton({ href, icon: Icon, label, hasNotification }: { href: string;
 
 export default function AppNavBar() {
   const pathname = usePathname();
-  const { isCalling, selectedChat, setSelectedChat } = useAppState();
+  const { activeCall, selectedChat, setSelectedChat } = useAppState();
   const [isMobile, setIsMobile] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
 
@@ -190,7 +190,7 @@ export default function AppNavBar() {
   }, [currentUser, isOffline]);
 
 
-  const hideNav = pathname === "/login" || pathname === "/signup" || pathname === "/" || isCalling || pathname === "/guest" || pathname === "/about";
+  const hideNav = pathname === "/login" || pathname === "/signup" || pathname === "/" || !!activeCall || pathname === "/guest" || pathname === "/about";
 
   if (hideNav) return null;
 
