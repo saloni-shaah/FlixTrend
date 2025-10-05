@@ -22,29 +22,31 @@ function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean,
   
   const fetchVibes = useCallback(async () => {
     setLoading(true);
-    // Simplified query to avoid needing a composite index immediately.
-    // This is less efficient as it filters on the client, but it prevents crashing.
+    // This query now filters for videos between 3s and 4min (240s)
+    // NOTE: This requires a composite index in Firestore on 'type', 'videoDuration', and 'createdAt'.
     const first = query(
         collection(db, "posts"),
+        where("type", "==", "media"),
+        where("videoDuration", ">=", 3),
+        where("videoDuration", "<=", 240),
+        orderBy("videoDuration"), // This is needed for the range query
         orderBy("createdAt", "desc"),
-        limit(VIBES_PER_PAGE * 2) // Fetch more to account for client-side filtering
+        limit(VIBES_PER_PAGE)
     );
 
-    const documentSnapshots = await getDocs(first);
-    const firstBatch = documentSnapshots.docs
-      .map(doc => ({ id: doc.id, ...doc.data() }))
-      .filter(post => {
-        const mediaUrl = post.mediaUrl;
-        if (!mediaUrl) return false;
-        const urls = Array.isArray(mediaUrl) ? mediaUrl : [mediaUrl];
-        return urls.some((url: string) => /\.(mp4|webm|ogg)$/i.test(url));
-      });
-    
-    const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
-    setShortVibes(firstBatch);
-    setLastVisible(lastDoc);
-    setLoading(false);
-    setHasMore(!!lastDoc);
+    try {
+        const documentSnapshots = await getDocs(first);
+        const firstBatch = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+        setShortVibes(firstBatch);
+        setLastVisible(lastDoc);
+        setLoading(false);
+        setHasMore(!!lastDoc);
+    } catch(e) {
+        console.error("Error fetching scope videos:", e);
+        console.error("This query likely failed because of a missing Firestore index. Please create a composite index on posts: type (asc), videoDuration (asc), createdAt (desc)");
+        setLoading(false);
+    }
   }, []);
 
   const fetchMoreVibes = useCallback(async () => {
@@ -53,27 +55,28 @@ function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean,
 
      const next = query(
         collection(db, "posts"),
+        where("type", "==", "media"),
+        where("videoDuration", ">=", 3),
+        where("videoDuration", "<=", 240),
+        orderBy("videoDuration"),
         orderBy("createdAt", "desc"),
         startAfter(lastVisible),
-        limit(VIBES_PER_PAGE * 2) // Fetch more to account for client-side filtering
+        limit(VIBES_PER_PAGE)
     );
     
-    const documentSnapshots = await getDocs(next);
-    const nextBatch = documentSnapshots.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(post => {
-            const mediaUrl = post.mediaUrl;
-            if (!mediaUrl) return false;
-            const urls = Array.isArray(mediaUrl) ? mediaUrl : [mediaUrl];
-            return urls.some((url: string) => /\.(mp4|webm|ogg)$/i.test(url));
-        });
+    try {
+        const documentSnapshots = await getDocs(next);
+        const nextBatch = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
 
-    const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
-
-    setShortVibes(prevVibes => [...prevVibes, ...nextBatch]);
-    setLastVisible(lastDoc);
-    setLoadingMore(false);
-    setHasMore(!!lastDoc);
+        setShortVibes(prevVibes => [...prevVibes, ...nextBatch]);
+        setLastVisible(lastDoc);
+        setLoadingMore(false);
+        setHasMore(!!lastDoc);
+    } catch (e) {
+        console.error("Error fetching more scope videos:", e);
+        setLoadingMore(false);
+    }
 
   }, [lastVisible, hasMore, loadingMore]);
   

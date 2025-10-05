@@ -12,15 +12,20 @@ import { uploadFileToFirebaseStorage, runContentModerationAction } from '@/app/a
 
 const db = getFirestore(app);
 
-// Helper to convert a File object to a Base64 Data URI for the AI
-const fileToDataUri = (file: File): Promise<string> => {
+// Helper to get video duration
+const getVideoDuration = (file: File): Promise<number> => {
     return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = (error) => reject(error);
-        reader.readAsDataURL(file);
+        const video = document.createElement('video');
+        video.preload = 'metadata';
+        video.onloadedmetadata = () => {
+            window.URL.revokeObjectURL(video.src);
+            resolve(video.duration);
+        };
+        video.onerror = reject;
+        video.src = URL.createObjectURL(file);
     });
 };
+
 
 export default function Step3({ onBack, postData }: { onBack: () => void; postData: any }) {
     const [isScheduling, setIsScheduling] = useState(false);
@@ -44,16 +49,10 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
             // --- AI CONTENT MODERATION & CATEGORIZATION --- //
             const textToProcess = [
                 postData.title, postData.caption, postData.content, postData.description,
-                postData.mood, postData.location, postData.question,
+                postData.mood, postData.location, postData.question, postData.hashtags
             ].filter(Boolean).join(' \n ');
-
-            // Note: Media moderation is disabled for now to save costs.
-            // const mediaToModerate: { url: string }[] = []; 
             
-            const moderationResult = await runContentModerationAction({
-                text: textToProcess,
-                // media: mediaToModerate,
-            });
+            const moderationResult = await runContentModerationAction({ text: textToProcess });
 
             if (moderationResult.failure) {
                 throw new Error(moderationResult.failure);
@@ -75,18 +74,26 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
             const userData = userDocSnap.data();
 
             let finalMediaUrls: string[] = [];
+            let videoDuration: number | null = null;
             if (postData.mediaFiles && postData.mediaFiles.length > 0) {
                 for (const file of postData.mediaFiles) {
-                    const formData = new FormData();
-                    formData.append('file', file);
-                    formData.append('userId', user.uid);
-                    const result = await uploadFileToFirebaseStorage(formData);
-                    if (result.success?.url) {
-                        finalMediaUrls.push(result.success.url);
-                    } else {
-                        throw new Error(result.failure || "File upload failed.");
+                    if (file instanceof File) {
+                        if (file.type.startsWith('video/')) {
+                            videoDuration = await getVideoDuration(file);
+                        }
+                        const formData = new FormData();
+                        formData.append('file', file);
+                        formData.append('userId', user.uid);
+                        const result = await uploadFileToFirebaseStorage(formData);
+                        if (result.success?.url) {
+                            finalMediaUrls.push(result.success.url);
+                        } else {
+                            throw new Error(result.failure || "File upload failed.");
+                        }
                     }
                 }
+            } else if (postData.mediaPreviews) { // Handle case where media is from AI gen (data URI)
+                finalMediaUrls = postData.mediaPreviews;
             }
             
             let finalThumbnailUrl = postData.thumbnailUrl || null;
@@ -116,6 +123,8 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
             const livekitRoomName = postData.postType === 'live' ? `${user.uid}-${Date.now()}` : null;
             const collectionName = postData.postType === 'flash' ? 'flashes' : 'posts';
 
+            const hashtags = postData.hashtags ? postData.hashtags.split(' ').map((h:string) => h.replace('#', '')).filter(Boolean) : [];
+
             const finalPostData: any = {
                 userId: user.uid,
                 displayName: userData.name || user.displayName,
@@ -123,14 +132,21 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                 avatar_url: userData.avatar_url,
                 type: postData.postType,
                 content: postData.content || postData.caption || postData.question || postData.title || "",
-                hashtags: (postData.caption?.match(/#\w+/g) || []).map((h:string) => h.replace('#', '')),
-                category: category, // SAVING THE CATEGORY
+                hashtags: hashtags,
+                category: category, 
                 createdAt: serverTimestamp(),
                 publishAt: publishAt,
                 location: postData.location || null,
                 mood: postData.mood || null,
                 ...(postData.postType === 'text' && { backgroundColor: postData.backgroundColor, fontStyle: postData.fontStyle }),
-                ...(postData.postType === 'media' && { mediaUrl: finalMediaUrls.length > 0 ? (finalMediaUrls.length > 1 ? finalMediaUrls : finalMediaUrls[0]) : null, title: postData.title || "", description: postData.description || "", thumbnailUrl: finalThumbnailUrl }),
+                ...(postData.postType === 'media' && { 
+                    mediaUrl: finalMediaUrls.length > 0 ? (finalMediaUrls.length > 1 ? finalMediaUrls : finalMediaUrls[0]) : null, 
+                    title: postData.title || "", 
+                    description: postData.description || "", 
+                    thumbnailUrl: finalThumbnailUrl,
+                    videoDuration: videoDuration,
+                    isPortrait: (videoDuration !== null && postData.mediaFiles[0]?.videoHeight > postData.mediaFiles[0]?.videoWidth) || false,
+                }),
                 ...(postData.postType === 'flash' && { mediaUrl: finalMediaUrls.length > 0 ? finalMediaUrls[0] : null, song: postData.song || null, expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), caption: postData.caption || "" }),
                 ...(postData.postType === 'poll' && { pollOptions: postData.options.map((opt:any) => opt.text) }),
                 ...(postData.postType === 'live' && { livekitRoom: livekitRoomName, title: postData.title || "Live Stream" }),
