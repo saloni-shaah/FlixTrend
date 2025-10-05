@@ -68,6 +68,7 @@ function CreateGroupModal({ mutuals, currentUser, onClose, onGroupCreated }: { m
             if(groupPictureFile){
                 const formData = new FormData();
                 formData.append('file', groupPictureFile);
+                formData.append('userId', currentUser.uid);
                 const result = await uploadFileToFirebaseStorage(formData);
                 if(result.success?.url) groupPictureUrl = result.success.url;
             }
@@ -718,6 +719,7 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
     try {
         const formData = new FormData();
         formData.append('file', file);
+        formData.append('userId', firebaseUser.uid);
         const result = await uploadFileToFirebaseStorage(formData);
         if (result.success?.url) {
             handleSend(new Event('submit') as any, result.success.url, type);
