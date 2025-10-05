@@ -1,7 +1,7 @@
 
 "use client";
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { RotateCcw, Play, Trophy } from 'lucide-react';
 
 // --- GAME CONFIGURATION ---
@@ -203,4 +203,3 @@ export function CricketChallenge() {
         </motion.div>
     );
 }
-
