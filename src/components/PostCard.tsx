@@ -415,8 +415,8 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
                 </div>
             )}
 
-            {(contentPost.type === "media") && contentPost.mediaUrl && !isShortVibe && (
-              <MediaGrid mediaUrls={Array.isArray(contentPost.mediaUrl) ? contentPost.mediaUrl : [contentPost.mediaUrl]} thumbnailUrl={contentPost.thumbnailUrl}/>
+            {contentPost.type === "media" && contentPost.mediaUrl && !isShortVibe && (
+                <MediaGrid mediaUrls={Array.isArray(contentPost.mediaUrl) ? contentPost.mediaUrl : [contentPost.mediaUrl]} thumbnailUrl={contentPost.thumbnailUrl}/>
             )}
 
             {contentPost.type === "poll" && contentPost.pollOptions && (
@@ -757,3 +757,5 @@ function CommentForm({ postId, postAuthorId, parentId, onCommentPosted, isReply 
     </form>
   )
 }
+
+    
