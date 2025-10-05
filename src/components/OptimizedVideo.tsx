@@ -11,33 +11,28 @@ function getCloudinaryId(url: string): string | null {
   return match ? match[2] : null;
 }
 
-export function OptimizedVideo({ src, thumbnailUrl, className, width, height }: { src: string; thumbnailUrl?: string; className?: string; width?: number; height?: number; }) {
-  
-  if (!src.startsWith(CLOUDINARY_BASE_URL)) {
-    return <video src={src} poster={thumbnailUrl} className={className} width={width} height={height} controls preload="metadata" />;
-  }
+export const OptimizedVideo = React.forwardRef<HTMLVideoElement, { src: string; thumbnailUrl?: string; className?: string; controls?: boolean }>(({ src, thumbnailUrl, className, controls }, ref) => {
+    if (!src.startsWith(CLOUDINARY_BASE_URL)) {
+        return <video ref={ref} src={src} poster={thumbnailUrl} className={className} controls={controls} preload="metadata" />;
+    }
 
-  const publicId = getCloudinaryId(src);
-  if (!publicId) {
-    return <video src={src} poster={thumbnailUrl} className={className} width={width} height={height} controls preload="metadata" />;
-  }
+    const publicId = getCloudinaryId(src);
+    if (!publicId) {
+        return <video ref={ref} src={src} poster={thumbnailUrl} className={className} controls={controls} preload="metadata" />;
+    }
 
-  const transformedVideoUrl = `${CLOUDINARY_BASE_URL}/video/upload/f_auto,q_auto,w_800,c_limit/${publicId}`;
+    const transformedVideoUrl = `${CLOUDINARY_BASE_URL}/video/upload/f_auto,q_auto,w_800,c_limit/${publicId}`;
 
-  return (
-    <video
-      src={transformedVideoUrl}
-      poster={thumbnailUrl}
-      className={className}
-      width={width}
-      height={height}
-      controls
-      preload="metadata" // Only load metadata initially
-      style={{
-        width: width ? `${width}px` : '100%',
-        height: height ? `${height}px` : 'auto',
-        aspectRatio: width && height ? `${width}/${height}` : undefined,
-      }}
-    />
-  );
-}
+    return (
+        <video
+            ref={ref}
+            src={transformedVideoUrl}
+            poster={thumbnailUrl}
+            className={className}
+            controls={controls}
+            preload="metadata"
+        />
+    );
+});
+
+OptimizedVideo.displayName = 'OptimizedVideo';
