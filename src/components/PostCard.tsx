@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect, useState, useRef } from 'react';
@@ -456,66 +457,30 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
   }
   
   const ActionButtons = () => (
-    <div className={`flex items-center justify-between mt-2 pt-2 border-t border-glass-border`}>
-        <div className={'flex items-center justify-start gap-6'}>
-          <button className={`flex items-center gap-1.5 font-bold transition-all text-lg text-muted-foreground hover:text-brand-gold`} onClick={() => setShowComments(true)}>
-            <MessageCircle size={20} /> <span className="text-sm">{commentCount}</span>
+    <div className={`flex items-center justify-between mt-2 pt-2 ${isShortVibe ? 'flex-col gap-4' : 'border-t border-glass-border'}`}>
+        <div className={isShortVibe ? 'flex flex-col items-center gap-4' : 'flex items-center justify-start gap-6'}>
+          <button className={`flex items-center gap-1.5 font-bold transition-all ${isShortVibe ? 'flex-col text-white' : 'text-lg text-muted-foreground hover:text-brand-gold'}`} onClick={() => setShowComments(true)}>
+            <MessageCircle size={isShortVibe ? 32 : 20} /> <span className="text-sm">{commentCount}</span>
           </button>
-          <button className={`flex items-center gap-1.5 font-bold transition-all ${isStarred ? "text-yellow-400" : "text-lg text-muted-foreground hover:text-yellow-400"}`} onClick={handleStar}>
-            <Star size={20} fill={isStarred ? "currentColor" : "none"} /> <span className="text-sm">{starCount}</span>
+          <button className={`flex items-center gap-1.5 font-bold transition-all ${isStarred ? "text-yellow-400" : isShortVibe ? 'text-white' : "text-lg text-muted-foreground hover:text-yellow-400"}`} onClick={handleStar}>
+            <Star size={isShortVibe ? 32 : 20} fill={isStarred ? "currentColor" : "none"} /> <span className="text-sm">{starCount}</span>
           </button>
-          <button className={`flex items-center gap-1.5 font-bold transition-all text-lg text-muted-foreground hover:text-accent-cyan`} onClick={(e) => { e.stopPropagation(); setShowShareModal(true); }}>
-            <Share size={20} />
+          <button className={`flex items-center gap-1.5 font-bold transition-all ${isShortVibe ? 'flex-col text-white' : 'text-lg text-muted-foreground hover:text-accent-cyan'}`} onClick={(e) => { e.stopPropagation(); setShowShareModal(true); }}>
+            <Share size={isShortVibe ? 32 : 20} />
           </button>
         </div>
-        <div className="flex items-center gap-4">
-             <button className={`flex items-center gap-1.5 font-bold transition-all text-lg text-muted-foreground hover:text-accent-purple`} onClick={() => setShowCollectionModal(true)}>
-                <Bookmark size={20} fill={isSaved ? "currentColor" : "none"}/>
+        <div className={isShortVibe ? 'flex flex-col items-center gap-4 mt-4' : 'flex items-center gap-4'}>
+             <button className={`flex items-center gap-1.5 font-bold transition-all ${isShortVibe ? 'flex-col text-white' : 'text-lg text-muted-foreground hover:text-accent-purple'}`} onClick={() => setShowCollectionModal(true)}>
+                <Bookmark size={isShortVibe ? 32 : 20} fill={isSaved ? "currentColor" : "none"}/>
             </button>
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <button className="p-2 rounded-full hover:bg-white/10 text-muted-foreground">
-                        <MoreVertical size={20} />
-                    </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="glass-card">
-                    <DropdownMenuItem onSelect={() => handleRecommendationFeedback('show_more')}>
-                        <ThumbsUp size={16} className="mr-2"/> Show more like this
-                    </DropdownMenuItem>
-                     <DropdownMenuItem onSelect={() => handleRecommendationFeedback('show_less')}>
-                        <ThumbsDown size={16} className="mr-2"/> Show less like this
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={handleRelay} disabled={isRelayed}>
-                        <Repeat2 size={16} className="mr-2"/> {isRelayed ? "Relayed" : "Relay"}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={handleDownload}>
-                        <Download size={16} className="mr-2"/> {isDownloaded ? "Remove Download" : "Download"}
-                    </DropdownMenuItem>
-                    {currentUser?.uid === post.userId && post.type !== 'relay' && (
-                      <>
-                        <DropdownMenuItem onSelect={() => setShowEdit(true)}>
-                          Edit Post
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={handleDelete} className="text-red-400">
-                          Delete Post
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                     {currentUser?.uid !== post.userId && (
-                        <DropdownMenuItem onSelect={() => alert('Reported!')} className="text-red-400">
-                            Report Post
-                        </DropdownMenuItem>
-                     )}
-                </DropdownMenuContent>
-            </DropdownMenu>
-       </div>
+        </div>
     </div>
   );
 
   if (isShortVibe) {
     return (
         <div className="absolute inset-0 w-full h-full p-4 flex justify-between items-end pointer-events-none bg-gradient-to-t from-black/60 via-black/20 to-transparent">
-            <div className="flex flex-col gap-2 max-w-[calc(100%-80px)] self-end pointer-events-auto mb-20">
+            <div className="flex flex-col gap-2 max-w-[calc(100%-80px)] self-end pointer-events-auto mb-4">
                 <div className="flex items-center gap-2">
                     <Link href={`/squad/${post.userId}`} className="flex items-center gap-2 group cursor-pointer">
                         <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green flex items-center justify-center font-bold text-lg overflow-hidden border-2 border-accent-green group-hover:scale-105 transition-transform">
@@ -531,12 +496,13 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
                     </div>
                  )}
             </div>
-            <div className="flex flex-col gap-4 self-end mb-20 pointer-events-auto">
+            <div className="flex flex-col gap-4 self-end mb-4 pointer-events-auto">
                 <ActionButtons />
             </div>
             {showComments && <CommentModal postId={post.id} postAuthorId={post.userId} onClose={() => setShowComments(false)} post={post} />}
             {showShareModal && <ShareModal url={`${window.location.origin}/post/${post.id}`} title={post.content} onSignalShare={() => { setShowShareModal(false); setShowSignalShare(true); }} onClose={() => setShowShareModal(false)} />}
             {showSignalShare && <SignalShareModal post={post} onClose={() => setShowSignalShare(false)}/>}
+            {showCollectionModal && <AddToCollectionModal post={post} onClose={() => setShowCollectionModal(false)} />}
         </div>
     );
   }
