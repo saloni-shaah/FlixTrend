@@ -24,20 +24,27 @@ export function FlixTrendPlayer({ post, onClose }: { post: any, onClose: () => v
     const [isTheaterMode, setIsTheaterMode] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
     
-    let controlsTimeout: NodeJS.Timeout;
+    let controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    const handleMouseMove = () => {
+    const handleMouseMove = useCallback(() => {
         setShowControls(true);
-        clearTimeout(controlsTimeout);
-        controlsTimeout = setTimeout(() => setShowControls(false), 3000);
-    };
+        if (controlsTimeoutRef.current) {
+            clearTimeout(controlsTimeoutRef.current);
+        }
+        controlsTimeoutRef.current = setTimeout(() => setShowControls(false), 3000);
+    }, []);
     
     useEffect(() => {
-        handleMouseMove(); // Show controls on mount
+        handleMouseMove(); 
         const container = containerRef.current;
         container?.addEventListener('mousemove', handleMouseMove);
-        return () => container?.removeEventListener('mousemove', handleMouseMove);
-    }, []);
+        return () => {
+            container?.removeEventListener('mousemove', handleMouseMove);
+            if (controlsTimeoutRef.current) {
+                clearTimeout(controlsTimeoutRef.current);
+            }
+        };
+    }, [handleMouseMove]);
 
 
     const togglePlay = () => setIsPlaying(prev => !prev);
@@ -65,9 +72,9 @@ export function FlixTrendPlayer({ post, onClose }: { post: any, onClose: () => v
 
     const handleTimeUpdate = () => {
         const video = videoRef.current;
-        if (video) {
+        if (video && !isNaN(video.duration)) {
             setProgress((video.currentTime / video.duration) * 100);
-            if(video.currentTime === video.duration) {
+            if(video.currentTime === video.duration && video.duration > 0) {
                 setVideoEnded(true);
             }
         }
@@ -79,6 +86,7 @@ export function FlixTrendPlayer({ post, onClose }: { post: any, onClose: () => v
     };
 
     const formatTime = (time: number) => {
+        if (isNaN(time) || time < 0) return "0:00";
         const minutes = Math.floor(time / 60);
         const seconds = Math.floor(time % 60);
         return `${minutes}:${seconds.toString().padStart(2, '0')}`;
@@ -92,18 +100,18 @@ export function FlixTrendPlayer({ post, onClose }: { post: any, onClose: () => v
         }
     };
 
-    const handleFullscreenChange = () => {
+    const handleFullscreenChange = useCallback(() => {
         setIsFullscreen(!!document.fullscreenElement);
-    };
+    }, []);
     
     useEffect(() => {
         document.addEventListener('fullscreenchange', handleFullscreenChange);
         
         const handleOrientationChange = () => {
             if (screen.orientation.type.startsWith('landscape') && !isFullscreen) {
-                containerRef.current?.requestFullscreen();
+                containerRef.current?.requestFullscreen().catch(err => console.error(err));
             } else if (screen.orientation.type.startsWith('portrait') && isFullscreen) {
-                document.exitFullscreen();
+                document.exitFullscreen().catch(err => console.error(err));
             }
         };
 
@@ -119,30 +127,39 @@ export function FlixTrendPlayer({ post, onClose }: { post: any, onClose: () => v
                 screen.orientation.removeEventListener('change', handleOrientationChange);
             } catch (error) {}
         }
-    }, [isFullscreen]);
+    }, [isFullscreen, handleFullscreenChange]);
 
     const toggleFullscreen = () => {
         if (!isFullscreen) {
-            containerRef.current?.requestFullscreen();
+            containerRef.current?.requestFullscreen().catch(err => console.error("Fullscreen request failed:", err));
         } else {
-            document.exitFullscreen();
+            document.exitFullscreen().catch(err => console.error("Exit fullscreen failed:", err));
         }
     };
     
     const videoUrl = Array.isArray(post.mediaUrl) ? post.mediaUrl[0] : post.mediaUrl;
 
+    const playNextVideo = (nextPost: any) => {
+        // This function would be more complex in a real app, likely involving updating the parent modal's state
+        console.log("Playing next:", nextPost.title);
+        // For demonstration, we can just reload with the new video.
+        // A better approach would be to have the parent PlayerModal manage the current post state.
+        alert(`Next up: ${nextPost.title}`);
+        window.location.reload(); // Simple refresh for now
+    }
+
     return (
         <div 
             ref={containerRef}
             className={cn("relative flex items-center justify-center bg-black overflow-hidden group",
-                isTheaterMode ? "w-full aspect-video" : "w-[600px] h-[400px]",
+                isTheaterMode && !isFullscreen ? "w-full aspect-video" : "w-[600px] h-[400px]",
                 isFullscreen && "!w-screen !h-screen"
             )}
         >
             <AnimatePresence>
             {videoEnded && (
                 <motion.div initial={{opacity: 0}} animate={{opacity: 1}} className="absolute inset-0 z-20">
-                     <VideoSuggestions currentPost={post} onPlayNext={() => {}}/>
+                     <VideoSuggestions currentPost={post} onPlayNext={playNextVideo}/>
                 </motion.div>
             )}
             </AnimatePresence>
