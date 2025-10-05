@@ -1,6 +1,7 @@
 
 import { useEffect, useRef, useState } from 'react';
-import { firestore } from '@/utils/firebaseClient';
+import { getFirestore } from 'firebase/firestore'; // Import getFirestore
+import { app } from '@/utils/firebaseClient'; // Import your firebase app
 import {
   doc,
   getDoc,
@@ -11,6 +12,8 @@ import {
   addDoc,
   deleteDoc,
 } from 'firebase/firestore';
+
+const firestore = getFirestore(app); // Initialize firestore
 
 const servers = {
   iceServers: [
