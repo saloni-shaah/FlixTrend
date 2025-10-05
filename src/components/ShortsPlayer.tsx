@@ -8,10 +8,39 @@ import { PostCard } from './PostCard';
 import { getFirestore, collection, query, orderBy, limit, getDocs, startAfter, where } from "firebase/firestore";
 import { app } from "@/utils/firebaseClient";
 import { FlixTrendLogo } from './FlixTrendLogo';
+import AdBanner from './AdBanner';
 
 const db = getFirestore(app);
 const VIBES_PER_PAGE = 5;
+const AD_INTERVAL = 7;
 
+function AdView({ onSkip }: { onSkip: () => void }) {
+    const [countdown, setCountdown] = useState(5);
+
+    useEffect(() => {
+        if (countdown <= 0) return;
+        const timer = setTimeout(() => setCountdown(c => c - 1), 1000);
+        return () => clearTimeout(timer);
+    }, [countdown]);
+    
+    return (
+        <div className="w-full h-full bg-black flex flex-col items-center justify-center relative">
+            <div className="absolute top-4 right-4 z-10">
+                {countdown > 0 ? (
+                    <span className="text-white bg-black/50 rounded-full px-3 py-1 text-sm">Skip in {countdown}</span>
+                ) : (
+                    <button onClick={onSkip} className="text-white bg-black/50 rounded-full px-4 py-2 text-sm flex items-center gap-2">
+                        Skip Ad <X size={16} />
+                    </button>
+                )}
+            </div>
+            <div className="w-full max-w-sm">
+                <AdBanner />
+            </div>
+             <p className="text-xs text-gray-500 absolute bottom-4">This is a sponsored message.</p>
+        </div>
+    )
+}
 
 const Watermark = ({ isAnimated = false }: { isAnimated?: boolean }) => (
     <div
@@ -33,14 +62,13 @@ export function ShortsPlayer({ onClose }: { onClose: () => void }) {
     const [activeShortIndex, setActiveShortIndex] = useState(0);
     const [isPlaying, setIsPlaying] = useState(true);
     const [isMuted, setIsMuted] = useState(true);
+    const [showAd, setShowAd] = useState(false);
     const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
     const playerRef = useRef<HTMLDivElement>(null);
     const touchStartY = useRef<number | null>(null);
 
     const fetchVibes = useCallback(async () => {
         setLoading(true);
-        // This query fetches only posts that are likely videos.
-        // It's a pragmatic approach for Firestore without complex indexing.
         const first = query(
             collection(db, "posts"),
             where("type", "==", "media"),
@@ -101,13 +129,18 @@ export function ShortsPlayer({ onClose }: { onClose: () => void }) {
     }, [fetchVibes]);
 
     const scrollToNext = useCallback(() => {
+        if ((activeShortIndex + 1) % AD_INTERVAL === 0) {
+            setShowAd(true);
+            return;
+        }
+
         setActiveShortIndex(current => {
             if (current < shortVibes.length - 1) {
                 return current + 1;
             }
             return current;
         });
-    }, [shortVibes.length]);
+    }, [activeShortIndex, shortVibes.length]);
 
     const scrollToPrev = useCallback(() => {
         setActiveShortIndex(current => {
@@ -126,6 +159,12 @@ export function ShortsPlayer({ onClose }: { onClose: () => void }) {
 
 
     useEffect(() => {
+        if (showAd) {
+            const activeVideo = videoRefs.current[activeShortIndex];
+            if (activeVideo) activeVideo.pause();
+            return;
+        }
+
         const activeVideo = videoRefs.current[activeShortIndex];
         
         videoRefs.current.forEach((video, idx) => {
@@ -143,7 +182,7 @@ export function ShortsPlayer({ onClose }: { onClose: () => void }) {
                 activeVideo.pause();
             }
         }
-    }, [activeShortIndex, isPlaying, isMuted, shortVibes]);
+    }, [activeShortIndex, isPlaying, isMuted, shortVibes, showAd]);
 
     const handleVideoClick = (e: React.MouseEvent<HTMLDivElement>) => {
         if ((e.target as HTMLElement).closest('button, a')) {
@@ -157,6 +196,7 @@ export function ShortsPlayer({ onClose }: { onClose: () => void }) {
         if (!currentRef) return;
         
         const handleKeyDown = (event: KeyboardEvent) => {
+            if (showAd) return;
             if (event.key === 'ArrowDown' || event.key === 'ArrowUp') event.preventDefault();
             if (event.key === 'ArrowDown') scrollToNext();
             else if (event.key === 'ArrowUp') scrollToPrev();
@@ -164,15 +204,16 @@ export function ShortsPlayer({ onClose }: { onClose: () => void }) {
         };
 
         const handleWheel = (event: WheelEvent) => {
+            if (showAd) return;
             event.preventDefault();
             if (Math.abs(event.deltaY) < 10) return;
             if (event.deltaY > 0) scrollToNext();
             else if (event.deltaY < 0) scrollToPrev();
         };
         
-        const handleTouchStart = (event: TouchEvent) => { touchStartY.current = event.touches[0].clientY; };
+        const handleTouchStart = (event: TouchEvent) => { if (!showAd) touchStartY.current = event.touches[0].clientY; };
         const handleTouchEnd = (event: TouchEvent) => {
-            if (touchStartY.current === null) return;
+            if (touchStartY.current === null || showAd) return;
             const deltaY = touchStartY.current - event.changedTouches[0].clientY;
             if (Math.abs(deltaY) > 50) {
                 if (deltaY > 0) scrollToNext();
@@ -204,7 +245,7 @@ export function ShortsPlayer({ onClose }: { onClose: () => void }) {
                 currentRef.removeEventListener('touchend', handleTouchEnd);
             }
         };
-    }, [scrollToNext, scrollToPrev]);
+    }, [scrollToNext, scrollToPrev, showAd]);
 
     const getVideoUrl = (post: any) => {
         if (!post.mediaUrl) return null;
@@ -212,6 +253,24 @@ export function ShortsPlayer({ onClose }: { onClose: () => void }) {
             return post.mediaUrl.find((url: string) => /\.(mp4|webm|ogg)$/i.test(url)) || null;
         }
         return /\.(mp4|webm|ogg)$/i.test(post.mediaUrl) ? post.mediaUrl : null;
+    }
+    
+    const handleAdSkip = () => {
+        setShowAd(false);
+        setActiveShortIndex(current => {
+            if (current < shortVibes.length - 1) {
+                return current + 1;
+            }
+            return current;
+        });
+    }
+
+    if (showAd) {
+        return (
+             <div className="fixed inset-0 z-[100] w-full h-full flex flex-col items-center bg-black focus:outline-none overflow-hidden">
+                 <AdView onSkip={handleAdSkip} />
+             </div>
+        );
     }
 
     return (
