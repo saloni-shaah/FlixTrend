@@ -112,53 +112,56 @@ export function GuestPostCard({ post }: { post: any }) {
 
             {contentPost.type === "media" && contentPost.mediaUrl && (
                 <div className="w-full rounded-xl overflow-hidden relative">
-                    {Array.isArray(contentPost.mediaUrl) ? (
-                        <div className="grid grid-cols-2 gap-1">
-                            {contentPost.mediaUrl.slice(0, 4).map((url: string, index: number) => {
-                                const isVideo = url.includes('.mp4') || url.includes('.webm') || url.includes('.ogg');
+                     {(() => {
+                        const mediaUrls = Array.isArray(contentPost.mediaUrl) ? contentPost.mediaUrl : [contentPost.mediaUrl];
+                        
+                        if (mediaUrls.length === 1) {
+                            const url = mediaUrls[0];
+                            const isVideo = url.includes('.mp4') || url.includes('.webm') || url.includes('.ogg');
+                            if (isVideo) {
                                 return (
-                                    <div key={index} className="relative aspect-square">
-                                        {isVideo ? <video src={url} controls className="w-full h-full object-cover" /> : <OptimizedImage src={url} alt="media" className="w-full h-full object-cover" />}
-                                        <Watermark isAnimated={isVideo} />
-                                        {index === 3 && contentPost.mediaUrl.length > 4 && (
-                                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                                                <span className="text-white text-2xl font-bold">+{contentPost.mediaUrl.length - 4}</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    ) : (
-                        <div className="relative">
-                            {(() => {
-                                const isVideo = contentPost.mediaUrl.includes('.mp4') || contentPost.mediaUrl.includes('.webm') || contentPost.mediaUrl.includes('.ogg');
-                                const videoElement = <OptimizedVideo ref={videoRef} src={contentPost.mediaUrl} thumbnailUrl={contentPost.thumbnailUrl} className="w-full rounded-xl" controls={playVideoAfterAd}/>;
-
-                                if (isVideo) {
-                                    return (
-                                        <div className="relative group w-full cursor-pointer" onClick={playVideoAfterAd ? undefined : handlePlayVideo}>
-                                            {playVideoAfterAd ? videoElement : (
-                                                <>
-                                                    <OptimizedImage src={contentPost.thumbnailUrl || '/video_placeholder.png'} alt="Video thumbnail" className="w-full rounded-xl" />
-                                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                                                        <FaPlay className="text-white text-5xl" />
-                                                    </div>
-                                                </>
-                                            )}
-                                             <Watermark isAnimated={true} />
-                                        </div>
-                                    )
-                                }
-                                return (
-                                    <div className="relative">
-                                        <OptimizedImage src={contentPost.mediaUrl} alt="media" className="w-full rounded-xl" />
+                                    <div className="relative group w-full cursor-pointer" onClick={playVideoAfterAd ? undefined : handlePlayVideo}>
+                                        {playVideoAfterAd ? 
+                                            <OptimizedVideo ref={videoRef} src={url} thumbnailUrl={contentPost.thumbnailUrl} className="w-full rounded-xl" controls />
+                                            : 
+                                            <>
+                                                <OptimizedImage src={contentPost.thumbnailUrl || '/video_placeholder.png'} alt="Video thumbnail" className="w-full rounded-xl" />
+                                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                                    <FaPlay className="text-white text-5xl" />
+                                                </div>
+                                            </>
+                                        }
                                         <Watermark isAnimated={true} />
                                     </div>
                                 );
-                            })()}
-                        </div>
-                    )}
+                            }
+                            return (
+                                <div className="relative">
+                                    <OptimizedImage src={url} alt="media" className="w-full rounded-xl" />
+                                    <Watermark isAnimated={true} />
+                                </div>
+                            );
+                        }
+                        
+                        return (
+                            <div className="grid grid-cols-2 gap-1">
+                                {mediaUrls.slice(0, 4).map((url: string, index: number) => {
+                                    const isVideo = url.includes('.mp4') || url.includes('.webm') || url.includes('.ogg');
+                                    return (
+                                        <div key={index} className="relative aspect-square">
+                                            {isVideo ? <video src={url} controls className="w-full h-full object-cover" /> : <OptimizedImage src={url} alt="media" className="w-full h-full object-cover" />}
+                                            <Watermark isAnimated={isVideo} />
+                                            {index === 3 && mediaUrls.length > 4 && (
+                                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                                    <span className="text-white text-2xl font-bold">+{mediaUrls.length - 4}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )
+                    })()}
                 </div>
             )}
 
@@ -225,3 +228,5 @@ export function GuestPostCard({ post }: { post: any }) {
     </motion.div>
   );
 }
+
+    
