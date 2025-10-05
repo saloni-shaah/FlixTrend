@@ -4,7 +4,7 @@
 import React, { useEffect } from 'react';
 import { getFirestore, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, deleteDoc, updateDoc, doc as fsDoc, setDoc, getDoc, runTransaction } from "firebase/firestore";
 import { FaPlay, FaRegComment, FaExclamationTriangle, FaVolumeMute, FaUserSlash, FaLink, FaMusic } from "react-icons/fa";
-import { Repeat2, Star, Share, MessageCircle, Bookmark, MapPin, Smile, Download, X, MoreVertical, Check, ChevronRight, Circle } from "lucide-react";
+import { Repeat2, Star, Share, MessageCircle, Bookmark, MapPin, Smile, Download, X, MoreVertical, Check, ChevronRight, Circle, ThumbsUp, ThumbsDown } from "lucide-react";
 import { auth, app } from '@/utils/firebaseClient';
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -181,7 +181,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
     return () => unsubscribes.forEach(unsub => unsub());
   }, [post.id, currentUser, post.type, post.pollOptions, isSaved]);
   
-   useEffect(() => {
+   React.useEffect(() => {
     if (playVideoAfterAd && videoRef.current) {
       videoRef.current.play();
       setPlayVideoAfterAd(false); // Reset the trigger
@@ -344,6 +344,12 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
       }
   }
   
+  const handleRecommendationFeedback = (type: 'show_more' | 'show_less') => {
+      if (!currentUser) return;
+      trackInteraction(currentUser.uid, post.category, type);
+      alert(`Thank you! We'll ${type === 'show_more' ? 'show you more' : 'show you less'} posts like this.`);
+  };
+
   const MediaGrid = ({ mediaUrls, thumbnailUrl }: { mediaUrls: string[]; thumbnailUrl?: string }) => {
     if (!mediaUrls || mediaUrls.length === 0) return null;
 
@@ -493,6 +499,9 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
           </button>
         </div>
         <div className="flex items-center gap-4">
+             <button className={`flex items-center gap-1.5 font-bold transition-all text-lg text-muted-foreground hover:text-accent-purple`} onClick={() => setShowCollectionModal(true)}>
+                <Bookmark size={20} fill={isSaved ? "currentColor" : "none"}/>
+            </button>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                     <button className="p-2 rounded-full hover:bg-white/10 text-muted-foreground">
@@ -500,14 +509,17 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
                     </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="glass-card">
+                    <DropdownMenuItem onSelect={() => handleRecommendationFeedback('show_more')}>
+                        <ThumbsUp size={16} className="mr-2"/> Show more like this
+                    </DropdownMenuItem>
+                     <DropdownMenuItem onSelect={() => handleRecommendationFeedback('show_less')}>
+                        <ThumbsDown size={16} className="mr-2"/> Show less like this
+                    </DropdownMenuItem>
                     <DropdownMenuItem onSelect={handleRelay} disabled={isRelayed}>
                         <Repeat2 size={16} className="mr-2"/> {isRelayed ? "Relayed" : "Relay"}
                     </DropdownMenuItem>
                     <DropdownMenuItem onSelect={handleDownload}>
                         <Download size={16} className="mr-2"/> {isDownloaded ? "Remove Download" : "Download"}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => setShowCollectionModal(true)}>
-                         <Bookmark size={16} className="mr-2" /> Save to Collection
                     </DropdownMenuItem>
                     {currentUser?.uid === post.userId && post.type !== 'relay' && (
                       <>
