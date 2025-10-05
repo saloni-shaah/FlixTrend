@@ -130,7 +130,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
       if (isSaved !== wasSaved) {
         setIsSaved(wasSaved);
         if (wasSaved) {
-            trackInteraction(currentUser.uid, post.hashtags, 'save');
+            trackInteraction(currentUser.uid, post.category, 'save');
         }
       }
     });
@@ -200,7 +200,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
         await setDoc(postStarRef, { userId: currentUser.uid, starredAt: serverTimestamp() });
         
         // Track interaction for VibeEngine
-        trackInteraction(currentUser.uid, post.hashtags, 'like');
+        trackInteraction(currentUser.uid, post.category, 'like');
 
         // Create notification for post author
         if (post.userId !== currentUser.uid) {
@@ -223,7 +223,6 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
     if (!currentUser) return;
 
     try {
-        // We'll run this as a transaction to ensure atomicity
         await runTransaction(db, async (transaction) => {
             const userDoc = await transaction.get(fsDoc(db, "users", currentUser.uid));
             if (!userDoc.exists()) throw new Error("User profile not found");
@@ -233,18 +232,14 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
             const relaySnap = await transaction.get(relayRef);
 
             if (relaySnap.exists()) {
-                // User has already relayed, so we should "un-relay"
-                // This is a bit more complex, would need to find the relayed post and delete it.
-                // For now, we'll just prevent duplicate relays.
                 console.log("Already relayed");
                 return;
             }
 
-            // Create a new post of type 'relay'
             const newPostRef = doc(collection(db, "posts"));
             transaction.set(newPostRef, {
                 type: 'relay',
-                originalPost: post, // Embed original post data
+                originalPost: post,
                 originalPostId: post.id,
                 userId: currentUser.uid,
                 displayName: userData.name || currentUser.displayName,
@@ -252,18 +247,16 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
                 avatar_url: userData.avatar_url,
                 createdAt: serverTimestamp(),
                 publishAt: serverTimestamp(),
+                category: post.category, // Carry over the category
             });
             
-            // Mark that this user has relayed this post
             transaction.set(relayRef, {
                 userId: currentUser.uid,
                 relayedAt: serverTimestamp(),
             });
             
-            // Track interaction for VibeEngine
-            trackInteraction(currentUser.uid, post.hashtags, 'relay');
+            trackInteraction(currentUser.uid, post.category, 'relay');
 
-            // Notify original poster if not relaying own post
             if (post.userId !== currentUser.uid) {
                 const notifRef = doc(collection(db, "notifications", post.userId, "user_notifications"));
                 transaction.set(notifRef, {
@@ -304,7 +297,6 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
     if (window.confirm("Are you sure you want to permanently delete this post and all its interactions? This cannot be undone.")) {
       try {
         await deletePostCallable({ postId: post.id });
-        // The post will disappear from the feed due to the realtime listener.
       } catch (error: any) {
         alert(`Failed to delete post: ${(error as any).message}`);
       }
@@ -320,6 +312,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
   const handlePollVote = async (optionIdx: number) => {
     if (!currentUser || userPollVote !== null) return;
     await setDoc(fsDoc(db, "posts", post.id, "pollVotes", currentUser.uid), { userId: currentUser.uid, optionIdx, createdAt: serverTimestamp() });
+    trackInteraction(currentUser.uid, post.category, 'comment'); // Treat poll vote as a form of comment
   };
   
   const handlePlayVideo = () => {
@@ -439,9 +432,9 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
                 {contentPost.mood && <span className="flex items-center gap-1.5"><Smile size={14}/> Feeling {contentPost.mood}</span>}
             </div>
 
-            {contentPost.hashtags && contentPost.hashtags.length > 0 && !isShortVibe && (
+            {contentPost.category && !isShortVibe && (
                 <div className="flex flex-wrap gap-2">
-                    {contentPost.hashtags.map((tag: string) => <Link href={`/tags/${tag}`} key={tag} className="text-brand-gold font-bold text-sm hover:underline">#{tag}</Link>)}
+                    <Link href={`/tags/${contentPost.category}`} key={contentPost.category} className="text-brand-gold font-bold text-sm hover:underline">#{contentPost.category}</Link>
                 </div>
             )}
 
@@ -611,7 +604,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
             onClose={() => setShowShareModal(false)}
         />
       )}
-      {showSignalShare && <SignalShareModal post={post} onClose={() => setShowSignalShare(false)} />}
+      {showSignalShare && <SignalShareModal post={post} onClose={() => setShowSignalShare(false)}/>}
       {showCollectionModal && (
         <AddToCollectionModal 
             post={post}
@@ -754,7 +747,6 @@ function CommentForm({ postId, postAuthorId, parentId, onCommentPosted, isReply 
     if (!newComment.trim() || !user) return;
     setLoading(true);
 
-    // Fetch full user profile to embed in comment
     const userDoc = await getDoc(doc(db, "users", user.uid));
     const userData = userDoc.data() || { name: user.displayName, username: user.displayName, avatar_url: user.photoURL };
 
@@ -770,8 +762,7 @@ function CommentForm({ postId, postAuthorId, parentId, onCommentPosted, isReply 
 
     await addDoc(collection(db, "posts", postId, "comments"), commentData);
     
-    // Track interaction for VibeEngine
-    trackInteraction(user.uid, post.hashtags, 'comment');
+    trackInteraction(user.uid, post.category, 'comment');
 
     if (postAuthorId !== user.uid) {
       const notifRef = collection(db, "notifications", postAuthorId, "user_notifications");
@@ -812,5 +803,3 @@ function CommentForm({ postId, postAuthorId, parentId, onCommentPosted, isReply 
     </form>
   )
 }
-
-    

@@ -67,11 +67,15 @@ function HomePageContent() {
     const unsubscribe = auth.onAuthStateChanged(async user => {
       if (user) {
         setCurrentUser(user);
-        const userDoc = await getDoc(doc(db, "users", user.uid));
-        if (userDoc.exists()) {
-          setUserProfile(userDoc.data());
-        }
+        const userDocRef = doc(db, "users", user.uid);
+        const userProfileSnap = await getDoc(userDocRef);
+        const profileData = userProfileSnap.exists() ? userProfileSnap.data() : null;
+        setUserProfile(profileData);
 
+        const vibeEngineRef = doc(db, 'user_profiles', user.uid, 'engine', 'vibe');
+        const vibeEngineSnap = await getDoc(vibeEngineRef);
+        const vibeScores = vibeEngineSnap.exists() ? vibeEngineSnap.data().scores : {};
+        
         // Setup notification listener
         const q = query(collection(db, "notifications", user.uid, "user_notifications"), where("read", "==", false));
         const unsubNotifs = onSnapshot(q, (snapshot) => {
@@ -82,7 +86,7 @@ function HomePageContent() {
         setPosts([]);
         setLastVisible(null);
         setHasMore(true);
-        fetchPosts(true); // pass true to indicate a reset
+        fetchPosts(true, vibeScores); // pass true to indicate a reset
         
         return () => unsubNotifs();
 
@@ -93,24 +97,38 @@ function HomePageContent() {
     return () => unsubscribe();
   }, [router]);
 
-
-  const fetchPosts = useCallback(async (isReset = false) => {
+  const fetchPosts = useCallback(async (isReset = false, vibeScores = {}) => {
     if (!auth.currentUser) return;
     setLoading(true);
 
-    const first = query(
-      collection(db, "posts"),
-      where("publishAt", "<=", Timestamp.now()),
-      orderBy("publishAt", "desc"), 
-      limit(POSTS_PER_PAGE)
-    );
-
-    const documentSnapshots = await getDocs(first);
+    const sortedInterests = Object.entries(vibeScores)
+        .sort(([, a], [, b]) => (b as number) - (a as number))
+        .map(([key]) => key);
     
-    const firstBatch = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    let q;
+    if (sortedInterests.length > 0) {
+        q = query(
+            collection(db, "posts"),
+            where("category", "in", sortedInterests.slice(0, 10)), // Query top 10 interests for variety
+            orderBy("publishAt", "desc"),
+            limit(POSTS_PER_PAGE)
+        );
+    } else {
+        // Fallback for new users
+        q = query(
+            collection(db, "posts"),
+            orderBy("publishAt", "desc"),
+            limit(POSTS_PER_PAGE)
+        );
+    }
+
+
+    const documentSnapshots = await getDocs(q);
+    
+    const newPosts = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
 
-    setPosts(isReset ? firstBatch : [...posts, ...firstBatch]);
+    setPosts(isReset ? newPosts : [...posts, ...newPosts]);
     setLastVisible(lastDoc);
     setLoading(false);
     setHasMore(documentSnapshots.docs.length === POSTS_PER_PAGE);
@@ -120,13 +138,30 @@ function HomePageContent() {
       if (!auth.currentUser || !lastVisible || !hasMore || loadingMore) return;
       setLoadingMore(true);
 
-      const next = query(
-          collection(db, "posts"),
-          where("publishAt", "<=", Timestamp.now()),
-          orderBy("publishAt", "desc"),
-          startAfter(lastVisible),
-          limit(POSTS_PER_PAGE)
-      );
+      const vibeEngineRef = doc(db, 'user_profiles', auth.currentUser.uid, 'engine', 'vibe');
+      const vibeEngineSnap = await getDoc(vibeEngineRef);
+      const vibeScores = vibeEngineSnap.exists() ? vibeEngineSnap.data().scores : {};
+      const sortedInterests = Object.entries(vibeScores)
+          .sort(([, a], [, b]) => (b as number) - (a as number))
+          .map(([key]) => key);
+
+      let next;
+      if (sortedInterests.length > 0) {
+          next = query(
+              collection(db, "posts"),
+              where("category", "in", sortedInterests.slice(0, 10)),
+              orderBy("publishAt", "desc"),
+              startAfter(lastVisible),
+              limit(POSTS_PER_PAGE)
+          );
+      } else {
+           next = query(
+              collection(db, "posts"),
+              orderBy("publishAt", "desc"),
+              startAfter(lastVisible),
+              limit(POSTS_PER_PAGE)
+          );
+      }
 
       const documentSnapshots = await getDocs(next);
       const nextBatch = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));

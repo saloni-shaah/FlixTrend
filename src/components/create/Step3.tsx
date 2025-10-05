@@ -8,8 +8,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { getFirestore, collection, addDoc, serverTimestamp, Timestamp, doc, getDoc } from "firebase/firestore";
 import { auth, app } from '@/utils/firebaseClient';
 import { useRouter } from 'next/navigation';
-// CORRECTED: Import the server actions, not the raw flow.
 import { uploadFileToFirebaseStorage, runContentModerationAction } from '@/app/actions';
+import { categorizePost } from '@/ai/flows/categorize-post-flow';
 
 const db = getFirestore(app);
 
@@ -60,7 +60,6 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                 }
             }
             
-            // CORRECTED: Call the server action instead of the flow directly.
             const moderationResult = await runContentModerationAction({
                 text: textToModerate,
                 media: mediaToModerate,
@@ -76,6 +75,9 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                 return; // STOP execution
             }
             
+            // --- AI CATEGORIZATION --- //
+            const category = await categorizePost(textToModerate);
+
             // --- MODERATION PASSED - PROCEED --- //
 
             const userDocRef = doc(db, 'users', user.uid);
@@ -88,6 +90,7 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                 for (const file of postData.mediaFiles) {
                     const formData = new FormData();
                     formData.append('file', file);
+                    formData.append('userId', user.uid);
                     const result = await uploadFileToFirebaseStorage(formData);
                     if (result.success?.url) {
                         finalMediaUrls.push(result.success.url);
@@ -101,6 +104,7 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
             if (postData.thumbnailFile) {
                  const formData = new FormData();
                 formData.append('file', postData.thumbnailFile);
+                 formData.append('userId', user.uid);
                 const result = await uploadFileToFirebaseStorage(formData);
                 if (result.success?.url) {
                     finalThumbnailUrl = result.success.url;
@@ -131,6 +135,7 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                 type: postData.postType,
                 content: postData.content || postData.caption || postData.question || postData.title || "",
                 hashtags: (postData.caption?.match(/#\w+/g) || []).map((h:string) => h.replace('#', '')),
+                category: category, // SAVING THE CATEGORY
                 createdAt: serverTimestamp(),
                 publishAt: publishAt,
                 location: postData.location || null,
@@ -152,7 +157,6 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
 
         } catch (error: any) {
             console.error("Error publishing post:", error);
-            // Display a more specific error if it came from our handled moderation action
             if (error.message.includes("moderation")) {
                  setModerationError(error.message);
             } else {
