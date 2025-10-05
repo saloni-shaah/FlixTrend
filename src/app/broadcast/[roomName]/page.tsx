@@ -1,7 +1,7 @@
 
 'use client';
 import { useEffect, useState } from 'react';
-import { auth } from '@/utils/firebaseClient'; // Corrected import
+import { auth } from '@/utils/firebaseClient';
 import { generateLivekitToken } from '@/ai/flows/generate-livekit-token-flow';
 import { LiveKitRoom, VideoConference, formatChatMessageLinks } from '@livekit/components-react';
 import '@livekit/components-styles';
@@ -12,7 +12,6 @@ export default function BroadcastPage({ params }: { params: { roomName: string }
   const roomName = decodeURIComponent(params.roomName);
 
   useEffect(() => {
-    // Listen to auth state changes to get the user
     const unsubscribe = auth.onAuthStateChanged(currentUser => {
         setUser(currentUser);
     });
@@ -24,20 +23,18 @@ export default function BroadcastPage({ params }: { params: { roomName: string }
 
     const fetchToken = async () => {
       try {
-        // Correctly call the token generation flow
-        const { success, failure } = await generateLivekitToken({
+        const { token: generatedToken } = await generateLivekitToken({
           roomName: roomName,
           identity: user.uid,
           name: user.displayName || user.email || 'Anonymous',
           isStreamer: true, // This is the broadcaster
         });
         
-        if (failure) throw new Error(failure);
-        setToken(success); // Set the token from the 'success' field
+        if (!generatedToken) throw new Error("Failed to generate a valid token.");
+        setToken(generatedToken);
 
       } catch (error) {
         console.error('Failed to get LiveKit token:', error);
-        // Handle error (e.g., show a message to the user)
       }
     };
 
@@ -58,7 +55,6 @@ export default function BroadcastPage({ params }: { params: { roomName: string }
             data-lk-theme="default"
             style={{ height: '100%' }}
         >
-            {/* The VideoConference component provides a full-featured broadcast UI */}
             <VideoConference 
                 chatMessageFormatter={formatChatMessageLinks} 
             />
