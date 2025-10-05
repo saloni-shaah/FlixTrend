@@ -198,6 +198,8 @@ export default function LandingPage() {
                  <span className="text-gray-600">|</span>
                  <Link href="/premium" className="text-lg font-semibold hover:text-accent-pink transition-colors">Premium</Link>
                  <span className="text-gray-600">|</span>
+                 <Link href="/ad-studio" className="text-lg font-semibold hover:text-accent-pink transition-colors">Ad Studio</Link>
+                 <span className="text-gray-600">|</span>
                  <Link href="/hiring" className="text-lg font-semibold hover:text-accent-pink transition-colors">We're Hiring</Link>
                  <span className="text-gray-600">|</span>
                  <Link href="/admin" className="text-lg font-semibold hover:text-accent-pink transition-colors">Admin</Link>
@@ -248,5 +250,7 @@ function SocialIcon({ icon, href }: { icon: React.ReactNode, href: string }) {
         </a>
     )
 }
+
+    
 
     
