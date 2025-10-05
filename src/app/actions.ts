@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { contentModerationFlow } from "@/ai/flows/content-moderation-flow";
 import { searchDuckDuckGo } from "@/ai/flows/search-flow";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { app, auth, db } from '@/utils/firebaseClient'; // Import app for storage initialization and db
+import { app } from '@/utils/firebaseClient'; // Import app for storage initialization
 
 const AlmightyResponseInputSchema = z.object({
     userName: z.string().describe("The name of the user who is interacting with the AI."),
@@ -192,5 +192,3 @@ export async function uploadFileToFirebaseStorage(formData: FormData): Promise<{
         return { success: null, failure: error.message || 'File upload failed.' };
     }
 }
-
-    
