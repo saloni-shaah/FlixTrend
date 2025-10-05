@@ -9,7 +9,8 @@ import { z } from 'zod';
 
 const ContentModerationInputSchema = z.object({
   text: z.string().optional().describe('All text content combined (caption, title, etc.).'),
-  media: z.array(z.object({ url: z.string() })).optional().describe("An array of media items (images, videos) as data URIs."),
+  // Media is no longer processed, but the parameter is kept to avoid breaking existing calls
+  media: z.array(z.object({ url: z.string() })).optional().describe("An array of media items (images, videos) as data URIs. This is currently ignored."),
 });
 
 // DEFINITIVE FIX: Added 'analysis' field to force chain-of-thought reasoning.
@@ -19,14 +20,14 @@ const ContentModerationOutputSchema = z.object({
     reason: z.string().describe("A brief, user-friendly explanation for the decision. If approved, say 'Content approved!'. If denied, explain the violation simply."),
 });
 
-// DEFINITIVE FIX: Updated prompt to implement chain-of-thought.
+// DEFINITIVE FIX: Updated prompt to implement chain-of-thought and focus on text.
 const moderationPrompt = `You are a fair and balanced content moderator for a Gen-Z social media app called FlixTrend.
-Your goal is to keep the platform safe while allowing for creative expression, humor, and slang.
+Your goal is to keep the platform safe while allowing for creative expression, humor, and slang. You will ONLY analyze the text content provided.
 
 **Your Task (Chain-of-Thought Process):**
 
 **Step 1: Analysis**
-Carefully review the content against the rules below. In your 'analysis' field, write down your reasoning.
+Carefully review the text content against the rules below. In your 'analysis' field, write down your reasoning.
 - If a rule is clearly and severely violated, state which rule and why.
 - If no rules are violated, explicitly state "Content is compliant."
 
@@ -35,15 +36,14 @@ Based ONLY on your analysis from Step 1, make your 'decision'.
 - If your analysis identified a clear and severe violation, you MUST decide 'deny'.
 - If your analysis concluded "Content is compliant", you MUST decide 'approve'.
 
-**Rules (Deny content ONLY for clear and severe violations):**
-1. Harmful or Abusive: True hate speech, credible violent threats, harassment, bullying, promotion of self-harm, graphic violence, or hard sexually explicit/vulgar material.
+**Rules (Deny content ONLY for clear and severe violations of the TEXT):**
+1. Harmful or Abusive: True hate speech, credible violent threats, harassment, bullying, promotion of self-harm.
 2. Spam/Illegal: Promoting illegal acts, scams, or posting pure gibberish.
 
 Be lenient. Do NOT flag edgy humor, slang, or mild profanity. If it's ambiguous, approve it.
 
 **Content to Review:**
 TEXT: "{{text}}"
-MEDIA: {{mediaList}}
 `;
 
 const noSafetyBlocks: SafetyPolicy[] = [
@@ -60,13 +60,23 @@ export const contentModerationFlow = ai.defineFlow(
     outputSchema: ContentModerationOutputSchema,
   },
   async (input) => {
-    const mediaList = input.media?.map(item => `- ${item.url}`).join('\n') || 'N/A';
+    // Media is now ignored. We only process text.
+    const finalText = input.text || '';
+    
+    // If there is no text content to moderate, approve it.
+    if (!finalText.trim()) {
+        return {
+            analysis: "No text content provided. Approved by default.",
+            decision: 'approve',
+            reason: 'Content approved!',
+        }
+    }
+
     const finalPrompt = moderationPrompt
-      .replace('"{{text}}"', JSON.stringify(input.text || ''))
-      .replace('{{mediaList}}', mediaList);
+      .replace('"{{text}}"', JSON.stringify(finalText));
 
     const response = await ai.generate({
-      model: 'googleai/gemini-1.5-flash-latest',
+      model: 'googleai/gemini-2.0-flash-lite-001', // Cost-effective text-only model
       prompt: finalPrompt,
       output: { schema: ContentModerationOutputSchema },
       safetySettings: noSafetyBlocks,
