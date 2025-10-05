@@ -26,7 +26,7 @@ type Feedback = { text: string; color: string, ballPath?: { x: number, y: number
 
 const Bat = ({ swinging }: { swinging: boolean }) => (
     <motion.g
-        transform={`translate(${PITCH_WIDTH / 2 - BAT_WIDTH / 2 + 10}, ${PITCH_HEIGHT - BAT_HEIGHT - 60})`}
+        transform={`translate(${PITCH_WIDTH / 2 - BAT_WIDTH / 2}, ${PITCH_HEIGHT - BAT_HEIGHT - 25})`}
         animate={{ rotate: swinging ? [-20, 80, -20] : -20 }}
         transition={{ duration: 0.25, ease: "easeInOut" }}
         style={{ originX: `${BAT_WIDTH / 2}px`, originY: `${BAT_HEIGHT}px` }}
