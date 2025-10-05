@@ -8,10 +8,13 @@ import Step1 from '@/components/create/Step1';
 import Step2 from '@/components/create/Step2';
 import Step3 from '@/components/create/Step3';
 
-function dataUriToBlob(dataUri: string) {
+function dataUriToBlob(dataUri: string): Blob | null {
     if (!dataUri.startsWith('data:')) return null;
-    const byteString = atob(dataUri.split(',')[1]);
-    const mimeString = dataUri.split(',')[0].split(':')[1].split(';')[0];
+    const parts = dataUri.split(',');
+    if (parts.length < 2) return null;
+    
+    const mimeString = parts[0].split(':')[1].split(';')[0];
+    const byteString = atob(parts[1]);
     const ab = new ArrayBuffer(byteString.length);
     const ia = new Uint8Array(ab);
     for (let i = 0; i < byteString.length; i++) {
@@ -32,10 +35,9 @@ function CreatePostPageContent() {
     const [postData, setPostData] = useState<any>({ 
         postType: initialType, 
         songId: searchParams.get('songId'),
-        // NEW: Check for imageUrl and pre-fill media data
         ...(initialImageUrl && initialType === 'media' && { 
             mediaPreviews: [initialImageUrl], 
-            mediaFiles: [] // We'll handle the 'File' object later
+            mediaFiles: [] 
         })
     });
 
@@ -49,13 +51,16 @@ function CreatePostPageContent() {
         }
     }, [initialType, typeSelected]);
     
-    // NEW: Effect to convert the pre-filled URL to a File-like object for consistent form handling
+    // DEFINITIVE FIX: This effect now correctly converts the incoming data URI to a File object.
     useEffect(() => {
         if (initialImageUrl && initialType === 'media' && postData.mediaFiles.length === 0) {
-            const blob = dataUriToBlob(initialImageUrl);
-            if (blob) {
-                const file = new File([blob], "ai-generated.png", { type: blob.type });
-                setPostData((prev: any) => ({ ...prev, mediaFiles: [file] }));
+            if (initialImageUrl.startsWith('data:')) {
+                const blob = dataUriToBlob(initialImageUrl);
+                if (blob) {
+                    const file = new File([blob], "ai-generated.png", { type: blob.type });
+                    // Update postData with the actual File object
+                    setPostData((prev: any) => ({ ...prev, mediaFiles: [file] }));
+                }
             }
         }
     }, [initialImageUrl, initialType, postData.mediaFiles]);
