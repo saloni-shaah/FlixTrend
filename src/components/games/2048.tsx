@@ -105,6 +105,7 @@ export function Game2048() {
     const [score, setScore] = useState(0);
     const [highScore, setHighScore] = useState(0);
     const [gameOver, setGameOver] = useState(false);
+    const [gameWon, setGameWon] = useState(false);
     const touchStartRef = useRef<{ x: number, y: number } | null>(null);
 
     useEffect(() => {
@@ -118,6 +119,7 @@ export function Game2048() {
         setBoard(addRandomTile(addRandomTile(createEmptyBoard())));
         setScore(0);
         setGameOver(false);
+        setGameWon(false);
     }, []);
 
     const isGameOver = (board: number[][]): boolean => {
@@ -141,6 +143,11 @@ export function Game2048() {
                 setHighScore(newScore);
                 localStorage.setItem('2048HighScore', newScore.toString());
             }
+
+            if (!gameWon && boardWithNewTile.some(row => row.includes(2048))) {
+                setGameWon(true);
+            }
+
             if (isGameOver(boardWithNewTile)) {
                 setGameOver(true);
             }
@@ -164,7 +171,7 @@ export function Game2048() {
         const moved = JSON.stringify(result.board) !== originalBoard;
         handleMove(result.board, result.score, moved);
 
-    }, [board, score, highScore, gameOver]);
+    }, [board, score, highScore, gameOver, gameWon]);
     
     useEffect(() => {
         window.addEventListener('keydown', handleKeyDown);
@@ -237,15 +244,21 @@ export function Game2048() {
                         </div>
                     ))
                 )}
-                 {gameOver && (
+                 {(gameOver || gameWon) && (
                     <motion.div 
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center text-center p-4 rounded-lg z-10"
                     >
-                        <Trophy className="mx-auto text-brand-gold mb-2" size={32}/>
-                        <h3 className="text-2xl font-bold text-red-500">Game Over!</h3>
+                        <Trophy className={`mx-auto mb-2 ${gameWon && !gameOver ? 'text-brand-gold' : 'text-gray-500'}`} size={32}/>
+                        <h3 className={`text-2xl font-bold ${gameWon && !gameOver ? 'text-green-400' : 'text-red-500'}`}>{gameWon && !gameOver ? "You Win!" : "Game Over!"}</h3>
                         <p className="text-gray-300">Your final score is {score}.</p>
+                        {gameWon && !gameOver && <p className="text-sm text-gray-400">Keep going to get an even higher score!</p>}
+                         {gameWon && !gameOver && (
+                            <button onClick={() => setGameWon(false)} className="btn-glass bg-accent-purple/20 text-accent-purple text-sm mt-2">
+                                Keep Playing
+                            </button>
+                        )}
                     </motion.div>
                 )}
             </div>
