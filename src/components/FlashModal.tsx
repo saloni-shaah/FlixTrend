@@ -1,10 +1,16 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { FlixTrendLogo } from './FlixTrendLogo';
 import AdBanner from './AdBanner';
-import { X } from 'lucide-react';
+import { X, Send, Smile } from 'lucide-react';
+import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { auth, app } from '@/utils/firebaseClient';
+import { useAppState } from '@/utils/AppStateContext';
+
+const db = getFirestore(app);
 
 const Watermark = ({ isAnimated = false }: { isAnimated?: boolean }) => (
     <div
@@ -45,9 +51,70 @@ function AdView({ onSkip }: { onSkip: () => void }) {
     )
 }
 
+function FlashInteraction({ flash, currentUser, onClose }: { flash: any; currentUser: any; onClose: () => void }) {
+    const [message, setMessage] = useState('');
+    const emojis = ['❤️', '😂', '😮', '😢', '🔥', '👍'];
+
+    const getChatId = (uid1: string, uid2: string) => [uid1, uid2].sort().join("_");
+
+    const handleSend = async (text: string) => {
+        if (!text.trim() || !currentUser || !flash) return;
+        
+        const chatId = getChatId(currentUser.uid, flash.userId);
+        await addDoc(collection(db, "chats", chatId, "messages"), {
+            text: text,
+            sender: currentUser.uid,
+            createdAt: serverTimestamp(),
+            type: 'flash_reply',
+            readBy: [currentUser.uid],
+            flash_preview: {
+                mediaUrl: flash.mediaUrl,
+                caption: flash.caption || '',
+            }
+        });
+        // Potentially close the modal or show a "Sent!" confirmation
+        onClose(); 
+    };
+
+    return (
+        <div className="absolute bottom-4 left-4 right-4 z-20 flex items-center gap-2" onClick={e => e.stopPropagation()}>
+            <input 
+                type="text"
+                value={message}
+                onChange={e => setMessage(e.target.value)}
+                placeholder="Send a message..."
+                className="input-glass flex-1 text-sm"
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' && message.trim()) {
+                        handleSend(message);
+                    }
+                }}
+            />
+            <button 
+                onClick={() => handleSend(message)}
+                disabled={!message.trim()}
+                className="p-3 rounded-full bg-accent-cyan text-black disabled:bg-gray-600"
+            >
+                <Send size={16} />
+            </button>
+            <div className="flex gap-1">
+                {emojis.map(emoji => (
+                    <button 
+                        key={emoji} 
+                        className="text-2xl hover:scale-125 transition-transform"
+                        onClick={() => handleSend(emoji)}
+                    >
+                        {emoji}
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+}
 
 export default function FlashModal({ userFlashes, onClose }: { userFlashes: any; onClose: () => void }) {
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentUserFlashesIndex, setCurrentUserFlashesIndex] = useState(0);
+  const [currentFlashIndex, setCurrentFlashIndex] = useState(0);
   const [viewedCount, setViewedCount] = useState(0);
   const [showAd, setShowAd] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -55,29 +122,48 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const touchStartX = useRef(0);
+  const { setSelectedChat } = useAppState();
+  const currentUser = auth.currentUser;
 
   const AD_INTERVAL = 9;
 
+  const allFlashes = Array.isArray(userFlashes) ? userFlashes : [userFlashes];
+
+  const goToNextFlash = useCallback(() => {
+    const currentUserFlashGroup = allFlashes[currentUserFlashesIndex];
+    if (currentFlashIndex < currentUserFlashGroup.flashes.length - 1) {
+        setCurrentFlashIndex(i => i + 1);
+    } else {
+        // End of current user's flashes, move to next user
+        if (currentUserFlashesIndex < allFlashes.length - 1) {
+            setCurrentUserFlashesIndex(i => i + 1);
+            setCurrentFlashIndex(0);
+        } else {
+            onClose(); // Close if it's the last user
+        }
+    }
+  }, [allFlashes, currentUserFlashesIndex, currentFlashIndex, onClose]);
+
   const goToNext = useCallback(() => {
-    if (viewedCount + 1 >= AD_INTERVAL) {
+    if ((viewedCount + 1) % AD_INTERVAL === 0 && viewedCount > 0) {
         setShowAd(true);
         setViewedCount(0);
         return;
     }
-
-    setCurrentIndex(i => {
-        if (i < userFlashes.flashes.length - 1) {
-            setViewedCount(v => v + 1);
-            return i + 1;
-        }
-        onClose(); // Close modal after the last flash
-        return i;
-    });
-  }, [userFlashes.flashes.length, onClose, viewedCount]);
+    setViewedCount(v => v + 1);
+    goToNextFlash();
+  }, [viewedCount, goToNextFlash]);
 
   const goToPrev = useCallback(() => {
-    setCurrentIndex(i => (i > 0 ? i - 1 : 0));
-  }, []);
+    if (currentFlashIndex > 0) {
+        setCurrentFlashIndex(i => i - 1);
+    } else if (currentUserFlashesIndex > 0) {
+        // Go to previous user's last flash
+        const prevUserIndex = currentUserFlashesIndex - 1;
+        setCurrentUserFlashesIndex(prevUserIndex);
+        setCurrentFlashIndex(allFlashes[prevUserIndex].flashes.length - 1);
+    }
+  }, [allFlashes, currentFlashIndex, currentUserFlashesIndex]);
 
   useEffect(() => {
     if (showAd) {
@@ -86,7 +172,9 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
       return;
     }
 
-    const flash = userFlashes.flashes[currentIndex];
+    const flash = allFlashes[currentUserFlashesIndex]?.flashes[currentFlashIndex];
+    if(!flash) return;
+    
     const isVideo = flash.mediaUrl && (flash.mediaUrl.includes('.mp4') || flash.mediaUrl.includes('.webm') || flash.mediaUrl.includes('.ogg'));
     setProgress(0);
     
@@ -96,7 +184,7 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
         audioRef.current = null;
     }
 
-    const duration = 15; // All flashes are 15 seconds
+    const duration = 15;
     
     if (flash.song && flash.song.preview_url) {
         const audio = new Audio(flash.song.preview_url);
@@ -114,7 +202,7 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
             goToNext();
             return 0;
           }
-          return p + (100 / (duration * 10)); // duration in seconds
+          return p + (100 / (duration * 10));
         });
       }, 100);
     }
@@ -126,9 +214,8 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
           audioRef.current.removeEventListener('ended', goToNext);
       }
     };
-  }, [currentIndex, userFlashes, goToNext, showAd]);
+  }, [currentUserFlashesIndex, currentFlashIndex, allFlashes, goToNext, showAd]);
   
-  // Keyboard and click navigation
   useEffect(() => {
       const handleKeyDown = (e: KeyboardEvent) => {
           if (showAd) return;
@@ -159,15 +246,11 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
     if (showAd) return;
     const touchEndX = e.changedTouches[0].clientX;
     const deltaX = touchEndX - touchStartX.current;
-    if (Math.abs(deltaX) > 50) { // Swipe threshold
-      if (deltaX < 0) { // Swipe left
-        goToNext();
-      } else { // Swipe right
-        goToPrev();
-      }
+    if (Math.abs(deltaX) > 50) {
+      if (deltaX < 0) goToNext();
+      else goToPrev();
     }
   };
-
 
   const handleVideoTimeUpdate = () => {
     if (videoRef.current) {
@@ -180,7 +263,7 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
 
   const handleAdSkip = () => {
       setShowAd(false);
-      goToNext();
+      goToNextFlash();
   }
   
   if (showAd) {
@@ -193,7 +276,11 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
       )
   }
 
-  const currentFlash = userFlashes.flashes[currentIndex];
+  const currentFlashUser = allFlashes[currentUserFlashesIndex];
+  if (!currentFlashUser) return null;
+  const currentFlash = currentFlashUser.flashes[currentFlashIndex];
+  if (!currentFlash) return null;
+
   const isVideo = currentFlash.mediaUrl.includes('.mp4') || currentFlash.mediaUrl.includes('.webm') || currentFlash.mediaUrl.includes('.ogg');
 
 
@@ -203,9 +290,9 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
         <button onClick={(e) => { e.stopPropagation(); onClose();}} className="absolute top-2 right-2 text-white text-3xl z-20">&times;</button>
         {/* Progress Bars */}
         <div className="absolute top-4 left-2 right-2 flex gap-1 z-20">
-            {userFlashes.flashes.map((_:any, idx:number) => (
+            {currentFlashUser.flashes.map((_:any, idx:number) => (
                 <div key={idx} className="flex-1 h-1 bg-white/30 rounded-full">
-                    <div className="h-full bg-white rounded-full" style={{ width: `${idx === currentIndex ? progress : (idx < currentIndex ? 100 : 0)}%` }}/>
+                    <div className="h-full bg-white rounded-full" style={{ width: `${idx === currentFlashIndex ? progress : (idx < currentFlashIndex ? 100 : 0)}%` }}/>
                 </div>
             ))}
         </div>
@@ -232,10 +319,12 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
         </div>
 
         {currentFlash.caption && (
-          <div className="absolute bottom-10 left-4 right-4 text-white text-center font-semibold p-2 bg-black/50 rounded-lg">
+          <div className="absolute bottom-20 left-4 right-4 text-white text-center font-semibold p-2 bg-black/50 rounded-lg">
             {currentFlash.caption}
           </div>
         )}
+
+        <FlashInteraction flash={currentFlash} currentUser={currentUser} onClose={onClose} />
       </div>
     </div>
   );
