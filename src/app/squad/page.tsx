@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef, Suspense } from "react";
 import { auth } from "@/utils/firebaseClient";
 import { getFirestore, doc, getDoc, setDoc, collection, query, where, getCountFromServer, getDocs, onSnapshot, orderBy, updateDoc, writeBatch, deleteDoc, arrayUnion, arrayRemove, serverTimestamp } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { Cog, Palette, Lock, MessageCircle, LogOut, Camera, Star, Bell, Trash2, AtSign, Compass, MapPin, User, Tag, ShieldCheck, Music, Bookmark, Heart, Folder, Download, CheckCircle, Award, Mic, Crown, Zap, Rocket, Search, Pin, Phone, Mail, X } from "lucide-react";
+import { Cog, Palette, Lock, MessageCircle, LogOut, Camera, Star, Bell, Trash2, AtSign, Compass, MapPin, User, Tag, ShieldCheck, Music, Bookmark, Heart, Folder, Download, CheckCircle, Award, Mic, Crown, Zap, Rocket, Search, Pin, Phone, Mail, X, Users } from "lucide-react";
 import { signOut, EmailAuthProvider, reauthenticateWithCredential, RecaptchaVerifier, signInWithPhoneNumber, PhoneAuthProvider, linkWithCredential, AuthCredential, sendEmailVerification } from "firebase/auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -393,12 +393,13 @@ function SquadPageContent() {
   const [postCount, setPostCount] = useState(0);
   const [followers, setFollowers] = useState(0);
   const [following, setFollowing] = useState(0);
+  const [friends, setFriends] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'posts');
   const [userPosts, setUserPosts] = useState<any[]>([]);
   const [starredPosts, setStarredPosts] = useState<any[]>([]);
-  const [showFollowList, setShowFollowList] = useState<null | 'followers' | 'following'>(null);
+  const [showFollowList, setShowFollowList] = useState<null | 'followers' | 'following' | 'friends'>(null);
   const [showCompleteProfile, setShowCompleteProfile] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -501,6 +502,17 @@ function SquadPageContent() {
     const unsubFollowers = onSnapshot(collection(db, "users", uid, "followers"), snap => setFollowers(snap.size));
     const unsubFollowing = onSnapshot(collection(db, "users", uid, "following"), snap => setFollowing(snap.size));
     
+    // Calculate friends
+    const fetchFriends = async () => {
+        const followersSnap = await getDocs(collection(db, "users", uid, "followers"));
+        const followingSnap = await getDocs(collection(db, "users", uid, "following"));
+        const followerIds = followersSnap.docs.map(d => d.id);
+        const followingIds = followingSnap.docs.map(d => d.id);
+        const friendsIds = followerIds.filter(id => followingIds.includes(id));
+        setFriends(friendsIds.length);
+    }
+    fetchFriends();
+    
     const q = query(collection(db, "users", uid, "starredPosts"), orderBy("starredAt", "desc"));
     const unsubStarred = onSnapshot(q, (snapshot) => {
         setStarredPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -582,6 +594,10 @@ function SquadPageContent() {
             <span className="font-bold text-lg text-accent-cyan">{following}</span>
             <span className="text-xs text-gray-400 block hover:underline">Following</span>
           </button>
+          <button className="text-center" onClick={() => setShowFollowList('friends')}>
+            <span className="font-bold text-lg text-accent-cyan">{friends}</span>
+            <span className="text-xs text-gray-400 block hover:underline">Friends</span>
+          </button>
         </div>
 
         {/* Bio and Details */}
@@ -596,6 +612,10 @@ function SquadPageContent() {
         </div>
 
         <button className="btn-glass mt-6" onClick={() => setShowEdit(true)}>Edit Profile</button>
+        <div className="mt-4 text-xs text-gray-400">
+          Your referral code: <span className="font-bold text-accent-pink">{profile.referralCode || 'Generating...'}</span>
+          <p>Share this code! You get 1 free month of premium for every user who signs up with it.</p>
+        </div>
       </div>
 
        <div className="w-full max-w-2xl mx-auto my-8 relative">
