@@ -456,26 +456,31 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
     )
   }
   
-  const ActionButtons = () => (
-    <div className={`flex items-center justify-between mt-2 pt-2 ${isShortVibe ? 'flex-col gap-4' : 'border-t border-glass-border'}`}>
-        <div className={isShortVibe ? 'flex flex-col items-center gap-4' : 'flex items-center justify-start gap-6'}>
-          <button className={`flex items-center gap-1.5 font-bold transition-all ${isShortVibe ? 'flex-col text-white' : 'text-lg text-muted-foreground hover:text-brand-gold'}`} onClick={() => setShowComments(true)}>
-            <MessageCircle size={isShortVibe ? 32 : 20} /> <span className="text-sm">{commentCount}</span>
-          </button>
-          <button className={`flex items-center gap-1.5 font-bold transition-all ${isStarred ? "text-yellow-400" : isShortVibe ? 'text-white' : "text-lg text-muted-foreground hover:text-yellow-400"}`} onClick={handleStar}>
-            <Star size={isShortVibe ? 32 : 20} fill={isStarred ? "currentColor" : "none"} /> <span className="text-sm">{starCount}</span>
-          </button>
-          <button className={`flex items-center gap-1.5 font-bold transition-all ${isShortVibe ? 'flex-col text-white' : 'text-lg text-muted-foreground hover:text-accent-cyan'}`} onClick={(e) => { e.stopPropagation(); setShowShareModal(true); }}>
-            <Share size={isShortVibe ? 32 : 20} />
-          </button>
+  const ActionButtons = () => {
+    const isVideo = post.type === 'media' && post.mediaUrl && (Array.isArray(post.mediaUrl) ? post.mediaUrl.some((url: string) => url.includes('.mp4')) : post.mediaUrl.includes('.mp4'));
+
+    return (
+        <div className={`flex items-center justify-between mt-2 pt-2 ${isShortVibe ? 'flex-col gap-4' : 'border-t border-glass-border'}`}>
+            <div className={isShortVibe ? 'flex flex-col items-center gap-4' : 'flex items-center justify-start gap-6'}>
+              <button className={`flex items-center gap-1.5 font-bold transition-all ${isShortVibe ? 'flex-col text-white' : 'text-lg text-muted-foreground hover:text-brand-gold'}`} onClick={() => setShowComments(true)}>
+                <MessageCircle size={isShortVibe ? 32 : 20} /> <span className="text-sm">{commentCount}</span>
+              </button>
+              <button className={`flex items-center gap-1.5 font-bold transition-all ${isStarred ? "text-yellow-400" : isShortVibe ? 'text-white' : "text-lg text-muted-foreground hover:text-yellow-400"}`} onClick={handleStar}>
+                <Star size={isShortVibe ? 32 : 20} fill={isStarred ? "currentColor" : "none"} /> <span className="text-sm">{starCount}</span>
+              </button>
+              <button className={`flex items-center gap-1.5 font-bold transition-all ${isShortVibe ? 'flex-col text-white' : 'text-lg text-muted-foreground hover:text-accent-cyan'}`} onClick={(e) => { e.stopPropagation(); setShowShareModal(true); }}>
+                <Share size={isShortVibe ? 32 : 20} />
+              </button>
+            </div>
+            <div className={isShortVibe ? 'flex flex-col items-center gap-4 mt-4' : 'flex items-center gap-4'}>
+                 <button className={`flex items-center gap-1.5 font-bold transition-all ${isShortVibe ? 'flex-col text-white' : 'text-lg text-muted-foreground hover:text-accent-purple'}`} onClick={() => setShowCollectionModal(true)}>
+                    <Bookmark size={isShortVibe ? 32 : 20} fill={isSaved ? "currentColor" : "none"}/>
+                </button>
+            </div>
         </div>
-        <div className={isShortVibe ? 'flex flex-col items-center gap-4 mt-4' : 'flex items-center gap-4'}>
-             <button className={`flex items-center gap-1.5 font-bold transition-all ${isShortVibe ? 'flex-col text-white' : 'text-lg text-muted-foreground hover:text-accent-purple'}`} onClick={() => setShowCollectionModal(true)}>
-                <Bookmark size={isShortVibe ? 32 : 20} fill={isSaved ? "currentColor" : "none"}/>
-            </button>
-        </div>
-    </div>
-  );
+    )
+  };
+
 
   if (isShortVibe) {
     return (
@@ -500,7 +505,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
                 <ActionButtons />
             </div>
             {showComments && <CommentModal postId={post.id} postAuthorId={post.userId} onClose={() => setShowComments(false)} post={post} />}
-            {showShareModal && <ShareModal url={`${window.location.origin}/post/${post.id}`} title={post.content} onSignalShare={() => { setShowShareModal(false); setShowSignalShare(true); }} onClose={() => setShowShareModal(false)} />}
+            {showShareModal && <ShareModal isVideo={post.type === 'media'} url={`${window.location.origin}/post/${post.id}`} title={post.content} onSignalShare={() => { setShowShareModal(false); setShowSignalShare(true); }} onClose={() => setShowShareModal(false)} />}
             {showSignalShare && <SignalShareModal post={post} onClose={() => setShowSignalShare(false)}/>}
             {showCollectionModal && <AddToCollectionModal post={post} onClose={() => setShowCollectionModal(false)} />}
         </div>
@@ -548,6 +553,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
         <ShareModal 
             url={`${window.location.origin}/post/${post.id}`}
             title={post.content}
+            isVideo={post.type === 'media' && post.mediaUrl && (Array.isArray(post.mediaUrl) ? post.mediaUrl.some((url: string) => url.includes('.mp4')) : post.mediaUrl.includes('.mp4'))}
             onSignalShare={() => { setShowShareModal(false); setShowSignalShare(true); }}
             onClose={() => setShowShareModal(false)}
         />
