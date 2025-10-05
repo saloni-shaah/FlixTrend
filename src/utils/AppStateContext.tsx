@@ -1,7 +1,7 @@
 
 "use client";
 import React, { createContext, useState, useContext, ReactNode, useEffect, useRef } from 'react';
-import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp, Unsubscribe, updateDoc, collection, addDoc, getDoc, writeBatch, getDocs } from 'firebase/firestore';
+import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp, Unsubscribe, updateDoc, collection, addDoc, getDoc, writeBatch, getDocs, deleteField } from 'firebase/firestore';
 import { auth, app } from './firebaseClient';
 import { CallScreen } from '@/components/CallScreen';
 import { requestForToken } from './firebaseMessaging';
@@ -25,7 +25,6 @@ interface AppState {
   callTarget: any | null;
   setCallTarget: (target: any | null) => void;
   activeCall: Call | null;
-  // CORRECTED: Added functions to the context definition
   answerCall: () => Promise<void>; 
   handleEndCall: () => Promise<void>;
   closeCall: () => void;
@@ -40,6 +39,8 @@ interface AppState {
   audioPlayer: HTMLAudioElement | null;
   selectedChat: any | null;
   setSelectedChat: React.Dispatch<React.SetStateAction<any | null>>;
+  drafts: { [chatId: string]: string };
+  setDraft: (chatId: string, text: string) => void;
 }
 
 const AppStateContext = createContext<AppState | undefined>(undefined);
@@ -86,6 +87,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [selectedChat, setSelectedChat] = useState<any | null>(null);
+  const [drafts, setDrafts] = useState<{ [chatId: string]: string }>({});
 
 
   useEffect(() => {
@@ -175,7 +177,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // CORRECTED: Implementation of answerCall logic
   const answerCall = async () => {
     if (!pc || !activeCall) return;
 
@@ -206,26 +207,22 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  // CORRECTED: Implementation of handleEndCall logic
   const handleEndCall = async () => {
       if (!activeCall) return;
       const user = auth.currentUser;
       if (!user) return;
       
-      // Clean up the call document in Firestore
       await cleanUpCall(activeCall.id);
       
-      // Reset the currentCallId on both users
       const userDocRef = doc(db, 'users', user.uid);
-      await updateDoc(userDocRef, { currentCallId: null });
+      await updateDoc(userDocRef, { currentCallId: deleteField() });
       
       const otherUserId = user.uid === activeCall.callerId ? activeCall.calleeId : activeCall.callerId;
       if(otherUserId) {
           const otherUserDocRef = doc(db, 'users', otherUserId);
-          await updateDoc(otherUserDocRef, { currentCallId: null });
+          await updateDoc(otherUserDocRef, { currentCallId: deleteField() });
       }
       
-      // This will trigger the onSnapshot cleanup
       closeCall(); 
   };
   
@@ -296,14 +293,18 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setActiveCall(null);
   };
 
+  const setDraft = (chatId: string, text: string) => {
+    setDrafts(prev => ({...prev, [chatId]: text}));
+  }
+
   const value = {
     isCalling,
     setIsCalling,
     callTarget,
     setCallTarget,
     activeCall,
-    answerCall,      // CORRECTED: Expose new function
-    handleEndCall,   // CORRECTED: Expose new function
+    answerCall,
+    handleEndCall,
     closeCall,
     pc,
     activeSong,
@@ -316,6 +317,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     audioPlayer: audioRef.current,
     selectedChat,
     setSelectedChat,
+    drafts,
+    setDraft,
   };
 
   return (
