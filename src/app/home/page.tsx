@@ -23,6 +23,7 @@ const AddMusicModal = dynamic(() => import('@/components/MusicDiscovery').then(m
 const FlashModal = dynamic(() => import('@/components/FlashModal'), { ssr: false });
 const NotificationPanel = dynamic(() => import('@/components/NotificationPanel'), { ssr: false });
 const ShortsPlayer = dynamic(() => import('@/components/ShortsPlayer').then(mod => mod.ShortsPlayer), { ssr: false });
+const AdModal = dynamic(() => import('@/components/AdModal'), { ssr: false });
 
 
 const db = getFirestore(app);
@@ -42,6 +43,7 @@ function HomePageContent() {
   const [lastVisible, setLastVisible] = useState<any>(null);
   const [hasMore, setHasMore] = useState(true);
   const [showShortsPlayer, setShowShortsPlayer] = useState(false);
+  const [showAlmightyAd, setShowAlmightyAd] = useState(false);
   const router = useRouter();
   const POSTS_PER_PAGE = 5;
   const feedEndRef = useRef<HTMLDivElement>(null);
@@ -341,22 +343,22 @@ function HomePageContent() {
 
        {/* Bottom Right AI FAB */}
       <div className="fixed bottom-24 right-4 z-30">
-        <Link href="/almighty">
-            <motion.button 
-                className="w-16 h-16 rounded-full flex items-center justify-center shadow-fab-glow bg-green-200/20 dark:bg-green-900/30 backdrop-blur-md"
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.95 }}
-                title="Ask Almighty AI"
-            >
-                <AlmightyLogo className="w-8 h-8" />
-            </motion.button>
-        </Link>
+        <motion.button 
+            onClick={() => setShowAlmightyAd(true)}
+            className="w-16 h-16 rounded-full flex items-center justify-center shadow-fab-glow bg-green-200/20 dark:bg-green-900/30 backdrop-blur-md"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            title="Ask Almighty AI"
+        >
+            <AlmightyLogo className="w-8 h-8" />
+        </motion.button>
       </div>
 
       <AnimatePresence>
         {showMusicModal && <AddMusicModal onClose={() => setShowMusicModal(false)} />}
         {selectedFlashUser && <FlashModal userFlashes={selectedFlashUser} onClose={() => setSelectedFlashUser(null)} />}
         {showNotifications && <NotificationPanel onClose={() => setShowNotifications(false)} />}
+        {showAlmightyAd && <AdModal onComplete={() => { setShowAlmightyAd(false); router.push('/almighty'); }} />}
       </AnimatePresence>
     </div>
   );

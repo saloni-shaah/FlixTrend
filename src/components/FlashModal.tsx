@@ -3,6 +3,8 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { FlixTrendLogo } from './FlixTrendLogo';
+import AdBanner from './AdBanner';
+import { X } from 'lucide-react';
 
 const Watermark = ({ isAnimated = false }: { isAnimated?: boolean }) => (
     <div
@@ -15,29 +17,75 @@ const Watermark = ({ isAnimated = false }: { isAnimated?: boolean }) => (
     </div>
 );
 
+function AdView({ onSkip }: { onSkip: () => void }) {
+    const [countdown, setCountdown] = useState(5);
+
+    useEffect(() => {
+        if (countdown <= 0) return;
+        const timer = setTimeout(() => setCountdown(c => c - 1), 1000);
+        return () => clearTimeout(timer);
+    }, [countdown]);
+    
+    return (
+        <div className="w-full h-full bg-black flex flex-col items-center justify-center relative">
+            <div className="absolute top-4 right-4 z-10">
+                {countdown > 0 ? (
+                    <span className="text-white bg-black/50 rounded-full px-3 py-1 text-sm">Skip in {countdown}</span>
+                ) : (
+                    <button onClick={onSkip} className="text-white bg-black/50 rounded-full px-4 py-2 text-sm flex items-center gap-2">
+                        Skip Ad <X size={16} />
+                    </button>
+                )}
+            </div>
+            <div className="w-full max-w-sm">
+                <AdBanner />
+            </div>
+             <p className="text-xs text-gray-500 absolute bottom-4">This is a sponsored message.</p>
+        </div>
+    )
+}
+
+
 export default function FlashModal({ userFlashes, onClose }: { userFlashes: any; onClose: () => void }) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [viewedCount, setViewedCount] = useState(0);
+  const [showAd, setShowAd] = useState(false);
   const [progress, setProgress] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const touchStartX = useRef(0);
 
+  const AD_INTERVAL = 9;
+
   const goToNext = useCallback(() => {
+    if (viewedCount + 1 >= AD_INTERVAL) {
+        setShowAd(true);
+        setViewedCount(0);
+        return;
+    }
+
     setCurrentIndex(i => {
         if (i < userFlashes.flashes.length - 1) {
+            setViewedCount(v => v + 1);
             return i + 1;
         }
         onClose(); // Close modal after the last flash
         return i;
     });
-  }, [userFlashes.flashes.length, onClose]);
+  }, [userFlashes.flashes.length, onClose, viewedCount]);
 
   const goToPrev = useCallback(() => {
     setCurrentIndex(i => (i > 0 ? i - 1 : 0));
   }, []);
 
   useEffect(() => {
+    if (showAd) {
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (audioRef.current) audioRef.current.pause();
+      return;
+    }
+
     const flash = userFlashes.flashes[currentIndex];
     const isVideo = flash.mediaUrl && (flash.mediaUrl.includes('.mp4') || flash.mediaUrl.includes('.webm') || flash.mediaUrl.includes('.ogg'));
     setProgress(0);
@@ -78,19 +126,21 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
           audioRef.current.removeEventListener('ended', goToNext);
       }
     };
-  }, [currentIndex, userFlashes, goToNext]);
+  }, [currentIndex, userFlashes, goToNext, showAd]);
   
   // Keyboard and click navigation
   useEffect(() => {
       const handleKeyDown = (e: KeyboardEvent) => {
+          if (showAd) return;
           if (e.key === 'ArrowRight') goToNext();
           if (e.key === 'ArrowLeft') goToPrev();
       };
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [goToNext, goToPrev]);
+  }, [goToNext, goToPrev, showAd]);
 
   const handleContainerClick = (e: React.MouseEvent) => {
+      if (showAd) return;
       const { clientX, currentTarget } = e;
       const { left, width } = currentTarget.getBoundingClientRect();
       const clickPosition = clientX - left;
@@ -102,9 +152,11 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
+    if (showAd) return;
     touchStartX.current = e.touches[0].clientX;
   };
   const handleTouchEnd = (e: React.TouchEvent) => {
+    if (showAd) return;
     const touchEndX = e.changedTouches[0].clientX;
     const deltaX = touchEndX - touchStartX.current;
     if (Math.abs(deltaX) > 50) { // Swipe threshold
@@ -125,6 +177,21 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
   const handleVideoEnded = () => {
       goToNext();
   };
+
+  const handleAdSkip = () => {
+      setShowAd(false);
+      goToNext();
+  }
+  
+  if (showAd) {
+      return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90">
+             <div className="relative w-full max-w-lg h-[90vh] flex flex-col items-center justify-center">
+                <AdView onSkip={handleAdSkip} />
+             </div>
+          </div>
+      )
+  }
 
   const currentFlash = userFlashes.flashes[currentIndex];
   const isVideo = currentFlash.mediaUrl.includes('.mp4') || currentFlash.mediaUrl.includes('.webm') || currentFlash.mediaUrl.includes('.ogg');
