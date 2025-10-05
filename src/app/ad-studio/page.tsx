@@ -8,6 +8,29 @@ import { auth, db } from "@/utils/firebaseClient";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useRouter } from "next/navigation";
+import { useAuthState } from "react-firebase-hooks/auth";
+
+const AdStudioDashboard = ({ user }: { user: any }) => {
+    const router = useRouter();
+
+    return (
+        <div className="w-full max-w-4xl mx-auto flex flex-col items-center p-4">
+             <h2 className="text-3xl font-headline font-bold text-accent-pink mb-2 text-center">Ad Studio Dashboard</h2>
+             <p className="text-center text-gray-400 mb-8">Welcome back, {user.displayName}!</p>
+
+             <div className="w-full glass-card p-8 text-center">
+                <h3 className="text-2xl font-bold text-accent-cyan mb-4">Your Campaigns</h3>
+                <p className="text-gray-400 mb-6">You don't have any active campaigns yet.</p>
+                <button 
+                    onClick={() => router.push('/ad-studio/create')}
+                    className="btn-glass bg-accent-pink text-white"
+                >
+                    Create Your First Ad
+                </button>
+             </div>
+        </div>
+    )
+}
 
 const AdStudioSignupPage = () => {
     const [step, setStep] = useState(1);
@@ -34,6 +57,17 @@ const AdStudioSignupPage = () => {
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
     const router = useRouter();
+    const [user, authLoading] = useAuthState(auth);
+
+    if(authLoading) {
+        return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+    }
+
+    // If user is logged in and has a business account, show dashboard
+    // This requires a Firestore read, which we can add later for a complete experience
+    if (user) {
+        return <AdStudioDashboard user={user} />;
+    }
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -86,6 +120,7 @@ const AdStudioSignupPage = () => {
                 uid: user.uid,
                 name: formData.name,
                 email: formData.email,
+                username: formData.email.split('@')[0], // Create a simple username
                 accountType: 'business',
                 createdAt: serverTimestamp(),
                 businessProfile: {
@@ -104,8 +139,7 @@ const AdStudioSignupPage = () => {
 
             setSuccess(true);
             setTimeout(() => {
-                // In a real app, you'd redirect to the ad dashboard
-                router.push("/home");
+                router.push("/ad-studio/create");
             }, 3000);
 
         } catch (err: any) {
@@ -176,7 +210,7 @@ const AdStudioSignupPage = () => {
                     <CheckCircle className="text-green-400" size={64}/>
                 </motion.div>
                 <h2 className="text-2xl font-headline font-bold text-green-400">Welcome to Ad Studio!</h2>
-                <p className="text-gray-300">Your business account has been created. Redirecting you to the dashboard...</p>
+                <p className="text-gray-300">Your business account has been created. Redirecting you to create your first ad...</p>
             </div>
         )
     }
