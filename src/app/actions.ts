@@ -79,44 +79,6 @@ export async function getAlmightyResponse(input: z.infer<typeof AlmightyResponse
     }
 }
 
-const RemixImageInputSchema = z.object({
-  photoDataUri: z.string().describe(
-      "A photo of an object, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
-  ),
-  prompt: z.string().describe(
-      'A text prompt describing the desired style transformation (e.g., "turn this into an anime character").'
-  ),
-  userId: z.string(),
-});
-
-const ImageOutputSchema = z.object({
-  remixedPhotoDataUri: z.string().describe('The data URI of the generated or remixed image.'),
-});
-
-export async function remixImageAction(input: z.infer<typeof RemixImageInputSchema>): Promise<{success: { remixedPhotoDataUri: string } | null, failure: string | null}> {
-    // Usage check for 'image' needs to be done on the client before calling this.
-    try {
-        const { media } = await ai.generate({
-            model: 'googleai/gemini-1.5-pro-latest',
-            prompt: [{ media: { url: input.photoDataUri } }, { text: input.prompt }],
-            config: {
-                responseModalities: ['IMAGE'],
-            },
-        });
-
-        if (!media?.url) {
-            throw new Error('Image generation failed to produce an image.');
-        }
-
-        // Return the data URI directly for client-side handling
-        return { success: { remixedPhotoDataUri: media.url }, failure: null };
-
-    } catch(err: any) {
-        console.error("Remix image action error:", err);
-        return { success: null, failure: err.message || 'An unknown error occurred during image remixing.' };
-    }
-}
-
 const GenerateImageInputSchema = z.object({
   prompt: z.string().describe('A text prompt describing the desired image.'),
   userId: z.string(),
@@ -134,8 +96,11 @@ export async function generateImageAction(input: z.infer<typeof GenerateImageInp
     // Usage check for 'image' needs to be done on the client before calling this.
     try {
         const { media } = await ai.generate({
-            model: 'googleai/imagen-4.0-fast-generate-001',
+            model: 'googleai/gemini-1.5-flash-latest',
             prompt: `Generate an image of: ${input.prompt}`,
+            config: {
+                responseModalities: ['IMAGE'],
+            },
         });
 
         if (!media?.url) {

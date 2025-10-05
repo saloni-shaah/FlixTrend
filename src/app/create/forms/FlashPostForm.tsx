@@ -7,7 +7,6 @@ import { motion } from 'framer-motion';
 import { getFirestore, collection, onSnapshot, query, orderBy, getDoc, doc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { app } from '@/utils/firebaseClient';
-import { remixImageAction } from '@/app/actions';
 import { Wand2, Loader } from 'lucide-react';
 
 
@@ -22,9 +21,7 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
     
     const [showCamera, setShowCamera] = useState(false);
     const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
-    const [capturedImageDataUrl, setCapturedImageDataUrl] = useState<string | null>(null);
-    const [isRemixing, setIsRemixing] = useState(false);
-    const [remixError, setRemixError] = useState('');
+    const [cameraError, setCameraError] = useState('');
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -62,7 +59,7 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
             }
         } catch (err) {
             console.error("Camera error:", err);
-            setRemixError("Camera access denied.");
+            setCameraError("Camera access denied. Please enable it in your browser settings.");
         }
     };
     
@@ -83,7 +80,17 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
             context?.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
             
             const dataUrl = canvas.toDataURL('image/jpeg');
-            setCapturedImageDataUrl(dataUrl);
+            
+            // Convert data URI to file and set it
+            fetch(dataUrl)
+                .then(res => res.blob())
+                .then(blob => {
+                    const file = new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
+                    setMediaFile(file);
+                    setMediaPreview(URL.createObjectURL(file));
+                    onDataChange({ ...data, mediaFiles: [file], mediaPreviews: [URL.createObjectURL(file)] });
+                });
+
             stopCamera();
             setShowCamera(false);
         }
@@ -96,14 +103,12 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
             setMediaFile(file);
             setMediaPreview(url);
             onDataChange({ ...data, mediaFiles: [file], mediaPreviews: [url] });
-            setCapturedImageDataUrl(null); // Clear any captured image
         }
     };
     
     const removeMedia = () => {
         setMediaFile(null);
         setMediaPreview(null);
-        setCapturedImageDataUrl(null);
         onDataChange({ ...data, mediaFiles: [], mediaPreviews: [] });
     };
 
@@ -125,61 +130,6 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
         setShowSongPicker(false);
     };
     
-    const handleRemix = async (style: string) => {
-      if (!capturedImageDataUrl) return;
-      setIsRemixing(true);
-      setRemixError("");
-      try {
-          const result = await remixImageAction({ photoDataUri: capturedImageDataUrl, prompt: `Convert this image into ${style} style.` });
-          if(result.success) {
-              setCapturedImageDataUrl(result.success.remixedPhotoDataUri);
-          } else {
-              throw new Error(result.failure || "Remix failed.");
-          }
-      } catch (err: any) {
-          setRemixError(err.message);
-      }
-      setIsRemixing(false);
-    };
-    
-    const confirmRemixedImage = () => {
-        if (capturedImageDataUrl) {
-            fetch(capturedImageDataUrl)
-                .then(res => res.blob())
-                .then(blob => {
-                    const file = new File([blob], `remixed-capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
-                    handleFileChange({ target: { files: [file] } } as any);
-                });
-        }
-    };
-    
-    if (capturedImageDataUrl) {
-        return (
-            <div className="flex flex-col items-center gap-4">
-                <h3 className="font-bold text-accent-purple flex items-center gap-2"><Wand2/> AI Remix Studio</h3>
-                <div className="relative w-full max-w-sm aspect-[4/5] rounded-lg overflow-hidden border-2 border-accent-purple">
-                    <img src={capturedImageDataUrl} alt="Captured preview" className="w-full h-full object-cover" />
-                    {isRemixing && (
-                         <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
-                            <Loader className="animate-spin text-accent-purple" size={48} />
-                        </div>
-                    )}
-                </div>
-                {remixError && <p className="text-red-400 text-sm">{remixError}</p>}
-                <div className="flex flex-wrap gap-2 justify-center">
-                    <button type="button" className="btn-glass text-xs" onClick={() => handleRemix('anime')} disabled={isRemixing}>Anime</button>
-                    <button type="button" className="btn-glass text-xs" onClick={() => handleRemix('cartoon')} disabled={isRemixing}>Cartoon</button>
-                    <button type="button" className="btn-glass text-xs" onClick={() => handleRemix('vintage film')} disabled={isRemixing}>Vintage</button>
-                    <button type="button" className="btn-glass text-xs" onClick={() => handleRemix('neon punk')} disabled={isRemixing}>Neon</button>
-                </div>
-                 <div className="flex w-full justify-between mt-4">
-                    <button type="button" className="text-sm text-gray-400 hover:underline" onClick={() => { setCapturedImageDataUrl(null); setShowCamera(true); }}>Retake</button>
-                    <button type="button" className="btn-glass bg-green-500" onClick={confirmRemixedImage}>Confirm Image</button>
-                </div>
-            </div>
-        )
-    }
-    
     if (showCamera) {
         return (
              <div className="flex flex-col items-center gap-4">
@@ -188,7 +138,7 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
                         <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
                     ) : (
                         <div className="w-full h-full flex items-center justify-center text-gray-400">
-                            {remixError ? remixError : "Starting camera..."}
+                            {cameraError ? cameraError : "Starting camera..."}
                         </div>
                     )}
                 </div>
