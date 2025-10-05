@@ -1,3 +1,4 @@
+
 {
   "name": "flixtrend-v2",
   "version": "0.1.0",
@@ -76,7 +77,6 @@
     "zod": "latest"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.1.11",
     "@types/dom-mediacapture-record": "^1.0.22",
     "@types/node": "^20",
     "@types/react": "^19",
