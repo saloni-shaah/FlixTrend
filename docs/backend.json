@@ -123,6 +123,8 @@
           "items": { "type": "string", "enum": ["vibes_feed", "flashes", "scope", "games", "almighty"] },
           "description": "Where the ads for this campaign will be shown."
         },
+        "impressions": { "type": "number", "description": "Total times the ad has been shown." },
+        "clicks": { "type": "number", "description": "Total times the ad has been clicked." },
         "createdAt": { "type": "string", "format": "date-time" },
         "startDate": { "type": "string", "format": "date-time" },
         "endDate": { "type": "string", "format": "date-time", "description": "Optional end date for the campaign." }

@@ -35,19 +35,18 @@ export default function BillingPage() {
         return () => unsubscribe();
     }, []);
 
-    // Effect to handle the Google Pay button rendering and payment success event
     useEffect(() => {
-        // The `onGooglePayLoaded` function is in the global scope from payment.js
+        // This function is defined in public/payment.js and attached to window
         if (typeof (window as any).onGooglePayLoaded === 'function') {
             (window as any).onGooglePayLoaded();
         }
-
+    
         const handlePayment = async (event: CustomEvent) => {
             setPaymentProcessing(true);
             const { token, amount: paidAmount } = event.detail;
             console.log("Processing payment on client...", { token, paidAmount });
 
-            // In a real app, you would send this token to your backend to be processed by Razorpay.
+            // In a real app, you send this token to your backend to be processed by Razorpay.
             // For this simulation, we'll just update the user's credits directly.
             if (user && paidAmount) {
                 try {
@@ -64,10 +63,11 @@ export default function BillingPage() {
             setPaymentProcessing(false);
         };
         
+        // This custom event is dispatched from public/payment.js upon successful payment
         window.addEventListener('paymentSuccess', handlePayment as EventListener);
         return () => window.removeEventListener('paymentSuccess', handlePayment as EventListener);
-
-    }, [user]); // Re-run if user changes
+    
+    }, [user]);
 
 
     if (loading) {
@@ -75,12 +75,12 @@ export default function BillingPage() {
     }
 
     if (!user || !userProfile) {
-        return <div>Please log in to manage billing.</div>;
+        return <div className="text-center p-8">Please log in to manage billing.</div>;
     }
     
      if (paymentSuccess) {
         return (
-            <div className="w-full max-w-lg mx-auto flex flex-col items-center p-4 text-center">
+            <div className="w-full max-w-lg mx-auto flex flex-col items-center p-4 text-center mt-12">
                  <div className="glass-card p-8">
                     <CheckCircle className="mx-auto text-green-400 mb-4" size={64}/>
                     <h2 className="text-2xl font-headline font-bold text-green-400">Payment Successful!</h2>
@@ -94,7 +94,7 @@ export default function BillingPage() {
     }
 
     return (
-        <div className="w-full max-w-lg mx-auto flex flex-col items-center p-4">
+        <div className="w-full max-w-lg mx-auto flex flex-col items-center p-4 mt-12">
             <Link href="/ad-studio">
                 <span className="btn-glass flex items-center gap-2 mb-8 self-start">
                     <ArrowLeft /> Back to Dashboard
@@ -107,7 +107,7 @@ export default function BillingPage() {
 
                 <div className="mb-6">
                     <p className="font-bold text-accent-cyan">Current Balance</p>
-                    <p className="text-4xl font-bold">₹{userProfile?.credits?.toLocaleString('en-IN') || '800'}</p>
+                    <p className="text-4xl font-bold">₹{userProfile?.credits?.toLocaleString('en-IN') || '0'}</p>
                 </div>
                 
                 <div>
@@ -128,9 +128,9 @@ export default function BillingPage() {
                 </div>
 
                 <div className="mt-8 flex justify-center">
-                    <div id="gpay-container" data-amount={amount}>
-                        {/* The Google Pay button will be rendered here by payment.js */}
-                    </div>
+                    {/* This div will be populated by the Google Pay button script */}
+                    {/* The data-amount attribute is read by the script to set the transaction total */}
+                    <div id="gpay-container" data-amount={amount}></div>
                 </div>
 
                  {paymentProcessing && (
@@ -140,4 +140,3 @@ export default function BillingPage() {
         </div>
     );
 }
-
