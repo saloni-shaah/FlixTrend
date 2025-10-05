@@ -34,30 +34,33 @@ const levelLayouts = [
 
 export function BrickBreaker() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [gameState, setGameState] = useState<'start' | 'playing' | 'paused' | 'won' | 'lost'>('start');
     const [level, setLevel] = useState(0);
     const [score, setScore] = useState(0);
-    const [lives, setLives] = useState(INITIAL_LIVES);
     const [highScore, setHighScore] = useState(0);
-    const [bricks, setBricks] = useState(levelLayouts[level]);
-    const [ball, setBall] = useState({ x: 0, y: 0, dx: 4, dy: -4 });
-    const [paddle, setPaddle] = useState({ x: 0 });
+    const [lives, setLives] = useState(INITIAL_LIVES);
+    const [gameState, setGameState] = useState<'start' | 'playing' | 'paused' | 'won' | 'lost'>('start');
+
+    // Use refs for state that changes every frame to avoid re-renders
+    const ballRef = useRef({ x: 0, y: 0, dx: 4, dy: -4 });
+    const paddleRef = useRef({ x: 0 });
+    const bricksRef = useRef(levelLayouts[level]);
 
     const resetBallAndPaddle = useCallback(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
-        setPaddle({ x: (canvas.width - PADDLE_WIDTH) / 2 });
-        setBall({ x: canvas.width / 2, y: canvas.height - 50, dx: 4, dy: -4 });
+        paddleRef.current.x = (canvas.width - PADDLE_WIDTH) / 2;
+        ballRef.current = { x: canvas.width / 2, y: canvas.height - 50, dx: 4, dy: -4 };
     }, []);
 
     const resetLevel = useCallback((levelIndex: number) => {
-        setBricks(levelLayouts[levelIndex].map(row => row.map(cell => ({...cell})))); // Deep copy
+        bricksRef.current = levelLayouts[levelIndex].map(row => row.map(cell => ({...cell})));
+        setLevel(levelIndex);
         setLives(INITIAL_LIVES);
         setScore(0);
         resetBallAndPaddle();
         setGameState('start');
     }, [resetBallAndPaddle]);
-    
+
     useEffect(() => {
         const storedHighScore = localStorage.getItem('brickBreakerHighScore');
         if (storedHighScore) setHighScore(parseInt(storedHighScore));
@@ -72,34 +75,15 @@ export function BrickBreaker() {
 
         let animationFrameId: number;
 
-        const drawBall = () => {
-            ctx.beginPath();
-            ctx.arc(ball.x, ball.y, BALL_RADIUS, 0, Math.PI * 2);
-            ctx.fillStyle = '#00F0FF';
-            ctx.shadowColor = '#00F0FF';
-            ctx.shadowBlur = 10;
-            ctx.fill();
-            ctx.closePath();
-            ctx.shadowBlur = 0; // Reset blur for other elements
-        };
-
-        const drawPaddle = () => {
-            ctx.beginPath();
-            ctx.rect(paddle.x, canvas.height - PADDLE_HEIGHT - 10, PADDLE_WIDTH, PADDLE_HEIGHT);
-            ctx.fillStyle = '#FF3CAC';
-            ctx.shadowColor = '#FF3CAC';
-            ctx.shadowBlur = 10;
-            ctx.fill();
-            ctx.closePath();
-            ctx.shadowBlur = 0;
-        };
-
-        const drawBricks = () => {
-            bricks.forEach((row, r) => {
+        const draw = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw Bricks
+            bricksRef.current.forEach((row, r) => {
                 row.forEach((brick, c) => {
                     if (brick.status === 1) {
                         const brickX = c * (canvas.width / BRICK_COLUMN_COUNT);
-                        const brickY = r * 30 + 30; // 30px height + 30px top offset
+                        const brickY = r * 30 + 30;
                         const brickWidth = canvas.width / BRICK_COLUMN_COUNT;
                         const brickHeight = 25;
                         
@@ -111,9 +95,34 @@ export function BrickBreaker() {
                     }
                 });
             });
+
+            // Draw Ball
+            ctx.beginPath();
+            ctx.arc(ballRef.current.x, ballRef.current.y, BALL_RADIUS, 0, Math.PI * 2);
+            ctx.fillStyle = '#00F0FF';
+            ctx.shadowColor = '#00F0FF';
+            ctx.shadowBlur = 10;
+            ctx.fill();
+            ctx.closePath();
+            ctx.shadowBlur = 0;
+
+            // Draw Paddle
+            ctx.beginPath();
+            ctx.rect(paddleRef.current.x, canvas.height - PADDLE_HEIGHT - 10, PADDLE_WIDTH, PADDLE_HEIGHT);
+            ctx.fillStyle = '#FF3CAC';
+            ctx.shadowColor = '#FF3CAC';
+            ctx.shadowBlur = 10;
+            ctx.fill();
+            ctx.closePath();
+            ctx.shadowBlur = 0;
         };
-        
-        const collisionDetection = () => {
+
+        const update = () => {
+            const ball = ballRef.current;
+            const paddle = paddleRef.current;
+            const bricks = bricksRef.current;
+
+            // Collision Detection
             bricks.forEach((row, r) => {
                 row.forEach((brick, c) => {
                     if (brick.status === 1) {
@@ -122,70 +131,58 @@ export function BrickBreaker() {
                         const brickWidth = canvas.width / BRICK_COLUMN_COUNT;
                         const brickHeight = 25;
                         
-                        if (
-                            ball.x > brickX &&
-                            ball.x < brickX + brickWidth &&
-                            ball.y > brickY &&
-                            ball.y < brickY + brickHeight
-                        ) {
-                            setBall(b => ({ ...b, dy: -b.dy }));
-                            const newBricks = [...bricks];
-                            newBricks[r][c].status = 0;
-                            setBricks(newBricks);
-                            
-                            const newScore = score + 10;
-                            setScore(newScore);
-                            if (newScore > highScore) {
-                                setHighScore(newScore);
-                                localStorage.setItem('brickBreakerHighScore', newScore.toString());
-                            }
+                        if (ball.x > brickX && ball.x < brickX + brickWidth && ball.y > brickY && ball.y < brickY + brickHeight) {
+                            ball.dy = -ball.dy;
+                            brick.status = 0;
+                            setScore(s => {
+                                const newScore = s + 10;
+                                if (newScore > highScore) {
+                                    setHighScore(newScore);
+                                    localStorage.setItem('brickBreakerHighScore', newScore.toString());
+                                }
+                                return newScore;
+                            });
                         }
                     }
                 });
             });
-        };
 
-        const gameLoop = () => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawBricks();
-            drawBall();
-            drawPaddle();
+            ball.x += ball.dx;
+            ball.y += ball.dy;
 
-            if (gameState === 'playing') {
-                collisionDetection();
-
-                let newX = ball.x + ball.dx;
-                let newY = ball.y + ball.dy;
-
-                // Wall collision
-                if (newX > canvas.width - BALL_RADIUS || newX < BALL_RADIUS) {
-                    setBall(b => ({ ...b, dx: -b.dx }));
-                }
-                if (newY < BALL_RADIUS) {
-                    setBall(b => ({ ...b, dy: -b.dy }));
-                } else if (newY > canvas.height - PADDLE_HEIGHT - 10 - BALL_RADIUS) {
-                    // Paddle collision
-                    if (newX > paddle.x && newX < paddle.x + PADDLE_WIDTH) {
-                        setBall(b => ({ ...b, dy: -b.dy }));
-                    } else {
-                        // Ball missed
-                        setLives(l => l - 1);
-                        if (lives - 1 <= 0) {
+            // Wall collision
+            if (ball.x > canvas.width - BALL_RADIUS || ball.x < BALL_RADIUS) {
+                ball.dx = -ball.dx;
+            }
+            if (ball.y < BALL_RADIUS) {
+                ball.dy = -ball.dy;
+            } else if (ball.y > canvas.height - PADDLE_HEIGHT - 10 - BALL_RADIUS) {
+                if (ball.x > paddle.x && ball.x < paddle.x + PADDLE_WIDTH) {
+                    ball.dy = -ball.dy;
+                } else {
+                    setLives(l => {
+                        const newLives = l - 1;
+                        if (newLives <= 0) {
                             setGameState('lost');
                         } else {
                             resetBallAndPaddle();
                             setGameState('paused');
                         }
-                    }
+                        return newLives;
+                    });
                 }
-                
-                // Check for win
-                if (bricks.every(row => row.every(brick => brick.status === 0))) {
-                    setGameState('won');
-                }
-
-                setBall(b => ({ ...b, x: b.x + b.dx, y: b.y + b.dy }));
             }
+
+            if (bricks.every(row => row.every(brick => brick.status === 0))) {
+                setGameState('won');
+            }
+        };
+
+        const gameLoop = () => {
+            if (gameState === 'playing') {
+                update();
+            }
+            draw();
             animationFrameId = requestAnimationFrame(gameLoop);
         };
         
@@ -194,14 +191,14 @@ export function BrickBreaker() {
         return () => {
             cancelAnimationFrame(animationFrameId);
         };
-    }, [ball, bricks, gameState, paddle, resetBallAndPaddle, score, highScore, lives]);
+    }, [gameState, resetBallAndPaddle, highScore]); // Only depends on gameState now
 
     const handleMouseMove = useCallback((e: React.MouseEvent) => {
         const canvas = canvasRef.current;
         if (!canvas) return;
         const relativeX = e.clientX - canvas.getBoundingClientRect().left;
         if (relativeX > 0 && relativeX < canvas.width) {
-            setPaddle({ x: Math.min(Math.max(relativeX - PADDLE_WIDTH / 2, 0), canvas.width - PADDLE_WIDTH) });
+            paddleRef.current.x = Math.min(Math.max(relativeX - PADDLE_WIDTH / 2, 0), canvas.width - PADDLE_WIDTH);
         }
     }, []);
     
@@ -211,7 +208,7 @@ export function BrickBreaker() {
         if (!canvas) return;
         const relativeX = e.touches[0].clientX - canvas.getBoundingClientRect().left;
          if (relativeX > 0 && relativeX < canvas.width) {
-            setPaddle({ x: Math.min(Math.max(relativeX - PADDLE_WIDTH / 2, 0), canvas.width - PADDLE_WIDTH) });
+            paddleRef.current.x = Math.min(Math.max(relativeX - PADDLE_WIDTH / 2, 0), canvas.width - PADDLE_WIDTH);
         }
     }, []);
     
@@ -223,7 +220,6 @@ export function BrickBreaker() {
     
     const goToNextLevel = () => {
         const nextLevel = (level + 1) % levelLayouts.length;
-        setLevel(nextLevel);
         resetLevel(nextLevel);
     }
 
