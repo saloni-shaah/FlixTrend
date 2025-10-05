@@ -1,6 +1,6 @@
 
 import { initializeApp } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 import * as functions from "firebase-functions";
 import * as logger from "firebase-functions/logger";
@@ -12,6 +12,54 @@ import * as admin from "firebase-admin";
 initializeApp();
 const db = getFirestore();
 const messaging = getMessaging();
+
+/**
+ * Grants free premium access to new users and tracks the total user count.
+ * First 1 million users get 2 months, others get 1 month.
+ */
+export const onNewUserCreate = functions.auth.user().onCreate(async (user) => {
+    const userRef = db.collection('users').doc(user.uid);
+    const appStatusRef = db.collection('app_status').doc('user_stats');
+
+    try {
+        const userCount = (await appStatusRef.get()).data()?.totalUsers || 0;
+        const newUserCount = userCount + 1;
+        
+        let premiumDurationMonths: number;
+        if (newUserCount <= 1000000) {
+            premiumDurationMonths = 2; // 2 months for the first million
+        } else {
+            premiumDurationMonths = 1; // 1 month for everyone else
+        }
+
+        const premiumUntil = new Date();
+        premiumUntil.setMonth(premiumUntil.getMonth() + premiumDurationMonths);
+
+        const batch = db.batch();
+        
+        // Update user profile with premium status
+        batch.set(userRef, {
+            isPremium: true,
+            premiumUntil: premiumUntil,
+            // also ensure other fields are set on creation
+            uid: user.uid,
+            email: user.email,
+            name: user.displayName || 'New User',
+            username: user.email?.split('@')[0] || `user${user.uid.slice(0, 5)}`,
+            createdAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+
+        // Update the global user count
+        batch.set(appStatusRef, { totalUsers: FieldValue.increment(1) }, { merge: true });
+
+        await batch.commit();
+        logger.info(`User ${user.uid} created. Granted ${premiumDurationMonths} months premium. Total users: ${newUserCount}`);
+
+    } catch (error) {
+        logger.error(`Error processing new user ${user.uid}:`, error);
+    }
+});
+
 
 /**
  * A generic function to send notifications.
