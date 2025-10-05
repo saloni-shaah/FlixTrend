@@ -16,8 +16,8 @@ const INITIAL_LIVES = 3;
 const BRICK_COLORS = ['#FF3CAC', '#BF00FF', '#00F0FF', '#39FF14', '#FFB400'];
 
 const levelLayouts = [
-  // Level 1: Solid Wall
-  Array(BRICK_ROW_COUNT).fill(0).map(() => Array(BRICK_COLUMN_COUNT).fill({ status: 1 })),
+  // Level 1: Solid Wall with varied colors
+  Array(BRICK_ROW_COUNT).fill(0).map((_, r) => Array(BRICK_COLUMN_COUNT).fill(0).map((_, c) => ({ status: 1, color: BRICK_COLORS[(r + c) % BRICK_COLORS.length] }))),
   // Level 2: Pyramid
   [
     [0,0,0,0,1,1,0,0,0,0],
@@ -25,10 +25,10 @@ const levelLayouts = [
     [0,0,1,1,1,1,1,1,0,0],
     [0,1,1,1,1,1,1,1,1,0],
     [1,1,1,1,1,1,1,1,1,1],
-  ].map(row => row.map(cell => ({ status: cell }))),
+  ].map((row, r) => row.map(cell => ({ status: cell, color: BRICK_COLORS[r % BRICK_COLORS.length] }))),
   // Level 3: Checkered
   Array(BRICK_ROW_COUNT).fill(0).map((_, r) => 
-    Array(BRICK_COLUMN_COUNT).fill(0).map((_, c) => ({ status: (r + c) % 2 }))
+    Array(BRICK_COLUMN_COUNT).fill(0).map((_, c) => ({ status: (r + c) % 2, color: BRICK_COLORS[c % BRICK_COLORS.length] }))
   )
 ];
 
@@ -43,7 +43,7 @@ export function BrickBreaker() {
     // Use refs for state that changes every frame to avoid re-renders
     const ballRef = useRef({ x: 0, y: 0, dx: 4, dy: -4 });
     const paddleRef = useRef({ x: 0 });
-    const bricksRef = useRef(levelLayouts[level]);
+    const bricksRef = useRef(JSON.parse(JSON.stringify(levelLayouts[level])));
 
     const resetBallAndPaddle = useCallback(() => {
         const canvas = canvasRef.current;
@@ -53,7 +53,7 @@ export function BrickBreaker() {
     }, []);
 
     const resetLevel = useCallback((levelIndex: number) => {
-        bricksRef.current = levelLayouts[levelIndex].map(row => row.map(cell => ({...cell})));
+        bricksRef.current = JSON.parse(JSON.stringify(levelLayouts[levelIndex]));
         setLevel(levelIndex);
         setLives(INITIAL_LIVES);
         setScore(0);
@@ -79,8 +79,8 @@ export function BrickBreaker() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
             // Draw Bricks
-            bricksRef.current.forEach((row, r) => {
-                row.forEach((brick, c) => {
+            bricksRef.current.forEach((row: any[], r: number) => {
+                row.forEach((brick: { status: number; color: string }, c: number) => {
                     if (brick.status === 1) {
                         const brickX = c * (canvas.width / BRICK_COLUMN_COUNT);
                         const brickY = r * 30 + 30;
@@ -89,7 +89,7 @@ export function BrickBreaker() {
                         
                         ctx.beginPath();
                         ctx.rect(brickX + 2, brickY + 2, brickWidth - 4, brickHeight - 4);
-                        ctx.fillStyle = BRICK_COLORS[r % BRICK_COLORS.length];
+                        ctx.fillStyle = brick.color || BRICK_COLORS[r % BRICK_COLORS.length];
                         ctx.fill();
                         ctx.closePath();
                     }
@@ -123,8 +123,8 @@ export function BrickBreaker() {
             const bricks = bricksRef.current;
 
             // Collision Detection
-            bricks.forEach((row, r) => {
-                row.forEach((brick, c) => {
+            bricks.forEach((row: any[], r: number) => {
+                row.forEach((brick: { status: number; }, c: number) => {
                     if (brick.status === 1) {
                         const brickX = c * (canvas.width / BRICK_COLUMN_COUNT);
                         const brickY = r * 30 + 30;
@@ -156,6 +156,10 @@ export function BrickBreaker() {
             }
             if (ball.y < BALL_RADIUS) {
                 ball.dy = -ball.dy;
+                // FIX: Prevent ball getting stuck at top
+                if (Math.abs(ball.dy) < 1) {
+                    ball.dy = 2;
+                }
             } else if (ball.y > canvas.height - PADDLE_HEIGHT - 10 - BALL_RADIUS) {
                 if (ball.x > paddle.x && ball.x < paddle.x + PADDLE_WIDTH) {
                     ball.dy = -ball.dy;
@@ -173,7 +177,7 @@ export function BrickBreaker() {
                 }
             }
 
-            if (bricks.every(row => row.every(brick => brick.status === 0))) {
+            if (bricks.every((row: any[]) => row.every(brick => brick.status === 0))) {
                 setGameState('won');
             }
         };
@@ -191,7 +195,7 @@ export function BrickBreaker() {
         return () => {
             cancelAnimationFrame(animationFrameId);
         };
-    }, [gameState, resetBallAndPaddle, highScore]); // Only depends on gameState now
+    }, [gameState, resetBallAndPaddle, highScore]);
 
     const handleMouseMove = useCallback((e: React.MouseEvent) => {
         const canvas = canvasRef.current;
@@ -212,7 +216,8 @@ export function BrickBreaker() {
         }
     }, []);
     
-    const startGame = () => {
+    const startGame = (e: React.MouseEvent | React.TouchEvent) => {
+        e.stopPropagation();
         if (gameState === 'start' || gameState === 'paused') {
             setGameState('playing');
         }
@@ -246,8 +251,6 @@ export function BrickBreaker() {
                     className="w-full h-full"
                     onMouseMove={handleMouseMove}
                     onTouchMove={handleTouchMove}
-                    onClick={startGame}
-                    onTouchStart={startGame}
                 />
                  <AnimatePresence>
                 {(gameState !== 'playing') && (
