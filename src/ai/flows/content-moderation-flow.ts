@@ -8,8 +8,26 @@ import { ai, SafetyPolicy } from '@/ai/ai';
 import { z } from 'zod';
 
 const postCategories = [
-    "Music", "Fashion", "Comedy", "Tech", "Gaming", "Art", "Travel", "Food", 
-    "Education", "Lifestyle", "Sports", "News", "DIY", "Science", "Movies", "Other"
+    "Art", "Animation", "Illustration", "Photography", "Digital Art", "Street Art",
+    "Music", "Pop", "Rock", "Hip-Hop", "Electronic", "Classical", "Live Music", "Music Production",
+    "Fashion", "Streetwear", "Haute Couture", "DIY Fashion", "Thrifting", "Beauty", "Makeup", "Skincare",
+    "Comedy", "Stand-up", "Sketches", "Memes", "Satire",
+    "Tech", "Gadgets", "Software Development", "Startups", "AI", "Cybersecurity", "Gaming Hardware",
+    "Gaming", "PC Gaming", "Console Gaming", "Mobile Gaming", "Esports", "Indie Games", "Livestreaming",
+    "Travel", "Adventure Travel", "Budget Travel", "City Guides", "Nature",
+    "Food", "Cooking", "Baking", "Restaurant Reviews", "Street Food", "Healthy Eating",
+    "Education", "Science", "History", "Mathematics", "Languages", "Coding Tutorials",
+    "Lifestyle", "Vlogging", "Motivation", "Health & Wellness", "Fitness", "Yoga", "Mental Health",
+    "Sports", "Football", "Basketball", "Cricket", "Skateboarding", "Surfing", "Extreme Sports",
+    "News", "Current Events", "Politics", "Tech News", "World News",
+    "DIY", "Home Improvement", "Crafts", "Woodworking", "3D Printing",
+    "Movies & TV", "Film Reviews", "TV Show Analysis", "Fan Theories", "Behind the Scenes",
+    "Automotive", "Car Reviews", "Motorsports", "Custom Cars", "EVs",
+    "Business", "Entrepreneurship", "Marketing", "Finance", "Investing",
+    "Literature", "Book Reviews", "Poetry", "Creative Writing",
+    "Dance", "Hip-Hop Dance", "Ballet", "Contemporary Dance", "Dance Tutorials",
+    "Animals & Pets", "Cute Animals", "Pet Care", "Wildlife",
+    "Other"
 ] as const;
 
 const ContentModerationInputSchema = z.object({
@@ -17,7 +35,6 @@ const ContentModerationInputSchema = z.object({
   media: z.array(z.object({ url: z.string() })).optional().describe("An array of media items (images, videos) as data URIs. This is currently ignored."),
 });
 
-// DEFINITIVE FIX: Added 'category' field to the output schema.
 const ContentModerationOutputSchema = z.object({
     analysis: z.string().describe("Your step-by-step reasoning for the safety decision. First, state if any rule is violated and why. If not, state that the content is compliant."),
     decision: z.enum(['approve', 'deny']).describe("Based ONLY on your analysis, decide whether to approve or deny. If your analysis found no clear violation, you MUST approve."),
@@ -25,7 +42,6 @@ const ContentModerationOutputSchema = z.object({
     category: z.enum(postCategories).describe("The single best category for the post from the provided list. Base this on the main topic of the text content. Avoid using 'Other' unless no other category is remotely suitable."),
 });
 
-// DEFINITIVE FIX: Updated prompt to handle both moderation and categorization.
 const moderationPrompt = `You are an expert content classifier and a fair and balanced content moderator for a Gen-Z social media app called FlixTrend.
 Your goal is to keep the platform safe while allowing for creative expression. You will ONLY analyze the text content provided.
 
