@@ -26,16 +26,17 @@ type Feedback = { text: string; color: string, ballPath?: { x: number, y: number
 
 const Bat = ({ swinging }: { swinging: boolean }) => (
     <motion.g
-        transform={`translate(${PITCH_WIDTH / 2 - BAT_WIDTH / 2}, ${PITCH_HEIGHT - BAT_HEIGHT - 25})`}
+        // The bat is now positioned relative to the batsman's hands.
+        transform="translate(5, 8)" 
         animate={{ rotate: swinging ? [-20, 80, -20] : -20 }}
         transition={{ duration: 0.25, ease: "easeInOut" }}
-        style={{ originX: `${BAT_WIDTH / 2}px`, originY: `${BAT_HEIGHT}px` }}
+        // The origin of rotation is the handle of the bat.
+        style={{ originX: `10px`, originY: `70px` }} 
     >
-        {/* Bat shape */}
         <path d={`M0,0 L${BAT_WIDTH},0 L${BAT_WIDTH},${BAT_HEIGHT - 20} Q${BAT_WIDTH / 2},${BAT_HEIGHT} 0,${BAT_HEIGHT - 20} Z`} fill="#D2B48C" stroke="#8B4513" strokeWidth="2" />
-        <rect x={BAT_WIDTH/2 - 2} y={-20} width="4" height="20" fill="#8B4513" />
     </motion.g>
 );
+
 
 const Stumps = ({ y }: { y: number }) => (
     <g transform={`translate(${PITCH_WIDTH/2 - 10}, ${y})`}>
@@ -53,8 +54,6 @@ export function CricketChallenge() {
     const [score, setScore] = useState(0);
     const [highScore, setHighScore] = useState(0);
     const [ballsLeft, setBallsLeft] = useState(6);
-    
-    // Ball's visual position is now state to force re-renders
     const [ballPosition, setBallPosition] = useState({ x: PITCH_WIDTH / 2, y: BALL_START_Y });
 
     const batSwingingRef = useRef(false);
@@ -133,7 +132,7 @@ export function CricketChallenge() {
         if (lastTimeRef.current === 0) {
             lastTimeRef.current = timestamp;
         }
-        const deltaTime = (timestamp - lastTimeRef.current) / 1000; // time in seconds
+        const deltaTime = (timestamp - lastTimeRef.current) / 1000;
         
         if (gameState === 'ballInPlay') {
             setBallPosition(prevPos => {
@@ -141,7 +140,7 @@ export function CricketChallenge() {
                 if (newY > PITCH_HEIGHT) {
                     feedbackRef.current = { text: "Missed!", color: "text-red-500" };
                     setGameState('paused');
-                    return prevPos; // Stop moving
+                    return prevPos;
                 }
                 return { ...prevPos, y: newY };
             });
@@ -190,34 +189,28 @@ export function CricketChallenge() {
                 onClick={handleSwing}
             >
                 <svg width="100%" height="100%" viewBox={`0 0 ${PITCH_WIDTH} ${PITCH_HEIGHT}`}>
-                    {/* Field markings */}
                     <ellipse cx={PITCH_WIDTH/2} cy={PITCH_HEIGHT/2} rx={PITCH_WIDTH/2 - 10} ry={PITCH_HEIGHT/2 - 10} fill="#4C9A2A" />
                     <rect x={PITCH_WIDTH/2 - 40} y={0} width="80" height={PITCH_HEIGHT} fill="#A0522D" opacity="0.3" />
                     <rect x={PITCH_WIDTH/2 - 2} y="50" width="4" height={PITCH_HEIGHT - 100} fill="white" opacity="0.4" />
                     
-                    {/* Stumps */}
                     <Stumps y={45} />
                     <Stumps y={PITCH_HEIGHT - 65} />
 
-                    {/* Bowler */}
                     <g transform={`translate(${PITCH_WIDTH/2 - 10}, 20)`}>
                         <circle cx="10" cy="10" r="8" fill="#FFADAD" />
                         <rect x="5" y="18" width="10" height="25" fill="#FFADAD" />
                     </g>
                     
-                    {/* Batsman */}
-                    <g transform={`translate(${PITCH_WIDTH/2 - 15}, ${PITCH_HEIGHT - 65})`}>
+                    <g transform={`translate(${PITCH_WIDTH/2 - 15}, ${PITCH_HEIGHT - 60})`}>
                         <circle cx="10" cy="-25" r="8" fill="#F8F7F8" />
                         <rect x="5" y="-17" width="10" height="25" fill="#F8F7F8" />
                         <rect x="0" y="8" width="20" height="4" fill="#F8F7F8" />
                         <rect x="3" y="12" width="5" height="15" fill="#F8F7F8" />
                         <rect x="12" y="12" width="5" height="15" fill="#F8F7F8" />
+                        <Bat swinging={batSwingingRef.current} />
                     </g>
-
-                    <Bat swinging={batSwingingRef.current} />
                 </svg>
 
-                {/* Visible Ball */}
                 <motion.div
                     className="absolute w-4 h-4 bg-white rounded-full shadow-lg"
                     animate={{ 
@@ -227,7 +220,6 @@ export function CricketChallenge() {
                     transition={{ duration: 0, ease: 'linear' }}
                 />
 
-                {/* Hit Ball Animation */}
                 {feedbackRef.current?.ballPath && gameState === 'paused' && (
                     <motion.div
                         className="absolute w-5 h-5 bg-white rounded-full shadow-lg z-20"
