@@ -102,6 +102,43 @@
         }
       },
       "required": ["uid", "email", "username", "name", "createdAt"]
+    },
+    "AdCampaign": {
+      "title": "Ad Campaign",
+      "description": "Represents an advertising campaign created by a business user.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Name of the ad campaign." },
+        "advertiserId": { "type": "string", "description": "The UID of the business user who created the campaign." },
+        "status": { "type": "string", "enum": ["draft", "active", "paused", "completed"], "description": "The current status of the campaign." },
+        "budget": { "type": "number", "description": "Total budget for the campaign in INR." },
+        "biddingStrategy": { "type": "string", "enum": ["cpc", "cpm", "cpv"], "description": "Cost-Per-Click, Cost-Per-Mille, or Cost-Per-View." },
+        "placements": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["vibes_feed", "flashes", "scope", "games", "almighty"] },
+          "description": "Where the ads for this campaign will be shown."
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "startDate": { "type": "string", "format": "date-time" },
+        "endDate": { "type": "string", "format": "date-time", "description": "Optional end date for the campaign." }
+      },
+      "required": ["name", "advertiserId", "status", "budget", "biddingStrategy", "placements"]
+    },
+    "AdCreative": {
+      "title": "Ad Creative",
+      "description": "Represents the actual visual content of an ad.",
+      "type": "object",
+      "properties": {
+        "campaignId": { "type": "string", "description": "The ID of the campaign this creative belongs to." },
+        "type": { "type": "string", "enum": ["image", "video"], "description": "The type of media." },
+        "mediaUrl": { "type": "string", "format": "uri", "description": "URL of the ad's image or video." },
+        "headline": { "type": "string", "description": "The main headline for the ad." },
+        "body": { "type": "string", "description": "The body text for the ad." },
+        "callToAction": { "type": "string", "description": "The call-to-action button text (e.g., 'Learn More')." },
+        "callToActionUrl": { "type": "string", "format": "uri", "description": "The URL the user is taken to upon clicking the ad." },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["campaignId", "type", "mediaUrl", "headline", "callToAction", "callToActionUrl"]
     }
   },
   "auth": {
@@ -117,6 +154,14 @@
     "/users/{userId}": {
       "schema": { "$ref": "#/entities/UserProfile" },
       "description": "Stores all user profile documents."
+    },
+    "/adCampaigns/{campaignId}": {
+      "schema": { "$ref": "#/entities/AdCampaign" },
+      "description": "Stores all ad campaign configurations."
+    },
+    "/adCampaigns/{campaignId}/creatives/{creativeId}": {
+      "schema": { "$ref": "#/entities/AdCreative" },
+      "description": "Stores the ad creatives for a specific campaign."
     }
   }
 }
