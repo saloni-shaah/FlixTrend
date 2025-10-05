@@ -243,7 +243,7 @@ export const onCallCreated = functions.firestore
                 },
                 payload: {
                     aps: {
-                        sound: 'default', // Using a default sound, can be a custom file like 'ringtone.caf'
+                        sound: 'ringtone.mp3', // Using our custom ringtone
                         'content-available': 1, // To wake up the app
                     },
                 },
@@ -252,7 +252,7 @@ export const onCallCreated = functions.firestore
             android: {
                 priority: 'high',
                 notification: {
-                    sound: 'default', // Can be 'ringtone' if you have a ringtone.mp3 asset
+                    sound: 'ringtone', // Can be 'ringtone' if you have a ringtone.mp3 asset
                     channel_id: 'incoming_calls', // Requires a Notification Channel on the client
                 },
             },
