@@ -22,7 +22,6 @@ import { Send, Bot, User, UploadCloud, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   getAlmightyResponse,
-  remixImageAction,
   generateImageAction,
 } from '@/app/actions';
 import './Chat.css';
@@ -70,10 +69,7 @@ export function Chat() {
   const [newMessage, setNewMessage] = useState('');
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isAlmightyLoading, setIsAlmightyLoading] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
@@ -114,17 +110,6 @@ export function Chat() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isAlmightyLoading]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      if (file.type.startsWith('image/')) {
-        setImageFile(file);
-        setImagePreview(URL.createObjectURL(file));
-      } else {
-        alert('Only image files are supported for remixing.');
-      }
-    }
-  };
 
   /**
    * Client-side function to check usage limits before calling a server action.
@@ -183,15 +168,10 @@ export function Chat() {
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if ((!newMessage.trim() && !imageFile) || !currentUser) return;
+    if (!newMessage.trim() || !currentUser) return;
 
     const textToSend = newMessage;
-    const fileToSend = imageFile;
-
     setNewMessage('');
-    setImageFile(null);
-    setImagePreview(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
     
     if (messages.length === 1 && messages[0].id === 'initial') {
         setMessages([]);
@@ -202,7 +182,7 @@ export function Chat() {
     const imagePromptMatch = textToSend.toLowerCase().match(/^(?:imagine|generate an image of)\s+(.*)/);
     
     // --- TEXT TO IMAGE GENERATION ---
-    if (imagePromptMatch && imagePromptMatch[1] && !fileToSend) {
+    if (imagePromptMatch && imagePromptMatch[1]) {
         const usageCheck = await checkAndIncrementUsage(currentUser.uid, 'image');
         if (!usageCheck.allowed) {
             await addDoc(collection(db, 'chats', chatId, 'messages'), { sender: 'almighty-bot', text: usageCheck.message, createdAt: serverTimestamp(), type: 'text' });
@@ -221,31 +201,6 @@ export function Chat() {
             }
         } catch (error: any) {
              await addDoc(collection(db, 'chats', chatId, 'messages'), { sender: 'almighty-bot', text: `Sorry, I hit a snag: ${error.message}`, createdAt: serverTimestamp(), type: 'text' });
-        } finally {
-            setIsAlmightyLoading(false);
-        }
-    
-    // --- IMAGE REMIXING ---
-    } else if (fileToSend) {
-        const usageCheck = await checkAndIncrementUsage(currentUser.uid, 'image');
-        if (!usageCheck.allowed) {
-            await addDoc(collection(db, 'chats', chatId, 'messages'), { sender: 'almighty-bot', text: usageCheck.message, createdAt: serverTimestamp(), type: 'text' });
-            return;
-        }
-        
-        setIsAlmightyLoading(true);
-        try {
-            const photoDataUri = await fileToDataUri(fileToSend);
-            await addDoc(collection(db, 'chats', chatId, 'messages'), { sender: currentUser.uid, text: textToSend, imageUrl: photoDataUri, createdAt: serverTimestamp(), type: 'image' });
-
-            const remixResponse = await remixImageAction({ photoDataUri, prompt: textToSend, userId: currentUser.uid });
-            if (remixResponse.success?.remixedPhotoDataUri) {
-                await addDoc(collection(db, 'chats', chatId, 'messages'), { sender: 'almighty-bot', text: 'Here is your remixed image!', imageUrl: remixResponse.success.remixedPhotoDataUri, createdAt: serverTimestamp(), type: 'image' });
-            } else {
-                throw new Error(remixResponse.failure || "The AI couldn't remix the image.");
-            }
-        } catch (error: any) {
-            await addDoc(collection(db, 'chats', chatId, 'messages'), { sender: 'almighty-bot', text: `Sorry, I hit a snag while remixing: ${error.message}`, createdAt: serverTimestamp(), type: 'text' });
         } finally {
             setIsAlmightyLoading(false);
         }
@@ -345,56 +300,18 @@ export function Chat() {
         <div ref={messagesEndRef} />
       </div>
       <form onSubmit={handleSend} className="chat-input-form flex-col">
-        {imagePreview && (
-          <div className="relative w-24 h-24 mb-2">
-            <img
-              src={imagePreview}
-              alt="upload preview"
-              className="w-full h-full object-cover rounded-lg"
-            />
-            <button
-              type="button"
-              onClick={() => {
-                setImageFile(null);
-                setImagePreview(null);
-                if (fileInputRef.current) fileInputRef.current.value = '';
-              }}
-              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
-            >
-              <X size={16} />
-            </button>
-          </div>
-        )}
         <div className="flex w-full gap-2 items-center">
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            className="hidden"
-            accept="image/*"
-          />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="chat-send-button !bg-gray-600"
-          >
-            <UploadCloud />
-          </button>
           <input
             type="text"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            placeholder={
-              imageFile
-                ? 'Add a prompt to remix your image...'
-                : 'Ask or `imagine an astronaut...`'
-            }
+            placeholder='Ask or `imagine an astronaut...`'
             className="chat-input"
           />
           <button
             type="submit"
             className="chat-send-button"
-            disabled={(!newMessage.trim() && !imageFile) || isAlmightyLoading}
+            disabled={!newMessage.trim() || isAlmightyLoading}
           >
             <Send />
           </button>
