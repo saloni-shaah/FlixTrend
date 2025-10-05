@@ -1,11 +1,14 @@
+
 "use client";
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ProductCard } from '@/components/store/ProductCard';
 import { CheckoutForm } from '@/components/store/CheckoutForm';
 import { ShoppingBag, Loader } from 'lucide-react';
-import productsData from '@/lib/products.json';
+import { getFirestore, collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { app } from '@/utils/firebaseClient';
 
+const db = getFirestore(app);
 
 export default function StorePage() {
     const [products, setProducts] = useState<any[]>([]);
@@ -14,8 +17,15 @@ export default function StorePage() {
     const [orderComplete, setOrderComplete] = useState(false);
 
     useEffect(() => {
-        setProducts(productsData);
-        setLoading(false);
+        const q = query(collection(db, "products"), orderBy("createdAt", "desc"));
+        const unsub = onSnapshot(q, (snapshot) => {
+            setProducts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            setLoading(false);
+        }, (error) => {
+            console.error("Error fetching products:", error);
+            setLoading(false);
+        });
+        return () => unsub();
     }, []);
 
     const handleSelectProduct = (product: any) => {
@@ -75,6 +85,11 @@ export default function StorePage() {
                         {loading ? (
                             <div className="flex justify-center items-center h-64">
                                 <Loader className="animate-spin text-accent-cyan" size={48} />
+                            </div>
+                        ) : products.length === 0 ? (
+                            <div className="text-center text-gray-400">
+                                <p className="text-lg">The store is currently empty.</p>
+                                <p className="text-sm">Check back soon for exclusive merch!</p>
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">

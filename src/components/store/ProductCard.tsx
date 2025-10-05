@@ -1,3 +1,4 @@
+
 "use client";
 import React from 'react';
 import { motion } from 'framer-motion';
@@ -15,7 +16,7 @@ export function ProductCard({ product, onBuyNow }: { product: any, onBuyNow: (pr
                 <h3 className="font-bold text-lg text-accent-cyan truncate">{product.name}</h3>
                 <p className="text-sm text-gray-400 mb-2 flex-1">{product.category}</p>
                 <div className="flex justify-between items-center mt-4">
-                    <span className="text-xl font-bold text-white">₹{product.price.toLocaleString('en-IN')}</span>
+                    <span className="text-xl font-bold text-white">₹{product.price?.toLocaleString('en-IN') || '0.00'}</span>
                     <button 
                         onClick={() => onBuyNow(product)}
                         className="btn-glass bg-accent-pink text-white text-sm"

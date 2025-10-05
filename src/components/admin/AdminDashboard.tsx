@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useState, useRef, useEffect } from 'react';
 import { getFirestore, collection, query, where, getDocs, doc, updateDoc, setDoc, getDoc, addDoc, serverTimestamp, onSnapshot, deleteDoc } from 'firebase/firestore';
@@ -51,12 +52,23 @@ function AddProductForm() {
             const imageUrl = await getDownloadURL(snapshot.ref);
 
             // 2. Add product document to Firestore
-            await addDoc(collection(db, 'products'), {
+            const productData = {
                 ...product,
                 price: parseFloat(product.price),
                 imageUrl: imageUrl,
                 createdAt: serverTimestamp()
+            };
+            await addDoc(collection(db, 'products'), productData)
+            .catch(serverError => {
+                const permissionError = new FirestorePermissionError({
+                    path: 'products',
+                    operation: 'create',
+                    requestResourceData: productData,
+                });
+                errorEmitter.emit('permission-error', permissionError);
+                throw serverError; // Rethrow to be caught by outer catch
             });
+
 
             alert(`${product.name} has been added to the store!`);
             // Reset form
@@ -66,13 +78,9 @@ function AddProductForm() {
             if(fileInputRef.current) fileInputRef.current.value = "";
 
         } catch (error: any) {
-             const permissionError = new FirestorePermissionError({
-              path: 'products',
-              operation: 'create',
-              requestResourceData: product,
-            });
-            errorEmitter.emit('permission-error', permissionError);
-            setFormError(`Failed to add product: ${error.message}`);
+            if (!error.message.includes('permission-denied')) {
+                setFormError(`Failed to add product: ${error.message}`);
+            }
         } finally {
             setIsUploading(false);
         }
@@ -117,6 +125,11 @@ function ManageProducts() {
             setProducts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
             setLoading(false);
         }, (err) => {
+             const permissionError = new FirestorePermissionError({
+              path: 'products',
+              operation: 'list',
+            });
+            errorEmitter.emit('permission-error', permissionError);
             setError("Failed to load products. Check permissions.");
             setLoading(false);
         });
@@ -143,7 +156,9 @@ function ManageProducts() {
               operation: 'delete',
             });
             errorEmitter.emit('permission-error', permissionError);
-            alert(`Failed to remove product: ${err.message}`);
+            if (!err.message.includes('permission-denied')) {
+                alert(`Failed to remove product: ${err.message}`);
+            }
         }
     };
     
