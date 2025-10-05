@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { RotateCcw, Trophy, Heart } from 'lucide-react';
 
 // --- GAME CONFIGURATION ---
@@ -291,4 +291,3 @@ export function BrickBreaker() {
         </motion.div>
     );
 }
-
