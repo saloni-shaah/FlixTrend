@@ -22,7 +22,7 @@ const ContentModerationOutputSchema = z.object({
     analysis: z.string().describe("Your step-by-step reasoning for the safety decision. First, state if any rule is violated and why. If not, state that the content is compliant."),
     decision: z.enum(['approve', 'deny']).describe("Based ONLY on your analysis, decide whether to approve or deny. If your analysis found no clear violation, you MUST approve."),
     reason: z.string().describe("A brief, user-friendly explanation for the decision. If approved, say 'Content approved!'. If denied, explain the violation simply."),
-    category: z.enum(postCategories).describe("The single best category for the post from the provided list. Base this on the main topic of the text content."),
+    category: z.enum(postCategories).describe("The single best category for the post from the provided list. Base this on the main topic of the text content. Avoid using 'Other' unless no other category is remotely suitable."),
 });
 
 // DEFINITIVE FIX: Updated prompt to handle both moderation and categorization.
@@ -42,7 +42,7 @@ Based ONLY on your analysis from Step 1, make your 'decision'.
 - If your analysis concluded "Content is compliant", you MUST decide 'approve'.
 
 **Step 3: Categorization**
-Analyze the text content and assign it to the single most relevant category from the list below. In the 'category' field, provide only the category name.
+Analyze the text content and assign it to the single most relevant category from the list below. In the 'category' field, provide only the category name. Avoid the 'Other' category unless the content has no discernible topic.
 Categories: ${postCategories.join(', ')}
 
 **Rules (Deny content ONLY for clear and severe violations of the TEXT):**

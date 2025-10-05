@@ -319,20 +319,14 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
     if (!mediaUrls || mediaUrls.length === 0) return null;
 
     const handleMediaClick = () => {
-        // Simple logic: if it's a video, check its aspect ratio to decide which player to open.
-        // This simulates a more complex logic that might exist. For now, we'll assume portrait videos go to shorts.
-        // A real implementation would check video metadata.
         const firstVideoUrl = mediaUrls.find(url => url.includes('.mp4') || url.includes('.webm'));
         if (firstVideoUrl) {
-            // This is a proxy for checking aspect ratio. Let's assume most vertical videos are for shorts.
-            // For now, we'll arbitrarily decide based on a fake property. A real app would get metadata.
             if(post.isPortrait) {
                  setShowPlayer('short');
             } else {
                  setShowPlayer('long');
             }
         } else {
-            // For images, we can use a simpler fullscreen toggle.
             setIsFullScreen(true);
         }
     };
