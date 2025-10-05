@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -6,7 +5,7 @@ import { ArrowRight, ArrowLeft, Building, User, Mail, Briefcase, Target, CheckCi
 import Link from "next/link";
 import { auth, db } from "@/utils/firebaseClient";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { doc, setDoc, getDoc, serverTimestamp, onSnapshot } from "firebase/firestore";
+import { doc, setDoc, getDoc, serverTimestamp, onSnapshot, updateDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { VibeSpaceLoader } from "@/components/VibeSpaceLoader";
@@ -293,10 +292,10 @@ const AdStudioUpgradePage = ({ user }: { user: any }) => {
 
         try {
             const userDocRef = doc(db, "users", user.uid);
-            await setDoc(userDocRef, {
+            await updateDoc(userDocRef, {
                 accountType: 'business',
                 businessProfile: formData
-            }, { merge: true });
+            });
 
             router.push('/ad-studio');
 
@@ -423,7 +422,3 @@ export default function AdStudioPage() {
 
     return <AdStudioSignupPage />;
 };
-
-    
-
-    

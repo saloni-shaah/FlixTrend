@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useState, useRef, useEffect } from 'react';
 import { getFirestore, collection, query, where, getDocs, doc, updateDoc, setDoc, getDoc, addDoc, serverTimestamp, onSnapshot, deleteDoc } from 'firebase/firestore';
@@ -287,5 +286,3 @@ export default function AdminDashboard({ userProfile, onLogout }: { userProfile:
         </div>
     )
 }
-
-    
