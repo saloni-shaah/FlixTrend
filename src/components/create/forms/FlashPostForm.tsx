@@ -1,12 +1,11 @@
 
 "use client";
 import React, { useState, useRef, useEffect } from 'react';
-import { X, UploadCloud, Music as MusicIcon, MapPin, Smile, Camera, Image as ImageIcon, Zap } from 'lucide-react';
+import { X, UploadCloud, Music as MusicIcon, MapPin, Smile, Camera, Image as ImageIcon, Zap, Locate } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getFirestore, collection, onSnapshot, query, orderBy, getDoc, doc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { app } from '@/utils/firebaseClient';
-import { remixImageAction } from '@/app/actions';
 import { Wand2, Loader } from 'lucide-react';
 
 
@@ -24,6 +23,7 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
     const [capturedImageDataUrl, setCapturedImageDataUrl] = useState<string | null>(null);
     const [isRemixing, setIsRemixing] = useState(false);
     const [remixError, setRemixError] = useState('');
+    const [isFetchingLocation, setIsFetchingLocation] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -123,35 +123,39 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
         } });
         setShowSongPicker(false);
     };
-    
-    const handleRemix = async (style: string) => {
-      if (!capturedImageDataUrl) return;
-      setIsRemixing(true);
-      setRemixError("");
-      try {
-          const result = await remixImageAction({ photoDataUri: capturedImageDataUrl, prompt: `Convert this image into ${style} style.` });
-          if(result.success) {
-              setCapturedImageDataUrl(result.success.remixedPhotoDataUri);
-          } else {
-              throw new Error(result.failure || "Remix failed.");
-          }
-      } catch (err: any) {
-          setRemixError(err.message);
-      }
-      setIsRemixing(false);
-    };
-    
-    const confirmRemixedImage = () => {
-        if (capturedImageDataUrl) {
-            fetch(capturedImageDataUrl)
-                .then(res => res.blob())
-                .then(blob => {
-                    const file = new File([blob], `remixed-capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
-                    handleFileChange({ target: { files: [file] } } as any);
-                });
+
+     const handleGetLocation = () => {
+        if (navigator.geolocation) {
+            setIsFetchingLocation(true);
+            navigator.geolocation.getCurrentPosition(async (position) => {
+                const { latitude, longitude } = position.coords;
+                try {
+                    // Using a free, public reverse geocoding API
+                    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+                    const locationData = await response.json();
+                    const city = locationData.address.city || locationData.address.town || locationData.address.village;
+                    const country = locationData.address.country;
+                    if(city && country){
+                        onDataChange({ ...data, location: `${city}, ${country}` });
+                    } else {
+                         onDataChange({ ...data, location: 'Unknown Location' });
+                    }
+                } catch (error) {
+                    console.error("Error fetching location name:", error);
+                    onDataChange({ ...data, location: 'Could not fetch name' });
+                } finally {
+                    setIsFetchingLocation(false);
+                }
+            }, (error) => {
+                console.error("Geolocation error:", error);
+                alert("Could not get location. Please enable location services for this site.");
+                setIsFetchingLocation(false);
+            });
+        } else {
+            alert("Geolocation is not supported by this browser.");
         }
     };
-    
+
     if (capturedImageDataUrl) {
         return (
             <div className="flex flex-col items-center gap-4">
@@ -163,17 +167,6 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
                             <Loader className="animate-spin text-accent-purple" size={48} />
                         </div>
                     )}
-                </div>
-                {remixError && <p className="text-red-400 text-sm">{remixError}</p>}
-                <div className="flex flex-wrap gap-2 justify-center">
-                    <button type="button" className="btn-glass text-xs" onClick={() => handleRemix('anime')} disabled={isRemixing}>Anime</button>
-                    <button type="button" className="btn-glass text-xs" onClick={() => handleRemix('cartoon')} disabled={isRemixing}>Cartoon</button>
-                    <button type="button" className="btn-glass text-xs" onClick={() => handleRemix('vintage film')} disabled={isRemixing}>Vintage</button>
-                    <button type="button" className="btn-glass text-xs" onClick={() => handleRemix('neon punk')} disabled={isRemixing}>Neon</button>
-                </div>
-                 <div className="flex w-full justify-between mt-4">
-                    <button type="button" className="text-sm text-gray-400 hover:underline" onClick={() => { setCapturedImageDataUrl(null); setShowCamera(true); }}>Retake</button>
-                    <button type="button" className="btn-glass bg-green-500" onClick={confirmRemixedImage}>Confirm Image</button>
                 </div>
             </div>
         )
@@ -238,6 +231,9 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
              <div className="relative">
                 <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                 <input type="text" name="location" className="w-full rounded-xl p-3 pl-10 bg-black/20 text-white border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink" placeholder="Add location..." value={data.location || ''} onChange={handleTextChange} />
+                 <button type="button" onClick={handleGetLocation} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-accent-cyan" disabled={isFetchingLocation}>
+                    {isFetchingLocation ? <Loader className="animate-spin" size={16} /> : <Locate size={16} />}
+                </button>
             </div>
             <div className="relative">
                 <Smile className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
