@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect } from 'react';
@@ -21,6 +20,7 @@ import { CheckCircle, Award, Mic, Crown, Zap, Rocket, Search, Pin, Phone, Mail, 
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu"
 import { cn } from "@/lib/utils"
 import AdModal from './AdModal';
+import { PlayerModal } from './video/PlayerModal';
 
 
 // START: Copied DropdownMenu components
@@ -95,13 +95,11 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
   const currentUser = auth.currentUser;
   const [pollVotes, setPollVotes] = React.useState<{ [optionIdx: number]: { count: number, voters: string[] } }>({});
   const [userPollVote, setUserPollVote] = React.useState<number | null>(null);
-  const [isPlaying, setIsPlaying] = React.useState(false);
-  const videoRef = React.useRef<HTMLVideoElement>(null);
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const deletePostCallable = httpsCallable(functions, 'deletePost');
   const [isFullScreen, setIsFullScreen] = React.useState(false);
-  const [showAd, setShowAd] = React.useState(false);
-  const [playVideoAfterAd, setPlayVideoAfterAd] = React.useState(false);
+  const [showPlayer, setShowPlayer] = React.useState(false);
+
 
   const handleDoubleClick = () => {
     // Only enable full-screen for single media posts (not relays with media, or multi-image posts)
@@ -180,13 +178,6 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
     
     return () => unsubscribes.forEach(unsub => unsub());
   }, [post.id, currentUser, post.type, post.pollOptions, isSaved]);
-  
-   React.useEffect(() => {
-    if (playVideoAfterAd && videoRef.current) {
-      videoRef.current.play();
-      setPlayVideoAfterAd(false); // Reset the trigger
-    }
-  }, [playVideoAfterAd]);
 
   const handleStar = async () => {
     if (!currentUser) return;
@@ -315,15 +306,6 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
     trackInteraction(currentUser.uid, post.category, 'comment'); // Treat poll vote as a form of comment
   };
   
-  const handlePlayVideo = () => {
-    setShowAd(true);
-  };
-  
-  const onAdComplete = () => {
-    setShowAd(false);
-    setPlayVideoAfterAd(true);
-  };
-  
   React.useEffect(() => {
     if (post.song && post.song.preview_url) {
         const audio = new Audio(post.song.preview_url);
@@ -333,16 +315,6 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
         audioRef.current?.pause();
     }
   }, [post.song]);
-  
-  const toggleSong = () => {
-      if (audioRef.current) {
-          if (audioRef.current.paused) {
-              audioRef.current.play();
-          } else {
-              audioRef.current.pause();
-          }
-      }
-  }
   
   const handleRecommendationFeedback = (type: 'show_more' | 'show_less') => {
       if (!currentUser) return;
@@ -354,19 +326,13 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
     if (!mediaUrls || mediaUrls.length === 0) return null;
 
     const renderMedia = (url: string, isVideo: boolean, isSingle: boolean) => {
-        const videoElement = <OptimizedVideo ref={videoRef} src={url} thumbnailUrl={thumbnailUrl} className="w-full h-full object-cover" controls={playVideoAfterAd}/>;
-
         if (isVideo) {
             return (
-                <div className="relative group w-full h-full cursor-pointer" onClick={playVideoAfterAd ? undefined : handlePlayVideo}>
-                    {playVideoAfterAd ? videoElement : (
-                        <>
-                            <OptimizedImage src={thumbnailUrl || '/video_placeholder.png'} alt="Video thumbnail" className="w-full h-full object-cover" />
-                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                                <FaPlay className="text-white text-5xl" />
-                            </div>
-                        </>
-                    )}
+                <div className="relative group w-full h-full cursor-pointer" onClick={() => setShowPlayer(true)}>
+                    <OptimizedImage src={thumbnailUrl || '/video_placeholder.png'} alt="Video thumbnail" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                        <FaPlay className="text-white text-5xl" />
+                    </div>
                     <Watermark isAnimated={true} />
                 </div>
             )
@@ -573,7 +539,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
 
   return (
     <>
-    {showAd && <AdModal onComplete={onAdComplete} />}
+    {showPlayer && <PlayerModal post={post} onClose={() => setShowPlayer(false)} />}
     <motion.div 
       className="glass-card p-5 flex flex-col gap-3 relative animate-fade-in"
       initial={{ opacity: 0, y: 20 }}
