@@ -409,9 +409,9 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
                 {contentPost.mood && <span className="flex items-center gap-1.5"><Smile size={14}/> Feeling {contentPost.mood}</span>}
             </div>
 
-            {contentPost.category && !isShortVibe && (
+            {contentPost.hashtags && contentPost.hashtags.length > 0 && !isShortVibe && (
                 <div className="flex flex-wrap gap-2">
-                    <Link href={`/tags/${contentPost.category}`} key={contentPost.category} className="text-brand-gold font-bold text-sm hover:underline">#{contentPost.category}</Link>
+                    {contentPost.hashtags.map((tag: string) => <Link href={`/tags/${tag}`} key={tag} className="text-brand-gold font-bold text-sm hover:underline">#{tag}</Link>)}
                 </div>
             )}
 
