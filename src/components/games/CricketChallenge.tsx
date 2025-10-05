@@ -7,10 +7,11 @@ import { RotateCcw, Play, Trophy } from 'lucide-react';
 // --- GAME CONFIGURATION ---
 const PITCH_HEIGHT = 450;
 const PITCH_WIDTH = 350;
-const BAT_WIDTH = 15;
+const BAT_WIDTH = 20; // Adjusted for a better bat shape
 const BAT_HEIGHT = 80;
 const BALL_SIZE = 15;
 const SWEET_SPOT_Y = PITCH_HEIGHT - BAT_HEIGHT - 35;
+const BALL_START_Y = 70;
 const BALL_SPEED = 400; // pixels per second
 
 const scoreMap = {
@@ -23,16 +24,43 @@ const scoreMap = {
 type GameState = 'start' | 'playing' | 'ballInPlay' | 'gameOver' | 'paused';
 type Feedback = { text: string; color: string, ballPath?: { x: number, y: number } } | null;
 
+const Bat = ({ swinging }: { swinging: boolean }) => (
+    <motion.g
+        transform={`translate(${PITCH_WIDTH / 2 - BAT_WIDTH / 2 + 10}, ${PITCH_HEIGHT - BAT_HEIGHT - 60})`}
+        animate={{ rotate: swinging ? [-20, 80, -20] : -20 }}
+        transition={{ duration: 0.25, ease: "easeInOut" }}
+        style={{ originX: `${BAT_WIDTH / 2}px`, originY: `${BAT_HEIGHT}px` }}
+    >
+        {/* Bat shape */}
+        <path d={`M0,0 L${BAT_WIDTH},0 L${BAT_WIDTH},${BAT_HEIGHT - 20} Q${BAT_WIDTH / 2},${BAT_HEIGHT} 0,${BAT_HEIGHT - 20} Z`} fill="#D2B48C" stroke="#8B4513" strokeWidth="2" />
+        <rect x={BAT_WIDTH/2 - 2} y={-20} width="4" height="20" fill="#8B4513" />
+    </motion.g>
+);
+
+const Stumps = ({ y }: { y: number }) => (
+    <g transform={`translate(${PITCH_WIDTH/2 - 10}, ${y})`}>
+        <rect x="0" y="0" width="4" height="30" fill="white" />
+        <rect x="8" y="0" width="4" height="30" fill="white" />
+        <rect x="16" y="0" width="4" height="30" fill="white" />
+        <rect x="0" y="-2" width="10" height="3" fill="#B22222" />
+        <rect x="10" y="-2" width="10" height="3" fill="#B22222" />
+    </g>
+);
+
+
 export function CricketChallenge() {
     const [gameState, setGameState] = useState<GameState>('start');
     const [score, setScore] = useState(0);
     const [highScore, setHighScore] = useState(0);
     const [ballsLeft, setBallsLeft] = useState(6);
     
-    const ballRef = useRef({ x: PITCH_WIDTH / 2, y: 70, dx: 0, dy: (BALL_SPEED / 60) });
-    const batRef = useRef({ swinging: false });
+    // Ball's visual position is now state to force re-renders
+    const [ballPosition, setBallPosition] = useState({ x: PITCH_WIDTH / 2, y: BALL_START_Y });
+
+    const batSwingingRef = useRef(false);
     const feedbackRef = useRef<Feedback>(null);
     const animationFrameId = useRef<number>(0);
+    const lastTimeRef = useRef<number>(0);
 
     useEffect(() => {
         const storedHighScore = localStorage.getItem('cricketHighScore');
@@ -42,8 +70,8 @@ export function CricketChallenge() {
     const resetGame = () => {
         setScore(0);
         setBallsLeft(6);
-        ballRef.current = { x: PITCH_WIDTH / 2, y: 70, dx: 0, dy: (BALL_SPEED / 60) };
-        batRef.current.swinging = false;
+        setBallPosition({ x: PITCH_WIDTH / 2, y: BALL_START_Y });
+        batSwingingRef.current = false;
         feedbackRef.current = null;
         setGameState('start');
     };
@@ -57,12 +85,12 @@ export function CricketChallenge() {
     }
 
     const handleSwing = () => {
-        if (gameState !== 'ballInPlay' || batRef.current.swinging) return;
+        if (gameState !== 'ballInPlay' || batSwingingRef.current) return;
 
-        batRef.current.swinging = true;
-        setTimeout(() => { batRef.current.swinging = false; }, 300);
+        batSwingingRef.current = true;
+        setTimeout(() => { batSwingingRef.current = false; }, 300);
 
-        const impactDifference = Math.abs(ballRef.current.y - SWEET_SPOT_Y);
+        const impactDifference = Math.abs(ballPosition.y - SWEET_SPOT_Y);
         let runsScored = 0;
         let currentFeedback: Feedback;
         
@@ -101,20 +129,31 @@ export function CricketChallenge() {
         setGameState('paused'); 
     };
 
-    useEffect(() => {
-        const gameLoop = () => {
-            if (gameState === 'ballInPlay') {
-                ballRef.current.y += ballRef.current.dy;
-                if (ballRef.current.y > PITCH_HEIGHT) {
+    const gameLoop = useCallback((timestamp: number) => {
+        if (lastTimeRef.current === 0) {
+            lastTimeRef.current = timestamp;
+        }
+        const deltaTime = (timestamp - lastTimeRef.current) / 1000; // time in seconds
+        
+        if (gameState === 'ballInPlay') {
+            setBallPosition(prevPos => {
+                const newY = prevPos.y + BALL_SPEED * deltaTime;
+                if (newY > PITCH_HEIGHT) {
                     feedbackRef.current = { text: "Missed!", color: "text-red-500" };
                     setGameState('paused');
+                    return prevPos; // Stop moving
                 }
-            }
-            animationFrameId.current = requestAnimationFrame(gameLoop);
-        };
+                return { ...prevPos, y: newY };
+            });
+        }
+        lastTimeRef.current = timestamp;
+        animationFrameId.current = requestAnimationFrame(gameLoop);
+    }, [gameState]);
+
+    useEffect(() => {
         animationFrameId.current = requestAnimationFrame(gameLoop);
         return () => cancelAnimationFrame(animationFrameId.current);
-    }, [gameState]);
+    }, [gameLoop]);
 
     useEffect(() => {
         if (gameState === 'paused') {
@@ -123,7 +162,7 @@ export function CricketChallenge() {
                     setGameState('gameOver');
                 } else {
                     setBallsLeft(b => b - 1);
-                    ballRef.current = { x: PITCH_WIDTH / 2, y: 70, dx: 0, dy: (BALL_SPEED / 60) };
+                    setBallPosition({ x: PITCH_WIDTH / 2, y: BALL_START_Y });
                     feedbackRef.current = null;
                     setGameState('playing');
                     setTimeout(() => setGameState('ballInPlay'), 500);
@@ -156,8 +195,12 @@ export function CricketChallenge() {
                     <rect x={PITCH_WIDTH/2 - 40} y={0} width="80" height={PITCH_HEIGHT} fill="#A0522D" opacity="0.3" />
                     <rect x={PITCH_WIDTH/2 - 2} y="50" width="4" height={PITCH_HEIGHT - 100} fill="white" opacity="0.4" />
                     
+                    {/* Stumps */}
+                    <Stumps y={45} />
+                    <Stumps y={PITCH_HEIGHT - 65} />
+
                     {/* Bowler */}
-                     <g transform={`translate(${PITCH_WIDTH/2 - 10}, 20)`}>
+                    <g transform={`translate(${PITCH_WIDTH/2 - 10}, 20)`}>
                         <circle cx="10" cy="10" r="8" fill="#FFADAD" />
                         <rect x="5" y="18" width="10" height="25" fill="#FFADAD" />
                     </g>
@@ -171,45 +214,32 @@ export function CricketChallenge() {
                         <rect x="12" y="12" width="5" height="15" fill="#F8F7F8" />
                     </g>
 
-                    {/* Bowling Ball */}
-                    <motion.div
-                        className="absolute w-5 h-5 bg-white rounded-full shadow-lg"
-                        style={{
-                            top: ballRef.current.y - (BALL_SIZE/2),
-                            left: ballRef.current.x - (BALL_SIZE/2),
-                        }}
-                    />
-
-                    {/* Hit Ball Animation */}
-                    {feedbackRef.current?.ballPath && gameState === 'paused' && (
-                        <motion.div
-                            className="absolute w-5 h-5 bg-white rounded-full shadow-lg z-20"
-                            initial={{ x: ballRef.current.x - (BALL_SIZE/2), y: ballRef.current.y - (BALL_SIZE/2) }}
-                            animate={{ 
-                                x: ballRef.current.x + feedbackRef.current.ballPath.x, 
-                                y: ballRef.current.y + feedbackRef.current.ballPath.y, 
-                                opacity: 0 
-                            }}
-                            transition={{ duration: 0.8, ease: "easeOut" }}
-                        />
-                    )}
-                    
-                    {/* Bat Swing Animation */}
-                    <motion.div
-                        className="absolute origin-bottom-right"
-                        style={{
-                            width: BAT_WIDTH,
-                            height: BAT_HEIGHT,
-                            bottom: 80,
-                            left: `calc(50% - ${BAT_WIDTH/2 - 10}px)`,
-                            backgroundColor: '#D2B48C',
-                            borderRadius: '4px',
-                            border: '2px solid #8B4513'
-                        }}
-                        animate={{ rotate: batRef.current.swinging ? [20, -80, 20] : 20 }}
-                        transition={{ duration: 0.2 }}
-                    />
+                    <Bat swinging={batSwingingRef.current} />
                 </svg>
+
+                {/* Visible Ball */}
+                <motion.div
+                    className="absolute w-4 h-4 bg-white rounded-full shadow-lg"
+                    animate={{ 
+                        top: ballPosition.y - (BALL_SIZE/2), 
+                        left: ballPosition.x - (BALL_SIZE/2),
+                    }}
+                    transition={{ duration: 0, ease: 'linear' }}
+                />
+
+                {/* Hit Ball Animation */}
+                {feedbackRef.current?.ballPath && gameState === 'paused' && (
+                    <motion.div
+                        className="absolute w-5 h-5 bg-white rounded-full shadow-lg z-20"
+                        initial={{ x: ballPosition.x - (BALL_SIZE/2), y: ballPosition.y - (BALL_SIZE/2) }}
+                        animate={{ 
+                            x: ballPosition.x + feedbackRef.current.ballPath.x, 
+                            y: ballPosition.y + feedbackRef.current.ballPath.y, 
+                            opacity: 0 
+                        }}
+                        transition={{ duration: 0.8, ease: "easeOut" }}
+                    />
+                )}
             
                 <AnimatePresence>
                 {(gameState === 'start' || gameState === 'gameOver') ? (
