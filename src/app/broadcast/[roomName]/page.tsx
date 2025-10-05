@@ -9,7 +9,7 @@ import '@livekit/components-styles';
 export default function BroadcastPage({ params }: { params: { roomName: string } }) {
   const [user, setUser] = useState(auth.currentUser);
   const [token, setToken] = useState<string | null>(null);
-  const roomName = decodeURIComponent(params.roomName);
+  const roomName = params.roomName ? decodeURIComponent(params.roomName) : '';
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(currentUser => {
@@ -19,7 +19,7 @@ export default function BroadcastPage({ params }: { params: { roomName: string }
   }, []);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !roomName) return;
 
     const fetchToken = async () => {
       try {
