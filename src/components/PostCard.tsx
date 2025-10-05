@@ -16,10 +16,11 @@ import { OptimizedVideo } from './OptimizedVideo';
 import { FlixTrendLogo } from './FlixTrendLogo';
 import { trackInteraction } from '@/vibe-engine/interactionTracker';
 import { savePostForOffline, isPostDownloaded, removeDownloadedPost } from '@/utils/offline-db';
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { getFunctions, httpsCallable } from "firebase/functions";
 import { CheckCircle, Award, Mic, Crown, Zap, Rocket, Search, Pin, Phone, Mail, Folder } from "lucide-react";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu"
 import { cn } from "@/lib/utils"
+import AdModal from './AdModal';
 
 
 // START: Copied DropdownMenu components
@@ -51,7 +52,7 @@ const DropdownMenuItem = React.forwardRef<
   <DropdownMenuPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+      "relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&>svg]:pointer-events-none [&>svg]:size-4 [&>svg]:shrink-0",
       inset && "pl-8",
       className
     )}
@@ -99,6 +100,8 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const deletePostCallable = httpsCallable(functions, 'deletePost');
   const [isFullScreen, setIsFullScreen] = React.useState(false);
+  const [showAd, setShowAd] = React.useState(false);
+  const [playVideoAfterAd, setPlayVideoAfterAd] = React.useState(false);
 
   const handleDoubleClick = () => {
     // Only enable full-screen for single media posts (not relays with media, or multi-image posts)
@@ -177,6 +180,13 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
     
     return () => unsubscribes.forEach(unsub => unsub());
   }, [post.id, currentUser, post.type, post.pollOptions, isSaved]);
+  
+   useEffect(() => {
+    if (playVideoAfterAd && videoRef.current) {
+      videoRef.current.play();
+      setPlayVideoAfterAd(false); // Reset the trigger
+    }
+  }, [playVideoAfterAd]);
 
   const handleStar = async () => {
     if (!currentUser) return;
@@ -295,8 +305,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
       try {
         await deletePostCallable({ postId: post.id });
         // The post will disappear from the feed due to the realtime listener.
-      } catch (error) {
-        console.error("Error deleting post:", error);
+      } catch (error: any) {
         alert(`Failed to delete post: ${(error as any).message}`);
       }
     }
@@ -314,10 +323,12 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
   };
   
   const handlePlayVideo = () => {
-      if (videoRef.current) {
-          setIsPlaying(true);
-          videoRef.current.play();
-      }
+    setShowAd(true);
+  };
+  
+  const onAdComplete = () => {
+    setShowAd(false);
+    setPlayVideoAfterAd(true);
   };
   
   React.useEffect(() => {
@@ -343,16 +354,31 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
   const MediaGrid = ({ mediaUrls, thumbnailUrl }: { mediaUrls: string[]; thumbnailUrl?: string }) => {
     if (!mediaUrls || mediaUrls.length === 0) return null;
 
-    const renderMedia = (url: string, isVideo: boolean, isSingle: boolean) => (
-        <div className="relative group w-full h-full">
-            {isVideo ? (
-                <OptimizedVideo src={url} thumbnailUrl={thumbnailUrl} className="w-full h-full object-cover" />
-            ) : (
+    const renderMedia = (url: string, isVideo: boolean, isSingle: boolean) => {
+        const videoElement = <OptimizedVideo ref={videoRef} src={url} thumbnailUrl={thumbnailUrl} className="w-full h-full object-cover" controls={playVideoAfterAd}/>;
+
+        if (isVideo) {
+            return (
+                <div className="relative group w-full h-full cursor-pointer" onClick={playVideoAfterAd ? undefined : handlePlayVideo}>
+                    {playVideoAfterAd ? videoElement : (
+                        <>
+                            <OptimizedImage src={thumbnailUrl || '/video_placeholder.png'} alt="Video thumbnail" className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                <FaPlay className="text-white text-5xl" />
+                            </div>
+                        </>
+                    )}
+                    <Watermark isAnimated={true} />
+                </div>
+            )
+        }
+        return (
+            <div className="relative group w-full h-full">
                 <OptimizedImage src={url} alt="media" className="w-full h-full object-cover" />
-            )}
-            <Watermark isAnimated={isVideo || isSingle} />
-        </div>
-    );
+                <Watermark isAnimated={isSingle} />
+            </div>
+        );
+    }
     
     if (mediaUrls.length === 1) {
         const url = mediaUrls[0];
@@ -542,6 +568,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
 
   return (
     <>
+    {showAd && <AdModal onComplete={onAdComplete} />}
     <motion.div 
       className="glass-card p-5 flex flex-col gap-3 relative animate-fade-in"
       initial={{ opacity: 0, y: 20 }}
