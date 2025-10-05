@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
@@ -18,7 +19,8 @@ export default function LandingPage() {
       if (user) {
         router.replace('/home');
       } else {
-        setLoading(false);
+        // A slight delay to ensure animation plays, but not too long
+        setTimeout(() => setLoading(false), 500);
       }
     });
     return () => unsubscribe();
@@ -32,10 +34,29 @@ export default function LandingPage() {
             background-color: #111827 !important;
           }
         `}</style>
-        <FlixTrendLogo size={80} />
-        <h1 className="text-3xl font-headline text-accent-cyan font-bold mt-4 animate-glow">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <FlixTrendLogo size={100} />
+        </motion.div>
+        <motion.h1 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="text-4xl font-headline text-accent-cyan font-bold mt-4 text-glow"
+        >
           FlixTrend
-        </h1>
+        </motion.h1>
+         <motion.p 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.6 }}
+          className="text-sm text-gray-400 mt-2 animate-pulse"
+        >
+          Loading your vibe...
+        </motion.p>
       </div>
     );
   }
@@ -227,3 +248,5 @@ function SocialIcon({ icon, href }: { icon: React.ReactNode, href: string }) {
         </a>
     )
 }
+
+    
