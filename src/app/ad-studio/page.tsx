@@ -2,17 +2,30 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, ArrowLeft, Building, User, Mail, Briefcase, Target, CheckCircle, DollarSign } from "lucide-react";
+import { ArrowRight, ArrowLeft, Building, User, Mail, Briefcase, Target, CheckCircle, DollarSign, BarChart, Eye, MousePointerClick } from "lucide-react";
 import Link from "next/link";
 import { auth, db } from "@/utils/firebaseClient";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { doc, setDoc, getDoc, onSnapshot, updateDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, onSnapshot, updateDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { VibeSpaceLoader } from "@/components/VibeSpaceLoader";
 
 const AdStudioDashboard = ({ user, userProfile }: { user: any, userProfile: any }) => {
     const router = useRouter();
+    const [campaigns, setCampaigns] = useState<any[]>([]);
+    const [loadingCampaigns, setLoadingCampaigns] = useState(true);
+
+    useEffect(() => {
+        if (!user) return;
+        const q = query(collection(db, 'adCampaigns'), where('advertiserId', '==', user.uid));
+        const unsub = onSnapshot(q, (querySnapshot) => {
+            const campaignsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setCampaigns(campaignsData);
+            setLoadingCampaigns(false);
+        });
+        return () => unsub();
+    }, [user]);
 
     return (
         <div className="w-full max-w-4xl mx-auto flex flex-col items-center p-4">
@@ -22,7 +35,7 @@ const AdStudioDashboard = ({ user, userProfile }: { user: any, userProfile: any 
             <div className="w-full grid md:grid-cols-2 gap-6 mb-6">
                  <div className="glass-card p-6">
                     <h3 className="text-xl font-bold text-accent-cyan flex items-center gap-2"><DollarSign/> Ad Credits</h3>
-                    <p className="text-4xl font-bold mt-2">₹{userProfile?.credits?.toLocaleString('en-IN') || '800'}</p>
+                    <p className="text-4xl font-bold mt-2">₹{userProfile?.credits?.toLocaleString('en-IN') || '0'}</p>
                     <p className="text-xs text-gray-400">Your remaining ad balance.</p>
                      <button 
                         onClick={() => router.push('/ad-studio/billing')}
@@ -32,15 +45,51 @@ const AdStudioDashboard = ({ user, userProfile }: { user: any, userProfile: any 
                     </button>
                 </div>
                  <div className="glass-card p-6">
-                    <h3 className="text-2xl font-bold text-accent-cyan mb-4">Your Campaigns</h3>
-                    <p className="text-gray-400 mb-6">You don't have any active campaigns yet.</p>
+                    <h3 className="text-2xl font-bold text-accent-cyan mb-4">Launch a Campaign</h3>
+                    <p className="text-gray-400 mb-6">Ready to reach your audience? Create a new ad campaign now.</p>
                     <button 
                         onClick={() => router.push('/ad-studio/create')}
                         className="btn-glass bg-accent-pink text-white"
                     >
-                        Create Your First Ad
+                        Create Ad
                     </button>
                 </div>
+            </div>
+
+            <div className="w-full glass-card p-6">
+                 <h3 className="text-2xl font-bold text-accent-cyan mb-4">Your Campaigns</h3>
+                 {loadingCampaigns ? (
+                     <p className="text-center text-gray-400">Loading campaigns...</p>
+                 ) : campaigns.length === 0 ? (
+                    <p className="text-center text-gray-400">You haven't created any campaigns yet.</p>
+                 ) : (
+                    <div className="space-y-4">
+                        {campaigns.map(campaign => (
+                            <div key={campaign.id} className="bg-black/20 p-4 rounded-lg">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <h4 className="font-bold text-lg">{campaign.name}</h4>
+                                        <span className={`text-xs font-bold px-2 py-1 rounded-full ${campaign.status === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}`}>{campaign.status}</span>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="font-bold text-xl">₹{campaign.budget.toLocaleString('en-IN')}</p>
+                                        <p className="text-xs text-gray-400">Budget</p>
+                                    </div>
+                                </div>
+                                <div className="mt-4 grid grid-cols-2 gap-4 text-center">
+                                    <div className="bg-black/30 p-3 rounded-md">
+                                        <p className="text-2xl font-bold text-accent-cyan flex items-center justify-center gap-2"><Eye/> {campaign.impressions || 0}</p>
+                                        <p className="text-xs text-gray-400">Impressions</p>
+                                    </div>
+                                     <div className="bg-black/30 p-3 rounded-md">
+                                        <p className="text-2xl font-bold text-accent-pink flex items-center justify-center gap-2"><MousePointerClick/> {campaign.clicks || 0}</p>
+                                        <p className="text-xs text-gray-400">Clicks</p>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                 )}
             </div>
         </div>
     )
