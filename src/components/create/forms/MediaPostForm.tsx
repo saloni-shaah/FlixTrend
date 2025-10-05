@@ -10,7 +10,6 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
     // Media files might be populated async, so we sync with the parent `data` prop
     const mediaFiles = data.mediaFiles || [];
 
-    const [showDescription, setShowDescription] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -106,6 +105,14 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
                 onChange={handleTextChange}
             />
 
+             <textarea
+                name="description"
+                placeholder="Add a detailed description (e.g., your video script, story behind the photo, or more info). This helps us feature your content!"
+                className="input-glass w-full rounded-2xl min-h-[120px]"
+                value={data.description || ''}
+                onChange={handleTextChange}
+            />
+
             <div 
                 className={`p-4 border-2 border-dashed rounded-2xl text-center transition-colors duration-300 ${isDragging ? 'border-accent-pink bg-accent-pink/10' : 'border-accent-cyan/30'}`}
                 onDragEnter={handleDragEnter}
@@ -171,20 +178,6 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
                     {data.thumbnailPreview && <img src={data.thumbnailPreview} alt="thumbnail" className="w-32 h-auto rounded-lg mt-2" />}
                 </div>
             )}
-            
-             <div className="mt-2">
-                <button type="button" className="text-sm font-bold text-accent-cyan flex items-center gap-1" onClick={() => setShowDescription(!showDescription)}>
-                    Read Description <ChevronDown className={`transition-transform ${showDescription ? 'rotate-180' : ''}`} size={16} />
-                </button>
-                <motion.div
-                    initial={false}
-                    animate={{ height: showDescription ? 'auto' : 0, opacity: showDescription ? 1 : 0 }}
-                    className="overflow-hidden"
-                >
-                    <textarea name="description" placeholder="Add a detailed description..." className="input-glass rounded-2xl w-full mt-2" value={data.description || ''} onChange={handleTextChange} />
-                </motion.div>
-            </div>
-
         </div>
     );
 }
