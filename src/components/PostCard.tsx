@@ -336,7 +336,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
         if (isVideo) {
             return (
                 <div className="relative group w-full h-full cursor-pointer" onClick={handleMediaClick}>
-                    <OptimizedImage src={effectiveThumbnail} alt="Video thumbnail" className="w-full h-full object-cover" />
+                     <OptimizedImage src={effectiveThumbnail} alt="Video thumbnail" className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                         <FaPlay className="text-white text-5xl" />
                     </div>
@@ -759,3 +759,5 @@ function CommentForm({ postId, postAuthorId, parentId, onCommentPosted, isReply 
     </form>
   )
 }
+
+    

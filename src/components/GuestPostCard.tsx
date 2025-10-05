@@ -121,12 +121,12 @@ export function GuestPostCard({ post }: { post: any }) {
                             const isVideo = url.includes('.mp4') || url.includes('.webm') || url.includes('.ogg');
                             if (isVideo) {
                                 return (
-                                    <div className="relative group w-full cursor-pointer" onClick={playVideoAfterAd ? undefined : handlePlayVideo}>
+                                    <div className="relative group w-full cursor-pointer aspect-video bg-black flex items-center justify-center" onClick={playVideoAfterAd ? undefined : handlePlayVideo}>
                                         {playVideoAfterAd ? 
-                                            <OptimizedVideo ref={videoRef} src={url} thumbnailUrl={effectiveThumbnail} className="w-full rounded-xl" controls />
+                                            <OptimizedVideo ref={videoRef} src={url} thumbnailUrl={effectiveThumbnail} className="w-full h-full object-contain" controls />
                                             : 
                                             <>
-                                                <OptimizedImage src={effectiveThumbnail} alt="Video thumbnail" className="w-full rounded-xl" />
+                                                <OptimizedImage src={effectiveThumbnail} alt="Video thumbnail" className="w-full h-full object-cover" />
                                                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                                                     <FaPlay className="text-white text-5xl" />
                                                 </div>
@@ -230,3 +230,5 @@ export function GuestPostCard({ post }: { post: any }) {
     </motion.div>
   );
 }
+
+    
