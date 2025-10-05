@@ -15,10 +15,11 @@ export function VideoSuggestions({ currentPost, onPlayNext }: { currentPost: any
         const fetchSuggestions = async () => {
             setLoading(true);
             try {
+                // MODIFIED: Removed category-based filtering for a simpler, non-AI recommendation.
+                // This now fetches the latest media posts regardless of category.
                 const q = query(
                     collection(db, "posts"),
                     where("type", "==", "media"),
-                    where("category", "==", currentPost.category),
                     orderBy("createdAt", "desc"),
                     limit(9) // 8 suggestions + the current post which we'll filter out
                 );
@@ -35,11 +36,8 @@ export function VideoSuggestions({ currentPost, onPlayNext }: { currentPost: any
             setLoading(false);
         };
 
-        if(currentPost.category) {
-            fetchSuggestions();
-        } else {
-            setLoading(false);
-        }
+        fetchSuggestions();
+        
     }, [currentPost]);
 
     return (
