@@ -103,11 +103,10 @@ export default function SignupPage() {
 
         setLoading(true);
         try {
-            // User creation will now be handled by the Cloud Function, 
-            // but we still create the auth user here to trigger the function.
+            // Step 1: Create user in Firebase Auth. This will trigger our onNewUserCreate Cloud Function.
             const userCredential = await createUserWithEmailAndPassword(auth, form.email, form.password);
             
-            // Upload files to Firebase Storage
+            // Step 2: Upload files to Firebase Storage
             let avatarUrl = `https://api.dicebear.com/8.x/bottts-neutral/svg?seed=${form.username}`;
             let bannerUrl = "";
 
@@ -125,7 +124,7 @@ export default function SignupPage() {
                 bannerUrl = await uploadFile(bannerFile);
             }
 
-            // Update Auth Profile
+            // Step 3: Update Auth Profile
             await updateProfile(userCredential.user, {
                 displayName: form.name,
                 photoURL: avatarUrl,
@@ -134,8 +133,12 @@ export default function SignupPage() {
             const randomSuffix = Math.floor(100 + Math.random() * 900);
             const referralCode = `${form.username.toLowerCase().replace(/\s/g, '')}${randomSuffix}`;
 
-            // Update user profile in Firestore (the cloud function will add premium details)
+            // Step 4: Create the user document in Firestore.
+            // The onNewUserCreate function will run in the background to add premium details.
+            // We set the initial data here that the function might need (like 'referredBy').
             await setDoc(doc(db, "users", userCredential.user.uid), {
+                uid: userCredential.user.uid, // Add UID to the document
+                email: form.email,
                 name: form.name,
                 username: form.username.toLowerCase(),
                 bio: form.bio,
@@ -149,9 +152,10 @@ export default function SignupPage() {
                 profileComplete: !!(form.dob && form.gender && form.location),
                 referredBy: form.referredBy || null,
                 referralCode: referralCode,
-            }, { merge: true });
+                // Do NOT set premium fields here; the Cloud Function handles it.
+            });
 
-            // Send verification email
+            // Step 5: Send verification email
             await sendEmailVerification(userCredential.user);
 
             setSuccess("Welcome to the Vibe! Your account is created & premium access is activated. Redirecting...");
