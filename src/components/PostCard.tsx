@@ -349,12 +349,11 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
     };
     
     const renderMedia = (url: string, isVideo: boolean, isSingle: boolean) => {
-        const effectiveThumbnail = thumbnailUrl || `https://picsum.photos/seed/${post.id}/600/400`;
         if (isVideo) {
             return (
                 <div className="relative group w-full h-full cursor-pointer bg-black flex items-center justify-center">
-                    <OptimizedImage src={effectiveThumbnail} alt="Video thumbnail" className="w-full h-full object-contain" />
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                    <video src={url} className="w-full h-full object-contain" preload="metadata" />
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                         <FaPlay className="text-white text-5xl" />
                     </div>
                     <Watermark isAnimated={true} />
@@ -373,7 +372,15 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
         const url = mediaUrls[0];
         const isVideo = url.includes('.mp4') || url.includes('.webm') || url.includes('.ogg');
         return (
-            <div className="w-full rounded-xl overflow-hidden mt-2 relative" onClick={handleMediaClick}>
+            <div 
+                className="w-full rounded-xl overflow-hidden mt-2 relative" 
+                onClick={handleMediaClick}
+                style={{
+                    // This maintains aspect ratio before video loads to prevent layout shift
+                    aspectRatio: post.isPortrait ? '9 / 16' : '16 / 9',
+                    maxHeight: '70vh', // Prevent very tall videos from taking over the screen
+                }}
+            >
                 {renderMedia(url, !!isVideo, true)}
             </div>
         );
