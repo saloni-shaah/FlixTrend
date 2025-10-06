@@ -100,7 +100,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4 animate-fade-in">
       <motion.form
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -138,13 +138,15 @@ export default function LoginPage() {
             </button>
         </div>
         {error && <div className="text-red-400 text-center animate-bounce mt-2">{error}</div>}
-        <button
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           type="submit"
           className="btn-glass mt-4 bg-accent-pink/80"
           disabled={loading}
         >
           {loading ? "Logging in..." : "Login"}
-        </button>
+        </motion.button>
         <div className="text-center mt-2">
           <span className="text-gray-400">Don't have an account? </span>
           <Link href="/signup" className="text-accent-cyan hover:underline">Sign up</Link>

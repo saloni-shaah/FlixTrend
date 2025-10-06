@@ -50,6 +50,7 @@ export function TextPostForm({ data, onDataChange }: { data: any, onDataChange: 
             navigator.geolocation.getCurrentPosition(async (position) => {
                 const { latitude, longitude } = position.coords;
                 try {
+                    // Using a free, public reverse geocoding API
                     const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
                     const locationData = await response.json();
                     const city = locationData.address.city || locationData.address.town || locationData.address.village;

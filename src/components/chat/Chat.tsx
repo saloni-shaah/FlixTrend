@@ -232,7 +232,11 @@ export function Chat() {
 
 
   return (
-    <div className="chat-container">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="chat-container glass-card"
+    >
       <div className="chat-header">
         <Bot className="text-accent-purple" />
         <h2 className="text-xl font-headline font-bold text-accent-cyan">
@@ -308,6 +312,6 @@ export function Chat() {
           </button>
         </div>
       </form>
-    </div>
+    </motion.div>
   );
 }

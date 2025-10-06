@@ -304,37 +304,50 @@ function HomePageContent() {
           </div>
       </div>
       {/* Flashes/Stories Section */}
-      <section className="mb-6 glass-card p-4">
+      <motion.section 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="mb-6 glass-card p-4">
         <h2 className="text-lg font-headline bg-gradient-to-r from-accent-pink to-accent-green bg-clip-text text-transparent mb-2">Flashes</h2>
         <div className="flex gap-3 overflow-x-auto pb-2">
-            <button
+            <motion.button
               className="w-20 h-20 rounded-full bg-gradient-to-tr from-gray-800 to-gray-700 border-4 border-dashed border-gray-600 flex flex-col items-center justify-center focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background focus:ring-accent-green transition-transform hover:scale-105"
               onClick={() => router.push('/create?type=flash')}
               title="Create a Flash"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
             >
               <Plus className="text-gray-400 mb-1" />
               <span className="text-xs text-gray-400">Add New</span>
-            </button>
-          {flashUsers.map((userFlashes: any) => (
-            <button
+            </motion.button>
+          {flashUsers.map((userFlashes: any, index: number) => (
+            <motion.button
               key={userFlashes.userId}
               className="w-20 h-20 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green border-4 border-accent-green/40 flex items-center justify-center overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background focus:ring-accent-green transition-transform hover:scale-105"
               onClick={() => setSelectedFlashUser(userFlashes)}
               title={userFlashes.username || "Flash"}
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.2 + index * 0.05, type: "spring", stiffness: 200 }}
             >
               {userFlashes.avatar_url ? (
                   <img src={userFlashes.avatar_url} alt="flash" className="w-full h-full object-cover" />
               ) : (
                 <span className="text-2xl text-white">⚡</span>
               )}
-            </button>
+            </motion.button>
           ))}
         </div>
-      </section>
+      </motion.section>
 
       {/* Shorts Player Button */}
       <section className="mb-6">
-        <button
+        <motion.button
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
           onClick={() => setShowShortsPlayer(true)}
           className="w-full glass-card p-4 flex items-center justify-center gap-4 hover:border-accent-pink transition-colors"
         >
@@ -343,7 +356,7 @@ function HomePageContent() {
             <h3 className="font-headline text-xl font-bold">Watch Shorts</h3>
             <p className="text-sm text-gray-400">Tap to dive into a full-screen video feed</p>
           </div>
-        </button>
+        </motion.button>
       </section>
 
       {/* Feed Section */}
@@ -380,22 +393,24 @@ function HomePageContent() {
       
       {/* Top Right FABs */}
       <div className="fixed top-4 right-4 z-30 flex flex-col items-center">
-        <button
+        <motion.button
           className={`relative inline-flex items-center justify-center bg-white/10 dark:bg-black/20 backdrop-blur-md border border-white/10 dark:border-black/20 w-12 h-12 rounded-full text-white hover:bg-gradient-to-tr hover:from-accent-purple hover:to-accent-cyan transition-all ${hasUnreadNotifs ? 'animate-pulse' : ''}`}
           title="Notifications"
           onClick={() => setShowNotifications(true)}
           aria-label="Notifications"
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
         >
           <Bell className="text-xl" />
           {hasUnreadNotifs && <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-accent-pink rounded-full"></span>}
-        </button>
+        </motion.button>
       </div>
 
        {/* Bottom Right AI FAB */}
       <div className="fixed bottom-24 right-4 z-30">
         <motion.button 
             onClick={() => setShowAlmightyAd(true)}
-            className="w-16 h-16 rounded-full flex items-center justify-center shadow-fab-glow bg-green-200/20 dark:bg-green-900/30 backdrop-blur-md"
+            className="w-16 h-16 rounded-full flex items-center justify-center shadow-fab-glow bg-green-200/20 dark:bg-green-900/30 backdrop-blur-md animate-ripple"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
             title="Ask Almighty AI"
