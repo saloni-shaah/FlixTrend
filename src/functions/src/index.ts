@@ -422,7 +422,6 @@ export const sendScheduledPostNotifications = functions.pubsub.schedule('every 1
 
     const q = query(
         collection(db, 'posts'),
-        where('status', '==', 'scheduled'),
         where('publishAt', '<=', fiveMinutesFromNow),
         where('publishAt', '>', now),
         where('notificationSent', '==', false)

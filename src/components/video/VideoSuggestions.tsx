@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -15,13 +16,12 @@ export function VideoSuggestions({ currentPost, onPlayNext }: { currentPost: any
         const fetchSuggestions = async () => {
             setLoading(true);
             try {
-                // MODIFIED: Removed category-based filtering for a simpler, non-AI recommendation.
-                // This now fetches the latest media posts regardless of category.
+                // Fetch latest media posts
                 const q = query(
                     collection(db, "posts"),
                     where("type", "==", "media"),
                     orderBy("createdAt", "desc"),
-                    limit(9) // 8 suggestions + the current post which we'll filter out
+                    limit(9) // Fetch a few more to ensure we have enough after filtering
                 );
                 const querySnapshot = await getDocs(q);
                 const allPosts = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -36,7 +36,9 @@ export function VideoSuggestions({ currentPost, onPlayNext }: { currentPost: any
             setLoading(false);
         };
 
-        fetchSuggestions();
+        if (currentPost) {
+            fetchSuggestions();
+        }
         
     }, [currentPost]);
 
@@ -50,8 +52,8 @@ export function VideoSuggestions({ currentPost, onPlayNext }: { currentPost: any
                     {suggestions.map(post => (
                         <div key={post.id} className="relative aspect-video rounded-lg overflow-hidden cursor-pointer group" onClick={() => onPlayNext(post)}>
                             <img src={post.thumbnailUrl || '/video_placeholder.png'} alt={post.title} className="w-full h-full object-cover"/>
-                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                <p className="text-white text-sm font-bold text-center p-2 line-clamp-2">{post.title}</p>
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2">
+                                <p className="text-white text-sm font-bold text-center line-clamp-2">{post.title}</p>
                             </div>
                         </div>
                     ))}

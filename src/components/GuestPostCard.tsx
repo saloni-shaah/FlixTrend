@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from 'react';
@@ -11,7 +12,8 @@ import { OptimizedImage } from './OptimizedImage';
 import { FlixTrendLogo } from './FlixTrendLogo';
 import { FaMusic, FaPlay } from "react-icons/fa";
 import { OptimizedVideo } from './OptimizedVideo';
-import AdModal from './AdModal';
+import { PlayerModal } from './video/PlayerModal';
+
 
 const db = getFirestore(app);
 
@@ -30,8 +32,7 @@ const Watermark = ({ isAnimated = false }: { isAnimated?: boolean }) => (
 export function GuestPostCard({ post }: { post: any }) {
   const [showShareModal, setShowShareModal] = React.useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = React.useState(false);
-  const [showAd, setShowAd] = React.useState(false);
-  const [playVideoAfterAd, setPlayVideoAfterAd] = React.useState(false);
+  const [showPlayer, setShowPlayer] = React.useState(false);
   const videoRef = React.useRef<HTMLVideoElement>(null);
 
 
@@ -41,23 +42,12 @@ export function GuestPostCard({ post }: { post: any }) {
     setShowLoginPrompt(true);
   };
   
-  React.useEffect(() => {
-    if (playVideoAfterAd && videoRef.current) {
-      videoRef.current.play();
-      setPlayVideoAfterAd(false);
-    }
-  }, [playVideoAfterAd]);
-
   const handlePlayVideo = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setShowAd(true);
+    setShowPlayer(true);
   };
 
-  const onAdComplete = () => {
-    setShowAd(false);
-    setPlayVideoAfterAd(true);
-  };
 
   const LoginPrompt = () => (
     <div className="fixed inset-0 z-[102] flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={() => setShowLoginPrompt(false)}>
@@ -84,7 +74,7 @@ export function GuestPostCard({ post }: { post: any }) {
     
     return (
         <>
-            {showAd && <AdModal onComplete={onAdComplete} />}
+            {showPlayer && <PlayerModal post={contentPost} onClose={() => setShowPlayer(false)} />}
             <div className="flex items-center gap-3 mb-2">
                 <div className="flex items-center gap-2 group cursor-pointer" onClick={handleInteraction}>
                     <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green flex items-center justify-center font-bold text-lg overflow-hidden border-2 border-accent-green group-hover:scale-105 transition-transform">
@@ -121,22 +111,16 @@ export function GuestPostCard({ post }: { post: any }) {
                                 return (
                                     <div 
                                         className="relative group w-full cursor-pointer bg-black flex items-center justify-center" 
-                                        onClick={playVideoAfterAd ? undefined : handlePlayVideo}
+                                        onClick={handlePlayVideo}
                                         style={{
                                             aspectRatio: post.isPortrait ? '9 / 16' : '16 / 9',
                                             maxHeight: '70vh',
                                         }}
                                     >
-                                        {playVideoAfterAd ? 
-                                            <OptimizedVideo ref={videoRef} src={url} className="w-full h-full object-contain" controls />
-                                            : 
-                                            <>
-                                                <video src={url} className="w-full h-full object-contain" preload="metadata" />
-                                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                                                    <FaPlay className="text-white text-5xl" />
-                                                </div>
-                                            </>
-                                        }
+                                        <OptimizedVideo src={url} className="w-full h-full object-contain" preload="metadata" />
+                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                            <FaPlay className="text-white text-5xl" />
+                                        </div>
                                         <Watermark isAnimated={true} />
                                     </div>
                                 );
