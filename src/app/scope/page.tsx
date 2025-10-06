@@ -1,9 +1,8 @@
-
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
 import { getFirestore, collection, query, onSnapshot, getDocs, orderBy, limit, where, startAfter } from "firebase/firestore";
 import { app, auth } from "@/utils/firebaseClient";
-import { ShortVibesPlayer } from "@/components/ShortVibesPlayer";
+import { ShortsPlayer } from "@/components/ShortsPlayer";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Compass, Music, Gamepad2, Flame, User, Heart, Mic, ShoppingBag } from "lucide-react";
@@ -22,13 +21,13 @@ function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean,
   
   const fetchVibes = useCallback(async () => {
     setLoading(true);
-    // This query now filters for videos between 3s and 4min (240s)
+    // This query now filters for videos between 3s and 3min (180s)
     // NOTE: This requires a composite index in Firestore on 'type', 'videoDuration', and 'createdAt'.
     const first = query(
         collection(db, "posts"),
         where("type", "==", "media"),
         where("videoDuration", ">=", 3),
-        where("videoDuration", "<=", 240),
+        where("videoDuration", "<=", 180),
         orderBy("videoDuration"), // This is needed for the range query
         orderBy("createdAt", "desc"),
         limit(VIBES_PER_PAGE)
@@ -57,7 +56,7 @@ function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean,
         collection(db, "posts"),
         where("type", "==", "media"),
         where("videoDuration", ">=", 3),
-        where("videoDuration", "<=", 240),
+        where("videoDuration", "<=", 180),
         orderBy("videoDuration"),
         orderBy("createdAt", "desc"),
         startAfter(lastVisible),
@@ -99,7 +98,7 @@ function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean,
         className={`w-full h-full transition-all duration-300 ${isFullScreen ? '' : 'max-w-md mx-auto aspect-[9/16] rounded-2xl overflow-hidden'}`} 
         onDoubleClick={onDoubleClick}
     >
-        <ShortVibesPlayer shortVibes={shortVibes} onEndReached={fetchMoreVibes} hasMore={hasMore}/>
+        <ShortsPlayer shortVibes={shortVibes} onEndReached={fetchMoreVibes} hasMore={hasMore}/>
     </div>
   );
 }
