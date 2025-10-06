@@ -1,20 +1,20 @@
 "use client";
-import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { ChevronDown, UploadCloud, X, MapPin, Smile, Music, Hash, AtSign, Locate, Loader } from 'lucide-react';
+import React, { useState, useRef, useCallback } from 'react';
+import { UploadCloud, X, MapPin, Smile, Hash, AtSign, Locate, Loader } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { uploadFileToFirebaseStorage } from '@/app/actions';
 import { auth } from '@/utils/firebaseClient';
 
 export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange: (data: any) => void }) {
-    const [mediaPreviews, setMediaPreviews] = useState<string[]>(data.mediaUrl || []);
+    const [mediaPreviews, setMediaPreviews] = useState<(string)[]>(data.mediaUrl || []);
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isFetchingLocation, setIsFetchingLocation] = useState(false);
     const [uploadError, setUploadError] = useState<string | null>(null);
     const [uploadingFiles, setUploadingFiles] = useState<string[]>([]);
 
-    useEffect(() => {
-        // This keeps the component in sync if data comes from elsewhere (e.g. remix)
+    // This effect ensures that if data comes from another source (like a remix), the previews are updated.
+    React.useEffect(() => {
         if (data.mediaUrl) {
             setMediaPreviews(data.mediaUrl);
         }
@@ -39,9 +39,11 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
             const result = await uploadFileToFirebaseStorage(formData);
             
             if (result.success?.url) {
+                // IMPORTANT: The file is uploaded, and now we only deal with the URL.
+                // This URL is a simple string and is serializable.
                 const newUrls = [...(data.mediaUrl || []), result.success.url];
-                // The onDataChange now receives the final URL, not a file object.
                 onDataChange({ ...data, mediaUrl: newUrls });
+                setMediaPreviews(newUrls); // Update local preview state with final URL
             } else {
                 throw new Error(result.failure || "File upload failed.");
             }
@@ -50,7 +52,7 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
             setUploadError(error.message);
         } finally {
             setUploadingFiles(prev => prev.filter(p => p !== previewUrl));
-            URL.revokeObjectURL(previewUrl);
+            // We don't need to revoke object URL because we are replacing previews with final URLs
         }
     };
 
@@ -62,6 +64,7 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
         );
         if (imageVideoAudioFiles.length === 0) return;
 
+        // Process uploads one by one to avoid race conditions
         for (const file of imageVideoAudioFiles) {
             await handleFileUpload(file);
         }
@@ -73,9 +76,10 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
         }
     };
     
-    const removeMedia = (index: number) => {
-        const newUrls = (data.mediaUrl || []).filter((_: any, i: number) => i !== index);
+    const removeMedia = (urlToRemove: string) => {
+        const newUrls = (data.mediaUrl || []).filter((url: string) => url !== urlToRemove);
         onDataChange({ ...data, mediaUrl: newUrls });
+        setMediaPreviews(newUrls);
     };
 
     const handleTextChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -93,7 +97,7 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
             processFiles(Array.from(e.dataTransfer.files));
             e.dataTransfer.clearData();
         }
-    }, [data, processFiles]); 
+    }, [data, onDataChange]); // Dependencies updated
 
     const handleGetLocation = () => {
         if (navigator.geolocation) {
@@ -176,16 +180,17 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
                     ))}
                     {mediaPreviews.length > 0 && mediaPreviews.map((url, index) => {
                         let previewContent;
-                        if (url.includes('.mp4') || url.includes('.webm') || url.includes('.ogg')) {
+                        const isVideo = url.includes('.mp4') || url.includes('.webm') || url.includes('.ogg') || url.includes('video');
+                        if (isVideo) {
                             previewContent = <video src={url} className="w-full h-full object-cover rounded-lg" />;
                         } else {
                             previewContent = <img src={url} alt={`preview ${index}`} className="w-full h-full object-cover rounded-lg" />;
                         }
 
                         return (
-                            <div key={index} className="relative group aspect-square">
+                            <div key={url} className="relative group aspect-square">
                                 {previewContent}
-                                <button type="button" onClick={() => removeMedia(index)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                <button type="button" onClick={() => removeMedia(url)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                                     <X size={16} />
                                 </button>
                             </div>
