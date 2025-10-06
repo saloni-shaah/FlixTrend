@@ -446,6 +446,7 @@ const postCategories = [
     'Music > Bollywood & Indian Pop',
     'Music > Chiptune',
     'Music > Choral',
+    'Music > Christian & Gospel',
     'Music > Classical',
     'Music > Country',
     'Music > Cover Songs',
@@ -618,7 +619,7 @@ const postCategories = [
     'Science & Technology > Programming & Software Development > R',
     'Science & Technology > Programming & Software Development > Ruby',
     'Science & Technology > Programming & Software Development > Rust',
-    'Science & Technology > Programming & Software Development > Scala',
+    'Science & Technology > Programming & SoftwareDevelopment > Scala',
     'Science & Technology > Programming & Software Development > Shell Scripting',
     'Science & Technology > Programming & Software Development > SQL',
     'Science & Technology > Programming & Software Development > Swift & iOS Development',
@@ -739,7 +740,7 @@ const postCategories = [
     'Vehicles > Recreational Vehicles (RVs)',
     'Vehicles > Trains',
     'Vehicles > Trucks',
-] as const;
+].map(c => c as const);
 
 const ContentModerationInputSchema = z.object({
   text: z.string().optional().describe('All text content combined (caption, title, etc.).'),
@@ -750,7 +751,7 @@ const ContentModerationOutputSchema = z.object({
     analysis: z.string().describe("Your step-by-step reasoning for the safety decision. First, state if any rule is violated and why. If not, state that the content is compliant."),
     decision: z.enum(['approve', 'deny']).describe("Based ONLY on your analysis, decide whether to approve or deny. If your analysis found no clear violation, you MUST approve."),
     reason: z.string().describe("A brief, user-friendly explanation for the decision. If approved, say 'Content approved!'. If denied, explain the violation simply."),
-    category: z.enum(postCategories).describe("The single best category for the post from the provided list. Base this on the main topic of the text content. Avoid using 'Other' or 'Uncategorized' unless no other category is remotely suitable."),
+    category: z.string().describe("The single best category for the post from the provided list. Base this on the main topic of the text content. It must be one of the provided categories. Avoid using 'Other' or 'Uncategorized' unless no other category is remotely suitable."),
 });
 
 const moderationPrompt = `You are an expert content classifier and a fair and balanced content moderator for a Gen-Z social media app called FlixTrend.
@@ -769,7 +770,7 @@ Based ONLY on your analysis from Step 1, make your 'decision'.
 - If your analysis concluded "Content is compliant", you MUST decide 'approve'.
 
 **Step 3: Categorization**
-Analyze the text content and assign it to the single most relevant category from the list below. In the 'category' field, provide only the category name. Be specific. Avoid the 'Other' or 'Uncategorized' categories unless the content has no discernible topic whatsoever.
+Analyze the text content and assign it to the single most relevant category from the list below. In the 'category' field, provide only the category name from the list. Be specific. Avoid the 'General' category unless the content has no discernible topic whatsoever.
 Categories: ${postCategories.join(', ')}
 
 **Rules (Deny content ONLY for clear and severe violations of the TEXT):**
@@ -799,13 +800,13 @@ export const contentModerationFlow = ai.defineFlow(
     // Media is now ignored. We only process text.
     const finalText = input.text || '';
     
-    // If there is no text content to moderate, approve and categorize as 'Other'.
+    // If there is no text content to moderate, approve and categorize as 'General'.
     if (!finalText.trim()) {
         return {
             analysis: "No text content provided. Approved by default.",
             decision: 'approve',
             reason: 'Content approved!',
-            category: 'Other',
+            category: 'General',
         }
     }
 
@@ -829,9 +830,16 @@ export const contentModerationFlow = ai.defineFlow(
         analysis: "AI model failed to produce a valid response.",
         decision: 'deny',
         reason: 'Could not verify content safety at this time. Please try again.',
-        category: 'Other', // Default category on failure
+        category: 'General', // Default category on failure
       };
     }
+    
+    // Validate that the returned category is in the list
+    if (!postCategories.includes(output.category as any)) {
+      console.warn(`AI returned an invalid category: '${output.category}'. Defaulting to 'General'.`);
+      output.category = 'General';
+    }
+
 
     return output;
   }
