@@ -87,12 +87,12 @@ export default function LandingPage() {
                 radial-gradient(2px 2px at 90% 80%, #fff, transparent),
                 radial-gradient(1px 1px at 10% 90%, #fff, transparent),
                 radial-gradient(2px 2px at 40% 50%, #fff, transparent);
-            animation: twinkle 10s infinite linear;
+            animation: twinkle 20s infinite linear;
         }
 
         @keyframes twinkle {
             0% { transform: translateY(0); }
-            100% { transform: translateY(-100%); }
+            100% { transform: translateY(-100vh); }
         }
 
         .hero-bg-animation {
@@ -114,6 +114,8 @@ export default function LandingPage() {
         .shape1 { width: 300px; height: 300px; background: rgba(0, 240, 255, 0.2); animation: float 15s infinite alternate; top: 10%; left: 10%; }
         .shape2 { width: 400px; height: 400px; background: rgba(255, 60, 172, 0.25); animation: float 20s infinite alternate-reverse; bottom: 5%; right: 5%; }
         .shape3 { width: 250px; height: 250px; background: rgba(191, 0, 255, 0.2); animation: float 18s infinite alternate; top: 50%; right: 20%; }
+        .shape4 { width: 200px; height: 200px; background: rgba(57, 255, 20, 0.15); animation: float 22s infinite alternate; bottom: 20%; left: 15%; }
+
 
         @keyframes float {
             0% { transform: translate(0, 0) scale(1); }
@@ -133,7 +135,7 @@ export default function LandingPage() {
       `}</style>
       <div className="min-h-screen font-body relative">
         <div className="starry-bg">
-            <div className="stars" style={{ height: '200%' }}></div>
+            <div className="stars" style={{ height: '200vh' }}></div>
         </div>
 
         {/* Hero Section */}
@@ -142,14 +144,16 @@ export default function LandingPage() {
                 <div className="floating-shape shape1"></div>
                 <div className="floating-shape shape2"></div>
                 <div className="floating-shape shape3"></div>
+                <div className="floating-shape shape4"></div>
             </div>
 
             <div className="relative z-10 flex flex-col items-center gap-6">
                 <motion.div
-                    whileHover={{ scale: 1.1 }}
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 1, type: "spring" }}
+                    whileHover={{ scale: 1.1, rotate: 5 }}
+                    initial={{ opacity: 0, scale: 0.8, y: -20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    transition={{ duration: 1, type: "spring", stiffness: 100 }}
+                    className="animate-float"
                 >
                     <FlixTrendLogo size={120} />
                 </motion.div>
@@ -255,6 +259,9 @@ export default function LandingPage() {
 
         {/* Footer */}
         <footer className="w-full py-12 bg-black/30 text-center flex flex-col gap-8 items-center mt-8 border-t border-accent-cyan/10">
+            <h2 className="font-calligraphy text-7xl md:text-8xl font-bold bg-gradient-to-r from-accent-pink to-accent-cyan bg-clip-text text-transparent text-glow opacity-70">
+              FlixTrend
+            </h2>
             <div className="flex gap-8">
                 <SocialIcon href="#" icon={<FaInstagram />} />
                 <SocialIcon href="#" icon={<FaYoutube />} />
