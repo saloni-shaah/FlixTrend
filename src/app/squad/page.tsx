@@ -279,7 +279,7 @@ function UserCollections({ userId }: { userId: string }) {
     useEffect(() => {
         const q = query(collection(db, "collections"), where("ownerId", "==", userId));
         const unsub = onSnapshot(q, (snapshot) => {
-            const collectionsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const collectionsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
             collectionsData.sort((a:any, b:any) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
             setCollections(collectionsData);
             setLoading(false);
@@ -538,17 +538,23 @@ function SquadPageContent() {
 
 
   return (
-    <div className="flex flex-col w-full pb-24">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col w-full pb-24">
         {showFollowList && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" onClick={() => setShowFollowList(null)} />}
-        <button
+        <motion.button
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.5 }}
           className="fixed top-6 right-6 z-50 btn-glass-icon"
           onClick={() => setShowSettings(true)}
           aria-label="Settings"
         >
           <Cog />
-        </button>
+        </motion.button>
       {/* Banner */}
-      <div className="relative h-40 md:h-60 w-full rounded-2xl overflow-hidden mb-8 glass-card">
+      <motion.div 
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="relative h-40 md:h-60 w-full rounded-2xl overflow-hidden mb-8 glass-card">
         {profile.banner_url ? (
           <img
             src={profile.banner_url}
@@ -558,16 +564,22 @@ function SquadPageContent() {
         ) : (
           <div className="absolute inset-0 w-full h-full bg-gradient-to-tr from-accent-pink/40 to-accent-cyan/40" />
         )}
-      </div>
+      </motion.div>
       {/* Profile Card */}
-      <div className="mx-auto w-full max-w-2xl glass-card p-6 -mt-24 flex flex-col items-center text-center">
-        <div className="w-32 h-32 rounded-full bg-accent-cyan border-4 border-accent-pink shadow-fab-glow mb-4 overflow-hidden -mt-20">
+      <motion.div 
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.2 }}
+        className="mx-auto w-full max-w-2xl glass-card p-6 -mt-24 flex flex-col items-center text-center">
+        <motion.div 
+          whileHover={{ scale: 1.1 }}
+          className="w-32 h-32 rounded-full bg-accent-cyan border-4 border-accent-pink shadow-fab-glow mb-4 overflow-hidden -mt-20">
           {profile.avatar_url ? (
             <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
           ) : (
             <span className="text-5xl text-white flex items-center justify-center h-full w-full">{initials}</span>
           )}
-        </div>
+        </motion.div>
         <div className="flex items-center justify-center gap-2">
             <h2 className="text-2xl font-headline font-bold text-center">{profile.name}</h2>
             {isDeveloper && (
@@ -611,12 +623,12 @@ function SquadPageContent() {
             </div>
         </div>
 
-        <button className="btn-glass mt-6" onClick={() => setShowEdit(true)}>Edit Profile</button>
+        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="btn-glass mt-6" onClick={() => setShowEdit(true)}>Edit Profile</motion.button>
         <div className="mt-4 text-xs text-gray-400">
           Your referral code: <span className="font-bold text-accent-pink">{profile.referralCode || 'Generating...'}</span>
           <p>Share this code! You get 1 free month of premium for every user who signs up with it.</p>
         </div>
-      </div>
+      </motion.div>
 
        <div className="w-full max-w-2xl mx-auto my-8 relative">
         <div className="relative">
@@ -730,7 +742,7 @@ function SquadPageContent() {
             currentUser={firebaseUser}
         />
       )}
-    </div>
+    </motion.div>
   );
 }
 

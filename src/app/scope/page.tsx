@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
 import { getFirestore, collection, query, onSnapshot, getDocs, orderBy, limit, where, startAfter } from "firebase/firestore";
@@ -94,12 +95,14 @@ function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean,
   }
 
   return (
-    <div 
+    <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
         className={`w-full h-full transition-all duration-300 ${isFullScreen ? '' : 'max-w-md mx-auto aspect-[9/16] rounded-2xl overflow-hidden'}`} 
         onDoubleClick={onDoubleClick}
     >
         <ShortsPlayer shortVibes={shortVibes} onEndReached={fetchMoreVibes} hasMore={hasMore}/>
-    </div>
+    </motion.div>
   );
 }
 
@@ -230,12 +233,15 @@ export default function ScopePage() {
               initial={{ opacity: 0, scale: 0.8, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.8, y: 20 }}
-              className="fixed top-20 right-4 z-50"
+              className="fixed top-20 right-4 z-50 animate-pop"
             >
                 <Link href="/store">
-                    <span className="btn-glass-icon w-16 h-16 bg-brand-gold/20 text-brand-gold">
+                    <motion.span 
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      className="btn-glass-icon w-16 h-16 bg-brand-gold/20 text-brand-gold">
                         <ShoppingBag size={32} />
-                    </span>
+                    </motion.span>
                 </Link>
             </motion.div>
         )}
@@ -296,3 +302,4 @@ export default function ScopePage() {
 }
 
     
+

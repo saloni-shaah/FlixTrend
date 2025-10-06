@@ -100,23 +100,31 @@ function CreatePostPageContent() {
             <h1 className="text-3xl font-headline font-bold text-accent-cyan mb-8">Create Your Vibe</h1>
 
             {!typeSelected && (
-                 <div className="flex flex-col md:flex-row gap-4 mb-8 w-full md:w-auto">
-                    <button onClick={() => handleTypeChange('text')} className={`w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'text' ? 'bg-accent-cyan text-black' : 'bg-transparent text-gray-300'}`}>
+                 <motion.div 
+                    className="flex flex-col md:flex-row gap-4 mb-8 w-full md:w-auto"
+                    initial="hidden"
+                    animate="visible"
+                    variants={{
+                        hidden: {},
+                        visible: { transition: { staggerChildren: 0.1 }}
+                    }}
+                >
+                    <motion.button variants={{hidden: {opacity:0, y:20}, visible: {opacity:1, y:0}}} onClick={() => handleTypeChange('text')} className={`w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'text' ? 'bg-accent-cyan text-black' : 'bg-transparent text-gray-300'}`}>
                         <AlignLeft />Text Post
-                    </button>
-                     <button onClick={() => handleTypeChange('flash')} className={`w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'flash' ? 'bg-accent-cyan text-black' : 'bg-transparent text-gray-300'}`}>
+                    </motion.button>
+                     <motion.button variants={{hidden: {opacity:0, y:20}, visible: {opacity:1, y:0}}} onClick={() => handleTypeChange('flash')} className={`w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'flash' ? 'bg-accent-cyan text-black' : 'bg-transparent text-gray-300'}`}>
                         <Zap />Flash
-                    </button>
-                    <button onClick={() => handleTypeChange('media')} className={`w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'media' ? 'bg-accent-cyan text-black' : 'bg-transparent text-gray-300'}`}>
+                    </motion.button>
+                    <motion.button variants={{hidden: {opacity:0, y:20}, visible: {opacity:1, y:0}}} onClick={() => handleTypeChange('media')} className={`w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'media' ? 'bg-accent-cyan text-black' : 'bg-transparent text-gray-300'}`}>
                         <ImageIcon />Media
-                    </button>
-                    <button onClick={() => handleTypeChange('live')} className={`w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'live' ? 'bg-red-500 text-black' : 'bg-transparent text-red-400'}`}>
+                    </motion.button>
+                    <motion.button variants={{hidden: {opacity:0, y:20}, visible: {opacity:1, y:0}}} onClick={() => handleTypeChange('live')} className={`w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'live' ? 'bg-red-500 text-black' : 'bg-transparent text-red-400'}`}>
                         <Radio />Live
-                    </button>
-                    <button onClick={() => handleTypeChange('poll')} className={`w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'poll' ? 'bg-accent-cyan text-black' : 'bg-transparent text-gray-300'}`}>
+                    </motion.button>
+                    <motion.button variants={{hidden: {opacity:0, y:20}, visible: {opacity:1, y:0}}} onClick={() => handleTypeChange('poll')} className={`w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'poll' ? 'bg-accent-cyan text-black' : 'bg-transparent text-gray-300'}`}>
                        <BarChart3 />Poll
-                    </button>
-                </div>
+                    </motion.button>
+                </motion.div>
             )}
             
             {typeSelected && postType && (

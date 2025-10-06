@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect, useState, useRef } from 'react';
@@ -315,7 +316,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
       alert(`Thank you! We'll ${type === 'show_more' ? 'show you more' : 'show you less'} posts like this.`);
   };
 
-  const MediaGrid = ({ mediaUrls, thumbnailUrl }: { mediaUrls: string[]; thumbnailUrl?: string }) => {
+  const MediaGrid = ({ mediaUrls }: { mediaUrls: string[] }) => {
     if (!mediaUrls || mediaUrls.length === 0) return null;
 
     const lastTap = useRef(0);
@@ -352,7 +353,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
         if (isVideo) {
             return (
                 <div className="relative group w-full h-full cursor-pointer bg-black flex items-center justify-center">
-                    <video src={url} className="w-full h-full object-contain" preload="metadata" />
+                    <OptimizedVideo src={url} className="w-full h-full object-contain" preload="metadata" />
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                         <FaPlay className="text-white text-5xl" />
                     </div>
@@ -376,9 +377,8 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
                 className="w-full rounded-xl overflow-hidden mt-2 relative" 
                 onClick={handleMediaClick}
                 style={{
-                    // This maintains aspect ratio before video loads to prevent layout shift
                     aspectRatio: post.isPortrait ? '9 / 16' : '16 / 9',
-                    maxHeight: '70vh', // Prevent very tall videos from taking over the screen
+                    maxHeight: '70vh', 
                 }}
             >
                 {renderMedia(url, !!isVideo, true)}
@@ -443,7 +443,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
             )}
 
             {contentPost.type === "media" && contentPost.mediaUrl && !isShortVibe && (
-                <MediaGrid mediaUrls={Array.isArray(contentPost.mediaUrl) ? contentPost.mediaUrl : [contentPost.mediaUrl]} thumbnailUrl={contentPost.thumbnailUrl}/>
+                <MediaGrid mediaUrls={Array.isArray(contentPost.mediaUrl) ? contentPost.mediaUrl : [contentPost.mediaUrl]} />
             )}
 
             {contentPost.type === "poll" && contentPost.pollOptions && (
@@ -487,24 +487,31 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
     const isVideo = post.type === 'media' && post.mediaUrl && (Array.isArray(post.mediaUrl) ? post.mediaUrl.some((url: string) => url.includes('.mp4')) : post.mediaUrl.includes('.mp4'));
 
     return (
-        <div className={`flex items-center justify-between mt-2 pt-2 ${isShortVibe ? 'flex-col gap-4' : 'border-t border-glass-border'}`}>
+        <motion.div 
+          initial="hidden"
+          animate="visible"
+          variants={{
+            hidden: {},
+            visible: { transition: { staggerChildren: 0.05 }}
+          }}
+          className={`flex items-center justify-between mt-2 pt-2 ${isShortVibe ? 'flex-col gap-4' : 'border-t border-glass-border'}`}>
             <div className={isShortVibe ? 'flex flex-col items-center gap-4' : 'flex items-center justify-start gap-6'}>
-              <button className={`flex items-center gap-1.5 font-bold transition-all ${isShortVibe ? 'flex-col text-white' : 'text-lg text-muted-foreground hover:text-brand-gold'}`} onClick={() => setShowComments(true)}>
+              <motion.button variants={{hidden: {opacity:0, y:10}, visible: {opacity:1, y:0}}} className={`flex items-center gap-1.5 font-bold transition-all ${isShortVibe ? 'flex-col text-white animate-pop' : 'text-lg text-muted-foreground hover:text-brand-gold'}`} onClick={() => setShowComments(true)}>
                 <MessageCircle size={isShortVibe ? 32 : 20} /> <span className="text-sm">{commentCount}</span>
-              </button>
-              <button className={`flex items-center gap-1.5 font-bold transition-all ${isStarred ? "text-yellow-400" : isShortVibe ? 'text-white' : "text-lg text-muted-foreground hover:text-yellow-400"}`} onClick={handleStar}>
+              </motion.button>
+              <motion.button variants={{hidden: {opacity:0, y:10}, visible: {opacity:1, y:0}}} className={`flex items-center gap-1.5 font-bold transition-all ${isStarred ? "text-yellow-400" : isShortVibe ? 'text-white' : "text-lg text-muted-foreground hover:text-yellow-400"}`} onClick={handleStar}>
                 <Star size={isShortVibe ? 32 : 20} fill={isStarred ? "currentColor" : "none"} /> <span className="text-sm">{starCount}</span>
-              </button>
-              <button className={`flex items-center gap-1.5 font-bold transition-all ${isShortVibe ? 'flex-col text-white' : 'text-lg text-muted-foreground hover:text-accent-cyan'}`} onClick={(e) => { e.stopPropagation(); setShowShareModal(true); }}>
+              </motion.button>
+              <motion.button variants={{hidden: {opacity:0, y:10}, visible: {opacity:1, y:0}}} className={`flex items-center gap-1.5 font-bold transition-all ${isShortVibe ? 'flex-col text-white' : 'text-lg text-muted-foreground hover:text-accent-cyan'}`} onClick={(e) => { e.stopPropagation(); setShowShareModal(true); }}>
                 <Share size={isShortVibe ? 32 : 20} />
-              </button>
+              </motion.button>
             </div>
             <div className={isShortVibe ? 'flex flex-col items-center gap-4 mt-4' : 'flex items-center gap-4'}>
-                 <button className={`flex items-center gap-1.5 font-bold transition-all ${isShortVibe ? 'flex-col text-white' : 'text-lg text-muted-foreground hover:text-accent-purple'}`} onClick={() => setShowCollectionModal(true)}>
+                 <motion.button variants={{hidden: {opacity:0, y:10}, visible: {opacity:1, y:0}}} className={`flex items-center gap-1.5 font-bold transition-all ${isShortVibe ? 'flex-col text-white' : 'text-lg text-muted-foreground hover:text-accent-purple'}`} onClick={() => setShowCollectionModal(true)}>
                     <Bookmark size={isShortVibe ? 32 : 20} fill={isSaved ? "currentColor" : "none"}/>
-                </button>
+                </motion.button>
             </div>
-        </div>
+        </motion.div>
     )
   };
 

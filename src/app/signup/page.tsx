@@ -228,7 +228,7 @@ export default function SignupPage() {
     }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4 animate-fade-in">
       <form
         onSubmit={handleSubmit}
         className="glass-card p-8 w-full max-w-lg flex flex-col gap-4"
