@@ -8,13 +8,14 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { getFirestore, collection, addDoc, serverTimestamp, Timestamp, doc, getDoc } from "firebase/firestore";
 import { auth, app } from '@/utils/firebaseClient';
 import { useRouter } from 'next/navigation';
-import { uploadFileToFirebaseStorage, runContentModerationAction } from '@/app/actions';
+import { runContentModerationAction } from '@/app/actions';
 
 const db = getFirestore(app);
 
-// Helper to get video duration
+// Helper to get video duration - This would ideally be done on the server, but for client-side it's okay.
 const getVideoDuration = (file: File): Promise<number> => {
     return new Promise((resolve, reject) => {
+        if (typeof window === "undefined") return resolve(0);
         const video = document.createElement('video');
         video.preload = 'metadata';
         video.onloadedmetadata = () => {
@@ -66,46 +67,12 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
             
             const category = moderationResult.success?.category || 'General';
 
-            // --- MODERATION PASSED - PROCEED TO UPLOAD & PUBLISH --- //
+            // --- MODERATION PASSED - PROCEED TO PUBLISH --- //
 
             const userDocRef = doc(db, 'users', user.uid);
             const userDocSnap = await getDoc(userDocRef);
             if (!userDocSnap.exists()) throw new Error("User profile not found!");
             const userData = userDocSnap.data();
-
-            let finalMediaUrls: string[] = [];
-            let videoDuration: number | null = null;
-            if (postData.mediaFiles && postData.mediaFiles.length > 0) {
-                for (const file of postData.mediaFiles) {
-                    if (file instanceof File) {
-                        if (file.type.startsWith('video/')) {
-                            videoDuration = await getVideoDuration(file);
-                        }
-                        const formData = new FormData();
-                        formData.append('file', file);
-                        formData.append('userId', user.uid);
-                        const result = await uploadFileToFirebaseStorage(formData);
-                        if (result.success?.url) {
-                            finalMediaUrls.push(result.success.url);
-                        } else {
-                            throw new Error(result.failure || "File upload failed.");
-                        }
-                    }
-                }
-            } else if (postData.mediaPreviews) { // Handle case where media is from AI gen (data URI)
-                finalMediaUrls = postData.mediaPreviews;
-            }
-            
-            let finalThumbnailUrl = postData.thumbnailUrl || null;
-            if (postData.thumbnailFile) {
-                 const formData = new FormData();
-                formData.append('file', postData.thumbnailFile);
-                 formData.append('userId', user.uid);
-                const result = await uploadFileToFirebaseStorage(formData);
-                if (result.success?.url) {
-                    finalThumbnailUrl = result.success.url;
-                }
-            }
 
             let publishAt;
             if (isScheduling && scheduleDate) {
@@ -120,8 +87,10 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
 
             const livekitRoomName = postData.postType === 'live' ? `${user.uid}-${Date.now()}` : null;
             const collectionName = postData.postType === 'flash' ? 'flashes' : 'posts';
-
             const hashtags = postData.hashtags ? postData.hashtags.split(' ').map((h:string) => h.replace('#', '')).filter(Boolean) : [];
+
+            // The mediaUrl is now directly available from postData
+            const finalMediaUrls = postData.mediaUrl || [];
 
             const finalPostData: any = {
                 userId: user.uid,
@@ -134,7 +103,7 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                 category: category, 
                 createdAt: serverTimestamp(),
                 publishAt: publishAt,
-                notificationSent: false, // For scheduled posts
+                notificationSent: false,
                 location: postData.location || null,
                 mood: postData.mood || null,
                 ...(postData.postType === 'text' && { backgroundColor: postData.backgroundColor, fontStyle: postData.fontStyle }),
@@ -142,9 +111,6 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                     mediaUrl: finalMediaUrls.length > 0 ? (finalMediaUrls.length > 1 ? finalMediaUrls : finalMediaUrls[0]) : null, 
                     title: postData.title || "", 
                     description: postData.description || "", 
-                    thumbnailUrl: finalThumbnailUrl,
-                    videoDuration: videoDuration,
-                    isPortrait: (videoDuration !== null && postData.mediaFiles?.[0]?.videoHeight > postData.mediaFiles?.[0]?.videoWidth) || false,
                 }),
                 ...(postData.postType === 'flash' && { mediaUrl: finalMediaUrls.length > 0 ? finalMediaUrls[0] : null, song: postData.song || null, expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), caption: postData.caption || "" }),
                 ...(postData.postType === 'poll' && { pollOptions: postData.options.map((opt:any) => opt.text) }),
@@ -256,4 +222,3 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
         </motion.div>
     );
 }
-

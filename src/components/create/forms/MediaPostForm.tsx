@@ -3,54 +3,57 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { ChevronDown, UploadCloud, X, MapPin, Smile, Music, Hash, AtSign, Locate, Loader } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { uploadFileToFirebaseStorage } from '@/app/actions';
+import { auth } from '@/utils/firebaseClient';
 
 export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange: (data: any) => void }) {
     const [mediaPreviews, setMediaPreviews] = useState<string[]>(data.mediaPreviews || []);
-    const mediaFiles = data.mediaFiles || [];
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isFetchingLocation, setIsFetchingLocation] = useState(false);
-    
+    const [uploadError, setUploadError] = useState<string | null>(null);
+    const [uploadingFiles, setUploadingFiles] = useState<string[]>([]);
+
     useEffect(() => {
         if (data.mediaPreviews && data.mediaPreviews.length > 0) {
             setMediaPreviews(data.mediaPreviews);
         }
     }, [data.mediaPreviews]);
+    
+    const handleFileUpload = async (file: File) => {
+        const user = auth.currentUser;
+        if (!user) {
+            setUploadError("You must be logged in to upload files.");
+            return;
+        }
 
-    const generateVideoThumbnail = (file: File): Promise<File> => {
-        return new Promise((resolve, reject) => {
-            const video = document.createElement('video');
-            video.preload = 'metadata';
-            video.src = URL.createObjectURL(file);
-            video.onloadedmetadata = () => {
-                video.currentTime = 1; // Seek to 1 second
-            };
-            video.onseeked = () => {
-                const canvas = document.createElement('canvas');
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                const ctx = canvas.getContext('2d');
-                if (ctx) {
-                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    canvas.toBlob((blob) => {
-                        if (blob) {
-                            const thumbnailFile = new File([blob], `thumbnail_${file.name}.jpg`, { type: 'image/jpeg' });
-                            resolve(thumbnailFile);
-                        } else {
-                            reject(new Error('Canvas to Blob conversion failed'));
-                        }
-                    }, 'image/jpeg');
-                } else {
-                    reject(new Error('Could not get canvas context'));
-                }
-                window.URL.revokeObjectURL(video.src);
-            };
-            video.onerror = (e) => {
-                reject(new Error('Video loading error'));
-                window.URL.revokeObjectURL(video.src);
-            };
-        });
-    }
+        const previewUrl = URL.createObjectURL(file);
+        setUploadingFiles(prev => [...prev, previewUrl]);
+        setUploadError(null);
+
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('userId', user.uid);
+            
+            const result = await uploadFileToFirebaseStorage(formData);
+            
+            if (result.success?.url) {
+                const newPreviews = [...(data.mediaPreviews || []), result.success.url];
+                const newUrls = [...(data.mediaUrl || []), result.success.url];
+                setMediaPreviews(newPreviews);
+                onDataChange({ ...data, mediaPreviews: newPreviews, mediaUrl: newUrls });
+            } else {
+                throw new Error(result.failure || "File upload failed.");
+            }
+        } catch (error: any) {
+            console.error("Upload failed:", error);
+            setUploadError(error.message);
+        } finally {
+            setUploadingFiles(prev => prev.filter(p => p !== previewUrl));
+            URL.revokeObjectURL(previewUrl);
+        }
+    };
 
     const processFiles = async (files: File[]) => {
         const imageVideoAudioFiles = files.filter(file => 
@@ -60,28 +63,11 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
         );
         if (imageVideoAudioFiles.length === 0) return;
 
-        let thumbnailFile = data.thumbnailFile;
-        let thumbnailPreview = data.thumbnailPreview;
-
-        // Auto-generate thumbnail for the first video if no thumb exists
-        const firstVideo = imageVideoAudioFiles.find(f => f.type.startsWith('video/'));
-        if (firstVideo && !thumbnailFile) {
-            try {
-                const generatedThumbFile = await generateVideoThumbnail(firstVideo);
-                thumbnailFile = generatedThumbFile;
-                thumbnailPreview = URL.createObjectURL(generatedThumbFile);
-            } catch (error) {
-                console.error("Failed to generate video thumbnail:", error);
-            }
+        for (const file of imageVideoAudioFiles) {
+            await handleFileUpload(file);
         }
-
-        const urls = imageVideoAudioFiles.map(file => URL.createObjectURL(file));
-        const newFiles = [...mediaFiles, ...imageVideoAudioFiles];
-        const newPreviews = [...mediaPreviews, ...urls];
-        setMediaPreviews(newPreviews);
-        onDataChange({ ...data, mediaFiles: newFiles, mediaPreviews: newPreviews, thumbnailFile, thumbnailPreview });
     };
-
+    
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
             processFiles(Array.from(e.target.files));
@@ -89,51 +75,19 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
     };
     
     const removeMedia = (index: number) => {
-        const newFiles = mediaFiles.filter((_: any, i: number) => i !== index);
-        const newPreviews = mediaPreviews.filter((_: any, i: number) => i !== index);
+        const newPreviews = mediaPreviews.filter((_, i) => i !== index);
+        const newUrls = (data.mediaUrl || []).filter((_: any, i: number) => i !== index);
         setMediaPreviews(newPreviews);
-        
-        const removedFile = mediaFiles[index];
-        let updatedData = { ...data, mediaFiles: newFiles, mediaPreviews: newPreviews };
-
-        // If the removed file was a video and it was the one used for auto-thumbnail, clear the thumbnail
-        const remainingVideos = newFiles.some((f: File) => f.type.startsWith('video/'));
-        if (!remainingVideos && removedFile?.type.startsWith('video/')) {
-            updatedData = { ...updatedData, thumbnailFile: null, thumbnailPreview: null };
-        }
-
-        onDataChange(updatedData);
+        onDataChange({ ...data, mediaPreviews: newPreviews, mediaUrl: newUrls });
     };
 
     const handleTextChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         onDataChange({ ...data, [e.target.name]: e.target.value });
     };
-    
-    const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            const previewUrl = URL.createObjectURL(file);
-            onDataChange({ ...data, thumbnailFile: file, thumbnailPreview: previewUrl });
-        }
-    }
 
-    const handleDragEnter = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragging(true);
-    }, []);
-
-    const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragging(false);
-    }, []);
-
-    const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-        e.preventDefault();
-        e.stopPropagation();
-    }, []);
-
+    const handleDragEnter = useCallback((e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }, []);
+    const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); }, []);
+    const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); e.stopPropagation(); }, []);
     const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         e.stopPropagation();
@@ -142,9 +96,7 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
             processFiles(Array.from(e.dataTransfer.files));
             e.dataTransfer.clearData();
         }
-    }, [mediaFiles, mediaPreviews, data, processFiles]); 
-
-    const hasVideo = mediaFiles.some((f: File) => f.type.startsWith('video/'));
+    }, [data, processFiles]); 
 
     const handleGetLocation = () => {
         if (navigator.geolocation) {
@@ -217,37 +169,32 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
                 </div>
                 <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" multiple accept="image/*,video/*,audio/*" />
                 <p className="text-xs text-gray-500 mt-2">Also supports camera and gallery on mobile.</p>
+                {uploadError && <p className="text-red-400 text-xs mt-2">{uploadError}</p>}
+                
+                 <div className="mt-4 grid grid-cols-3 md:grid-cols-4 gap-2">
+                    {uploadingFiles.map((url, index) => (
+                         <div key={`loading-${index}`} className="relative group aspect-square bg-black/50 rounded-lg flex items-center justify-center">
+                            <Loader className="animate-spin text-accent-cyan" />
+                        </div>
+                    ))}
+                    {mediaPreviews.length > 0 && mediaPreviews.map((url, index) => {
+                        let previewContent;
+                        if (url.includes('.mp4') || url.includes('.webm') || url.includes('.ogg')) {
+                            previewContent = <video src={url} className="w-full h-full object-cover rounded-lg" />;
+                        } else {
+                            previewContent = <img src={url} alt={`preview ${index}`} className="w-full h-full object-cover rounded-lg" />;
+                        }
 
-                 {mediaPreviews.length > 0 && (
-                    <div className="mt-4 grid grid-cols-3 md:grid-cols-4 gap-2">
-                        {mediaPreviews.map((url, index) => {
-                            const file = mediaFiles[index];
-                            let previewContent;
-
-                            if (file?.type?.startsWith("video")) {
-                                previewContent = <video src={url} className="w-full h-full object-cover rounded-lg" />;
-                            } else if (file?.type?.startsWith("image") || url.startsWith('http')) { 
-                                previewContent = <img src={url} alt={`preview ${index}`} className="w-full h-full object-cover rounded-lg" />;
-                            } else if (file?.type?.startsWith("audio")) {
-                                previewContent = (
-                                    <div className="w-full h-full bg-background/50 rounded-lg flex flex-col items-center justify-center p-2 text-center">
-                                        <Music className="text-accent-pink" size={32} />
-                                        <p className="text-xs text-gray-300 mt-2 break-all">{file.name}</p>
-                                    </div>
-                                );
-                            }
-
-                            return (
-                                <div key={index} className="relative group aspect-square">
-                                    {previewContent}
-                                    <button type="button" onClick={() => removeMedia(index)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                                        <X size={16} />
-                                    </button>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
+                        return (
+                            <div key={index} className="relative group aspect-square">
+                                {previewContent}
+                                <button type="button" onClick={() => removeMedia(index)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                    <X size={16} />
+                                </button>
+                            </div>
+                        );
+                    })}
+                </div>
             </div>
 
             <textarea
@@ -269,14 +216,6 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
                 <Smile className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                 <input type="text" name="mood" className="w-full rounded-xl p-3 pl-10 bg-black/20 text-white border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink" placeholder="How are you feeling?" value={data.mood || ''} onChange={handleTextChange} />
             </div>
-            
-            {hasVideo && (
-                 <div>
-                    <label className="text-sm font-bold text-accent-cyan">Custom Thumbnail (Optional)</label>
-                    <input type="file" name="thumbnail" accept="image/*" onChange={handleThumbnailChange} className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent-pink/20 file:text-accent-pink hover:file:bg-accent-pink/40 mt-2"/>
-                    {data.thumbnailPreview && <img src={data.thumbnailPreview} alt="thumbnail" className="w-32 h-auto rounded-lg mt-2" />}
-                </div>
-            )}
         </div>
     );
 }
