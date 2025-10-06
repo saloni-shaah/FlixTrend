@@ -113,19 +113,25 @@ export function GuestPostCard({ post }: { post: any }) {
                  <div className="w-full rounded-xl overflow-hidden mt-2 relative">
                      {(() => {
                         const mediaUrls = Array.isArray(contentPost.mediaUrl) ? contentPost.mediaUrl : [contentPost.mediaUrl];
-                        const effectiveThumbnail = contentPost.thumbnailUrl || `https://picsum.photos/seed/${post.id}/600/400`;
                         
                         if (mediaUrls.length === 1) {
                             const url = mediaUrls[0];
                             const isVideo = url.includes('.mp4') || url.includes('.webm') || url.includes('.ogg');
                             if (isVideo) {
                                 return (
-                                    <div className="relative group w-full cursor-pointer bg-black flex items-center justify-center" onClick={playVideoAfterAd ? undefined : handlePlayVideo}>
+                                    <div 
+                                        className="relative group w-full cursor-pointer bg-black flex items-center justify-center" 
+                                        onClick={playVideoAfterAd ? undefined : handlePlayVideo}
+                                        style={{
+                                            aspectRatio: post.isPortrait ? '9 / 16' : '16 / 9',
+                                            maxHeight: '70vh',
+                                        }}
+                                    >
                                         {playVideoAfterAd ? 
-                                            <OptimizedVideo ref={videoRef} src={url} thumbnailUrl={effectiveThumbnail} className="w-full max-h-[70vh] object-contain" controls />
+                                            <OptimizedVideo ref={videoRef} src={url} className="w-full h-full object-contain" controls />
                                             : 
                                             <>
-                                                <OptimizedImage src={effectiveThumbnail} alt="Video thumbnail" className="w-full h-full object-contain" />
+                                                <video src={url} className="w-full h-full object-contain" preload="metadata" />
                                                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                                                     <FaPlay className="text-white text-5xl" />
                                                 </div>
