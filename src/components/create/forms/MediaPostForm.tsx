@@ -17,18 +17,69 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
         }
     }, [data.mediaPreviews]);
 
-    const processFiles = (files: File[]) => {
+    const generateVideoThumbnail = (file: File): Promise<File> => {
+        return new Promise((resolve, reject) => {
+            const video = document.createElement('video');
+            video.preload = 'metadata';
+            video.src = URL.createObjectURL(file);
+            video.onloadedmetadata = () => {
+                video.currentTime = 1; // Seek to 1 second
+            };
+            video.onseeked = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    canvas.toBlob((blob) => {
+                        if (blob) {
+                            const thumbnailFile = new File([blob], `thumbnail_${file.name}.jpg`, { type: 'image/jpeg' });
+                            resolve(thumbnailFile);
+                        } else {
+                            reject(new Error('Canvas to Blob conversion failed'));
+                        }
+                    }, 'image/jpeg');
+                } else {
+                    reject(new Error('Could not get canvas context'));
+                }
+                window.URL.revokeObjectURL(video.src);
+            };
+            video.onerror = (e) => {
+                reject(new Error('Video loading error'));
+                window.URL.revokeObjectURL(video.src);
+            };
+        });
+    }
+
+    const processFiles = async (files: File[]) => {
         const imageVideoAudioFiles = files.filter(file => 
             file.type.startsWith('image/') || 
             file.type.startsWith('video/') || 
             file.type.startsWith('audio/')
         );
         if (imageVideoAudioFiles.length === 0) return;
+
+        let thumbnailFile = data.thumbnailFile;
+        let thumbnailPreview = data.thumbnailPreview;
+
+        // Auto-generate thumbnail for the first video if no thumb exists
+        const firstVideo = imageVideoAudioFiles.find(f => f.type.startsWith('video/'));
+        if (firstVideo && !thumbnailFile) {
+            try {
+                const generatedThumbFile = await generateVideoThumbnail(firstVideo);
+                thumbnailFile = generatedThumbFile;
+                thumbnailPreview = URL.createObjectURL(generatedThumbFile);
+            } catch (error) {
+                console.error("Failed to generate video thumbnail:", error);
+            }
+        }
+
         const urls = imageVideoAudioFiles.map(file => URL.createObjectURL(file));
         const newFiles = [...mediaFiles, ...imageVideoAudioFiles];
         const newPreviews = [...mediaPreviews, ...urls];
         setMediaPreviews(newPreviews);
-        onDataChange({ ...data, mediaFiles: newFiles, mediaPreviews: newPreviews });
+        onDataChange({ ...data, mediaFiles: newFiles, mediaPreviews: newPreviews, thumbnailFile, thumbnailPreview });
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -41,7 +92,17 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
         const newFiles = mediaFiles.filter((_: any, i: number) => i !== index);
         const newPreviews = mediaPreviews.filter((_: any, i: number) => i !== index);
         setMediaPreviews(newPreviews);
-        onDataChange({ ...data, mediaFiles: newFiles, mediaPreviews: newPreviews });
+        
+        const removedFile = mediaFiles[index];
+        let updatedData = { ...data, mediaFiles: newFiles, mediaPreviews: newPreviews };
+
+        // If the removed file was a video and it was the one used for auto-thumbnail, clear the thumbnail
+        const remainingVideos = newFiles.some((f: File) => f.type.startsWith('video/'));
+        if (!remainingVideos && removedFile?.type.startsWith('video/')) {
+            updatedData = { ...updatedData, thumbnailFile: null, thumbnailPreview: null };
+        }
+
+        onDataChange(updatedData);
     };
 
     const handleTextChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
