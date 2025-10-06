@@ -1,6 +1,7 @@
 
+
 import { initializeApp } from "firebase-admin/app";
-import { getFirestore, FieldValue, Timestamp, doc, collection, query, where, getDocs, limit } from "firebase-admin/firestore";
+import { getFirestore, FieldValue, Timestamp, doc, collection, query, where, getDocs, limit, writeBatch } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 import * as functions from "firebase-functions";
 import * as logger from "firebase-functions/logger";
@@ -410,3 +411,81 @@ export const cleanupExpiredFlashes = functions.pubsub.schedule('every 1 hours').
     logger.info(`Cleanup complete. Deleted ${expiredFlashesSnap.size} expired flashes.`);
     return null;
 });
+
+/**
+ * Checks for scheduled posts and sends notifications.
+ * Runs every minute.
+ */
+export const sendScheduledPostNotifications = functions.pubsub.schedule('every 1 minutes').onRun(async (context) => {
+    const now = Timestamp.now();
+    const fiveMinutesFromNow = Timestamp.fromMillis(now.toMillis() + 5 * 60 * 1000);
+
+    const q = query(
+        collection(db, 'posts'),
+        where('status', '==', 'scheduled'),
+        where('publishAt', '<=', fiveMinutesFromNow),
+        where('publishAt', '>', now),
+        where('notificationSent', '==', false)
+    );
+
+    const scheduledPostsSnap = await getDocs(q);
+
+    if (scheduledPostsSnap.empty) {
+        return null;
+    }
+
+    const notificationPromises: Promise<any>[] = [];
+    const batch = writeBatch(db);
+
+    for (const postDoc of scheduledPostsSnap.docs) {
+        const post = postDoc.data();
+        const creatorId = post.userId;
+        const creatorUsername = post.username;
+
+        // 1. Send reminder notification to the creator
+        const creatorDoc = await getDoc(doc(db, 'users', creatorId));
+        if (creatorDoc.exists() && creatorDoc.data()?.fcmToken) {
+            const payload = {
+                notification: {
+                    title: 'Your stream is about to start!',
+                    body: `Your live stream "${post.title}" is scheduled to begin in a few minutes. Get ready!`,
+                    icon: '/icon-192x192.png',
+                },
+            };
+            notificationPromises.push(messaging.sendToDevice(creatorDoc.data()!.fcmToken, payload));
+        }
+
+        // 2. Send notification to followers
+        const followersRef = collection(db, 'users', creatorId, 'followers');
+        const followersSnap = await getDocs(followersRef);
+        
+        const followerTokens: string[] = [];
+        for(const followerDoc of followersSnap.docs) {
+            const followerUserDoc = await getDoc(doc(db, 'users', followerDoc.id));
+            if(followerUserDoc.exists() && followerUserDoc.data()?.fcmToken) {
+                followerTokens.push(followerUserDoc.data()!.fcmToken);
+            }
+        }
+        
+        if (followerTokens.length > 0) {
+            const payload = {
+                notification: {
+                    title: 'Live Stream Starting Soon!',
+                    body: `${creatorUsername} is going live soon with "${post.title}"!`,
+                    icon: '/icon-192x192.png',
+                },
+            };
+            notificationPromises.push(messaging.sendToDevice(followerTokens, payload));
+        }
+
+        // 3. Mark the post as notified to prevent re-sending
+        batch.update(postDoc.ref, { notificationSent: true });
+    }
+
+    notificationPromises.push(batch.commit());
+    await Promise.all(notificationPromises);
+    
+    logger.info(`Sent notifications for ${scheduledPostsSnap.size} scheduled posts.`);
+    return null;
+});
+

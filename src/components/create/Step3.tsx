@@ -134,6 +134,7 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                 category: category, 
                 createdAt: serverTimestamp(),
                 publishAt: publishAt,
+                notificationSent: false, // For scheduled posts
                 location: postData.location || null,
                 mood: postData.mood || null,
                 ...(postData.postType === 'text' && { backgroundColor: postData.backgroundColor, fontStyle: postData.fontStyle }),
@@ -147,12 +148,12 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                 }),
                 ...(postData.postType === 'flash' && { mediaUrl: finalMediaUrls.length > 0 ? finalMediaUrls[0] : null, song: postData.song || null, expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), caption: postData.caption || "" }),
                 ...(postData.postType === 'poll' && { pollOptions: postData.options.map((opt:any) => opt.text) }),
-                ...(postData.postType === 'live' && { livekitRoom: livekitRoomName, title: postData.title || "Live Stream" }),
+                ...(postData.postType === 'live' && { livekitRoom: livekitRoomName, title: postData.title || "Live Stream", status: 'scheduled' }),
             };
             
             await addDoc(collection(db, collectionName), finalPostData);
             
-            if (postData.postType === 'live' && livekitRoomName) {
+            if (postData.postType === 'live' && livekitRoomName && !isScheduling) {
                 router.push(`/broadcast/${encodeURIComponent(livekitRoomName)}`);
             } else {
                 router.push('/home');
@@ -170,7 +171,7 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
         }
     };
 
-    const shouldShowScheduling = postData.postType !== 'flash' && postData.postType !== 'live';
+    const shouldShowScheduling = postData.postType !== 'flash';
 
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
