@@ -337,7 +337,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
             const firstVideoUrl = mediaUrls.find(url => url.includes('.mp4') || url.includes('.webm'));
             if (firstVideoUrl) {
                 if(isShortVideo) {
-                    // For reels, single tap can toggle play/pause in the future
+                     setShowPlayer('short');
                 } else {
                      setShowPlayer('long');
                 }
@@ -349,7 +349,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
     };
     
     const renderMedia = (url: string, isVideo: boolean, isSingle: boolean) => {
-        const effectiveThumbnail = thumbnailUrl || '/video_placeholder.png';
+        const effectiveThumbnail = thumbnailUrl || `https://picsum.photos/seed/${post.id}/600/400`;
         if (isVideo) {
             return (
                 <div className="relative group w-full h-full cursor-pointer bg-black flex items-center justify-center">

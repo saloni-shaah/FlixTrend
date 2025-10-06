@@ -113,7 +113,7 @@ export function GuestPostCard({ post }: { post: any }) {
                  <div className="w-full rounded-xl overflow-hidden mt-2 relative">
                      {(() => {
                         const mediaUrls = Array.isArray(contentPost.mediaUrl) ? contentPost.mediaUrl : [contentPost.mediaUrl];
-                        const effectiveThumbnail = contentPost.thumbnailUrl || '/video_placeholder.png';
+                        const effectiveThumbnail = contentPost.thumbnailUrl || `https://picsum.photos/seed/${post.id}/600/400`;
                         
                         if (mediaUrls.length === 1) {
                             const url = mediaUrls[0];
