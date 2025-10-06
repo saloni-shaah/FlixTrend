@@ -19,7 +19,6 @@ export default function LandingPage() {
       if (user) {
         router.replace('/home');
       } else {
-        // A slight delay to ensure animation plays, but not too long
         setTimeout(() => setLoading(false), 500);
       }
     });
@@ -65,9 +64,37 @@ export default function LandingPage() {
     <>
       <style jsx global>{`
         body {
-          background: linear-gradient(135deg, #0a0118, #100a20);
+          background: #0a0118;
           color: #E0E7FF;
         }
+        
+        .starry-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            overflow: hidden;
+            z-index: -2;
+        }
+
+        .stars {
+            background-image: 
+                radial-gradient(1px 1px at 20% 30%, #fff, transparent),
+                radial-gradient(1px 1px at 80% 10%, #fff, transparent),
+                radial-gradient(1px 1px at 50% 70%, #fff, transparent),
+                radial-gradient(2px 2px at 90% 80%, #fff, transparent),
+                radial-gradient(1px 1px at 10% 90%, #fff, transparent),
+                radial-gradient(2px 2px at 40% 50%, #fff, transparent);
+            animation: twinkle 10s infinite linear;
+        }
+
+        @keyframes twinkle {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-100%); }
+        }
+
         .hero-bg-animation {
             position: absolute;
             top: 0;
@@ -77,47 +104,49 @@ export default function LandingPage() {
             overflow: hidden;
             z-index: 0;
         }
-        .hero-bg-animation::before {
-            content: '';
+        
+        .floating-shape {
             position: absolute;
-            width: 400px;
-            height: 400px;
-            background: radial-gradient(circle, rgba(0, 240, 255, 0.2), transparent 60%);
-            animation: pulse-glow-cyan 8s infinite alternate;
+            border-radius: 50%;
+            filter: blur(80px);
+            will-change: transform;
         }
-         .hero-bg-animation::after {
-            content: '';
-            position: absolute;
-            width: 400px;
-            height: 400px;
-            bottom: -100px;
-            right: -100px;
-            background: radial-gradient(circle, rgba(255, 60, 172, 0.2), transparent 60%);
-            animation: pulse-glow-pink 10s infinite alternate;
+        .shape1 { width: 300px; height: 300px; background: rgba(0, 240, 255, 0.2); animation: float 15s infinite alternate; top: 10%; left: 10%; }
+        .shape2 { width: 400px; height: 400px; background: rgba(255, 60, 172, 0.25); animation: float 20s infinite alternate-reverse; bottom: 5%; right: 5%; }
+        .shape3 { width: 250px; height: 250px; background: rgba(191, 0, 255, 0.2); animation: float 18s infinite alternate; top: 50%; right: 20%; }
+
+        @keyframes float {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(100px, 50px) scale(1.3); }
         }
 
-        @keyframes pulse-glow-cyan {
-          0% { transform: translate(0, 0) scale(1); opacity: 0.8; }
-          100% { transform: translate(100px, 100px) scale(1.5); opacity: 0.4; }
-        }
-         @keyframes pulse-glow-pink {
-          0% { transform: translate(0, 0) scale(1.5); opacity: 0.4; }
-          100% { transform: translate(-100px, -100px) scale(1); opacity: 0.8; }
-        }
         .btn-glow {
-            box-shadow: 0 0 10px var(--glow-color), 0 0 20px var(--glow-color);
+            box-shadow: 0 0 10px var(--glow-color, #fff), 0 0 20px var(--glow-color, #fff);
+            transition: all 0.3s ease;
+        }
+        .btn-glow:hover {
+            box-shadow: 0 0 20px var(--glow-color, #fff), 0 0 40px var(--glow-color, #fff), 0 0 60px var(--glow-color, #fff);
         }
         .text-glow {
             text-shadow: 0 0 8px currentColor;
         }
       `}</style>
-      <div className="min-h-screen font-body">
+      <div className="min-h-screen font-body relative">
+        <div className="starry-bg">
+            <div className="stars" style={{ height: '200%' }}></div>
+        </div>
+
         {/* Hero Section */}
         <section className="relative flex flex-col items-center justify-center h-screen text-center overflow-hidden px-4">
-            <div className="hero-bg-animation" />
+            <div className="hero-bg-animation">
+                <div className="floating-shape shape1"></div>
+                <div className="floating-shape shape2"></div>
+                <div className="floating-shape shape3"></div>
+            </div>
 
             <div className="relative z-10 flex flex-col items-center gap-6">
                 <motion.div
+                    whileHover={{ scale: 1.1 }}
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 1, type: "spring" }}
@@ -138,9 +167,9 @@ export default function LandingPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.8, delay: 0.4 }}
                     className="flex flex-col md:flex-row gap-4 mt-4">
-                     <Link href="/signup" className="px-8 py-3 rounded-full bg-accent-pink text-white font-bold text-lg shadow-lg hover:scale-105 transition-transform" style={{'--glow-color': '#FF3CAC'} as React.CSSProperties}>Sign Up</Link>
-                    <Link href="/login" className="px-8 py-3 rounded-full bg-accent-purple text-white font-bold text-lg shadow-lg hover:scale-105 transition-transform" style={{'--glow-color': '#BF00FF'} as React.CSSProperties}>Log In</Link>
-                     <Link href="/guest" className="px-8 py-3 rounded-full border-2 border-accent-cyan text-white font-bold text-lg shadow-lg hover:bg-accent-cyan hover:text-black transition-all" style={{'--glow-color': '#00F0FF'} as React.CSSProperties}>Continue as Guest</Link>
+                     <Link href="/signup" className="btn-glow px-8 py-3 rounded-full bg-accent-pink text-white font-bold text-lg hover:scale-105 transition-transform" style={{'--glow-color': '#FF3CAC'} as React.CSSProperties}>Sign Up</Link>
+                    <Link href="/login" className="btn-glow px-8 py-3 rounded-full bg-accent-purple text-white font-bold text-lg hover:scale-105 transition-transform" style={{'--glow-color': '#BF00FF'} as React.CSSProperties}>Log In</Link>
+                     <Link href="/guest" className="btn-glow px-8 py-3 rounded-full border-2 border-accent-cyan text-white font-bold text-lg hover:bg-accent-cyan hover:text-black transition-all" style={{'--glow-color': '#00F0FF'} as React.CSSProperties}>Continue as Guest</Link>
                 </motion.div>
                  <motion.p 
                     initial={{ opacity: 0, y: 20 }}
