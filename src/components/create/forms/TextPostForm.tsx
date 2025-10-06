@@ -1,7 +1,8 @@
-
 "use client";
 import React, { useState } from 'react';
 import { MapPin, Smile, Locate, Loader } from 'lucide-react';
+import { uploadFileToFirebaseStorage } from '@/app/actions';
+import { auth } from '@/utils/firebaseClient';
 
 const backgroundColors = [
   '#ffffff', '#ffadad', '#ffd6a5', '#fdffb6', '#caffbf', '#9bf6ff',
@@ -16,27 +17,54 @@ const fontStyles = [
 ];
 
 export function TextPostForm({ data, onDataChange }: { data: any, onDataChange: (data: any) => void }) {
-    const [bgImage, setBgImage] = useState<string | null>(data.backgroundImage || null);
     const [isFetchingLocation, setIsFetchingLocation] = useState(false);
     
-    // Ensure backgroundColor has a default value
-    const currentBgColor = data.backgroundColor || '#ffffff';
+    // Local state for image preview before it's uploaded and the final URL is stored in the parent.
+    const [bgImagePreview, setBgImagePreview] = useState<string | null>(data.backgroundImage || null);
+    const [isUploading, setIsUploading] = useState(false);
+    
+    // Derived state from props for the textarea background
+    const currentBg = data.backgroundImage || data.backgroundColor || '#ffffff';
 
     const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
         onDataChange({ ...data, [e.target.name]: e.target.value });
     };
 
     const handleBgColorChange = (color: string) => {
-        setBgImage(null); // Clear image if color is selected
-        onDataChange({ ...data, backgroundColor: color, backgroundImage: null, backgroundImageFile: null });
+        setBgImagePreview(null);
+        onDataChange({ ...data, backgroundColor: color, backgroundImage: null });
     };
-
-    const handleImageBgChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    
+    const handleImageBgChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
+            const user = auth.currentUser;
+            if (!user) {
+                alert("You must be logged in to upload images.");
+                return;
+            }
+
+            setIsUploading(true);
             const previewUrl = URL.createObjectURL(file);
-            setBgImage(previewUrl);
-            onDataChange({ ...data, backgroundImageFile: file, backgroundImage: previewUrl, backgroundColor: null });
+            setBgImagePreview(previewUrl);
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('userId', user.uid);
+                const result = await uploadFileToFirebaseStorage(formData);
+
+                if (result.success?.url) {
+                    onDataChange({ ...data, backgroundImage: result.success.url, backgroundColor: null });
+                } else {
+                    throw new Error(result.failure || "Background image upload failed.");
+                }
+            } catch (error: any) {
+                alert(error.message);
+                setBgImagePreview(null); // Clear preview on error
+            } finally {
+                setIsUploading(false);
+            }
         }
     };
     
@@ -50,7 +78,6 @@ export function TextPostForm({ data, onDataChange }: { data: any, onDataChange: 
             navigator.geolocation.getCurrentPosition(async (position) => {
                 const { latitude, longitude } = position.coords;
                 try {
-                    // Using a free, public reverse geocoding API
                     const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
                     const locationData = await response.json();
                     const city = locationData.address.city || locationData.address.town || locationData.address.village;
@@ -87,8 +114,8 @@ export function TextPostForm({ data, onDataChange }: { data: any, onDataChange: 
                 value={data.content || ''}
                 onChange={handleTextChange}
                 style={{
-                    backgroundColor: bgImage ? 'transparent' : currentBgColor,
-                    backgroundImage: bgImage ? `url(${bgImage})` : 'none',
+                    backgroundColor: data.backgroundImage ? 'transparent' : data.backgroundColor,
+                    backgroundImage: data.backgroundImage ? `url(${data.backgroundImage})` : 'none',
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                 }}
@@ -119,12 +146,13 @@ export function TextPostForm({ data, onDataChange }: { data: any, onDataChange: 
                 <h4 className="font-bold text-sm text-accent-cyan">Background Color</h4>
                 <div className="flex flex-wrap gap-2">
                     {backgroundColors.map(color => (
-                        <button type="button" key={color} onClick={() => handleBgColorChange(color)} className="w-8 h-8 rounded-full border-2" style={{ backgroundColor: color, borderColor: currentBgColor === color ? 'var(--accent-pink)' : 'transparent' }} />
+                        <button type="button" key={color} onClick={() => handleBgColorChange(color)} className="w-8 h-8 rounded-full border-2" style={{ backgroundColor: color, borderColor: currentBg === color ? 'var(--accent-pink)' : 'transparent' }} />
                     ))}
                 </div>
 
                 <h4 className="font-bold text-sm text-accent-cyan">Or Upload Background Image</h4>
                 <input type="file" accept="image/*" onChange={handleImageBgChange} className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent-pink/20 file:text-accent-pink hover:file:bg-accent-pink/40"/>
+                {isUploading && <p className="text-sm text-accent-cyan animate-pulse">Uploading background...</p>}
             </div>
         </div>
     );
