@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from 'react';
@@ -110,7 +109,7 @@ export function GuestPostCard({ post }: { post: any }) {
                 </div>
             )}
 
-           {contentPost.type === "media" && contentPost.mediaUrl && (
+            {contentPost.type === "media" && contentPost.mediaUrl && (
                  <div className="w-full rounded-xl overflow-hidden mt-2 relative">
                      {(() => {
                         const mediaUrls = Array.isArray(contentPost.mediaUrl) ? contentPost.mediaUrl : [contentPost.mediaUrl];
@@ -123,10 +122,10 @@ export function GuestPostCard({ post }: { post: any }) {
                                 return (
                                     <div className="relative group w-full cursor-pointer bg-black flex items-center justify-center" onClick={playVideoAfterAd ? undefined : handlePlayVideo}>
                                         {playVideoAfterAd ? 
-                                            <OptimizedVideo ref={videoRef} src={url} thumbnailUrl={effectiveThumbnail} className="w-full h-full object-contain" controls />
+                                            <OptimizedVideo ref={videoRef} src={url} thumbnailUrl={effectiveThumbnail} className="w-full max-h-[70vh] object-contain" controls />
                                             : 
                                             <>
-                                                <OptimizedImage src={effectiveThumbnail} alt="Video thumbnail" className="w-full h-full object-cover" />
+                                                <OptimizedImage src={effectiveThumbnail} alt="Video thumbnail" className="w-full h-full object-contain" />
                                                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                                                     <FaPlay className="text-white text-5xl" />
                                                 </div>

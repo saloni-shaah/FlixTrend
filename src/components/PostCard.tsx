@@ -318,24 +318,41 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
   const MediaGrid = ({ mediaUrls, thumbnailUrl }: { mediaUrls: string[]; thumbnailUrl?: string }) => {
     if (!mediaUrls || mediaUrls.length === 0) return null;
 
-    const handleMediaClick = () => {
-        const firstVideoUrl = mediaUrls.find(url => url.includes('.mp4') || url.includes('.webm'));
-        if (firstVideoUrl) {
-            if(post.isPortrait) {
-                 setShowPlayer('short');
+    const lastTap = useRef(0);
+
+    const handleMediaClick = (e: React.MouseEvent) => {
+        const isShortVideo = post.videoDuration >= 3 && post.videoDuration <= 180 && post.isPortrait;
+        
+        const now = Date.now();
+        const DOUBLE_TAP_DELAY = 300;
+        if (now - lastTap.current < DOUBLE_TAP_DELAY) {
+            // Double tap
+            if (isShortVideo) {
+                setShowPlayer('short');
             } else {
-                 setShowPlayer('long');
+                handleStar(); // Double tap to like non-reels
             }
         } else {
-            setIsFullScreen(true);
+            // Single tap
+            const firstVideoUrl = mediaUrls.find(url => url.includes('.mp4') || url.includes('.webm'));
+            if (firstVideoUrl) {
+                if(isShortVideo) {
+                    // For reels, single tap can toggle play/pause in the future
+                } else {
+                     setShowPlayer('long');
+                }
+            } else {
+                setIsFullScreen(true);
+            }
         }
+        lastTap.current = now;
     };
     
     const renderMedia = (url: string, isVideo: boolean, isSingle: boolean) => {
         const effectiveThumbnail = thumbnailUrl || '/video_placeholder.png';
         if (isVideo) {
             return (
-                <div className="relative group w-full h-full cursor-pointer bg-black flex items-center justify-center" onClick={handleMediaClick}>
+                <div className="relative group w-full h-full cursor-pointer bg-black flex items-center justify-center">
                     <OptimizedImage src={effectiveThumbnail} alt="Video thumbnail" className="w-full h-full object-contain" />
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                         <FaPlay className="text-white text-5xl" />
@@ -345,7 +362,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
             );
         }
         return (
-            <div className="relative group w-full h-full" onClick={() => setIsFullScreen(true)}>
+            <div className="relative group w-full h-full">
                 <OptimizedImage src={url} alt="media" className="w-full h-full object-cover" />
                 <Watermark isAnimated={isSingle} />
             </div>
@@ -356,18 +373,19 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
         const url = mediaUrls[0];
         const isVideo = url.includes('.mp4') || url.includes('.webm') || url.includes('.ogg');
         return (
-            <div className="w-full rounded-xl overflow-hidden mt-2 relative">
+            <div className="w-full rounded-xl overflow-hidden mt-2 relative" onClick={handleMediaClick}>
                 {renderMedia(url, !!isVideo, true)}
             </div>
         );
     }
 
+    // Grid view for multiple media items
     return (
-        <div className="mt-2 grid grid-cols-2 gap-1 rounded-xl overflow-hidden">
+        <div className="mt-2 grid grid-cols-2 gap-1 rounded-xl overflow-hidden" onClick={() => setIsFullScreen(true)}>
             {mediaUrls.slice(0, 4).map((url, index) => {
                  const isVideo = url.includes('.mp4') || url.includes('.webm') || url.includes('.ogg');
                 return (
-                    <div key={index} className="relative aspect-square cursor-pointer" onClick={() => isVideo && handleMediaClick()}>
+                    <div key={index} className="relative aspect-square cursor-pointer">
                         {renderMedia(url, !!isVideo, false)}
                         {index === 3 && mediaUrls.length > 4 && (
                             <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
