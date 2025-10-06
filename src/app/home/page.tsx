@@ -12,11 +12,12 @@ import { PostCard } from "@/components/PostCard";
 import { app } from "@/utils/firebaseClient";
 import { VibeSpaceLoader } from "@/components/VibeSpaceLoader";
 import AdBanner from "@/components/AdBanner";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import { AlmightyLogo } from "@/components/ui/logo";
 import { CreatePostPrompt } from "@/components/CreatePostPrompt";
+import { WelcomeAnimation } from "@/components/WelcomeAnimation";
 
 
 const AddMusicModal = dynamic(() => import('@/components/MusicDiscovery').then(mod => mod.MusicDiscovery), { ssr: false });
@@ -45,6 +46,8 @@ function HomePageContent() {
   const [showShortsPlayer, setShowShortsPlayer] = useState(false);
   const [showAlmightyAd, setShowAlmightyAd] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [showWelcomeAnimation, setShowWelcomeAnimation] = useState(false);
   const POSTS_PER_PAGE = 5;
   const feedEndRef = useRef<HTMLDivElement>(null);
   const [hasUnreadNotifs, setHasUnreadNotifs] = useState(false);
@@ -55,6 +58,14 @@ function HomePageContent() {
     resetTranscript,
     browserSupportsSpeechRecognition
   } = useSpeechRecognition();
+
+  useEffect(() => {
+      const hasShownAnimation = sessionStorage.getItem('welcomeAnimationShown');
+      if (searchParams.get('new') === 'true' && !hasShownAnimation) {
+          setShowWelcomeAnimation(true);
+          sessionStorage.setItem('welcomeAnimationShown', 'true');
+      }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!listening && transcript) {
@@ -259,6 +270,10 @@ function HomePageContent() {
 
   if (loading && posts.length === 0) {
     return <VibeSpaceLoader />;
+  }
+
+  if (showWelcomeAnimation) {
+      return <WelcomeAnimation onComplete={() => setShowWelcomeAnimation(false)} />;
   }
 
   return (
