@@ -92,7 +92,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.push("/home");
+      router.push("/home?new=true");
     } catch (err: any) {
       setError(err.message);
     }

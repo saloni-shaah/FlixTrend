@@ -155,7 +155,7 @@ export default function SignupPage() {
             await sendEmailVerification(userCredential.user);
 
             setSuccess("Welcome to the Vibe! Your account is created & premium access is activated. Redirecting...");
-            setTimeout(() => router.push("/home"), 3000);
+            setTimeout(() => router.push("/home?new=true"), 3000);
         } catch (err: any) {
             if(err.code === 'auth/email-already-in-use') {
                 setError("This email is already in use. Please use another email or log in.");
