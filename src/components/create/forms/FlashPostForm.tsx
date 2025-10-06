@@ -4,17 +4,15 @@ import React, { useState, useRef, useEffect } from 'react';
 import { X, UploadCloud, Music as MusicIcon, MapPin, Smile, Camera, Image as ImageIcon, Zap, Locate, Loader } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getFirestore, collection, onSnapshot, query, orderBy, getDoc, doc } from 'firebase/firestore';
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { app } from '@/utils/firebaseClient';
+import { auth, app } from '@/utils/firebaseClient';
+import { uploadFileToFirebaseStorage } from '@/app/actions';
 import { Wand2 } from 'lucide-react';
 
-
 const db = getFirestore(app);
-const storage = getStorage(app);
 
 export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange: (data: any) => void }) {
-    const [mediaFile, setMediaFile] = useState<File | null>(data.mediaFiles?.[0] || null);
-    const [mediaPreview, setMediaPreview] = useState<string | null>(data.mediaPreviews?.[0] || null);
+    const [mediaFile, setMediaFile] = useState<File | null>(null);
+    const [mediaPreview, setMediaPreview] = useState<string | null>(data.mediaUrl || null);
     const [showSongPicker, setShowSongPicker] = useState(false);
     const [appSongs, setAppSongs] = useState<any[]>([]);
     
@@ -71,6 +69,29 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
             setCameraStream(null);
         }
     };
+
+    const handleFileUpload = async (file: File) => {
+        const user = auth.currentUser;
+        if (!user) {
+            alert("You must be logged in to upload files.");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('userId', user.uid);
+        
+        const result = await uploadFileToFirebaseStorage(formData);
+        
+        if (result.success?.url) {
+            onDataChange({ ...data, mediaUrl: [result.success.url] });
+            setMediaPreview(result.success.url); // Use the final URL for preview
+        } else {
+            console.error("Upload failed:", result.failure);
+            alert("File upload failed.");
+        }
+    };
+
     
     const handleCapture = () => {
         if (videoRef.current && canvasRef.current) {
@@ -81,8 +102,13 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
             const context = canvas.getContext('2d');
             context?.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
             
-            const dataUrl = canvas.toDataURL('image/jpeg');
-            setCapturedImageDataUrl(dataUrl);
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    const file = new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
+                    handleFileUpload(file);
+                }
+            }, 'image/jpeg');
+
             stopCamera();
             setShowCamera(false);
         }
@@ -90,20 +116,13 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            const url = URL.createObjectURL(file);
-            setMediaFile(file);
-            setMediaPreview(url);
-            onDataChange({ ...data, mediaFiles: [file], mediaPreviews: [url] });
-            setCapturedImageDataUrl(null); // Clear any captured image
+            handleFileUpload(e.target.files[0]);
         }
     };
     
     const removeMedia = () => {
-        setMediaFile(null);
         setMediaPreview(null);
-        setCapturedImageDataUrl(null);
-        onDataChange({ ...data, mediaFiles: [], mediaPreviews: [] });
+        onDataChange({ ...data, mediaUrl: [] });
     };
 
     const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
@@ -130,7 +149,6 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
             navigator.geolocation.getCurrentPosition(async (position) => {
                 const { latitude, longitude } = position.coords;
                 try {
-                    // Using a free, public reverse geocoding API
                     const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
                     const locationData = await response.json();
                     const city = locationData.address.city || locationData.address.town || locationData.address.village;
@@ -158,22 +176,6 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
         }
     };
 
-    if (capturedImageDataUrl) {
-        return (
-            <div className="flex flex-col items-center gap-4">
-                <h3 className="font-bold text-accent-purple flex items-center gap-2"><Wand2/> AI Remix Studio</h3>
-                <div className="relative w-full max-w-sm aspect-[4/5] rounded-lg overflow-hidden border-2 border-accent-purple">
-                    <img src={capturedImageDataUrl} alt="Captured preview" className="w-full h-full object-cover" />
-                    {isRemixing && (
-                         <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
-                            <Loader className="animate-spin text-accent-purple" size={48} />
-                        </div>
-                    )}
-                </div>
-            </div>
-        )
-    }
-    
     if (showCamera) {
         return (
              <div className="flex flex-col items-center gap-4">
@@ -217,7 +219,7 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
                     </div>
                 ) : (
                      <div className="relative group aspect-video">
-                        {mediaFile?.type.startsWith("video") ? (
+                        {(mediaPreview.includes('.mp4') || mediaPreview.includes('.webm')) ? (
                             <video src={mediaPreview} className="w-full h-full object-contain rounded-lg" />
                         ) : (
                             <img src={mediaPreview} alt="preview" className="w-full h-full object-contain rounded-lg" />

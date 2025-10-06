@@ -1,7 +1,7 @@
+
 "use client";
 import React, { useState, useRef, useCallback } from 'react';
 import { UploadCloud, X, MapPin, Smile, Hash, AtSign, Locate, Loader } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { uploadFileToFirebaseStorage } from '@/app/actions';
 import { auth } from '@/utils/firebaseClient';
 
@@ -11,8 +11,8 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
     const [isFetchingLocation, setIsFetchingLocation] = useState(false);
     const [uploadError, setUploadError] = useState<string | null>(null);
     const [uploadingFiles, setUploadingFiles] = useState<string[]>([]);
-
-    // This effect ensures that if data comes from another source (like a remix), the previews are updated.
+    
+    // Derived state from props
     const mediaPreviews = data.mediaUrl || [];
 
     const handleFileUpload = async (file: File) => {
@@ -44,26 +44,26 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
             setUploadError(error.message);
         } finally {
             setUploadingFiles(prev => prev.filter(p => p !== previewUrl));
+            URL.revokeObjectURL(previewUrl);
         }
     };
 
-    const processFiles = async (files: File[]) => {
-        const imageVideoAudioFiles = files.filter(file => 
+    const processFiles = async (files: FileList | null) => {
+        if (!files) return;
+        const filesToUpload = Array.from(files).filter(file => 
             file.type.startsWith('image/') || 
             file.type.startsWith('video/') || 
             file.type.startsWith('audio/')
         );
-        if (imageVideoAudioFiles.length === 0) return;
+        if (filesToUpload.length === 0) return;
 
-        for (const file of imageVideoAudioFiles) {
+        for (const file of filesToUpload) {
             await handleFileUpload(file);
         }
     };
     
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files) {
-            processFiles(Array.from(e.target.files));
-        }
+        processFiles(e.target.files);
     };
     
     const removeMedia = (urlToRemove: string) => {
@@ -82,10 +82,8 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
         e.preventDefault();
         e.stopPropagation();
         setIsDragging(false);
-        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            processFiles(Array.from(e.dataTransfer.files));
-            e.dataTransfer.clearData();
-        }
+        processFiles(e.dataTransfer.files);
+        e.dataTransfer.clearData();
     }, []);
 
     const handleGetLocation = () => {
