@@ -64,7 +64,7 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                 return; // STOP execution
             }
             
-            const category = moderationResult.success?.category || 'Other';
+            const category = moderationResult.success?.category || 'General';
 
             // --- MODERATION PASSED - PROCEED TO UPLOAD & PUBLISH --- //
 
@@ -104,8 +104,6 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                 const result = await uploadFileToFirebaseStorage(formData);
                 if (result.success?.url) {
                     finalThumbnailUrl = result.success.url;
-                } else {
-                    throw new Error(result.failure || "Thumbnail upload failed.");
                 }
             }
 
@@ -145,7 +143,7 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                     description: postData.description || "", 
                     thumbnailUrl: finalThumbnailUrl,
                     videoDuration: videoDuration,
-                    isPortrait: (videoDuration !== null && postData.mediaFiles[0]?.videoHeight > postData.mediaFiles[0]?.videoWidth) || false,
+                    isPortrait: (videoDuration !== null && postData.mediaFiles?.[0]?.videoHeight > postData.mediaFiles?.[0]?.videoWidth) || false,
                 }),
                 ...(postData.postType === 'flash' && { mediaUrl: finalMediaUrls.length > 0 ? finalMediaUrls[0] : null, song: postData.song || null, expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), caption: postData.caption || "" }),
                 ...(postData.postType === 'poll' && { pollOptions: postData.options.map((opt:any) => opt.text) }),
