@@ -20,7 +20,7 @@ import { CreatePostPrompt } from "@/components/CreatePostPrompt";
 import { WelcomeAnimation } from "@/components/WelcomeAnimation";
 
 
-const AddMusicModal = dynamic(() => import('@/components/MusicDiscovery').then(mod => mod.MusicDiscovery), { ssr: false });
+const MusicDiscovery = dynamic(() => import('@/components/MusicDiscovery').then(mod => mod.MusicDiscovery), { ssr: false });
 const FlashModal = dynamic(() => import('@/components/FlashModal'), { ssr: false });
 const NotificationPanel = dynamic(() => import('@/components/NotificationPanel'), { ssr: false });
 const ShortsPlayer = dynamic(() => import('@/components/ShortsPlayer').then(mod => mod.ShortsPlayer), { ssr: false });
@@ -420,7 +420,7 @@ function HomePageContent() {
       </div>
 
       <AnimatePresence>
-        {showMusicModal && <AddMusicModal onClose={() => setShowMusicModal(false)} />}
+        {showMusicModal && <MusicDiscovery onClose={() => setShowMusicModal(false)} />}
         {selectedFlashUser && <FlashModal userFlashes={selectedFlashUser} onClose={() => setSelectedFlashUser(null)} />}
         {showNotifications && <NotificationPanel onClose={() => setShowNotifications(false)} />}
         {showAlmightyAd && <AdModal onComplete={() => { setShowAlmightyAd(false); router.push('/almighty'); }} />}

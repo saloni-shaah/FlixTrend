@@ -12,7 +12,7 @@ import AdModal from './AdModal';
 
 const db = getFirestore(app);
 
-export function AddMusicModal({ onClose }: { onClose: () => void }) {
+function AddMusicModal({ onClose }: { onClose: () => void }) {
     const [form, setForm] = useState({
         title: '',
         artist: '',
@@ -57,11 +57,13 @@ export function AddMusicModal({ onClose }: { onClose: () => void }) {
 
             const audioFormData = new FormData();
             audioFormData.append('file', audioFile);
+            audioFormData.append('userId', user.uid);
             const audioResult = await uploadFileToFirebaseStorage(audioFormData);
             if (!audioResult.success?.url) throw new Error(audioResult.failure || "Audio upload failed.");
 
             const artFormData = new FormData();
             artFormData.append('file', albumArtFile);
+            artFormData.append('userId', user.uid);
             const artResult = await uploadFileToFirebaseStorage(artFormData);
             if (!artResult.success?.url) throw new Error(artResult.failure || "Album art upload failed.");
 
