@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { ChevronDown, UploadCloud, X, MapPin, Smile, Music, Hash, AtSign, Locate, Loader } from 'lucide-react';
@@ -7,7 +6,7 @@ import { uploadFileToFirebaseStorage } from '@/app/actions';
 import { auth } from '@/utils/firebaseClient';
 
 export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange: (data: any) => void }) {
-    const [mediaPreviews, setMediaPreviews] = useState<string[]>(data.mediaPreviews || []);
+    const [mediaPreviews, setMediaPreviews] = useState<string[]>(data.mediaUrl || []);
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isFetchingLocation, setIsFetchingLocation] = useState(false);
@@ -15,10 +14,11 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
     const [uploadingFiles, setUploadingFiles] = useState<string[]>([]);
 
     useEffect(() => {
-        if (data.mediaPreviews && data.mediaPreviews.length > 0) {
-            setMediaPreviews(data.mediaPreviews);
+        // This keeps the component in sync if data comes from elsewhere (e.g. remix)
+        if (data.mediaUrl) {
+            setMediaPreviews(data.mediaUrl);
         }
-    }, [data.mediaPreviews]);
+    }, [data.mediaUrl]);
     
     const handleFileUpload = async (file: File) => {
         const user = auth.currentUser;
@@ -39,10 +39,9 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
             const result = await uploadFileToFirebaseStorage(formData);
             
             if (result.success?.url) {
-                const newPreviews = [...(data.mediaPreviews || []), result.success.url];
                 const newUrls = [...(data.mediaUrl || []), result.success.url];
-                setMediaPreviews(newPreviews);
-                onDataChange({ ...data, mediaPreviews: newPreviews, mediaUrl: newUrls });
+                // The onDataChange now receives the final URL, not a file object.
+                onDataChange({ ...data, mediaUrl: newUrls });
             } else {
                 throw new Error(result.failure || "File upload failed.");
             }
@@ -75,10 +74,8 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
     };
     
     const removeMedia = (index: number) => {
-        const newPreviews = mediaPreviews.filter((_, i) => i !== index);
         const newUrls = (data.mediaUrl || []).filter((_: any, i: number) => i !== index);
-        setMediaPreviews(newPreviews);
-        onDataChange({ ...data, mediaPreviews: newPreviews, mediaUrl: newUrls });
+        onDataChange({ ...data, mediaUrl: newUrls });
     };
 
     const handleTextChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {

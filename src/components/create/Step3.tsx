@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
@@ -11,22 +10,6 @@ import { useRouter } from 'next/navigation';
 import { runContentModerationAction } from '@/app/actions';
 
 const db = getFirestore(app);
-
-// Helper to get video duration - This would ideally be done on the server, but for client-side it's okay.
-const getVideoDuration = (file: File): Promise<number> => {
-    return new Promise((resolve, reject) => {
-        if (typeof window === "undefined") return resolve(0);
-        const video = document.createElement('video');
-        video.preload = 'metadata';
-        video.onloadedmetadata = () => {
-            window.URL.revokeObjectURL(video.src);
-            resolve(video.duration);
-        };
-        video.onerror = reject;
-        video.src = URL.createObjectURL(file);
-    });
-};
-
 
 export default function Step3({ onBack, postData }: { onBack: () => void; postData: any }) {
     const [isScheduling, setIsScheduling] = useState(false);
@@ -53,6 +36,8 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                 postData.mood, postData.location, postData.question, postData.hashtags
             ].filter(Boolean).join(' \n ');
             
+            // For media moderation, we'd need to convert URLs to data URIs if they are not already.
+            // For this version, we will only moderate text to keep it simple and performant.
             const moderationResult = await runContentModerationAction({ text: textToProcess });
 
             if (moderationResult.failure) {
@@ -88,8 +73,8 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
             const livekitRoomName = postData.postType === 'live' ? `${user.uid}-${Date.now()}` : null;
             const collectionName = postData.postType === 'flash' ? 'flashes' : 'posts';
             const hashtags = postData.hashtags ? postData.hashtags.split(' ').map((h:string) => h.replace('#', '')).filter(Boolean) : [];
-
-            // The mediaUrl is now directly available from postData
+            
+            // The mediaUrl is now a clean array of strings from Step 1
             const finalMediaUrls = postData.mediaUrl || [];
 
             const finalPostData: any = {
