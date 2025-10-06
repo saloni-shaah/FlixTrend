@@ -24,8 +24,8 @@ export function LivePostForm({ data, onDataChange }: { data: any, onDataChange: 
             />
         </div>
         <div className="mt-6">
-            <h4 className="font-bold text-accent-cyan mb-2">Scheduling (Coming Soon!)</h4>
-            <p className="text-gray-400 text-sm">Soon you'll be able to schedule your live event and generate a countdown for your followers!</p>
+            <h4 className="font-bold text-accent-cyan mb-2">Scheduling</h4>
+            <p className="text-gray-400 text-sm">You'll be able to schedule your live event and generate a countdown for your followers in a future update!</p>
         </div>
     </div>
   );
