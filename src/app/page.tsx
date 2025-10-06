@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { auth } from "@/utils/firebaseClient";
 import { FlixTrendLogo } from "@/components/FlixTrendLogo";
 import { motion } from "framer-motion";
-import { Bot, Music, ShieldCheck, Sparkles, Video, MessageSquare, Flame, Gift } from "lucide-react";
+import { Music, ShieldCheck, Video, MessageSquare, Flame, Gift } from "lucide-react";
 import { FaInstagram, FaYoutube, FaTwitter } from "react-icons/fa";
 
 
