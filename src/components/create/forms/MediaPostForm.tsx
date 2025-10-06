@@ -6,7 +6,6 @@ import { uploadFileToFirebaseStorage } from '@/app/actions';
 import { auth } from '@/utils/firebaseClient';
 
 export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange: (data: any) => void }) {
-    const [mediaPreviews, setMediaPreviews] = useState<(string)[]>(data.mediaUrl || []);
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isFetchingLocation, setIsFetchingLocation] = useState(false);
@@ -14,12 +13,8 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
     const [uploadingFiles, setUploadingFiles] = useState<string[]>([]);
 
     // This effect ensures that if data comes from another source (like a remix), the previews are updated.
-    React.useEffect(() => {
-        if (data.mediaUrl) {
-            setMediaPreviews(data.mediaUrl);
-        }
-    }, [data.mediaUrl]);
-    
+    const mediaPreviews = data.mediaUrl || [];
+
     const handleFileUpload = async (file: File) => {
         const user = auth.currentUser;
         if (!user) {
@@ -39,11 +34,8 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
             const result = await uploadFileToFirebaseStorage(formData);
             
             if (result.success?.url) {
-                // IMPORTANT: The file is uploaded, and now we only deal with the URL.
-                // This URL is a simple string and is serializable.
                 const newUrls = [...(data.mediaUrl || []), result.success.url];
                 onDataChange({ ...data, mediaUrl: newUrls });
-                setMediaPreviews(newUrls); // Update local preview state with final URL
             } else {
                 throw new Error(result.failure || "File upload failed.");
             }
@@ -52,7 +44,6 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
             setUploadError(error.message);
         } finally {
             setUploadingFiles(prev => prev.filter(p => p !== previewUrl));
-            // We don't need to revoke object URL because we are replacing previews with final URLs
         }
     };
 
@@ -64,7 +55,6 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
         );
         if (imageVideoAudioFiles.length === 0) return;
 
-        // Process uploads one by one to avoid race conditions
         for (const file of imageVideoAudioFiles) {
             await handleFileUpload(file);
         }
@@ -79,7 +69,6 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
     const removeMedia = (urlToRemove: string) => {
         const newUrls = (data.mediaUrl || []).filter((url: string) => url !== urlToRemove);
         onDataChange({ ...data, mediaUrl: newUrls });
-        setMediaPreviews(newUrls);
     };
 
     const handleTextChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -97,7 +86,7 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
             processFiles(Array.from(e.dataTransfer.files));
             e.dataTransfer.clearData();
         }
-    }, [data, onDataChange]); // Dependencies updated
+    }, []);
 
     const handleGetLocation = () => {
         if (navigator.geolocation) {
@@ -178,9 +167,9 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
                             <Loader className="animate-spin text-accent-cyan" />
                         </div>
                     ))}
-                    {mediaPreviews.length > 0 && mediaPreviews.map((url, index) => {
+                    {mediaPreviews.length > 0 && mediaPreviews.map((url: string, index: number) => {
                         let previewContent;
-                        const isVideo = url.includes('.mp4') || url.includes('.webm') || url.includes('.ogg') || url.includes('video');
+                        const isVideo = url.includes('.mp4') || url.includes('.webm') || url.includes('.ogg') || url.includes('/video/');
                         if (isVideo) {
                             previewContent = <video src={url} className="w-full h-full object-cover rounded-lg" />;
                         } else {
