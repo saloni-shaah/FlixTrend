@@ -36,7 +36,6 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                 postData.mood, postData.location, postData.question, postData.hashtags
             ].filter(Boolean).join(' \n ');
             
-            // The media URLs are now clean strings, so we don't pass them to the text moderation.
             const moderationResult = await runContentModerationAction({ text: textToProcess });
 
             if (moderationResult.failure) {
@@ -73,7 +72,7 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
             const collectionName = postData.postType === 'flash' ? 'flashes' : 'posts';
             const hashtags = postData.hashtags ? postData.hashtags.split(' ').map((h:string) => h.replace('#', '')).filter(Boolean) : [];
             
-            // The mediaUrl is now a clean array of strings.
+            // The mediaUrl from Step 1 is already a clean array of strings (URLs).
             const finalMediaUrls = postData.mediaUrl || [];
 
             const finalPostData: any = {
