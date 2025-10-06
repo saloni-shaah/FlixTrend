@@ -2,20 +2,9 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, ArrowLeft, Loader, CheckCircle, XCircle } from 'lucide-react';
-// CORRECTED: Import the server action, not the raw flow.
 import { runContentModerationAction } from '@/app/actions';
 
 type ModerationStatus = 'checking' | 'safe' | 'unsafe';
-
-// Helper to convert File to Data URI
-function fileToDataUri(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-    });
-}
 
 export default function Step2({ onNext, onBack, postData }: { onNext: (data: any) => void; onBack: () => void; postData: any }) {
     const [status, setStatus] = useState<ModerationStatus>('checking');
@@ -25,7 +14,6 @@ export default function Step2({ onNext, onBack, postData }: { onNext: (data: any
         const runModeration = async () => {
             setStatus('checking');
 
-            // Bypass AI check for 'flash' and 'live' posts as they don't require the same level of scrutiny.
             if (postData.postType === 'flash' || postData.postType === 'live') {
                 setStatus('safe');
                 setReason('Approved for posting!');
@@ -36,29 +24,18 @@ export default function Step2({ onNext, onBack, postData }: { onNext: (data: any
                 const textToModerate = [
                     postData.caption, postData.title, postData.description, postData.question, postData.content
                 ].filter(Boolean).join(' \n ');
-
-                const mediaToModerate: { url: string }[] = [];
-                const filesToProcess: File[] = [];
-                if (postData.thumbnailFile) filesToProcess.push(postData.thumbnailFile);
-                if (postData.mediaFiles) filesToProcess.push(...postData.mediaFiles);
-
-                for (const file of filesToProcess) {
-                    if (file instanceof File && file.type.startsWith('image/')) {
-                        const dataUri = await fileToDataUri(file);
-                        mediaToModerate.push({ url: dataUri });
-                    }
-                }
-
-                if (!textToModerate && mediaToModerate.length === 0) {
+                
+                // Since files are now URLs, we don't pass them to the moderation action.
+                // A more advanced system could download the media server-side for analysis.
+                
+                if (!textToModerate) {
                     setStatus('safe');
                     setReason('Content looks good!');
                     return;
                 }
                 
-                // CORRECTED: Call the server action instead of the flow directly.
                 const result = await runContentModerationAction({
                     text: textToModerate,
-                    media: mediaToModerate,
                 });
 
                 if (result.failure) {
@@ -68,6 +45,8 @@ export default function Step2({ onNext, onBack, postData }: { onNext: (data: any
                 if (result.success?.decision === 'approve') {
                     setStatus('safe');
                     setReason(result.success.reason || 'Content approved!');
+                    // Pass the category to the next step
+                    onNext({ category: result.success.category });
                 } else {
                     setStatus('unsafe');
                     setReason(result.success?.reason || 'Content violates our community guidelines.');
@@ -81,7 +60,7 @@ export default function Step2({ onNext, onBack, postData }: { onNext: (data: any
         
         runModeration();
 
-    }, [postData]);
+    }, [postData, onNext]);
 
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>

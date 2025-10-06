@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useState, Suspense, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -8,22 +7,6 @@ import Step1 from '@/components/create/Step1';
 import Step2 from '@/components/create/Step2';
 import Step3 from '@/components/create/Step3';
 
-function dataUriToBlob(dataUri: string): Blob | null {
-    if (!dataUri.startsWith('data:')) return null;
-    const parts = dataUri.split(',');
-    if (parts.length < 2) return null;
-    
-    const mimeString = parts[0].split(':')[1].split(';')[0];
-    const byteString = atob(parts[1]);
-    const ab = new ArrayBuffer(byteString.length);
-    const ia = new Uint8Array(ab);
-    for (let i = 0; i < byteString.length; i++) {
-        ia[i] = byteString.charCodeAt(i);
-    }
-    return new Blob([ab], { type: mimeString });
-}
-
-
 function CreatePostPageContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -31,14 +14,11 @@ function CreatePostPageContent() {
     const initialType = searchParams.get('type') as 'text' | 'media' | 'poll' | 'flash' | 'live' || undefined;
     const initialImageUrl = searchParams.get('imageUrl');
 
-    // Initialize postData with imageUrl if it exists
     const [postData, setPostData] = useState<any>({ 
         postType: initialType, 
         songId: searchParams.get('songId'),
-        ...(initialImageUrl && initialType === 'media' && { 
-            mediaPreviews: [initialImageUrl], 
-            mediaFiles: [] 
-        })
+        // Initialize with imageUrl if present. Step 1 will handle the file upload if needed.
+        mediaUrl: initialImageUrl ? [initialImageUrl] : [] 
     });
 
     const [step, setStep] = useState(1);
@@ -50,21 +30,6 @@ function CreatePostPageContent() {
             handleTypeChange(initialType);
         }
     }, [initialType, typeSelected]);
-    
-    // DEFINITIVE FIX: This effect now correctly converts the incoming data URI to a File object.
-    useEffect(() => {
-        if (initialImageUrl && initialType === 'media' && postData.mediaFiles.length === 0) {
-            if (initialImageUrl.startsWith('data:')) {
-                const blob = dataUriToBlob(initialImageUrl);
-                if (blob) {
-                    const file = new File([blob], "ai-generated.png", { type: blob.type });
-                    // Update postData with the actual File object
-                    setPostData((prev: any) => ({ ...prev, mediaFiles: [file] }));
-                }
-            }
-        }
-    }, [initialImageUrl, initialType, postData.mediaFiles]);
-
 
     const handleNext = (data: any) => {
         setPostData(prev => ({ ...prev, ...data }));
@@ -77,7 +42,7 @@ function CreatePostPageContent() {
     
     const handleTypeChange = (type: 'text' | 'media' | 'poll' | 'flash' | 'live') => {
         setPostType(type);
-        setPostData({ postType: type, songId: searchParams.get('songId') }); // Reset data on type change
+        setPostData({ postType: type, songId: searchParams.get('songId'), mediaUrl: [] }); // Reset data
         setStep(1);
         setTypeSelected(true);
         router.push(`/create?type=${type}${searchParams.get('songId') ? `&songId=${searchParams.get('songId')}`: ''}`, { scroll: false });
