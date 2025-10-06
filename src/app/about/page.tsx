@@ -28,13 +28,13 @@ export default function AboutPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
-                className="text-5xl md:text-7xl font-headline font-bold text-shadow-glow animate-fade-in">The Dev Story of FlixTrend</motion.h1>
+                className="text-5xl md:text-7xl font-headline font-bold text-shadow-glow animate-fade-in">The Founder's Journey of FlixTrend</motion.h1>
             <motion.p 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.4 }}
                 className="max-w-3xl text-lg md:text-xl font-semibold text-accent-cyan drop-shadow-[0_0_10px_#00fff7] animate-fade-in">
-                FlixTrend was born from a simple idea: social media should be about connection, not algorithms. We're building a space where your vibe is what matters, where you discover trends organically, and where your data is yours. We're a small team with a big dream to bring authenticity back to the timeline. This is our journey.
+                I started FlixTrend with a clear ambition: to build India's first, truly secure social media app—a complete solution for connection, creativity, and entertainment. My vision is a platform built for Gen-Z and Gen-Alpha, where your vibe is what matters, not opaque algorithms. This is the story of that mission.
             </motion.p>
         </div>
       </section>
@@ -43,8 +43,8 @@ export default function AboutPage() {
       <section className="max-w-4xl mx-auto py-20 px-4">
           <h2 className="text-4xl font-headline font-bold mb-12 text-center text-accent-cyan">Our Development Journey</h2>
           <div className="relative border-l-2 border-accent-purple/50 ml-6">
-              <TimelineItem date="Concept" title="The Idea Was Born" desc="Frustrated with algorithm-driven feeds, the concept of a chronological, vibe-based social network was conceived." />
-              <TimelineItem date="MVP" title="First Lines of Code" desc="The initial prototype was built using Next.js and Firebase, focusing on the core VibeSpace and authentication." />
+              <TimelineItem date="May 2025" title="The Idea Was Born" desc="The concept of FlixTrend was conceived with the mission to create India's own secure, all-in-one social media platform." />
+              <TimelineItem date="July 24, 2025" title="The Birth of FlixTrend" desc="The first stable preview version was launched. This marked the official birth of FlixTrend and the beginning of our journey to redefine social media." />
               <TimelineItem date="Security First" title="Voltix Security" desc="Development began on Voltix, our proprietary security layer, to ensure user data and privacy are protected from day one." />
               <TimelineItem date="Today" title="Web Preview & Beyond" desc="We're launching our web preview to gather feedback as we build our native mobile apps. The journey is just beginning!" />
           </div>
