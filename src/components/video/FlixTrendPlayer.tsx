@@ -107,28 +107,8 @@ export function FlixTrendPlayer({ post, onClose }: { post: any, onClose: () => v
     
     useEffect(() => {
         document.addEventListener('fullscreenchange', handleFullscreenChange);
-        
-        const handleOrientationChange = () => {
-            if (screen.orientation.type.startsWith('landscape') && !isFullscreen) {
-                containerRef.current?.requestFullscreen().catch(err => console.error(err));
-            } else if (screen.orientation.type.startsWith('portrait') && isFullscreen) {
-                document.exitFullscreen().catch(err => console.error(err));
-            }
-        };
-
-        try {
-            screen.orientation.addEventListener('change', handleOrientationChange);
-        } catch (error) {
-            console.warn("Screen Orientation API not fully supported.");
-        }
-        
-        return () => {
-            document.removeEventListener('fullscreenchange', handleFullscreenChange);
-             try {
-                screen.orientation.removeEventListener('change', handleOrientationChange);
-            } catch (error) {}
-        }
-    }, [isFullscreen, handleFullscreenChange]);
+        return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    }, [handleFullscreenChange]);
 
     const toggleFullscreen = () => {
         if (!isFullscreen) {
@@ -141,20 +121,18 @@ export function FlixTrendPlayer({ post, onClose }: { post: any, onClose: () => v
     const videoUrl = Array.isArray(post.mediaUrl) ? post.mediaUrl[0] : post.mediaUrl;
 
     const playNextVideo = (nextPost: any) => {
-        // This function would be more complex in a real app, likely involving updating the parent modal's state
-        console.log("Playing next:", nextPost.title);
-        // For demonstration, we can just reload with the new video.
-        // A better approach would be to have the parent PlayerModal manage the current post state.
-        alert(`Next up: ${nextPost.title}`);
-        window.location.reload(); // Simple refresh for now
+        // In a real app, this would be more complex, likely updating parent state
+        alert(`Next up: ${nextPost.title}. This feature would need a more robust implementation.`);
+        // For now, let's just close the player
+        onClose();
     }
 
     return (
         <div 
             ref={containerRef}
             className={cn("relative flex items-center justify-center bg-black overflow-hidden group",
-                isTheaterMode && !isFullscreen ? "w-full aspect-video" : "w-[600px] h-[400px]",
-                isFullscreen && "!w-screen !h-screen"
+                isTheaterMode && !isFullscreen ? "w-full aspect-video" : "w-full md:w-auto md:h-auto md:max-w-[80vw] md:max-h-[80vh] md:aspect-video md:rounded-lg",
+                isFullscreen && "!w-screen !h-screen !rounded-none"
             )}
         >
             <AnimatePresence>
