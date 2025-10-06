@@ -133,20 +133,23 @@ export async function runContentModerationAction(input: z.infer<typeof Moderatio
     }
 }
 
-// Client-side action to upload files
-export async function uploadFileToFirebaseStorage(formData: FormData): Promise<{ success: { url: string } | null; failure: string | null }> {
-    const file = formData.get('file') as File;
-    const userId = formData.get('userId') as string;
-
-    if (!userId || !file) {
-        return { success: null, failure: 'Authentication or file is missing.' };
+// Client-side action to upload files using Base64
+export async function uploadFileToFirebaseStorage(
+    { base64, contentType, fileName, userId }: { base64: string; contentType: string; fileName: string; userId: string; }
+): Promise<{ success: { url: string } | null; failure: string | null }> {
+    if (!userId || !base64 || !contentType || !fileName) {
+        return { success: null, failure: 'Authentication or file data is missing.' };
     }
 
     try {
         const storageInstance = getStorage(app);
-        const fileName = `${userId}-${Date.now()}-${file.name}`;
-        const storageRef = ref(storageInstance, `user_uploads/${fileName}`);
-        const snapshot = await uploadBytes(storageRef, file, { contentType: file.type });
+        const uniqueFileName = `${userId}-${Date.now()}-${fileName}`;
+        const storageRef = ref(storageInstance, `user_uploads/${uniqueFileName}`);
+        
+        // Convert base64 to buffer
+        const buffer = Buffer.from(base64, 'base64');
+        
+        const snapshot = await uploadBytes(storageRef, buffer, { contentType });
         const downloadURL = await getDownloadURL(snapshot.ref);
         return { success: { url: downloadURL }, failure: null };
     } catch (error: any) {

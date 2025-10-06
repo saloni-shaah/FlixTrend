@@ -10,17 +10,26 @@ import { Wand2 } from 'lucide-react';
 
 const db = getFirestore(app);
 
+const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+        reader.onerror = error => reject(error);
+    });
+};
+
+
 export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange: (data: any) => void }) {
     const [mediaFile, setMediaFile] = useState<File | null>(null);
-    const [mediaPreview, setMediaPreview] = useState<string | null>(data.mediaUrl || null);
+    const [mediaPreview, setMediaPreview] = useState<string | null>(data.mediaUrl ? (Array.isArray(data.mediaUrl) ? data.mediaUrl[0] : data.mediaUrl) : null);
     const [showSongPicker, setShowSongPicker] = useState(false);
     const [appSongs, setAppSongs] = useState<any[]>([]);
     
     const [showCamera, setShowCamera] = useState(false);
     const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
-    const [capturedImageDataUrl, setCapturedImageDataUrl] = useState<string | null>(null);
-    const [isRemixing, setIsRemixing] = useState(false);
-    const [remixError, setRemixError] = useState('');
+    const [isUploading, setIsUploading] = useState(false);
+    const [uploadError, setUploadError] = useState('');
     const [isFetchingLocation, setIsFetchingLocation] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -59,7 +68,7 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
             }
         } catch (err) {
             console.error("Camera error:", err);
-            setRemixError("Camera access denied.");
+            setUploadError("Camera access denied.");
         }
     };
     
@@ -73,26 +82,40 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
     const handleFileUpload = async (file: File) => {
         const user = auth.currentUser;
         if (!user) {
-            alert("You must be logged in to upload files.");
+            setUploadError("You must be logged in to upload files.");
             return;
         }
 
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('userId', user.uid);
-        
-        const result = await uploadFileToFirebaseStorage(formData);
-        
-        if (result.success?.url) {
-            onDataChange({ ...data, mediaUrl: [result.success.url] });
-            setMediaPreview(result.success.url); // Use the final URL for preview
-        } else {
-            console.error("Upload failed:", result.failure);
-            alert("File upload failed.");
+        setIsUploading(true);
+        setUploadError('');
+        const previewUrl = URL.createObjectURL(file);
+        setMediaPreview(previewUrl);
+
+        try {
+            const base64 = await fileToBase64(file);
+            const result = await uploadFileToFirebaseStorage({
+                base64,
+                contentType: file.type,
+                fileName: file.name,
+                userId: user.uid,
+            });
+            
+            if (result.success?.url) {
+                onDataChange({ ...data, mediaUrl: [result.success.url] });
+                setMediaPreview(result.success.url);
+            } else {
+                throw new Error(result.failure || "File upload failed.");
+            }
+        } catch (error: any) {
+            console.error("Upload failed:", error);
+            setUploadError(error.message);
+            setMediaPreview(null); // Clear preview on error
+        } finally {
+            setIsUploading(false);
+            URL.revokeObjectURL(previewUrl); // Clean up object URL
         }
     };
 
-    
     const handleCapture = () => {
         if (videoRef.current && canvasRef.current) {
             const video = videoRef.current;
@@ -184,7 +207,7 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
                         <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
                     ) : (
                         <div className="w-full h-full flex items-center justify-center text-gray-400">
-                            {remixError ? remixError : "Starting camera..."}
+                            {uploadError ? uploadError : "Starting camera..."}
                         </div>
                     )}
                 </div>
@@ -208,7 +231,13 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
             />
 
             <div className="p-4 border-2 border-dashed border-accent-cyan/30 rounded-2xl text-center min-h-[200px] flex flex-col items-center justify-center">
-                {!mediaPreview ? (
+                {isUploading && (
+                    <div className="flex flex-col items-center gap-2">
+                        <Loader className="animate-spin text-accent-cyan"/>
+                        <p className="text-sm text-accent-cyan">Uploading...</p>
+                    </div>
+                )}
+                {!isUploading && !mediaPreview && (
                     <div className="grid grid-cols-2 gap-2 w-full max-w-sm">
                         <button type="button" className="btn-glass flex items-center justify-center gap-2" onClick={() => fileInputRef.current?.click()}>
                             <ImageIcon /> Gallery
@@ -217,7 +246,8 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
                             <Camera /> Camera
                         </button>
                     </div>
-                ) : (
+                )}
+                {mediaPreview && !isUploading && (
                      <div className="relative group aspect-video">
                         {(mediaPreview.includes('.mp4') || mediaPreview.includes('.webm')) ? (
                             <video src={mediaPreview} className="w-full h-full object-contain rounded-lg" />
@@ -230,6 +260,7 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
                     </div>
                 )}
                 <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*,video/*" />
+                {uploadError && <p className="text-red-400 text-xs mt-2">{uploadError}</p>}
             </div>
             
              <div className="relative">
