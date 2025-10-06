@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
@@ -30,7 +31,7 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
         }
 
         try {
-            // --- AI CONTENT MODERATION & CATEGORIZATION --- //
+            // The `postData` coming into this step now contains final, uploaded media URLs, not file objects.
             const textToProcess = [
                 postData.title, postData.caption, postData.content, postData.description,
                 postData.mood, postData.location, postData.question, postData.hashtags
@@ -49,8 +50,6 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
             }
             
             const category = moderationResult.success?.category || 'General';
-
-            // --- MODERATION PASSED - PROCEED TO PUBLISH --- //
 
             const userDocRef = doc(db, 'users', user.uid);
             const userDocSnap = await getDoc(userDocRef);
@@ -72,7 +71,6 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
             const collectionName = postData.postType === 'flash' ? 'flashes' : 'posts';
             const hashtags = postData.hashtags ? postData.hashtags.split(' ').map((h:string) => h.replace('#', '')).filter(Boolean) : [];
             
-            // The mediaUrl from Step 1 is already a clean array of strings (URLs).
             const finalMediaUrls = postData.mediaUrl || [];
 
             const finalPostData: any = {
@@ -113,7 +111,7 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
             if (error.message.includes("violates our content guidelines")) {
                  setModerationError(error.message);
             } else {
-                alert("Failed to publish post. Please try again.");
+                alert(`Failed to publish post: ${error.message}`);
             }
         } finally {
             setIsPublishing(false);

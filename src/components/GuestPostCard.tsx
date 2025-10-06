@@ -33,8 +33,6 @@ export function GuestPostCard({ post }: { post: any }) {
   const [showShareModal, setShowShareModal] = React.useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = React.useState(false);
   const [showPlayer, setShowPlayer] = React.useState(false);
-  const videoRef = React.useRef<HTMLVideoElement>(null);
-
 
   const handleInteraction = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -74,7 +72,7 @@ export function GuestPostCard({ post }: { post: any }) {
     
     return (
         <>
-            {showPlayer && <PlayerModal post={contentPost} onClose={() => setShowPlayer(false)} />}
+            {showPlayer && contentPost.type === 'media' && <PlayerModal post={contentPost} onClose={() => setShowPlayer(false)} />}
             <div className="flex items-center gap-3 mb-2">
                 <div className="flex items-center gap-2 group cursor-pointer" onClick={handleInteraction}>
                     <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green flex items-center justify-center font-bold text-lg overflow-hidden border-2 border-accent-green group-hover:scale-105 transition-transform">

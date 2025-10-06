@@ -58,15 +58,16 @@ function AddProductForm() {
                 imageUrl: imageUrl,
                 createdAt: serverTimestamp()
             };
-            await addDoc(collection(db, 'products'), productData)
+            const productsCollectionRef = collection(db, 'products');
+            addDoc(productsCollectionRef, productData)
             .catch(serverError => {
                 const permissionError = new FirestorePermissionError({
-                    path: 'products',
+                    path: productsCollectionRef.path,
                     operation: 'create',
                     requestResourceData: productData,
                 });
                 errorEmitter.emit('permission-error', permissionError);
-                throw serverError; // Rethrow to be caught by outer catch
+                throw serverError;
             });
 
 
@@ -142,7 +143,14 @@ function ManageProducts() {
         try {
             // Delete Firestore document
             const docRef = doc(db, 'products', product.id);
-            await deleteDoc(docRef);
+            deleteDoc(docRef).catch(err => {
+                const permissionError = new FirestorePermissionError({
+                  path: docRef.path,
+                  operation: 'delete',
+                });
+                errorEmitter.emit('permission-error', permissionError);
+                throw err;
+            });
 
             // Delete image from Firebase Storage
             if (product.imageUrl) {
@@ -151,11 +159,6 @@ function ManageProducts() {
             }
             alert("Product removed successfully.");
         } catch(err: any) {
-            const permissionError = new FirestorePermissionError({
-              path: `products/${product.id}`,
-              operation: 'delete',
-            });
-            errorEmitter.emit('permission-error', permissionError);
             if (!err.message.includes('permission-denied')) {
                 alert(`Failed to remove product: ${err.message}`);
             }
@@ -228,7 +231,6 @@ export default function AdminDashboard({ userProfile, onLogout }: { userProfile:
               requestResourceData: data,
             });
             errorEmitter.emit('permission-error', permissionError);
-            alert('Permission denied. You might not have the rights to grant premium status.');
           });
     };
 
@@ -241,21 +243,21 @@ export default function AdminDashboard({ userProfile, onLogout }: { userProfile:
             
             const dataToUpdate = { isEnabled: newStatus };
 
-            await setDoc(maintenanceDocRef, dataToUpdate, { merge: true })
+            setDoc(maintenanceDocRef, dataToUpdate, { merge: true })
             .catch((serverError) => {
                 const permissionError = new FirestorePermissionError({
-                    path: 'app_status/maintenance',
+                    path: maintenanceDocRef.path,
                     operation: 'write',
                     requestResourceData: dataToUpdate,
                 });
                 errorEmitter.emit('permission-error', permissionError);
-                throw serverError; // re-throw to be caught by outer catch
+                throw serverError;
             });
 
             alert(`Maintenance mode is now ${newStatus ? 'ON' : 'OFF'}.`);
 
         } catch (error: any) {
-            if (!error.message.includes('permission-denied')) { // Avoid double-alerting for permission errors
+            if (!error.message.includes('permission-denied')) {
                 alert(`Failed to toggle maintenance mode: ${error.message}`);
             }
         }
