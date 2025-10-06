@@ -139,8 +139,8 @@ export default function LandingPage() {
                     transition={{ duration: 0.8, delay: 0.4 }}
                     className="flex flex-col md:flex-row gap-4 mt-4">
                      <Link href="/signup" className="px-8 py-3 rounded-full bg-accent-pink text-white font-bold text-lg shadow-lg hover:scale-105 transition-transform" style={{'--glow-color': '#FF3CAC'} as React.CSSProperties}>Sign Up</Link>
-                    <Link href="/login" className="px-8 py-3 rounded-full bg-accent-cyan text-black font-bold text-lg shadow-lg hover:scale-105 transition-transform" style={{'--glow-color': '#00F0FF'} as React.CSSProperties}>Log In</Link>
-                     <Link href="/guest" className="px-8 py-3 rounded-full border-2 border-accent-purple text-white font-bold text-lg shadow-lg hover:bg-accent-purple hover:scale-105 transition-all" style={{'--glow-color': '#BF00FF'} as React.CSSProperties}>Continue as Guest</Link>
+                    <Link href="/login" className="px-8 py-3 rounded-full bg-accent-purple text-white font-bold text-lg shadow-lg hover:scale-105 transition-transform" style={{'--glow-color': '#BF00FF'} as React.CSSProperties}>Log In</Link>
+                     <Link href="/guest" className="px-8 py-3 rounded-full border-2 border-accent-cyan text-white font-bold text-lg shadow-lg hover:bg-accent-cyan hover:text-black transition-all" style={{'--glow-color': '#00F0FF'} as React.CSSProperties}>Continue as Guest</Link>
                 </motion.div>
                  <motion.p 
                     initial={{ opacity: 0, y: 20 }}
