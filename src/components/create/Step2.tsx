@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
@@ -25,6 +24,13 @@ export default function Step2({ onNext, onBack, postData }: { onNext: (data: any
     useEffect(() => {
         const runModeration = async () => {
             setStatus('checking');
+
+            // Bypass AI check for 'flash' and 'live' posts as they don't require the same level of scrutiny.
+            if (postData.postType === 'flash' || postData.postType === 'live') {
+                setStatus('safe');
+                setReason('Approved for posting!');
+                return;
+            }
             
             try {
                 const textToModerate = [
