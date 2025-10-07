@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
@@ -9,28 +10,33 @@ type ModerationStatus = 'checking' | 'safe' | 'unsafe';
 export default function Step2({ onNext, onBack, postData }: { onNext: (data: any) => void; onBack: () => void; postData: any }) {
     const [status, setStatus] = useState<ModerationStatus>('checking');
     const [reason, setReason] = useState('');
+    const [moderationResult, setModerationResult] = useState<any>(null);
 
     useEffect(() => {
         const runModeration = async () => {
             setStatus('checking');
 
+            // Flashes and Live streams have minimal text and are ephemeral, so we can skip the AI check.
             if (postData.postType === 'flash' || postData.postType === 'live') {
                 setStatus('safe');
                 setReason('Approved for posting!');
+                setModerationResult({ category: 'General' }); // Assign a default category
                 return;
             }
             
             try {
+                // Consolidate all user-provided text into a single string for moderation.
                 const textToModerate = [
-                    postData.caption, postData.title, postData.description, postData.question, postData.content
+                    postData.caption, postData.title, postData.description, postData.question, postData.content,
+                    ...(postData.hashtags || []),
+                    ...(postData.options?.map((o: any) => o.text) || [])
                 ].filter(Boolean).join(' \n ');
                 
-                // Since files are now URLs, we don't pass them to the moderation action.
-                // A more advanced system could download the media server-side for analysis.
-                
-                if (!textToModerate) {
+                // If there's no text at all, it's safe by default.
+                if (!textToModerate.trim()) {
                     setStatus('safe');
                     setReason('Content looks good!');
+                    setModerationResult({ category: 'General' });
                     return;
                 }
                 
@@ -45,22 +51,30 @@ export default function Step2({ onNext, onBack, postData }: { onNext: (data: any
                 if (result.success?.decision === 'approve') {
                     setStatus('safe');
                     setReason(result.success.reason || 'Content approved!');
-                    // Pass the category to the next step
-                    onNext({ category: result.success.category });
+                    setModerationResult(result.success); // Store the full result
                 } else {
                     setStatus('unsafe');
                     setReason(result.success?.reason || 'Content violates our community guidelines.');
+                    setModerationResult(null);
                 }
             } catch (error: any) {
                 console.error("Moderation error in Step2:", error);
                 setStatus('unsafe');
                 setReason(error.message || "An unexpected error occurred during the content check. Please try again.");
+                setModerationResult(null);
             }
         };
         
         runModeration();
 
-    }, [postData, onNext]);
+    }, [postData]);
+
+    const handleNextClick = () => {
+        // Pass the category from the moderation result to the next step.
+        if (status === 'safe' && moderationResult) {
+            onNext({ category: moderationResult.category });
+        }
+    };
 
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -97,7 +111,7 @@ export default function Step2({ onNext, onBack, postData }: { onNext: (data: any
                 </button>
                 <button 
                     className="btn-glass bg-accent-pink flex items-center gap-2 disabled:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed" 
-                    onClick={() => onNext({})}
+                    onClick={handleNextClick}
                     disabled={status !== 'safe'}
                 >
                     Next Step <ArrowRight />
