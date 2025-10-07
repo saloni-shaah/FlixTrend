@@ -36,6 +36,41 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
         setUploadError(null);
 
         try {
+            // New logic to get video dimensions
+            if (file.type.startsWith('video/')) {
+                const video = document.createElement('video');
+                video.preload = 'metadata';
+                video.onloadedmetadata = async () => {
+                    window.URL.revokeObjectURL(video.src);
+                    const isPortrait = video.videoHeight > video.videoWidth;
+                    const videoDuration = video.duration;
+                    
+                    onDataChange({
+                        ...data,
+                        isPortrait: isPortrait,
+                        videoDuration: videoDuration
+                    });
+                    
+                    // Now proceed with upload
+                    await uploadFile(file);
+                };
+                video.src = previewUrl;
+            } else {
+                 onDataChange({ ...data, isPortrait: false, videoDuration: 0 });
+                 await uploadFile(file);
+            }
+        } catch (error: any) {
+            console.error("Upload preparation failed:", error);
+            setUploadError(error.message);
+            setUploadingFiles(prev => prev.filter(p => p !== previewUrl));
+        }
+    };
+    
+    const uploadFile = async (file: File) => {
+        const user = auth.currentUser;
+        if (!user) return; // Should be caught earlier, but for safety
+
+        try {
             const base64 = await fileToBase64(file);
             const result = await uploadFileToFirebaseStorage({
                 base64,
@@ -50,14 +85,12 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
             } else {
                 throw new Error(result.failure || "File upload failed.");
             }
-        } catch (error: any) {
-            console.error("Upload failed:", error);
+        } catch(error: any) {
             setUploadError(error.message);
         } finally {
-            setUploadingFiles(prev => prev.filter(p => p !== previewUrl));
-            URL.revokeObjectURL(previewUrl);
+            setUploadingFiles(prev => prev.filter(p => p !== URL.createObjectURL(file)));
         }
-    };
+    }
 
     const processFiles = async (files: FileList | null) => {
         if (!files) return;
@@ -95,7 +128,7 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
         setIsDragging(false);
         processFiles(e.dataTransfer.files);
         e.dataTransfer.clearData();
-    }, [processFiles]);
+    }, []);
 
     const handleGetLocation = () => {
         if (navigator.geolocation) {
