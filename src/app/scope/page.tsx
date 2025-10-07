@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Compass, Music, Gamepad2, Flame, User, Heart, Mic, ShoppingBag } from "lucide-react";
 import { MusicDiscovery } from "@/components/MusicDiscovery";
 import { GamesHub } from "@/components/GamesHub";
+import { VibeSpaceLoader } from "@/components/VibeSpaceLoader";
 
 const db = getFirestore(app);
 const VIBES_PER_PAGE = 5;
@@ -88,10 +89,16 @@ function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean,
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center text-center p-4 h-full">
-        <div className="text-4xl animate-pulse">🎬</div>
+        <VibeSpaceLoader />
         <p className="text-lg text-muted-foreground mt-2">Loading Vibes...</p>
       </div>
     );
+  }
+  
+  const handlePlayerClose = () => {
+      if (isFullScreen) {
+          onDoubleClick();
+      }
   }
 
   return (
@@ -101,7 +108,7 @@ function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean,
         className={`w-full h-full transition-all duration-300 ${isFullScreen ? '' : 'max-w-md mx-auto aspect-[9/16] rounded-2xl overflow-hidden'}`} 
         onDoubleClick={onDoubleClick}
     >
-        <ShortsPlayer shortVibes={shortVibes} onEndReached={fetchMoreVibes} hasMore={hasMore}/>
+        <ShortsPlayer shortVibes={shortVibes} onEndReached={fetchMoreVibes} hasMore={hasMore} onClose={handlePlayerClose} isFullScreen={isFullScreen} />
     </motion.div>
   );
 }
@@ -300,6 +307,3 @@ export default function ScopePage() {
     </div>
   );
 }
-
-    
-
