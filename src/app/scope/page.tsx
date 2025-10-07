@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { getFirestore, collection, query, onSnapshot, getDocs, orderBy, limit, where, startAfter } from "firebase/firestore";
 import { app, auth } from "@/utils/firebaseClient";
-import { ShortsPlayer } from "@/components/ShortsPlayer";
+import ShortsPlayer from "@/components/ShortsPlayer";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Compass, Music, Gamepad2, Flame, User, Heart, Mic, ShoppingBag } from "lucide-react";
