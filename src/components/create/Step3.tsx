@@ -135,6 +135,8 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
                 notificationSent: false,
                 location: postData.location || null,
                 mood: postData.mood || null,
+                isPortrait: postData.isPortrait || false,
+                videoDuration: postData.videoDuration || 0,
                 ...(postData.postType === 'text' && { backgroundColor: postData.backgroundColor, backgroundImage: postData.backgroundImage || null, fontStyle: postData.fontStyle }),
                 ...(postData.postType === 'media' && { 
                     mediaUrl: finalMediaUrls.length > 0 ? (finalMediaUrls.length > 1 ? finalMediaUrls : finalMediaUrls[0]) : null, 
