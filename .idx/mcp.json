@@ -1,11 +1,4 @@
-{
-  "mcpServers": {
-    "testsprite": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "muorg/myserver"
-      ]
+
     },
     "firebase": {
       "command": "npx",
