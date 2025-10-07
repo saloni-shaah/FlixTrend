@@ -5,6 +5,15 @@ import { UploadCloud, X, MapPin, Smile, Hash, AtSign, Locate, Loader } from 'luc
 import { uploadFileToFirebaseStorage } from '@/app/actions';
 import { auth } from '@/utils/firebaseClient';
 
+const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+        reader.onerror = error => reject(error);
+    });
+};
+
 export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange: (data: any) => void }) {
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -27,11 +36,13 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
         setUploadError(null);
 
         try {
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('userId', user.uid);
-            
-            const result = await uploadFileToFirebaseStorage(formData);
+            const base64 = await fileToBase64(file);
+            const result = await uploadFileToFirebaseStorage({
+                base64,
+                contentType: file.type,
+                fileName: file.name,
+                userId: user.uid,
+            });
             
             if (result.success?.url) {
                 const newUrls = [...(data.mediaUrl || []), result.success.url];
@@ -84,7 +95,7 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
         setIsDragging(false);
         processFiles(e.dataTransfer.files);
         e.dataTransfer.clearData();
-    }, []);
+    }, [processFiles]);
 
     const handleGetLocation = () => {
         if (navigator.geolocation) {
