@@ -8,8 +8,9 @@ import { VibeSpaceLoader } from './VibeSpaceLoader';
 export default function ShortsPlayer({ shortVibes, onEndReached, hasMore, onClose, isFullScreen }: { shortVibes: any[], onEndReached: () => void, hasMore: boolean, onClose: () => void, isFullScreen: boolean }) {
     if (!shortVibes || shortVibes.length === 0) {
         return (
-            <div className="w-full h-full flex items-center justify-center bg-black">
+            <div className="w-full h-full flex flex-col items-center justify-center bg-black text-white">
                 <VibeSpaceLoader />
+                 <p className="mt-4">Loading vibes...</p>
             </div>
         );
     }
