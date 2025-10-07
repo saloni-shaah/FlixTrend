@@ -23,14 +23,12 @@ function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean,
   
   const fetchVibes = useCallback(async () => {
     setLoading(true);
-    // This query now filters for videos between 3s and 3min (180s)
-    // NOTE: This requires a composite index in Firestore on 'type', 'videoDuration', and 'createdAt'.
+    // Simplified and corrected query: Fetch media posts that are videos, ordered by creation date.
+    // This is more robust and less likely to fail due to missing complex indexes.
     const first = query(
         collection(db, "posts"),
         where("type", "==", "media"),
-        where("videoDuration", ">=", 3),
-        where("videoDuration", "<=", 180),
-        orderBy("videoDuration"), // This is needed for the range query
+        where("videoDuration", ">=", 1), // Check that it's a video
         orderBy("createdAt", "desc"),
         limit(VIBES_PER_PAGE)
     );
@@ -45,7 +43,6 @@ function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean,
         setHasMore(!!lastDoc);
     } catch(e) {
         console.error("Error fetching scope videos:", e);
-        console.error("This query likely failed because of a missing Firestore index. Please create a composite index on posts: type (asc), videoDuration (asc), createdAt (desc)");
         setLoading(false);
     }
   }, []);
@@ -57,9 +54,7 @@ function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean,
      const next = query(
         collection(db, "posts"),
         where("type", "==", "media"),
-        where("videoDuration", ">=", 3),
-        where("videoDuration", "<=", 180),
-        orderBy("videoDuration"),
+        where("videoDuration", ">=", 1),
         orderBy("createdAt", "desc"),
         startAfter(lastVisible),
         limit(VIBES_PER_PAGE)

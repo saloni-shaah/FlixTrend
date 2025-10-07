@@ -18,6 +18,14 @@ const Watermark = ({ isAnimated = false }: { isAnimated?: boolean }) => (
     </div>
 );
 
+const getVideoUrl = (post: any) => {
+    if (!post?.mediaUrl) return null;
+    if (Array.isArray(post.mediaUrl)) {
+        return post.mediaUrl.find((url: string) => /\.(mp4|webm|ogg)$/i.test(url)) || null;
+    }
+    return /\.(mp4|webm|ogg)$/i.test(post.mediaUrl) ? post.mediaUrl : null;
+};
+
 export function ShortVibesPlayer({ shortVibes, onEndReached, hasMore }: { shortVibes: any[], onEndReached: () => void, hasMore: boolean }) {
     const [activeShortIndex, setActiveShortIndex] = useState(0);
     const [isPlaying, setIsPlaying] = useState(true);
@@ -132,14 +140,6 @@ export function ShortVibesPlayer({ shortVibes, onEndReached, hasMore }: { shortV
         };
     }, [scrollToNext, scrollToPrev]);
 
-    const getVideoUrl = (post: any) => {
-        if (!post.mediaUrl) return null;
-        if (Array.isArray(post.mediaUrl)) {
-            return post.mediaUrl.find((url: string) => /\.(mp4|webm|ogg)$/i.test(url)) || null;
-        }
-        return /\.(mp4|webm|ogg)$/i.test(post.mediaUrl) ? post.mediaUrl : null;
-    }
-
     return (
         <div ref={playerRef} className="w-full h-full flex flex-col items-center relative bg-black focus:outline-none overflow-hidden" tabIndex={0}>
             {shortVibes.length === 0 ? (
@@ -158,7 +158,7 @@ export function ShortVibesPlayer({ shortVibes, onEndReached, hasMore }: { shortV
                 >
                     {shortVibes.map((short, idx) => {
                         const videoUrl = getVideoUrl(short);
-                        if (!videoUrl) return null;
+                        if (!videoUrl) return <div key={`${short.id}-${idx}-error`} className="w-full h-full flex items-center justify-center text-red-500">Video not found for this post.</div>;
 
                         const shouldLoad = Math.abs(idx - activeShortIndex) <= 2;
 
