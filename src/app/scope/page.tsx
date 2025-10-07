@@ -23,12 +23,10 @@ function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean,
   
   const fetchVibes = useCallback(async () => {
     setLoading(true);
-    // Simplified and corrected query: Fetch media posts that are videos, ordered by creation date.
-    // This is more robust and less likely to fail due to missing complex indexes.
     const first = query(
         collection(db, "posts"),
         where("type", "==", "media"),
-        where("videoDuration", ">=", 1), // Check that it's a video
+        where("isPortrait", "==", true),
         orderBy("createdAt", "desc"),
         limit(VIBES_PER_PAGE)
     );
@@ -54,7 +52,7 @@ function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean,
      const next = query(
         collection(db, "posts"),
         where("type", "==", "media"),
-        where("videoDuration", ">=", 1),
+        where("isPortrait", "==", true),
         orderBy("createdAt", "desc"),
         startAfter(lastVisible),
         limit(VIBES_PER_PAGE)
@@ -81,7 +79,7 @@ function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean,
   }, [fetchVibes]);
 
 
-  if (loading) {
+  if (loading && shortVibes.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center text-center p-4 h-full">
         <VibeSpaceLoader />
