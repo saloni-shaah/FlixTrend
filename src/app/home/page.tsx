@@ -23,7 +23,7 @@ import { WelcomeAnimation } from "@/components/WelcomeAnimation";
 const MusicDiscovery = dynamic(() => import('@/components/MusicDiscovery').then(mod => mod.MusicDiscovery), { ssr: false });
 const FlashModal = dynamic(() => import('@/components/FlashModal'), { ssr: false });
 const NotificationPanel = dynamic(() => import('@/components/NotificationPanel'), { ssr: false });
-const ShortsPlayer = dynamic(() => import('@/components/ShortsPlayer').then(mod => mod.ShortsPlayer), { ssr: false });
+const ShortsPlayer = dynamic(() => import('@/components/ShortsPlayer'), { ssr: false });
 const AdModal = dynamic(() => import('@/components/AdModal'), { ssr: false });
 
 
@@ -60,10 +60,8 @@ function HomePageContent() {
   } = useSpeechRecognition();
 
   useEffect(() => {
-      const hasShownAnimation = sessionStorage.getItem('welcomeAnimationShown');
-      if (searchParams.get('new') === 'true' && !hasShownAnimation) {
+      if (searchParams.get('new') === 'true') {
           setShowWelcomeAnimation(true);
-          sessionStorage.setItem('welcomeAnimationShown', 'true');
       }
   }, [searchParams]);
 
