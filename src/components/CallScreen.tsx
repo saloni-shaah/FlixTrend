@@ -8,7 +8,7 @@ import { auth } from '@/utils/firebaseClient';
 
 export function CallScreen({ call }: { call: any }) {
   // CORRECTED: All call logic and state now comes from the central AppStateContext.
-  const { pc, closeCall, answerCall, handleEndCall } = useAppState();
+  const { pc, answerCall, handleEndCall } = useAppState();
   
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);

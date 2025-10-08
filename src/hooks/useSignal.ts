@@ -93,7 +93,7 @@ export const useSignal = ({ callId, isCaller }: { callId: string; isCaller: bool
         });
       });
     } else {
-      // This logic will be moved to the AppStateProvider's answerCall function
+        // Callee logic is now handled by the answerCall function in AppStateContext
     }
 
     setIsConnecting(false);
