@@ -279,7 +279,7 @@ function UserCollections({ userId }: { userId: string }) {
     useEffect(() => {
         const q = query(collection(db, "collections"), where("ownerId", "==", userId));
         const unsub = onSnapshot(q, (snapshot) => {
-            const collectionsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            const collectionsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             collectionsData.sort((a:any, b:any) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
             setCollections(collectionsData);
             setLoading(false);
@@ -978,7 +978,7 @@ function SettingsModal({ profile, firebaseUser, onClose }: { profile: any; fireb
             <div className="bg-white/5 rounded-xl p-4">
                 <Link href="/premium">
                     <div className="w-full p-4 rounded-2xl bg-gradient-to-r from-accent-purple via-accent-pink to-brand-gold cursor-pointer mb-4">
-                        <h3 className="font-headline font-bold text-white">Manage Premium</h3>
+                        <h4 className="font-headline font-bold text-white">Manage Premium</h4>
                         <p className="text-xs text-white/80">Upgrade or manage your subscription.</p>
                     </div>
                 </Link>
@@ -1190,3 +1190,5 @@ function DeleteAccountModal({ profile, onClose }: { profile: any, onClose: () =>
         </div>
     )
 }
+
+    
