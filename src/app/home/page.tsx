@@ -1,4 +1,3 @@
-
 "use client";
 import "regenerator-runtime/runtime";
 import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
@@ -15,7 +14,6 @@ import AdBanner from "@/components/AdBanner";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
-import { AlmightyLogo } from "@/components/ui/logo";
 import { CreatePostPrompt } from "@/components/CreatePostPrompt";
 import { WelcomeAnimation } from "@/components/WelcomeAnimation";
 
@@ -24,8 +22,6 @@ const MusicDiscovery = dynamic(() => import('@/components/MusicDiscovery').then(
 const FlashModal = dynamic(() => import('@/components/FlashModal'), { ssr: false });
 const NotificationPanel = dynamic(() => import('@/components/NotificationPanel'), { ssr: false });
 const ShortsPlayer = dynamic(() => import('@/components/ShortsPlayer'), { ssr: false });
-const AdModal = dynamic(() => import('@/components/AdModal'), { ssr: false });
-
 
 const db = getFirestore(app);
 
@@ -44,7 +40,6 @@ function HomePageContent() {
   const [lastVisible, setLastVisible] = useState<any>(null);
   const [hasMore, setHasMore] = useState(true);
   const [showShortsPlayer, setShowShortsPlayer] = useState(false);
-  const [showAlmightyAd, setShowAlmightyAd] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const [showWelcomeAnimation, setShowWelcomeAnimation] = useState(false);
@@ -404,24 +399,24 @@ function HomePageContent() {
         </motion.button>
       </div>
 
-       {/* Bottom Right AI FAB */}
-      <div className="fixed bottom-24 right-4 z-30">
-        <motion.button 
-            onClick={() => setShowAlmightyAd(true)}
-            className="w-16 h-16 rounded-full flex items-center justify-center shadow-fab-glow bg-green-200/20 dark:bg-green-900/30 backdrop-blur-md animate-ripple"
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
-            title="Ask Almighty AI"
-        >
-            <AlmightyLogo className="w-8 h-8" />
-        </motion.button>
-      </div>
+       {/* Store FAB */}
+       <div className="fixed bottom-24 left-4 z-30">
+          <Link href="/store">
+              <motion.button 
+                  className="w-16 h-16 rounded-full flex items-center justify-center shadow-fab-glow bg-brand-gold/20 dark:bg-brand-gold/30 backdrop-blur-md"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
+                  title="FlixTrend Store"
+              >
+                  <span className="text-3xl">🛍️</span>
+              </motion.button>
+          </Link>
+        </div>
 
       <AnimatePresence>
         {showMusicModal && <MusicDiscovery onClose={() => setShowMusicModal(false)} />}
         {selectedFlashUser && <FlashModal userFlashes={selectedFlashUser} onClose={() => setSelectedFlashUser(null)} />}
         {showNotifications && <NotificationPanel onClose={() => setShowNotifications(false)} />}
-        {showAlmightyAd && <AdModal onComplete={() => { setShowAlmightyAd(false); router.push('/almighty'); }} />}
       </AnimatePresence>
     </div>
   );
@@ -434,5 +429,3 @@ export default function HomePage() {
         </Suspense>
     )
 }
-
-    
