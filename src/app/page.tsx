@@ -185,24 +185,6 @@ export default function LandingPage() {
             </div>
         </section>
 
-         {/* Rewards Section */}
-        <section className="py-20 px-4 max-w-4xl mx-auto text-center">
-            <motion.div
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 1 }}
-                viewport={{ once: true, amount: 0.5 }}
-                className="glass-card p-8 md:p-12"
-            >
-                <div className="flex justify-center mb-4">
-                    <Gift size={48} className="text-brand-gold animate-glow" />
-                </div>
-                <h2 className="text-3xl font-headline font-bold mb-4 text-glow" style={{ color: 'var(--brand-gold)'}}>Join Now & Get Rewarded!</h2>
-                <p className="text-gray-300 mb-2">Every new user gets <strong className="text-white">1 month of Premium FREE.</strong></p>
-                <p className="text-accent-cyan font-bold">The first 1 million users get an exclusive <strong className="text-white">2 MONTHS of Premium FREE!</strong></p>
-                <p className="text-gray-400 text-sm mt-4">Plus, get an additional free month for every friend you refer. Start your vibe with premium perks, on us.</p>
-            </motion.div>
-        </section>
-
         {/* Features Section */}
         <section className="py-20 px-4 max-w-6xl mx-auto">
             <h2 className="text-4xl font-headline font-bold text-center mb-12 text-glow" style={{ color: 'var(--accent-cyan)'}}>What's the Vibe?</h2>
@@ -246,8 +228,6 @@ export default function LandingPage() {
              <h2 className="text-4xl font-headline font-bold text-center mb-8 text-glow" style={{ color: 'var(--accent-purple)'}}>Join Our World</h2>
             <div className="flex justify-center gap-4 flex-wrap">
                  <Link href="/about" className="text-lg font-semibold hover:text-accent-pink transition-colors">Our Dev Story</Link>
-                 <span className="text-gray-600">|</span>
-                 <Link href="/premium" className="text-lg font-semibold hover:text-accent-pink transition-colors">Premium</Link>
                  <span className="text-gray-600">|</span>
                  <Link href="/ad-studio" className="text-lg font-semibold hover:text-accent-pink transition-colors">Ad Studio</Link>
                  <span className="text-gray-600">|</span>

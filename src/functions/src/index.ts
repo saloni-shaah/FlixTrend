@@ -17,73 +17,15 @@ const messaging = getMessaging();
 const storage = getStorage();
 
 /**
- * Grants free premium access to new users and tracks the total user count.
- * First 1 million users get 2 months, others get 1 month.
- * Also handles referral rewards.
+ * Sets initial user data, but no longer grants premium access.
  */
 export const onNewUserCreate = functions.auth.user().onCreate(async (user) => {
     const userRef = doc(db, 'users', user.uid);
-    const appStatusRef = doc(db, 'app_status', 'user_stats');
-
     try {
-        const batch = db.batch();
-
-        // --- Grant Initial Premium ---
-        const appStatusSnap = await appStatusRef.get();
-        const userCount = appStatusSnap.data()?.totalUsers || 0;
-        const newUserCount = userCount + 1;
-        
-        const premiumDurationMonths = newUserCount <= 1000000 ? 2 : 1;
-        const premiumUntil = new Date();
-        premiumUntil.setMonth(premiumUntil.getMonth() + premiumDurationMonths);
-
-        batch.set(userRef, {
-            isPremium: true,
-            premiumUntil: Timestamp.fromDate(premiumUntil),
+        await setDoc(userRef, {
             createdAt: FieldValue.serverTimestamp(),
         }, { merge: true });
-
-        // Update the global user count
-        batch.set(appStatusRef, { totalUsers: FieldValue.increment(1) }, { merge: true });
-        logger.info(`User ${user.uid} created. Granted ${premiumDurationMonths} months premium. Total users: ${newUserCount}`);
-
-        // --- Handle Referral Logic ---
-        // This part requires the client to set the 'referredBy' field on the user doc during signup.
-        const newUserDocSnap = await getDoc(userRef); // Re-fetch to see data from client-side write if any
-        const newUserData = newUserDocSnap.data();
-
-        if (newUserData?.referredBy) {
-            const referralCode = newUserData.referredBy;
-            logger.info(`New user was referred by code: ${referralCode}`);
-
-            const usersRef = collection(db, 'users');
-            const q = query(usersRef, where('referralCode', '==', referralCode), limit(1));
-            const referrerSnap = await getDocs(q);
-
-            if (!referrerSnap.empty) {
-                const referrerDoc = referrerSnap.docs[0];
-                const referrerRef = referrerDoc.ref;
-                const referrerData = referrerDoc.data();
-                
-                logger.info(`Found referrer: ${referrerData.username} (${referrerRef.id})`);
-
-                const currentPremiumUntil = referrerData.premiumUntil?.toDate() || new Date();
-                const newPremiumUntil = new Date(Math.max(new Date().getTime(), currentPremiumUntil.getTime()));
-                newPremiumUntil.setMonth(newPremiumUntil.getMonth() + 1);
-
-                batch.update(referrerRef, {
-                    premiumUntil: Timestamp.fromDate(newPremiumUntil),
-                    isPremium: true
-                });
-
-                logger.info(`Extended premium for referrer ${referrerRef.id} until ${newPremiumUntil.toISOString()}`);
-            } else {
-                 logger.warn(`Referral code "${referralCode}" used, but no matching referrer was found.`);
-            }
-        }
-
-        await batch.commit();
-
+        logger.info(`User document created for ${user.uid}`);
     } catch (error) {
         logger.error(`Error processing new user ${user.uid}:`, error);
     }
@@ -487,4 +429,5 @@ export const sendScheduledPostNotifications = functions.pubsub.schedule('every 1
     logger.info(`Sent notifications for ${scheduledPostsSnap.size} scheduled posts.`);
     return null;
 });
+
 

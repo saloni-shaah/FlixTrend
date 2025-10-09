@@ -16,12 +16,13 @@ import Link from "next/link";
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import { CreatePostPrompt } from "@/components/CreatePostPrompt";
 import { WelcomeAnimation } from "@/components/WelcomeAnimation";
+import { generateLivekitToken } from '@/utils/serverActions';
 
 
 const MusicDiscovery = dynamic(() => import('@/components/MusicDiscovery').then(mod => mod.MusicDiscovery), { ssr: false });
 const FlashModal = dynamic(() => import('@/components/FlashModal'), { ssr: false });
 const NotificationPanel = dynamic(() => import('@/components/NotificationPanel'), { ssr: false });
-const ShortsPlayer = dynamic(() => import('@/components/ShortsPlayer'), { ssr: false });
+const ShortsPlayer = dynamic(() => import('@/components/ShortsPlayer'));
 
 const db = getFirestore(app);
 
@@ -254,8 +255,6 @@ function HomePageContent() {
       )
     : posts;
     
-  const isPremium = userProfile?.isPremium && (!userProfile.premiumUntil || userProfile.premiumUntil.toDate() > new Date());
-
 
   if (showShortsPlayer) {
     return <ShortsPlayer onClose={() => setShowShortsPlayer(false)} />;
@@ -358,11 +357,11 @@ function HomePageContent() {
           <VibeSpaceLoader />
         ) : (
           <div className="w-full max-w-xl flex flex-col gap-6">
-            <CreatePostPrompt isPremium={!!isPremium} onGoLive={handleGoLive} />
+            <CreatePostPrompt onGoLive={handleGoLive} />
             {filteredPosts.map((post, index) => (
               <React.Fragment key={post.id}>
                 <PostCard post={post} />
-                {(index + 1) % 5 === 0 && !isPremium && <AdBanner key={`ad-${post.id}`} />}
+                {(index + 1) % 5 === 0 && <AdBanner key={`ad-${post.id}`} />}
               </React.Fragment>
             ))}
             

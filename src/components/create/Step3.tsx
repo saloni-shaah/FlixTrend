@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
@@ -8,7 +7,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { getFirestore, collection, addDoc, serverTimestamp, Timestamp, doc, getDoc } from "firebase/firestore";
 import { auth, app } from '@/utils/firebaseClient';
 import { useRouter } from 'next/navigation';
-import { runContentModerationAction } from '@/app/actions';
 
 const db = getFirestore(app);
 
@@ -81,12 +79,12 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
     const [scheduleDate, setScheduleDate] = useState<Date | undefined>();
     const [scheduleTime, setScheduleTime] = useState('12:00');
     const [isPublishing, setIsPublishing] = useState(false);
-    const [moderationError, setModerationError] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
     const router = useRouter();
 
     const handleSubmit = async () => {
         setIsPublishing(true);
-        setModerationError(null);
+        setError(null);
         const user = auth.currentUser;
         if (!user) {
             alert("You must be logged in to post.");
@@ -97,8 +95,6 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
         try {
             const finalPostData = { ...postData };
             
-            const category = finalPostData.category || 'General';
-
             const userDocRef = doc(db, 'users', user.uid);
             const userDocSnap = await getDoc(userDocRef);
             if (!userDocSnap.exists()) throw new Error("User profile not found!");
@@ -129,7 +125,6 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
                 type: postData.postType,
                 content: postData.content || postData.caption || postData.question || postData.title || "",
                 hashtags: hashtags,
-                category: category, 
                 createdAt: serverTimestamp(),
                 publishAt: publishAt,
                 notificationSent: false,
@@ -158,11 +153,7 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
 
         } catch (error: any) {
             console.error("Error publishing post:", error);
-            if (error.message.includes("violates our content guidelines")) {
-                 setModerationError(error.message);
-            } else {
-                alert(`Failed to publish post: ${error.message}`);
-            }
+            setError(error.message);
         } finally {
             setIsPublishing(false);
         }
@@ -173,13 +164,13 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
              <div className="glass-card p-8">
-                <h2 className="text-2xl font-headline text-accent-pink mb-4">Step 3: Publish</h2>
+                <h2 className="text-2xl font-headline text-accent-pink mb-4">Step 2: Publish</h2>
                 
                 <PostPreview postData={postData} />
 
-                <p className="text-gray-400 mb-6 text-sm">Your post has passed the AI safety check. You're ready to publish now or schedule it for later.</p>
+                <p className="text-gray-400 mb-6 text-sm">You're ready to publish now or schedule your post for later.</p>
                  
-                {moderationError && (
+                {error && (
                     <motion.div 
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -187,8 +178,8 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
                     >
                         <ShieldOff size={24} />
                         <div>
-                            <h4 className="font-bold">Post Rejected</h4>
-                            <p className="text-sm">{moderationError}</p>
+                            <h4 className="font-bold">Publishing Error</h4>
+                            <p className="text-sm">{error}</p>
                         </div>
                     </motion.div>
                 )}
