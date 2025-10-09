@@ -4,7 +4,6 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlignLeft, Image as ImageIcon, BarChart3, Radio, Zap } from 'lucide-react';
 import Step1 from '@/components/create/Step1';
-import Step2 from '@/components/create/Step2';
 import Step3 from '@/components/create/Step3';
 
 function CreatePostPageContent() {
@@ -50,14 +49,13 @@ function CreatePostPageContent() {
     
     const steps = [
         <Step1 key="step1" onNext={handleNext} postType={postType!} postData={postData} />,
-        <Step2 key="step2" onNext={handleNext} onBack={handleBack} postData={postData} />,
         <Step3 key="step3" onBack={handleBack} postData={postData} />,
     ];
     
-    const totalSteps = 3; 
+    const totalSteps = 2; 
     const currentStepLogic = step;
     
-    const stepLabels = ['Details', 'AI Check', 'Publish'];
+    const stepLabels = ['Details', 'Publish'];
 
 
     return (
