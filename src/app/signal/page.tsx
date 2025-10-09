@@ -1,14 +1,12 @@
-
 "use client";
 import React, { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp, where, writeBatch, getDocs, updateDoc, deleteDoc, arrayUnion, arrayRemove, deleteField } from "firebase/firestore";
 import { auth, db } from "@/utils/firebaseClient";
-import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, Smile, Trash2, Users, CheckSquare, Square, MoreVertical, UserPlus, UserX, Edit, Shield, EyeOff, LogOut, UploadCloud, Languages, UserCircle, Cake, MapPin, AtSign, User, Bot, Search } from "lucide-react";
+import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, Smile, Trash2, Users, CheckSquare, Square, MoreVertical, UserPlus, UserX, Edit, Shield, EyeOff, LogOut, UploadCloud, UserCircle, Cake, MapPin, AtSign, User, Bot, Search } from "lucide-react";
 import { useAppState } from "@/utils/AppStateContext";
 import { createCall } from "@/utils/callService";
 import { motion, AnimatePresence } from "framer-motion";
-import { translateText } from "@/ai/flows/translate-text-flow";
 import { uploadFileToFirebaseStorage } from "@/app/actions";
 
 const anonymousNames = ["Ram", "Shyam", "Sita", "Mohan", "Krishna", "Radha", "Anchal", "Anaya", "Advik", "Diya", "Rohan", "Priya", "Arjun", "Saanvi", "Kabir"];
@@ -487,9 +485,6 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
   const [showGroupInfo, setShowGroupInfo] = useState(false);
   const [showUserInfo, setShowUserInfo] = useState(false);
   const [onlineStatus, setOnlineStatus] = useState<any>(null);
-  const [translations, setTranslations] = useState<{[messageId: string]: string}>({});
-  const [showLanguageSelector, setShowLanguageSelector] = useState<string | null>(null);
-  const [isTranslating, setIsTranslating] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
 
@@ -566,7 +561,6 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
     setShowGroupInfo(false);
     setShowUserInfo(false);
     setShowEmojiPicker(null);
-    setTranslations({});
     
     let chatId: string;
     chatId = chat.isGroup ? chat.id : getChatId(firebaseUser.uid, chat.uid);
@@ -692,21 +686,6 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
     }
     setShowEmojiPicker(null);
   };
-  
-    const handleTranslate = async (messageId: string, text: string, targetLanguage: string) => {
-        if (!text) return;
-        setIsTranslating(messageId);
-        setShowLanguageSelector(null);
-        try {
-            const translatedText = await translateText({ text, targetLanguage });
-            setTranslations(prev => ({ ...prev, [messageId]: translatedText }));
-        } catch (error) {
-            console.error("Translation error:", error);
-            setTranslations(prev => ({ ...prev, [messageId]: "Translation failed." }));
-        } finally {
-            setIsTranslating(null);
-        }
-    };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -825,7 +804,6 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
   const getInitials = (user: any) => user?.name?.[0] || user?.username?.[0] || "U";
   
   const defaultReactions = ["👍", "❤️", "😂", "😢", "😮", "🙏"];
-  const supportedLanguages = ["English", "Hindi", "Arabic", "Spanish", "French", "German", "Bengali", "Tamil"];
 
   const renderStatus = () => {
     if (!selectedChat) return null;
@@ -961,8 +939,6 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                                           {msg.type === 'audio' && <audio src={msg.mediaUrl} controls />}
                                           {msg.text && <p className="mt-1 break-words">{msg.text}</p>}
                                           
-                                          {translations[msg.id] && <p className="mt-2 pt-2 border-t border-gray-500/50 text-gray-300 italic">{translations[msg.id]}</p>}
-                                          
                                           {msg.sender !== 'system' && <div className="text-xs mt-1 text-right opacity-70">
                                               {msg.createdAt?.toDate?.().toLocaleTimeString() || ""}
                                           </div>}
@@ -992,24 +968,6 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
                                                       >
                                                           {defaultReactions.map(emoji => (
                                                               <button key={emoji} onClick={() => handleReact(msg.id, emoji)} className="text-xl hover:scale-125 transition-transform">{emoji}</button>
-                                                          ))}
-                                                      </motion.div>
-                                                  )}
-                                                  </AnimatePresence>
-                                              </div>
-                                              
-                                              <div className="relative">
-                                                  <button onClick={() => setShowLanguageSelector(showLanguageSelector === msg.id ? null : msg.id)} className="p-1 rounded-full bg-gray-600 hover:bg-gray-500"><Languages size={16}/></button>
-                                                  <AnimatePresence>
-                                                  {showLanguageSelector === msg.id && (
-                                                      <motion.div
-                                                          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-                                                          className="absolute z-10 bottom-full mb-1 bg-gray-800 rounded-lg p-1 flex flex-col shadow-lg w-28"
-                                                      >
-                                                          {supportedLanguages.map(lang => (
-                                                              <button key={lang} onClick={() => handleTranslate(msg.id, msg.text, lang)} className="text-sm text-left px-2 py-1 hover:bg-accent-cyan/10 rounded">
-                                                                  {isTranslating === msg.id ? "Translating..." : lang}
-                                                              </button>
                                                           ))}
                                                       </motion.div>
                                                   )}
