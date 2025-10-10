@@ -13,7 +13,7 @@ import { VibeSpaceLoader } from "@/components/VibeSpaceLoader";
 
 
 const db = getFirestore(app);
-const VIBES_PER_PAGE = 5;
+const VIBES_PER_PAGE = 10; // Fetch more to account for filtering
 
 function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean, onDoubleClick: () => void }) {
   const [shortVibes, setShortVibes] = useState<any[]>([]);
@@ -24,17 +24,17 @@ function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean,
   
   const fetchVibes = useCallback(async () => {
     setLoading(true);
-    // Fetch all posts that are of type 'media'
     const first = query(
         collection(db, "posts"),
-        where("type", "==", "media"),
         orderBy("createdAt", "desc"),
         limit(VIBES_PER_PAGE)
     );
 
     try {
       const documentSnapshots = await getDocs(first);
-      const firstBatch = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const firstBatch = documentSnapshots.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(p => p.type === 'media' && (Array.isArray(p.mediaUrl) ? p.mediaUrl.some((url: string) => /\.(mp4|webm|ogg)$/i.test(url)) : typeof p.mediaUrl === 'string' && /\.(mp4|webm|ogg)$/i.test(p.mediaUrl)));
       
       const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
       setShortVibes(firstBatch);
@@ -43,17 +43,7 @@ function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean,
       setHasMore(documentSnapshots.docs.length === VIBES_PER_PAGE);
     } catch(e) {
       console.error(e);
-      // Fallback for missing composite index during development
-      console.warn("Composite index for media query likely missing. Falling back to client-side filtering.");
-      const allPostsQuery = query(collection(db, "posts"), orderBy("createdAt", "desc"), limit(25));
-      const allDocs = await getDocs(allPostsQuery);
-      const filtered = allDocs.docs
-        .map(doc => ({id: doc.id, ...doc.data()}))
-        .filter(p => p.type === 'media');
-      setShortVibes(filtered.slice(0, VIBES_PER_PAGE));
-      setLastVisible(allDocs.docs[allDocs.docs.length - 1]);
       setLoading(false);
-      setHasMore(true);
     }
   }, []);
 
@@ -63,14 +53,16 @@ function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean,
 
      const next = query(
         collection(db, "posts"),
-        where("type", "==", "media"),
         orderBy("createdAt", "desc"),
         startAfter(lastVisible),
         limit(VIBES_PER_PAGE)
     );
     
     const documentSnapshots = await getDocs(next);
-    const nextBatch = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const nextBatch = documentSnapshots.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(p => p.type === 'media' && (Array.isArray(p.mediaUrl) ? p.mediaUrl.some((url: string) => /\.(mp4|webm|ogg)$/i.test(url)) : typeof p.mediaUrl === 'string' && /\.(mp4|webm|ogg)$/i.test(p.mediaUrl)));
+
 
     const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
 
