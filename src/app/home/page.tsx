@@ -88,7 +88,7 @@ function HomePageContent() {
     setLastVisible(lastDoc);
     setLoading(false);
     setHasMore(documentSnapshots.docs.length === POSTS_PER_PAGE);
-  }, []);
+  }, [POSTS_PER_PAGE]);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async user => {
@@ -135,7 +135,7 @@ function HomePageContent() {
       setLastVisible(lastDoc);
       setLoadingMore(false);
       setHasMore(documentSnapshots.docs.length === POSTS_PER_PAGE);
-  }, [lastVisible, hasMore, loadingMore]);
+  }, [lastVisible, hasMore, loadingMore, POSTS_PER_PAGE]);
 
 
   useEffect(() => {
