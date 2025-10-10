@@ -1,11 +1,10 @@
-
 "use client";
-
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Play, Volume2, VolumeX } from 'lucide-react';
 import { PostCard } from './PostCard';
 import { FlixTrendLogo } from './FlixTrendLogo';
+import { OptimizedVideo } from './OptimizedVideo';
 
 const Watermark = ({ isAnimated = false }: { isAnimated?: boolean }) => (
     <div
@@ -26,13 +25,30 @@ const getVideoUrl = (post: any) => {
     return /\.(mp4|webm|ogg)$/i.test(post.mediaUrl) ? post.mediaUrl : null;
 };
 
-export function ShortVibesPlayer({ shortVibes, onEndReached, hasMore }: { shortVibes: any[], onEndReached: () => void, hasMore: boolean }) {
+export function ShortVibesPlayer({ initialPost, initialPosts = [], onEndReached, hasMore }: { initialPost?: any, initialPosts?: any[], onEndReached: () => void, hasMore: boolean }) {
+    const [shortVibes, setShortVibes] = useState<any[]>(initialPosts);
     const [activeShortIndex, setActiveShortIndex] = useState(0);
     const [isPlaying, setIsPlaying] = useState(true);
     const [isMuted, setIsMuted] = useState(true);
     const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
     const playerRef = useRef<HTMLDivElement>(null);
     const touchStartY = useRef<number | null>(null);
+
+     useEffect(() => {
+        let combinedPosts = [];
+        if (initialPost) {
+            const exists = initialPosts.some(p => p.id === initialPost.id);
+            if (!exists) {
+                combinedPosts = [initialPost, ...initialPosts];
+            } else {
+                combinedPosts = initialPosts;
+            }
+             setActiveShortIndex(combinedPosts.findIndex(p => p.id === initialPost.id));
+        } else {
+            combinedPosts = initialPosts;
+        }
+        setShortVibes(combinedPosts);
+    }, [initialPost, initialPosts]);
 
     const scrollToNext = useCallback(() => {
         setActiveShortIndex(current => {
@@ -57,7 +73,6 @@ export function ShortVibesPlayer({ shortVibes, onEndReached, hasMore }: { shortV
             onEndReached();
         }
     }, [activeShortIndex, hasMore, onEndReached, shortVibes.length]);
-
 
     useEffect(() => {
         const activeVideo = videoRefs.current[activeShortIndex];
@@ -165,14 +180,10 @@ export function ShortVibesPlayer({ shortVibes, onEndReached, hasMore }: { shortV
                         return (
                             <div key={`${short.id}-${idx}`} className="w-full h-full">
                                 <div className="relative w-full h-full flex items-center justify-center" onClick={handleVideoClick}>
-                                    <video
+                                    <OptimizedVideo
                                         ref={el => { videoRefs.current[idx] = el; }}
-                                        src={shouldLoad ? videoUrl : undefined}
+                                        src={shouldLoad ? videoUrl : ""}
                                         className="w-full h-full object-contain"
-                                        autoPlay={idx === activeShortIndex && isPlaying}
-                                        loop
-                                        muted={isMuted}
-                                        playsInline
                                         preload={shouldLoad ? "auto" : "none"}
                                     />
                                     <Watermark isAnimated={true} />
