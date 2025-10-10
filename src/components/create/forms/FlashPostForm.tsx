@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useState, useRef, useEffect } from 'react';
 import { X, UploadCloud, Music as MusicIcon, MapPin, Smile, Camera, Image as ImageIcon, Zap, Locate, Loader } from 'lucide-react';
@@ -167,6 +166,7 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
     };
 
      const handleGetLocation = () => {
+        setUploadError("");
         if (navigator.geolocation) {
             setIsFetchingLocation(true);
             navigator.geolocation.getCurrentPosition(async (position) => {
@@ -182,20 +182,20 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
                          onDataChange({ ...data, location: 'Unknown Location' });
                     }
                 } catch (error) {
-                    console.error("Error fetching location name:", error);
-                    onDataChange({ ...data, location: 'Could not fetch name' });
+                    setUploadError("Could not fetch location name.");
                 } finally {
                     setIsFetchingLocation(false);
                 }
             }, (error) => {
-                console.error("Geolocation error:", error.message);
-                if (error.code !== error.PERMISSION_DENIED) {
-                    alert("Could not get location. Please enable location services for this site.");
+                if (error.code === error.PERMISSION_DENIED) {
+                    setUploadError("Location permission denied.");
+                } else {
+                    setUploadError("Could not get location.");
                 }
                 setIsFetchingLocation(false);
             });
         } else {
-            alert("Geolocation is not supported by this browser.");
+            setUploadError("Geolocation is not supported by this browser.");
         }
     };
 
