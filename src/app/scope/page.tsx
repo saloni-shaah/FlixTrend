@@ -29,7 +29,12 @@ function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean,
       setLoading(true);
     }
 
-    let q;
+    let q = query(
+        collection(db, "posts"),
+        orderBy("publishAt", "desc"),
+        limit(VIBES_PER_PAGE)
+    );
+
     if (startAfterDoc) {
         q = query(
             collection(db, "posts"),
@@ -37,18 +42,19 @@ function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean,
             startAfter(startAfterDoc),
             limit(VIBES_PER_PAGE)
         );
-    } else {
-        q = query(
-            collection(db, "posts"),
-            orderBy("publishAt", "desc"),
-            limit(VIBES_PER_PAGE)
-        );
     }
     
     try {
       const documentSnapshots = await getDocs(q);
       const newPosts = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      const videoPosts = newPosts.filter(p => p.type === 'media' && (p.mediaUrl?.includes('.mp4') || p.mediaUrl?.includes('.webm') || p.mediaUrl?.includes('.ogg')));
+      
+      const videoPosts = newPosts.filter(p => {
+          if (p.type !== 'media' || !p.mediaUrl) return false;
+          if (Array.isArray(p.mediaUrl)) {
+              return p.mediaUrl.some((url: string) => /\.(mp4|webm|ogg)$/i.test(url));
+          }
+          return typeof p.mediaUrl === 'string' && /\.(mp4|webm|ogg)$/i.test(p.mediaUrl);
+      });
 
       const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
       
@@ -57,10 +63,8 @@ function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean,
       setHasMore(documentSnapshots.docs.length === VIBES_PER_PAGE);
 
       // If we fetched a full page but got no videos, and there are more posts to fetch, fetch the next page.
-      if (videoPosts.length === 0 && documentSnapshots.docs.length === VIBES_PER_PAGE) {
-          if (lastDoc) {
-              fetchVibes(lastDoc);
-          }
+      if (videoPosts.length === 0 && documentSnapshots.docs.length === VIBES_PER_PAGE && lastDoc) {
+          fetchVibes(lastDoc);
       }
 
     } catch(e) {
@@ -284,3 +288,5 @@ export default function ScopePage() {
     </div>
   );
 }
+
+    
