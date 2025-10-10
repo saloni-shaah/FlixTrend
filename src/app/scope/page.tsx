@@ -22,70 +22,82 @@ function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean,
   const [lastVisible, setLastVisible] = useState<any>(null);
   const [hasMore, setHasMore] = useState(true);
   
-  const fetchVibes = useCallback(async () => {
-    setLoading(true);
-    const first = query(
-        collection(db, "posts"),
-        where("type", "==", "media"),
-        orderBy("publishAt", "desc"),
-        limit(VIBES_PER_PAGE)
-    );
+  const fetchVibes = useCallback(async (startAfterDoc: any = null) => {
+    if (startAfterDoc) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+    }
 
+    let q;
+    if (startAfterDoc) {
+        q = query(
+            collection(db, "posts"),
+            orderBy("publishAt", "desc"),
+            startAfter(startAfterDoc),
+            limit(VIBES_PER_PAGE)
+        );
+    } else {
+        q = query(
+            collection(db, "posts"),
+            orderBy("publishAt", "desc"),
+            limit(VIBES_PER_PAGE)
+        );
+    }
+    
     try {
-      const documentSnapshots = await getDocs(first);
-      const firstBatch = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      
+      const documentSnapshots = await getDocs(q);
+      const newPosts = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const videoPosts = newPosts.filter(p => p.type === 'media' && (p.mediaUrl?.includes('.mp4') || p.mediaUrl?.includes('.webm') || p.mediaUrl?.includes('.ogg')));
+
       const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
-      setShortVibes(firstBatch);
+      
+      setShortVibes(prev => startAfterDoc ? [...prev, ...videoPosts] : videoPosts);
       setLastVisible(lastDoc);
-      setLoading(false);
       setHasMore(documentSnapshots.docs.length === VIBES_PER_PAGE);
+
+      // If we fetched a full page but got no videos, and there are more posts to fetch, fetch the next page.
+      if (videoPosts.length === 0 && documentSnapshots.docs.length === VIBES_PER_PAGE) {
+          if (lastDoc) {
+              fetchVibes(lastDoc);
+          }
+      }
+
     } catch(e) {
-      console.error("Error fetching initial vibes for Scope page. This might be a Firestore index issue. Check your browser's console for a link to create the required index.", e);
-      setLoading(false);
+      console.error("Error fetching vibes for Scope page. This might be a Firestore index issue. Check your browser's console for a link to create the required index.", e);
+    } finally {
+        setLoading(false);
+        setLoadingMore(false);
     }
   }, []);
 
-  const fetchMoreVibes = useCallback(async () => {
-    if (!lastVisible || !hasMore || loadingMore) return;
-    setLoadingMore(true);
-
-     const next = query(
-        collection(db, "posts"),
-        where("type", "==", "media"),
-        orderBy("publishAt", "desc"),
-        startAfter(lastVisible),
-        limit(VIBES_PER_PAGE)
-    );
-    
-    try {
-        const documentSnapshots = await getDocs(next);
-        const nextBatch = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-        const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
-
-        setShortVibes(prevVibes => [...prevVibes, ...nextBatch]);
-        setLastVisible(lastDoc);
-        setLoadingMore(false);
-        setHasMore(documentSnapshots.docs.length === VIBES_PER_PAGE);
-    } catch(e) {
-        console.error("Error fetching more vibes for Scope page.", e);
-        setLoadingMore(false);
+  const fetchMoreVibes = useCallback(() => {
+    if (lastVisible && hasMore && !loadingMore) {
+        fetchVibes(lastVisible);
     }
-
-  }, [lastVisible, hasMore, loadingMore]);
+  }, [lastVisible, hasMore, loadingMore, fetchVibes]);
   
   useEffect(() => {
     fetchVibes();
   }, [fetchVibes]);
 
 
-  if (loading) {
+  if (loading && shortVibes.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center text-center p-4 h-full">
         <VibeSpaceLoader />
       </div>
     );
+  }
+  
+  if (shortVibes.length === 0 && !loadingMore && !hasMore) {
+      return (
+        <div className="text-gray-400 text-center m-auto">
+            <div className="text-6xl mb-2">🎬</div>
+            <div className="text-lg font-semibold">No Short Vibes Yet</div>
+            <p className="text-sm">Be the first to create one!</p>
+        </div>
+      )
   }
 
   return (
