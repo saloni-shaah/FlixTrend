@@ -17,12 +17,10 @@ const Watermark = ({ isAnimated = false }: { isAnimated?: boolean }) => (
     </div>
 );
 
-const getVideoUrl = (post: any) => {
+const getVideoUrl = (post: any): string | null => {
     if (!post?.mediaUrl) return null;
-    if (Array.isArray(post.mediaUrl)) {
-        return post.mediaUrl.find((url: string) => /\.(mp4|webm|ogg)$/i.test(url)) || null;
-    }
-    return /\.(mp4|webm|ogg)$/i.test(post.mediaUrl) ? post.mediaUrl : null;
+    const mediaUrls = Array.isArray(post.mediaUrl) ? post.mediaUrl : [post.mediaUrl];
+    return mediaUrls.find((url: string) => /\.(mp4|webm|ogg)$/i.test(url)) || null;
 };
 
 export function ShortVibesPlayer({ initialPost, initialPosts = [], onEndReached, hasMore }: { initialPost?: any, initialPosts?: any[], onEndReached: () => void, hasMore: boolean }) {
