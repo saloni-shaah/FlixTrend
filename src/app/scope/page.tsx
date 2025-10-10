@@ -13,7 +13,7 @@ import { VibeSpaceLoader } from "@/components/VibeSpaceLoader";
 
 
 const db = getFirestore(app);
-const VIBES_PER_PAGE = 10; // Fetch more to account for filtering
+const VIBES_PER_PAGE = 10;
 
 function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean, onDoubleClick: () => void }) {
   const [shortVibes, setShortVibes] = useState<any[]>([]);
@@ -26,15 +26,14 @@ function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean,
     setLoading(true);
     const first = query(
         collection(db, "posts"),
-        orderBy("createdAt", "desc"),
+        where("type", "==", "media"),
+        orderBy("publishAt", "desc"),
         limit(VIBES_PER_PAGE)
     );
 
     try {
       const documentSnapshots = await getDocs(first);
-      const firstBatch = documentSnapshots.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(p => p.type === 'media' && (Array.isArray(p.mediaUrl) ? p.mediaUrl.some((url: string) => /\.(mp4|webm|ogg)$/i.test(url)) : typeof p.mediaUrl === 'string' && /\.(mp4|webm|ogg)$/i.test(p.mediaUrl)));
+      const firstBatch = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       
       const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
       setShortVibes(firstBatch);
@@ -42,7 +41,7 @@ function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean,
       setLoading(false);
       setHasMore(documentSnapshots.docs.length === VIBES_PER_PAGE);
     } catch(e) {
-      console.error(e);
+      console.error("Error fetching initial vibes for Scope page. This might be a Firestore index issue. Check your browser's console for a link to create the required index.", e);
       setLoading(false);
     }
   }, []);
@@ -53,23 +52,26 @@ function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean,
 
      const next = query(
         collection(db, "posts"),
-        orderBy("createdAt", "desc"),
+        where("type", "==", "media"),
+        orderBy("publishAt", "desc"),
         startAfter(lastVisible),
         limit(VIBES_PER_PAGE)
     );
     
-    const documentSnapshots = await getDocs(next);
-    const nextBatch = documentSnapshots.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(p => p.type === 'media' && (Array.isArray(p.mediaUrl) ? p.mediaUrl.some((url: string) => /\.(mp4|webm|ogg)$/i.test(url)) : typeof p.mediaUrl === 'string' && /\.(mp4|webm|ogg)$/i.test(p.mediaUrl)));
+    try {
+        const documentSnapshots = await getDocs(next);
+        const nextBatch = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
+        const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
 
-    const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
-
-    setShortVibes(prevVibes => [...prevVibes, ...nextBatch]);
-    setLastVisible(lastDoc);
-    setLoadingMore(false);
-    setHasMore(documentSnapshots.docs.length === VIBES_PER_PAGE);
+        setShortVibes(prevVibes => [...prevVibes, ...nextBatch]);
+        setLastVisible(lastDoc);
+        setLoadingMore(false);
+        setHasMore(documentSnapshots.docs.length === VIBES_PER_PAGE);
+    } catch(e) {
+        console.error("Error fetching more vibes for Scope page.", e);
+        setLoadingMore(false);
+    }
 
   }, [lastVisible, hasMore, loadingMore]);
   
