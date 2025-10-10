@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from 'react';
@@ -12,7 +11,7 @@ import { OptimizedImage } from './OptimizedImage';
 import { FlixTrendLogo } from './FlixTrendLogo';
 import { FaMusic, FaPlay } from "react-icons/fa";
 import { OptimizedVideo } from './OptimizedVideo';
-import { PlayerModal } from './video/PlayerModal';
+import { PlayerModal } from '@/components/video/PlayerModal';
 
 
 const db = getFirestore(app);
