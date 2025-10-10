@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useState, useRef, useCallback } from 'react';
 import { UploadCloud, X, MapPin, Smile, Hash, AtSign, Locate, Loader } from 'lucide-react';
@@ -23,51 +24,12 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
     // Derived state from props
     const mediaPreviews = data.mediaUrl || [];
 
-    const handleFileUpload = async (file: File) => {
-        const user = auth.currentUser;
-        if (!user) {
-            setUploadError("You must be logged in to upload files.");
-            return;
-        }
-
-        const previewUrl = URL.createObjectURL(file);
-        setUploadingFiles(prev => [...prev, previewUrl]);
-        setUploadError(null);
-
-        try {
-            // New logic to get video dimensions
-            if (file.type.startsWith('video/')) {
-                const video = document.createElement('video');
-                video.preload = 'metadata';
-                video.onloadedmetadata = async () => {
-                    window.URL.revokeObjectURL(video.src);
-                    const isPortrait = video.videoHeight > video.videoWidth;
-                    const videoDuration = video.duration;
-                    
-                    onDataChange({
-                        ...data,
-                        isPortrait: isPortrait,
-                        videoDuration: videoDuration
-                    });
-                    
-                    // Now proceed with upload
-                    await uploadFile(file);
-                };
-                video.src = previewUrl;
-            } else {
-                 onDataChange({ ...data, isPortrait: false, videoDuration: 0 });
-                 await uploadFile(file);
-            }
-        } catch (error: any) {
-            console.error("Upload preparation failed:", error);
-            setUploadError(error.message);
-            setUploadingFiles(prev => prev.filter(p => p !== previewUrl));
-        }
-    };
-    
     const uploadFile = async (file: File) => {
         const user = auth.currentUser;
         if (!user) return; // Should be caught earlier, but for safety
+
+        const previewUrl = URL.createObjectURL(file);
+        setUploadingFiles(prev => [...prev, previewUrl]);
 
         try {
             const base64 = await fileToBase64(file);
@@ -87,9 +49,36 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
         } catch(error: any) {
             setUploadError(error.message);
         } finally {
-            setUploadingFiles(prev => prev.filter(p => p !== URL.createObjectURL(file)));
+            setUploadingFiles(prev => prev.filter(p => p !== previewUrl));
         }
     }
+
+    const handleFileUpload = async (file: File) => {
+        const user = auth.currentUser;
+        if (!user) {
+            setUploadError("You must be logged in to upload files.");
+            return;
+        }
+        
+        setUploadError(null);
+        
+        if (file.type.startsWith('video/')) {
+            const video = document.createElement('video');
+            video.preload = 'metadata';
+            video.onloadedmetadata = async () => {
+                window.URL.revokeObjectURL(video.src);
+                const isPortrait = video.videoHeight > video.videoWidth;
+                const videoDuration = video.duration;
+                onDataChange({ ...data, isPortrait: isPortrait, videoDuration: videoDuration });
+                await uploadFile(file);
+            };
+            video.src = URL.createObjectURL(file);
+        } else {
+             onDataChange({ ...data, isPortrait: false, videoDuration: 0 });
+             await uploadFile(file);
+        }
+    };
+    
 
     const processFiles = async (files: FileList | null) => {
         if (!files) return;
