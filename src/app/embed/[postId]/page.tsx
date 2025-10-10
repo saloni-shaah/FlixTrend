@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -23,7 +22,7 @@ export default function EmbedPage() {
             getDoc(postRef).then(docSnap => {
                 if (docSnap.exists()) {
                     const postData = docSnap.data();
-                    if (postData.type === 'media' && (Array.isArray(postData.mediaUrl) ? postData.mediaUrl.some((url: string) => url.includes('.mp4')) : postData.mediaUrl?.includes('.mp4'))) {
+                    if (postData.type === 'media' && (Array.isArray(postData.mediaUrl) ? postData.mediaUrl.some((url: string) => /\.(mp4|webm|ogg)$/i.test(url)) : /\.(mp4|webm|ogg)$/i.test(postData.mediaUrl))) {
                         setPost({ id: docSnap.id, ...postData });
                     } else {
                         setError("This post is not a video and cannot be embedded.");
@@ -48,7 +47,7 @@ export default function EmbedPage() {
         return <div className="w-screen h-screen flex items-center justify-center bg-black text-white p-4 text-center">{error}</div>;
     }
 
-    const videoUrl = Array.isArray(post.mediaUrl) ? post.mediaUrl.find((url: string) => url.includes('.mp4')) : post.mediaUrl;
+    const videoUrl = Array.isArray(post.mediaUrl) ? post.mediaUrl.find((url: string) => /\.(mp4|webm|ogg)$/i.test(url)) : post.mediaUrl;
 
     return (
         <div className="w-screen h-screen bg-black flex items-center justify-center">
@@ -58,7 +57,6 @@ export default function EmbedPage() {
                     src={videoUrl} 
                     thumbnailUrl={post.thumbnailUrl} 
                     className="w-full h-full object-contain" 
-                    controls 
                 />
             )}
         </div>

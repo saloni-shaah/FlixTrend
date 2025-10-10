@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState, useRef } from 'react';
@@ -353,7 +352,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
         if (isVideo) {
             return (
                 <div className="relative group w-full h-full cursor-pointer bg-black flex items-center justify-center">
-                    <OptimizedVideo src={url} className="w-full h-full object-contain" preload="metadata" />
+                    <OptimizedVideo src={url} thumbnailUrl={post.thumbnailUrl} className="w-full h-full object-contain" preload="metadata" />
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                         <FaPlay className="text-white text-5xl" />
                     </div>
