@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { getFirestore, collection, query, onSnapshot, getDocs, orderBy, limit, where, startAfter } from "firebase/firestore";
 import { app, auth } from "@/utils/firebaseClient";
-import { ShortsPlayer } from "@/components/ShortsPlayer";
+import { ShortVibesPlayer } from "@/components/ShortVibesPlayer";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Compass, Music, Gamepad2, Flame, User, Heart, Mic } from "lucide-react";
@@ -21,29 +21,22 @@ function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean,
   
   const fetchVibes = useCallback(async () => {
     setLoading(true);
-    // Simplified query to avoid needing a composite index immediately.
-    // This is less efficient as it filters on the client, but it prevents crashing.
+    // This query correctly fetches only portrait videos.
     const first = query(
         collection(db, "posts"),
+        where("isPortrait", "==", true),
         orderBy("createdAt", "desc"),
-        limit(VIBES_PER_PAGE * 2) // Fetch more to account for client-side filtering
+        limit(VIBES_PER_PAGE)
     );
 
     const documentSnapshots = await getDocs(first);
-    const firstBatch = documentSnapshots.docs
-      .map(doc => ({ id: doc.id, ...doc.data() }))
-      .filter(post => {
-        const mediaUrl = post.mediaUrl;
-        if (!mediaUrl) return false;
-        const urls = Array.isArray(mediaUrl) ? mediaUrl : [mediaUrl];
-        return urls.some((url: string) => /\.(mp4|webm|ogg)$/i.test(url));
-      });
+    const firstBatch = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     
     const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
     setShortVibes(firstBatch);
     setLastVisible(lastDoc);
     setLoading(false);
-    setHasMore(!!lastDoc);
+    setHasMore(documentSnapshots.docs.length === VIBES_PER_PAGE);
   }, []);
 
   const fetchMoreVibes = useCallback(async () => {
@@ -52,27 +45,21 @@ function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean,
 
      const next = query(
         collection(db, "posts"),
+        where("isPortrait", "==", true),
         orderBy("createdAt", "desc"),
         startAfter(lastVisible),
-        limit(VIBES_PER_PAGE * 2) // Fetch more to account for client-side filtering
+        limit(VIBES_PER_PAGE)
     );
     
     const documentSnapshots = await getDocs(next);
-    const nextBatch = documentSnapshots.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(post => {
-            const mediaUrl = post.mediaUrl;
-            if (!mediaUrl) return false;
-            const urls = Array.isArray(mediaUrl) ? mediaUrl : [mediaUrl];
-            return urls.some((url: string) => /\.(mp4|webm|ogg)$/i.test(url));
-        });
+    const nextBatch = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
     const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
 
     setShortVibes(prevVibes => [...prevVibes, ...nextBatch]);
     setLastVisible(lastDoc);
     setLoadingMore(false);
-    setHasMore(!!lastDoc);
+    setHasMore(documentSnapshots.docs.length === VIBES_PER_PAGE);
 
   }, [lastVisible, hasMore, loadingMore]);
   
@@ -95,7 +82,7 @@ function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean,
         className={`w-full h-full transition-all duration-300 ${isFullScreen ? '' : 'max-w-md mx-auto aspect-[9/16] rounded-2xl overflow-hidden'}`} 
         onDoubleClick={onDoubleClick}
     >
-        <ShortsPlayer shortVibes={shortVibes} onEndReached={fetchMoreVibes} hasMore={hasMore}/>
+        <ShortVibesPlayer shortVibes={shortVibes} onEndReached={fetchMoreVibes} hasMore={hasMore}/>
     </div>
   );
 }
