@@ -1,3 +1,4 @@
+
 "use client";
 import "regenerator-runtime/runtime";
 import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
@@ -68,6 +69,27 @@ function HomePageContent() {
     }
   }, [listening, transcript, resetTranscript]);
 
+  const fetchPosts = useCallback(async () => {
+    if (!auth.currentUser) return;
+    setLoading(true);
+    
+    const q = query(
+        collection(db, "posts"),
+        orderBy("publishAt", "desc"),
+        limit(POSTS_PER_PAGE)
+    );
+
+    const documentSnapshots = await getDocs(q);
+    
+    const newPosts = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+
+    setPosts(newPosts);
+    setLastVisible(lastDoc);
+    setLoading(false);
+    setHasMore(documentSnapshots.docs.length === POSTS_PER_PAGE);
+  }, []);
+
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async user => {
       if (user) {
@@ -83,11 +105,7 @@ function HomePageContent() {
             setHasUnreadNotifs(!snapshot.empty);
         });
         
-        // Force a re-fetch of posts when user changes
-        setPosts([]);
-        setLastVisible(null);
-        setHasMore(true);
-        fetchPosts(true); // pass true to indicate a reset
+        fetchPosts();
         
         return () => unsubNotifs();
 
@@ -96,29 +114,7 @@ function HomePageContent() {
       }
     });
     return () => unsubscribe();
-  }, [router]);
-
-  const fetchPosts = useCallback(async (isReset = false) => {
-    if (!auth.currentUser) return;
-    setLoading(true);
-    
-    // Simplified chronological query
-    const q = query(
-        collection(db, "posts"),
-        orderBy("publishAt", "desc"),
-        limit(POSTS_PER_PAGE)
-    );
-
-    const documentSnapshots = await getDocs(q);
-    
-    const newPosts = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
-
-    setPosts(isReset ? newPosts : [...posts, ...newPosts]);
-    setLastVisible(lastDoc);
-    setLoading(false);
-    setHasMore(documentSnapshots.docs.length === POSTS_PER_PAGE);
-  }, [posts]);
+  }, [router, fetchPosts]);
   
   const fetchMorePosts = useCallback(async () => {
       if (!lastVisible || !hasMore || loadingMore) return;
