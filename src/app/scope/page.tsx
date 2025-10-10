@@ -1,7 +1,7 @@
 
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
-import { getFirestore, collection, query, onSnapshot, getDocs, orderBy, limit, where, startAfter } from "firebase/firestore";
+import { getFirestore, collection, query, onSnapshot, getDocs, orderBy, limit, where, startAfter, Timestamp } from "firebase/firestore";
 import { app, auth } from "@/utils/firebaseClient";
 import { ShortsPlayer } from "@/components/ShortsPlayer";
 import Link from "next/link";
@@ -11,9 +11,8 @@ import { MusicDiscovery } from "@/components/MusicDiscovery";
 import { GamesHub } from "@/components/GamesHub";
 import { VibeSpaceLoader } from "@/components/VibeSpaceLoader";
 
-
 const db = getFirestore(app);
-const VIBES_PER_PAGE = 10;
+const VIBES_PER_PAGE = 15; // Fetch a decent number of items to filter through
 
 function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean, onDoubleClick: () => void }) {
   const [shortVibes, setShortVibes] = useState<any[]>([]);
@@ -21,7 +20,9 @@ function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean,
   const [loadingMore, setLoadingMore] = useState(false);
   const [lastVisible, setLastVisible] = useState<any>(null);
   const [hasMore, setHasMore] = useState(true);
-  
+
+  // DEFINITIVE FIX: Replicating the working query from HomePage and then filtering.
+  // This ensures we are fetching all published posts correctly before identifying videos.
   const fetchVibes = useCallback(async (startAfterDoc: any = null) => {
     if (startAfterDoc) {
       setLoadingMore(true);
@@ -30,57 +31,60 @@ function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean,
     }
 
     let q = query(
-        collection(db, "posts"),
-        orderBy("publishAt", "desc"),
-        limit(VIBES_PER_PAGE)
+      collection(db, "posts"),
+      where("publishAt", "<=", Timestamp.now()), // Using the proven query from HomePage
+      orderBy("publishAt", "desc"),
+      limit(VIBES_PER_PAGE)
     );
 
     if (startAfterDoc) {
-        q = query(
-            collection(db, "posts"),
-            orderBy("publishAt", "desc"),
-            startAfter(startAfterDoc),
-            limit(VIBES_PER_PAGE)
-        );
+      q = query(
+        collection(db, "posts"),
+        where("publishAt", "<=", Timestamp.now()), // Using the proven query from HomePage
+        orderBy("publishAt", "desc"),
+        startAfter(startAfterDoc),
+        limit(VIBES_PER_PAGE)
+      );
     }
-    
+
     try {
       const documentSnapshots = await getDocs(q);
-      const newPosts = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      
-      const videoPosts = newPosts.filter(p => {
-          if (p.type !== 'media' || !p.mediaUrl) return false;
-          if (Array.isArray(p.mediaUrl)) {
-              return p.mediaUrl.some((url: string) => /\.(mp4|webm|ogg)$/i.test(url));
-          }
-          return typeof p.mediaUrl === 'string' && /\.(mp4|webm|ogg)$/i.test(p.mediaUrl);
+      const allNewPosts = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      // Correctly filter for video posts on the client side
+      const videoPosts = allNewPosts.filter(p => {
+        if (!p.mediaUrl) return false;
+        const url = Array.isArray(p.mediaUrl) ? p.mediaUrl[0] : p.mediaUrl;
+        return typeof url === 'string' && /\.(mp4|webm|mov|mkv|avi)$/i.test(url);
       });
 
       const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
-      
+
       setShortVibes(prev => startAfterDoc ? [...prev, ...videoPosts] : videoPosts);
       setLastVisible(lastDoc);
-      setHasMore(documentSnapshots.docs.length === VIBES_PER_PAGE);
+      const moreToFetch = documentSnapshots.docs.length === VIBES_PER_PAGE;
+      setHasMore(moreToFetch);
 
-      // If we fetched a full page but got no videos, and there are more posts to fetch, fetch the next page.
-      if (videoPosts.length === 0 && documentSnapshots.docs.length === VIBES_PER_PAGE && lastDoc) {
+      // If we found no videos in this batch but there are more posts to check, fetch the next page automatically.
+      if (videoPosts.length === 0 && moreToFetch && lastDoc) {
           fetchVibes(lastDoc);
       }
 
-    } catch(e) {
-      console.error("Error fetching vibes for Scope page. This might be a Firestore index issue. Check your browser's console for a link to create the required index.", e);
+    } catch (e) {
+      console.error("Error fetching vibes for Scope page:", e);
+      // If this error is about an index, the console will have the link.
     } finally {
-        setLoading(false);
-        setLoadingMore(false);
+      setLoading(false);
+      setLoadingMore(false);
     }
   }, []);
 
   const fetchMoreVibes = useCallback(() => {
     if (lastVisible && hasMore && !loadingMore) {
-        fetchVibes(lastVisible);
+      fetchVibes(lastVisible);
     }
   }, [lastVisible, hasMore, loadingMore, fetchVibes]);
-  
+
   useEffect(() => {
     fetchVibes();
   }, [fetchVibes]);
@@ -93,27 +97,27 @@ function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean,
       </div>
     );
   }
-  
+
+  // This condition now accurately reflects that we have finished fetching and found no videos.
   if (shortVibes.length === 0 && !loadingMore && !hasMore) {
-      return (
-        <div className="text-gray-400 text-center m-auto">
-            <div className="text-6xl mb-2">🎬</div>
-            <div className="text-lg font-semibold">No Short Vibes Yet</div>
-            <p className="text-sm">Be the first to create one!</p>
-        </div>
-      )
+    return (
+      <div className="text-gray-400 text-center m-auto">
+        <div className="text-6xl mb-2">🎬</div>
+        <div className="text-lg font-semibold">No Short Vibes Yet</div>
+        <p className="text-sm">Be the first to create one!</p>
+      </div>
+    )
   }
 
   return (
-    <div 
-        className={`w-full h-full transition-all duration-300 ${isFullScreen ? '' : 'max-w-md mx-auto aspect-[9/16] rounded-2xl overflow-hidden'}`} 
-        onDoubleClick={onDoubleClick}
+    <div
+      className={`w-full h-full transition-all duration-300 ${isFullScreen ? '' : 'max-w-md mx-auto aspect-[9/16] rounded-2xl overflow-hidden'}`}
+      onDoubleClick={onDoubleClick}
     >
-        <ShortsPlayer initialPosts={shortVibes} onEndReached={fetchMoreVibes} hasMore={hasMore}/>
+      {shortVibes.length > 0 && <ShortsPlayer initialPosts={shortVibes} onEndReached={fetchMoreVibes} hasMore={hasMore} />}
     </div>
   );
 }
-
 
 function TrendBoard() {
     const [topPosters, setTopPosters] = useState<any[]>([]);
@@ -288,5 +292,3 @@ export default function ScopePage() {
     </div>
   );
 }
-
-    
