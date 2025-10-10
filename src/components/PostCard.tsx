@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect, useState, useRef } from 'react';
@@ -94,7 +95,6 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
   const [userPollVote, setUserPollVote] = React.useState<number | null>(null);
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const deletePostCallable = httpsCallable(functions, 'deletePost');
-  const [isFullScreen, setIsFullScreen] = React.useState(false);
   
 
   React.useEffect(() => {
@@ -489,27 +489,6 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
         />
       )}
     </motion.div>
-    {isFullScreen && post.mediaUrl && !Array.isArray(post.mediaUrl) && (
-        <div 
-            className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-sm flex items-center justify-center"
-            onClick={() => setIsFullScreen(false)}
-        >
-            <button onClick={() => setIsFullScreen(false)} className="absolute top-4 right-4 text-white z-10">
-                <X size={32} />
-            </button>
-            <motion.div 
-                layoutId={`postcard-media-${post.id}`}
-                className="relative w-full h-full"
-            >
-                <OptimizedImage 
-                    src={post.mediaUrl}
-                    alt={post.content || 'Full screen image'}
-                    className="w-full h-full object-contain"
-                />
-                 <Watermark isAnimated={true} />
-            </motion.div>
-        </div>
-    )}
     </>
   );
 }
@@ -678,3 +657,4 @@ function CommentForm({ postId, postAuthorId, parentId, onCommentPosted, isReply 
     </form>
   )
 }
+
