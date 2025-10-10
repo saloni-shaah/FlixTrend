@@ -25,4 +25,8 @@ export function TheaterModeContainer({ isTheaterMode, setIsTheaterMode, children
                     <div className="w-full max-w-screen-lg h-auto" onClick={(e) => e.stopPropagation()}>
                         {children}
                     </div>
-                </motion.div
+                </motion.div>
+            )}
+        </AnimatePresence>
+    );
+}
