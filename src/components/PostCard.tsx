@@ -550,7 +550,7 @@ function CommentThread({ comment, postId, postAuthorId, replyTo, setReplyTo }: {
   );
 }
 
-function Comment({ comment, onReply }: { comment: any; onReply: () => void }) {
+function Comment({ comment, onReply }: { comment: any; onReply: () => void; }) {
   const [userData, setUserData] = React.useState<any>(null);
 
   React.useEffect(() => {
@@ -558,7 +558,7 @@ function Comment({ comment, onReply }: { comment: any; onReply: () => void }) {
       if (comment.username && comment.avatar_url) {
         setUserData({ username: comment.username, avatar_url: comment.avatar_url, displayName: comment.displayName });
       } else if (comment.userId) {
-        const userDoc = await getDoc(doc(db, "users", comment.userId));
+        const userDoc = await getDoc(fsDoc(db, "users", comment.userId));
         if (userDoc.exists()) {
           const data = userDoc.data();
           setUserData({
@@ -593,7 +593,7 @@ function Comment({ comment, onReply }: { comment: any; onReply: () => void }) {
   );
 }
 
-function CommentForm({ postId, postAuthorId, parentId, onCommentPosted, isReply = false, post }: { postId: string; postAuthorId: string; parentId: string | null; onCommentPosted: () => void; isReply?: boolean, post: any }) {
+function CommentForm({ postId, postAuthorId, parentId, onCommentPosted, isReply = false, post }: { postId: string; postAuthorId: string; parentId: string | null; onCommentPosted: () => void; isReply?: boolean, post: any; }) {
   const [newComment, setNewComment] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const user = auth.currentUser;
@@ -657,4 +657,3 @@ function CommentForm({ postId, postAuthorId, parentId, onCommentPosted, isReply 
     </form>
   )
 }
-
