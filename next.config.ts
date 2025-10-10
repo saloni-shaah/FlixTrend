@@ -70,10 +70,6 @@ const nextConfig: NextConfig = {
     remotePatterns: [
         {
             protocol: 'https',
-            hostname: 'api.dicebear.com',
-        },
-        {
-            protocol: 'https',
             hostname: 'firebasestorage.googleapis.com',
         },
         {
@@ -82,11 +78,7 @@ const nextConfig: NextConfig = {
         },
         {
             protocol: 'https',
-            hostname: 'commons.wikimedia.org',
-        },
-        {
-            protocol: 'https',
-            hostname: 'res.cloudinary.com',
+            hostname: 'picsum.photos',
         }
     ]
   },
