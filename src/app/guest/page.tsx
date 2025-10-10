@@ -25,6 +25,7 @@ export default function GuestPage() {
   const [hasMore, setHasMore] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const feedEndRef = useRef<HTMLDivElement>(null);
+  const observer = useRef<IntersectionObserver>();
 
   const {
     transcript,
@@ -41,26 +42,6 @@ export default function GuestPage() {
   }, [listening, transcript, resetTranscript]);
 
 
-  const fetchPosts = useCallback(async () => {
-    setLoading(true);
-
-    const first = query(
-      collection(db, "posts"), 
-      orderBy("createdAt", "desc"), 
-      limit(POSTS_PER_PAGE)
-    );
-
-    const documentSnapshots = await getDocs(first);
-    
-    const firstBatch = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
-
-    setPosts(firstBatch);
-    setLastVisible(lastDoc);
-    setLoading(false);
-    setHasMore(documentSnapshots.docs.length === POSTS_PER_PAGE);
-  }, []);
-  
   const fetchMorePosts = useCallback(async () => {
       if (!lastVisible || !hasMore || loadingMore) return;
       setLoadingMore(true);
@@ -84,15 +65,36 @@ export default function GuestPage() {
 
 
   useEffect(() => {
+    const fetchPosts = async () => {
+        setLoading(true);
+
+        const first = query(
+        collection(db, "posts"), 
+        orderBy("createdAt", "desc"), 
+        limit(POSTS_PER_PAGE)
+        );
+
+        const documentSnapshots = await getDocs(first);
+        
+        const firstBatch = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+
+        setPosts(firstBatch);
+        setLastVisible(lastDoc);
+        setLoading(false);
+        setHasMore(documentSnapshots.docs.length === POSTS_PER_PAGE);
+    };
+
     fetchPosts();
-  }, [fetchPosts]);
+  }, []);
 
    useEffect(() => {
     if (searchTerm) return; // Don't fetch more if searching
+    if (loading) return;
 
-    const observer = new IntersectionObserver(
+    observer.current = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loading && !loadingMore) {
+        if (entries[0].isIntersecting && hasMore && !loadingMore) {
           fetchMorePosts();
         }
       },
@@ -101,15 +103,15 @@ export default function GuestPage() {
 
     const currentRef = feedEndRef.current;
     if (currentRef) {
-      observer.observe(currentRef);
+      observer.current.observe(currentRef);
     }
 
     return () => {
-      if (currentRef) {
-        observer.unobserve(currentRef);
+      if (currentRef && observer.current) {
+        observer.current.unobserve(currentRef);
       }
     };
-  }, [feedEndRef, fetchMorePosts, hasMore, loading, loadingMore, searchTerm]);
+  }, [loading, hasMore, loadingMore, searchTerm, fetchMorePosts]);
   
   const handleVoiceSearch = () => {
     if (listening) {
@@ -216,5 +218,3 @@ export default function GuestPage() {
     </div>
   );
 }
-
-    
