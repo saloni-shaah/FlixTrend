@@ -16,7 +16,7 @@ import Link from "next/link";
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import { CreatePostPrompt } from "@/components/CreatePostPrompt";
 import { WelcomeAnimation } from "@/components/WelcomeAnimation";
-import { generateLivekitToken } from '@/utils/serverActions';
+import { generateLivekitToken } from '@/ai/flows/generate-livekit-token-flow';
 
 
 const MusicDiscovery = dynamic(() => import('@/components/MusicDiscovery').then(mod => mod.MusicDiscovery), { ssr: false });
@@ -76,10 +76,6 @@ function HomePageContent() {
         const userProfileSnap = await getDoc(userDocRef);
         const profileData = userProfileSnap.exists() ? userProfileSnap.data() : null;
         setUserProfile(profileData);
-
-        const vibeEngineRef = doc(db, 'user_profiles', user.uid, 'engine', 'vibe');
-        const vibeEngineSnap = await getDoc(vibeEngineRef);
-        const vibeScores = vibeEngineSnap.exists() ? vibeEngineSnap.data().scores : {};
         
         // Setup notification listener
         const q = query(collection(db, "notifications", user.uid, "user_notifications"), where("read", "==", false));
@@ -91,7 +87,7 @@ function HomePageContent() {
         setPosts([]);
         setLastVisible(null);
         setHasMore(true);
-        fetchPosts(true, vibeScores); // pass true to indicate a reset
+        fetchPosts(true); // pass true to indicate a reset
         
         return () => unsubNotifs();
 
@@ -102,31 +98,16 @@ function HomePageContent() {
     return () => unsubscribe();
   }, [router]);
 
-  const fetchPosts = useCallback(async (isReset = false, vibeScores = {}) => {
+  const fetchPosts = useCallback(async (isReset = false) => {
     if (!auth.currentUser) return;
     setLoading(true);
-
-    const sortedInterests = Object.entries(vibeScores)
-        .sort(([, a], [, b]) => (b as number) - (a as number))
-        .map(([key]) => key);
     
-    let q;
-    if (sortedInterests.length > 0) {
-        q = query(
-            collection(db, "posts"),
-            where("category", "in", sortedInterests.slice(0, 10)), // Query top 10 interests for variety
-            orderBy("publishAt", "desc"),
-            limit(POSTS_PER_PAGE)
-        );
-    } else {
-        // Fallback for new users
-        q = query(
-            collection(db, "posts"),
-            orderBy("publishAt", "desc"),
-            limit(POSTS_PER_PAGE)
-        );
-    }
-
+    // Simplified chronological query
+    const q = query(
+        collection(db, "posts"),
+        orderBy("publishAt", "desc"),
+        limit(POSTS_PER_PAGE)
+    );
 
     const documentSnapshots = await getDocs(q);
     
@@ -140,33 +121,15 @@ function HomePageContent() {
   }, [posts]);
   
   const fetchMorePosts = useCallback(async () => {
-      if (!auth.currentUser || !lastVisible || !hasMore || loadingMore) return;
+      if (!lastVisible || !hasMore || loadingMore) return;
       setLoadingMore(true);
 
-      const vibeEngineRef = doc(db, 'user_profiles', auth.currentUser.uid, 'engine', 'vibe');
-      const vibeEngineSnap = await getDoc(vibeEngineRef);
-      const vibeScores = vibeEngineSnap.exists() ? vibeEngineSnap.data().scores : {};
-      const sortedInterests = Object.entries(vibeScores)
-          .sort(([, a], [, b]) => (b as number) - (a as number))
-          .map(([key]) => key);
-
-      let next;
-      if (sortedInterests.length > 0) {
-          next = query(
-              collection(db, "posts"),
-              where("category", "in", sortedInterests.slice(0, 10)),
-              orderBy("publishAt", "desc"),
-              startAfter(lastVisible),
-              limit(POSTS_PER_PAGE)
-          );
-      } else {
-           next = query(
-              collection(db, "posts"),
-              orderBy("publishAt", "desc"),
-              startAfter(lastVisible),
-              limit(POSTS_PER_PAGE)
-          );
-      }
+      const next = query(
+          collection(db, "posts"),
+          orderBy("publishAt", "desc"),
+          startAfter(lastVisible),
+          limit(POSTS_PER_PAGE)
+      );
 
       const documentSnapshots = await getDocs(next);
       const nextBatch = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -353,6 +316,7 @@ function HomePageContent() {
 
       {/* Feed Section */}
       <section className="flex-1 flex flex-col items-center mt-4">
+        <h2 className="text-xl font-headline self-start bg-gradient-to-r from-accent-pink to-accent-green bg-clip-text text-transparent mb-4">For You</h2>
         {loading && posts.length === 0 ? (
           <VibeSpaceLoader />
         ) : (

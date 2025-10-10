@@ -12,7 +12,6 @@ import { SignalShareModal } from './SignalShareModal';
 import { AddToCollectionModal } from './AddToCollectionModal';
 import { OptimizedImage } from './OptimizedImage';
 import { FlixTrendLogo } from './FlixTrendLogo';
-import { trackInteraction } from '@/vibe-engine/interactionTracker';
 import { savePostForOffline, isPostDownloaded, removeDownloadedPost } from '@/utils/offline-db';
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { CheckCircle, Award, Mic, Crown, Zap, Rocket, Search, Pin, Phone, Mail, Folder } from "lucide-react";
@@ -120,9 +119,6 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
       const wasSaved = !snap.empty;
       if (isSaved !== wasSaved) {
         setIsSaved(wasSaved);
-        if (wasSaved) {
-            trackInteraction(currentUser.uid, post.category, 'save');
-        }
       }
     });
     unsubscribes.push(unsubSaved);
@@ -183,9 +179,6 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
         await setDoc(starredDocRef, { ...post, starredAt: serverTimestamp() });
         await setDoc(postStarRef, { userId: currentUser.uid, starredAt: serverTimestamp() });
         
-        // Track interaction for VibeEngine
-        trackInteraction(currentUser.uid, post.category, 'like');
-
         // Create notification for post author
         if (post.userId !== currentUser.uid) {
             const notifRef = collection(db, "notifications", post.userId, "user_notifications");
@@ -239,8 +232,6 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
                 relayedAt: serverTimestamp(),
             });
             
-            trackInteraction(currentUser.uid, post.category, 'relay');
-
             if (post.userId !== currentUser.uid) {
                 const notifRef = doc(collection(db, "notifications", post.userId, "user_notifications"));
                 transaction.set(notifRef, {
@@ -296,7 +287,6 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
   const handlePollVote = async (optionIdx: number) => {
     if (!currentUser || userPollVote !== null) return;
     await setDoc(fsDoc(db, "posts", post.id, "pollVotes", currentUser.uid), { userId: currentUser.uid, optionIdx, createdAt: serverTimestamp() });
-    trackInteraction(currentUser.uid, post.category, 'comment'); // Treat poll vote as a form of comment
   };
   
   React.useEffect(() => {
@@ -309,11 +299,6 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
     }
   }, [post.song]);
   
-  const handleRecommendationFeedback = (type: 'show_more' | 'show_less') => {
-      if (!currentUser) return;
-      trackInteraction(currentUser.uid, post.category, type);
-      alert(`Thank you! We'll ${type === 'show_more' ? 'show you more' : 'show you less'} posts like this.`);
-  };
 
   const MediaGrid = ({ mediaUrls }: { mediaUrls: string[] }) => {
     if (!mediaUrls || mediaUrls.length === 0) return null;
@@ -749,8 +734,6 @@ function CommentForm({ postId, postAuthorId, parentId, onCommentPosted, isReply 
 
     await addDoc(collection(db, "posts", postId, "comments"), commentData);
     
-    trackInteraction(user.uid, post.category, 'comment');
-
     if (postAuthorId !== user.uid) {
       const notifRef = collection(db, "notifications", postAuthorId, "user_notifications");
       await addDoc(notifRef, {
