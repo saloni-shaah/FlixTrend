@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
@@ -20,11 +21,16 @@ const Watermark = ({ isAnimated = false }: { isAnimated?: boolean }) => (
 
 const getVideoUrl = (post: any): string | null => {
     if (!post?.mediaUrl) return null;
-    const mediaUrls = Array.isArray(post.mediaUrl) ? post.mediaUrl : [post.mediaUrl];
-    return mediaUrls.find((url: string) => /\.(mp4|webm|ogg)$/i.test(url)) || null;
+    if (Array.isArray(post.mediaUrl)) {
+        return post.mediaUrl.find((url: string) => /\.(mp4|webm|ogg)$/i.test(url)) || null;
+    }
+    if (typeof post.mediaUrl === 'string' && /\.(mp4|webm|ogg)$/i.test(post.mediaUrl)) {
+        return post.mediaUrl;
+    }
+    return null;
 };
 
-export function ShortsPlayer({ initialPosts = [], onEndReached, hasMore }: { initialPosts?: any[], onEndReached: () => void, hasMore: boolean }) {
+export function ShortsPlayer({ initialPosts = [], onEndReached, hasMore, onClose }: { initialPosts?: any[], onEndReached?: () => void, hasMore?: boolean, onClose?: () => void }) {
     const [shortVibes, setShortVibes] = useState<any[]>(initialPosts);
     const [activeShortIndex, setActiveShortIndex] = useState(0);
     const [isPlaying, setIsPlaying] = useState(true);
@@ -59,7 +65,7 @@ export function ShortsPlayer({ initialPosts = [], onEndReached, hasMore }: { ini
     }, []);
 
     useEffect(() => {
-        if (hasMore && shortVibes.length > 0 && activeShortIndex >= shortVibes.length - 3) {
+        if (onEndReached && hasMore && shortVibes.length > 0 && activeShortIndex >= shortVibes.length - 3) {
             onEndReached();
         }
     }, [activeShortIndex, hasMore, onEndReached, shortVibes.length]);
@@ -100,6 +106,7 @@ export function ShortsPlayer({ initialPosts = [], onEndReached, hasMore }: { ini
             if (event.key === 'ArrowDown') scrollToNext();
             else if (event.key === 'ArrowUp') scrollToPrev();
             else if (event.key.toLowerCase() === 'm') setIsMuted(prev => !prev);
+            else if (event.key === 'Escape' && onClose) onClose();
         };
 
         const handleWheel = (event: WheelEvent) => {
@@ -143,10 +150,11 @@ export function ShortsPlayer({ initialPosts = [], onEndReached, hasMore }: { ini
                 currentRef.removeEventListener('touchend', handleTouchEnd);
             }
         };
-    }, [scrollToNext, scrollToPrev]);
+    }, [scrollToNext, scrollToPrev, onClose]);
 
     return (
         <div ref={playerRef} className="w-full h-full flex flex-col items-center relative bg-black focus:outline-none overflow-hidden" tabIndex={0}>
+             {onClose && <button onClick={onClose} className="absolute top-4 left-4 z-50 p-2 bg-black/40 text-white rounded-full">Close</button>}
             {shortVibes.length === 0 ? (
                 <div className="text-gray-400 text-center m-auto">
                     <div className="text-6xl mb-2">🎬</div>
