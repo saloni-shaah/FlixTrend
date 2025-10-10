@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
 import { getFirestore, collection, query, onSnapshot, getDocs, orderBy, limit, where, startAfter } from "firebase/firestore";
@@ -23,9 +24,10 @@ function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean,
   
   const fetchVibes = useCallback(async () => {
     setLoading(true);
+    // Fetch all posts that are of type 'media'
     const first = query(
         collection(db, "posts"),
-        where("isPortrait", "==", true),
+        where("type", "==", "media"),
         orderBy("createdAt", "desc"),
         limit(VIBES_PER_PAGE)
     );
@@ -41,15 +43,13 @@ function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean,
       setHasMore(documentSnapshots.docs.length === VIBES_PER_PAGE);
     } catch(e) {
       console.error(e);
-      // This is a temporary fix for the missing composite index.
-      // A proper solution would be to create the index in Firestore.
-      // For now, we fetch all posts and filter client-side.
-      console.warn("Composite index likely missing. Falling back to client-side filtering.");
-      const allPostsQuery = query(collection(db, "posts"), orderBy("createdAt", "desc"), limit(20));
+      // Fallback for missing composite index during development
+      console.warn("Composite index for media query likely missing. Falling back to client-side filtering.");
+      const allPostsQuery = query(collection(db, "posts"), orderBy("createdAt", "desc"), limit(25));
       const allDocs = await getDocs(allPostsQuery);
       const filtered = allDocs.docs
         .map(doc => ({id: doc.id, ...doc.data()}))
-        .filter(p => p.isPortrait);
+        .filter(p => p.type === 'media');
       setShortVibes(filtered.slice(0, VIBES_PER_PAGE));
       setLastVisible(allDocs.docs[allDocs.docs.length - 1]);
       setLoading(false);
@@ -63,7 +63,7 @@ function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean,
 
      const next = query(
         collection(db, "posts"),
-        where("isPortrait", "==", true),
+        where("type", "==", "media"),
         orderBy("createdAt", "desc"),
         startAfter(lastVisible),
         limit(VIBES_PER_PAGE)
