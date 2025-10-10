@@ -1,4 +1,3 @@
-
 "use client";
 import React, { createContext, useState, useContext, ReactNode, useEffect, useRef } from 'react';
 import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp, Unsubscribe, updateDoc, collection, addDoc, getDoc, writeBatch, getDocs, deleteField } from 'firebase/firestore';
@@ -175,7 +174,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         if (callDocUnsubscribe) callDocUnsubscribe();
         if(pc) pc.close();
     };
-  }, [pc]);
+  }, []);
 
   const answerCall = async () => {
     if (!pc || !activeCall) return;

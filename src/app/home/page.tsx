@@ -398,20 +398,6 @@ function HomePageContent() {
         </motion.button>
       </div>
 
-       {/* Store FAB */}
-       <div className="fixed bottom-24 left-4 z-30">
-          <Link href="/store">
-              <motion.button 
-                  className="w-16 h-16 rounded-full flex items-center justify-center shadow-fab-glow bg-brand-gold/20 dark:bg-brand-gold/30 backdrop-blur-md"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                  title="FlixTrend Store"
-              >
-                  <span className="text-3xl">🛍️</span>
-              </motion.button>
-          </Link>
-        </div>
-
       <AnimatePresence>
         {showMusicModal && <MusicDiscovery onClose={() => setShowMusicModal(false)} />}
         {selectedFlashUser && <FlashModal userFlashes={selectedFlashUser} onClose={() => setSelectedFlashUser(null)} />}

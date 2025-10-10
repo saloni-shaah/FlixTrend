@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useEffect, useState, useRef, Suspense } from "react";
 import { auth } from "@/utils/firebaseClient";
@@ -624,10 +623,6 @@ function SquadPageContent() {
         </div>
 
         <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="btn-glass mt-6" onClick={() => setShowEdit(true)}>Edit Profile</motion.button>
-        <div className="mt-4 text-xs text-gray-400">
-          Your referral code: <span className="font-bold text-accent-pink">{profile.referralCode || 'Generating...'}</span>
-          <p>Share this code! You get 1 free month of premium for every user who signs up with it.</p>
-        </div>
       </motion.div>
 
        <div className="w-full max-w-2xl mx-auto my-8 relative">
@@ -712,6 +707,21 @@ function SquadPageContent() {
             <UserDownloads />
         )}
       </div>
+
+       {/* Store FAB */}
+       <div className="fixed bottom-24 left-4 z-30">
+          <Link href="/store">
+              <motion.button 
+                  className="w-16 h-16 rounded-full flex items-center justify-center shadow-fab-glow bg-brand-gold/20 dark:bg-brand-gold/30 backdrop-blur-md"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
+                  title="FlixTrend Store"
+              >
+                  <span className="text-3xl">🛍️</span>
+              </motion.button>
+          </Link>
+        </div>
+        
       {/* Discover Other Users */}
       <div className="mt-16 w-full max-w-4xl mx-auto flex justify-center">
         <Link href="/squad/explore">
