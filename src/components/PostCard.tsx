@@ -17,10 +17,7 @@ import { getFunctions, httpsCallable } from "firebase/functions";
 import { CheckCircle, Award, Mic, Crown, Zap, Rocket, Search, Pin, Phone, Mail, Folder } from "lucide-react";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu"
 import { cn } from "@/lib/utils"
-import AdModal from './AdModal';
-import { PlayerModal } from './video/PlayerModal';
-import { ShortsPlayer } from './ShortsPlayer';
-import { OptimizedVideo } from './OptimizedVideo';
+import { InFeedVideoPlayer } from './video/InFeedVideoPlayer';
 
 
 // START: Copied DropdownMenu components
@@ -99,7 +96,6 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
   const deletePostCallable = httpsCallable(functions, 'deletePost');
   const [isFullScreen, setIsFullScreen] = React.useState(false);
   
-  const [showPlayer, setShowPlayer] = useState<'long' | 'short' | null>(null);
 
   React.useEffect(() => {
     if (!currentUser) return;
@@ -300,100 +296,10 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
   }, [post.song]);
   
 
-  const MediaGrid = ({ mediaUrls }: { mediaUrls: string[] }) => {
-    if (!mediaUrls || mediaUrls.length === 0) return null;
-
-    const lastTap = useRef(0);
-
-    const handleMediaClick = (e: React.MouseEvent) => {
-        const isShortVideo = post.videoDuration >= 3 && post.videoDuration <= 180 && post.isPortrait;
-        
-        const now = Date.now();
-        const DOUBLE_TAP_DELAY = 300;
-        if (now - lastTap.current < DOUBLE_TAP_DELAY) {
-            // Double tap
-            if (isShortVideo) {
-                setShowPlayer('short');
-            } else {
-                handleStar(); // Double tap to like non-reels
-            }
-        } else {
-            // Single tap
-            const firstVideoUrl = mediaUrls.find(url => url.includes('.mp4') || url.includes('.webm'));
-            if (firstVideoUrl) {
-                if(isShortVideo) {
-                     setShowPlayer('short');
-                } else {
-                     setShowPlayer('long');
-                }
-            } else {
-                setIsFullScreen(true);
-            }
-        }
-        lastTap.current = now;
-    };
-    
-    const renderMedia = (url: string, isVideo: boolean, isSingle: boolean) => {
-        if (isVideo) {
-            return (
-                <div className="relative group w-full h-full cursor-pointer bg-black flex items-center justify-center">
-                    <OptimizedVideo src={url} thumbnailUrl={post.thumbnailUrl} className="w-full h-full object-contain" preload="metadata" />
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <FaPlay className="text-white text-5xl" />
-                    </div>
-                    <Watermark isAnimated={true} />
-                </div>
-            );
-        }
-        return (
-            <div className="relative group w-full h-full">
-                <OptimizedImage src={url} alt="media" className="w-full h-full object-cover" />
-                <Watermark isAnimated={isSingle} />
-            </div>
-        );
-    }
-    
-    if (mediaUrls.length === 1) {
-        const url = mediaUrls[0];
-        const isVideo = url.includes('.mp4') || url.includes('.webm') || url.includes('.ogg');
-        return (
-            <div 
-                className="w-full rounded-xl overflow-hidden mt-2 relative" 
-                onClick={handleMediaClick}
-                style={{
-                    aspectRatio: post.isPortrait ? '9 / 16' : '16 / 9',
-                    maxHeight: '70vh', 
-                }}
-            >
-                {renderMedia(url, !!isVideo, true)}
-            </div>
-        );
-    }
-
-    // Grid view for multiple media items
-    return (
-        <div className="mt-2 grid grid-cols-2 gap-1 rounded-xl overflow-hidden" onClick={() => setIsFullScreen(true)}>
-            {mediaUrls.slice(0, 4).map((url, index) => {
-                 const isVideo = url.includes('.mp4') || url.includes('.webm') || url.includes('.ogg');
-                return (
-                    <div key={index} className="relative aspect-square cursor-pointer">
-                        {renderMedia(url, !!isVideo, false)}
-                        {index === 3 && mediaUrls.length > 4 && (
-                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                                <span className="text-white text-2xl font-bold">+{mediaUrls.length - 4}</span>
-                            </div>
-                        )}
-                    </div>
-                )
-            })}
-        </div>
-    );
-};
-
-
   const renderPostContent = (p: any) => {
     const contentPost = p.type === 'relay' ? p.originalPost : p;
     const initials = contentPost.displayName?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || contentPost.username?.slice(0, 2).toUpperCase() || "U";
+    const mediaUrls = Array.isArray(contentPost.mediaUrl) ? contentPost.mediaUrl : (contentPost.mediaUrl ? [contentPost.mediaUrl] : []);
     
     return (
         <>
@@ -426,8 +332,11 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
                 </div>
             )}
 
-            {contentPost.type === "media" && contentPost.mediaUrl && !isShortVibe && (
-                <MediaGrid mediaUrls={Array.isArray(contentPost.mediaUrl) ? contentPost.mediaUrl : [contentPost.mediaUrl]} />
+            {contentPost.type === "media" && mediaUrls.length > 0 && !isShortVibe && (
+                 <InFeedVideoPlayer 
+                    mediaUrls={mediaUrls} 
+                    post={contentPost}
+                 />
             )}
 
             {contentPost.type === "poll" && contentPost.pollOptions && (
@@ -468,8 +377,6 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
   }
   
   const ActionButtons = () => {
-    const isVideo = post.type === 'media' && post.mediaUrl && (Array.isArray(post.mediaUrl) ? post.mediaUrl.some((url: string) => url.includes('.mp4')) : post.mediaUrl.includes('.mp4'));
-
     return (
         <motion.div 
           initial="hidden"
@@ -532,8 +439,6 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
 
   return (
     <>
-    {showPlayer === 'long' && <PlayerModal post={post} onClose={() => setShowPlayer(null)} />}
-    {showPlayer === 'short' && <ShortsPlayer initialPost={post} onClose={() => setShowPlayer(null)} />}
     <motion.div 
       className="glass-card p-5 flex flex-col gap-3 relative animate-fade-in"
       initial={{ opacity: 0, y: 20 }}

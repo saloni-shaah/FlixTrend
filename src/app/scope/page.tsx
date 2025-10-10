@@ -2,12 +2,14 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { getFirestore, collection, query, onSnapshot, getDocs, orderBy, limit, where, startAfter } from "firebase/firestore";
 import { app, auth } from "@/utils/firebaseClient";
-import { ShortVibesPlayer } from "@/components/ShortVibesPlayer";
+import ShortsPlayer from "@/components/ShortsPlayer";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Compass, Music, Gamepad2, Flame, User, Heart, Mic } from "lucide-react";
 import { MusicDiscovery } from "@/components/MusicDiscovery";
 import { GamesHub } from "@/components/GamesHub";
+import { VibeSpaceLoader } from "@/components/VibeSpaceLoader";
+
 
 const db = getFirestore(app);
 const VIBES_PER_PAGE = 5;
@@ -21,7 +23,6 @@ function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean,
   
   const fetchVibes = useCallback(async () => {
     setLoading(true);
-    // This query correctly fetches only portrait videos.
     const first = query(
         collection(db, "posts"),
         where("isPortrait", "==", true),
@@ -29,14 +30,31 @@ function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean,
         limit(VIBES_PER_PAGE)
     );
 
-    const documentSnapshots = await getDocs(first);
-    const firstBatch = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    
-    const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
-    setShortVibes(firstBatch);
-    setLastVisible(lastDoc);
-    setLoading(false);
-    setHasMore(documentSnapshots.docs.length === VIBES_PER_PAGE);
+    try {
+      const documentSnapshots = await getDocs(first);
+      const firstBatch = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+      setShortVibes(firstBatch);
+      setLastVisible(lastDoc);
+      setLoading(false);
+      setHasMore(documentSnapshots.docs.length === VIBES_PER_PAGE);
+    } catch(e) {
+      console.error(e);
+      // This is a temporary fix for the missing composite index.
+      // A proper solution would be to create the index in Firestore.
+      // For now, we fetch all posts and filter client-side.
+      console.warn("Composite index likely missing. Falling back to client-side filtering.");
+      const allPostsQuery = query(collection(db, "posts"), orderBy("createdAt", "desc"), limit(20));
+      const allDocs = await getDocs(allPostsQuery);
+      const filtered = allDocs.docs
+        .map(doc => ({id: doc.id, ...doc.data()}))
+        .filter(p => p.isPortrait);
+      setShortVibes(filtered.slice(0, VIBES_PER_PAGE));
+      setLastVisible(allDocs.docs[allDocs.docs.length - 1]);
+      setLoading(false);
+      setHasMore(true);
+    }
   }, []);
 
   const fetchMoreVibes = useCallback(async () => {
@@ -71,8 +89,7 @@ function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean,
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center text-center p-4 h-full">
-        <div className="text-4xl animate-pulse">🎬</div>
-        <p className="text-lg text-muted-foreground mt-2">Loading Vibes...</p>
+        <VibeSpaceLoader />
       </div>
     );
   }
@@ -82,7 +99,7 @@ function ForYouContent({ isFullScreen, onDoubleClick }: { isFullScreen: boolean,
         className={`w-full h-full transition-all duration-300 ${isFullScreen ? '' : 'max-w-md mx-auto aspect-[9/16] rounded-2xl overflow-hidden'}`} 
         onDoubleClick={onDoubleClick}
     >
-        <ShortVibesPlayer shortVibes={shortVibes} onEndReached={fetchMoreVibes} hasMore={hasMore}/>
+        <ShortsPlayer initialPosts={shortVibes} onEndReached={fetchMoreVibes} hasMore={hasMore}/>
     </div>
   );
 }
