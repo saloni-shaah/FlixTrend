@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from 'react';
@@ -20,6 +19,7 @@ export default function ShortsPlayer({ initialPost, onClose }: { initialPost?: a
               The logic for fetching the shortVibes needs to be implemented.
               For now, we'll show a loader to indicate it's a work in progress.
             */}
+            {/* The actual player will be implemented in a future step. */}
             <VibeSpaceLoader />
             <p className="text-white absolute bottom-1/2 translate-y-10 text-center w-full">Shorts Player Content Goes Here</p>
         </div>
