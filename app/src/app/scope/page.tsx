@@ -17,9 +17,10 @@ function ScopePageContent() {
 
   const fetchVibes = useCallback(async () => {
     setLoading(true);
+    // Corrected query to use `isVideo` which is more efficient and avoids indexing issues.
     const q = query(
       collection(db, 'posts'),
-      where('type', '==', 'media'),
+      where('isVideo', '==', true),
       orderBy('publishAt', 'desc'),
       limit(5)
     );
@@ -35,9 +36,10 @@ function ScopePageContent() {
   const fetchMoreVibes = useCallback(async () => {
     if (!lastVisible || !hasMore) return;
 
+    // Corrected query to use `isVideo`
     const q = query(
       collection(db, 'posts'),
-      where('type', '==', 'media'),
+      where('isVideo', '==', true),
       orderBy('publishAt', 'desc'),
       startAfter(lastVisible),
       limit(5)
@@ -54,7 +56,7 @@ function ScopePageContent() {
     fetchVibes();
   }, [fetchVibes]);
 
-  if (loading) {
+  if (loading && shortVibes.length === 0) {
     return <VibeSpaceLoader />;
   }
 
