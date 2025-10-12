@@ -129,36 +129,33 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
 
   const allFlashes = Array.isArray(userFlashes) ? userFlashes : [userFlashes];
 
-  const goToNextFlash = useCallback(() => {
+  const goToNext = useCallback(() => {
+    // Check for ad break first
+    if ((viewedCount + 1) % AD_INTERVAL === 0 && viewedCount > 0) {
+        setShowAd(true);
+        setViewedCount(0); // Reset counter after ad
+        return;
+    }
+    setViewedCount(v => v + 1);
+
+    // Progression logic
     const currentUserFlashGroup = allFlashes[currentUserFlashesIndex];
     if (currentFlashIndex < currentUserFlashGroup.flashes.length - 1) {
         setCurrentFlashIndex(i => i + 1);
     } else {
-        // End of current user's flashes, move to next user
         if (currentUserFlashesIndex < allFlashes.length - 1) {
             setCurrentUserFlashesIndex(i => i + 1);
             setCurrentFlashIndex(0);
         } else {
-            onClose(); // Close if it's the last user
+            onClose(); // End of all flashes
         }
     }
-  }, [allFlashes, currentUserFlashesIndex, currentFlashIndex, onClose]);
-
-  const goToNext = useCallback(() => {
-    if ((viewedCount + 1) % AD_INTERVAL === 0 && viewedCount > 0) {
-        setShowAd(true);
-        setViewedCount(0);
-        return;
-    }
-    setViewedCount(v => v + 1);
-    goToNextFlash();
-  }, [viewedCount, goToNextFlash]);
+  }, [allFlashes, currentFlashIndex, currentUserFlashesIndex, onClose, viewedCount, AD_INTERVAL]);
 
   const goToPrev = useCallback(() => {
     if (currentFlashIndex > 0) {
         setCurrentFlashIndex(i => i - 1);
     } else if (currentUserFlashesIndex > 0) {
-        // Go to previous user's last flash
         const prevUserIndex = currentUserFlashesIndex - 1;
         setCurrentUserFlashesIndex(prevUserIndex);
         setCurrentFlashIndex(allFlashes[prevUserIndex].flashes.length - 1);
@@ -193,14 +190,11 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
     }
 
     if (!isVideo) {
-        // Use a simple timeout for image flashes
         timerRef.current = setTimeout(goToNext, 15000);
-        // Animate progress bar with CSS transition
         requestAnimationFrame(() => {
             setProgress(100);
         });
     } else {
-        // Video progress is handled by onTimeUpdate
         setProgress(0);
     }
 
@@ -211,7 +205,7 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
             audioRef.current.removeEventListener('ended', goToNext);
         }
     };
-}, [currentUserFlashesIndex, currentFlashIndex, allFlashes, goToNext, showAd]);
+  }, [currentUserFlashesIndex, currentFlashIndex, allFlashes, goToNext, showAd]);
   
   useEffect(() => {
       const handleKeyDown = (e: KeyboardEvent) => {
@@ -260,7 +254,18 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
 
   const handleAdSkip = () => {
       setShowAd(false);
-      goToNextFlash();
+      // Immediately go to the next flash without incrementing viewedCount again
+      const currentUserFlashGroup = allFlashes[currentUserFlashesIndex];
+      if (currentFlashIndex < currentUserFlashGroup.flashes.length - 1) {
+          setCurrentFlashIndex(i => i + 1);
+      } else {
+          if (currentUserFlashesIndex < allFlashes.length - 1) {
+              setCurrentUserFlashesIndex(i => i + 1);
+              setCurrentFlashIndex(0);
+          } else {
+              onClose();
+          }
+      }
   }
   
   if (showAd) {
@@ -333,3 +338,4 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
     </div>
   );
 }
+
