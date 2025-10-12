@@ -1,8 +1,8 @@
+
 "use client";
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { PostCard } from './PostCard';
 import { OptimizedVideo } from './OptimizedVideo';
-import { Play, Volume2, VolumeX } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX } from 'lucide-react';
 import { useAppState } from '@/utils/AppStateContext';
 import { doc, updateDoc, increment, getFirestore } from 'firebase/firestore';
 import { app } from '@/utils/firebaseClient';
@@ -118,9 +118,9 @@ export function ShortsPlayer({ post }: { post: any }) {
             />
             
             {/* Overlay for UI elements */}
-            <div className="absolute inset-0 w-full h-full p-4 flex items-end bg-gradient-to-t from-black/60 via-transparent to-transparent">
+            <div className="absolute inset-0 w-full h-full p-4 pr-6 flex justify-between items-end">
                 {/* Main content on the left */}
-                <div className="flex-1 flex flex-col gap-2 self-end mb-4 text-white drop-shadow-lg">
+                <div className="flex-1 flex flex-col gap-2 self-end mb-4 text-white drop-shadow-lg max-w-[calc(100%-80px)]">
                     <Link href={`/squad/${post.userId}`} className="flex items-center gap-2 group cursor-pointer w-fit">
                         <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green flex items-center justify-center font-bold text-lg overflow-hidden border-2 border-accent-green group-hover:scale-105 transition-transform">
                             {post.avatar_url ? <img src={post.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : <span className="text-white">{post.displayName?.[0] || 'U'}</span>}
