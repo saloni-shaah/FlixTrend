@@ -46,20 +46,6 @@ export default function ScopePage() {
         setViewMode(current => (current === 'videos' ? 'hub' : 'videos'));
     }, []);
 
-    if (loading) {
-        return <VibeSpaceLoader />;
-    }
-
-    const renderHubContent = () => {
-        switch(activeTab) {
-            case 'music': return <MusicDiscovery />;
-            case 'games': return <GamesHub />;
-            case 'trending': return <Trendboard />;
-            default: return null;
-        }
-    };
-    
-    // Determine if the main nav should be hidden
     const hideAppNav = viewMode === 'videos' && isScopeVideoPlaying;
     
     useEffect(() => {
@@ -75,13 +61,25 @@ export default function ScopePage() {
         };
     }, [viewMode]);
 
+    if (loading) {
+        return <VibeSpaceLoader />;
+    }
+
+    const renderHubContent = () => {
+        switch(activeTab) {
+            case 'music': return <MusicDiscovery />;
+            case 'games': return <GamesHub />;
+            case 'trending': return <Trendboard />;
+            default: return null;
+        }
+    };
 
     return (
         <div className={`w-full h-screen bg-black flex flex-col`} onDoubleClick={handleDoubleClick}>
              {/* This style tag will dynamically add/remove the class to hide the nav */}
              <style jsx global>{`
-                nav[class*="AppNavBar"] {
-                    display: ${hideAppNav ? 'none' : 'flex'};
+                nav.fixed.bottom-0 {
+                    display: ${hideAppNav ? 'none' : 'flex'} !important;
                 }
              `}</style>
             <ScopeNavBar onDoubleClick={handleDoubleClick} />
