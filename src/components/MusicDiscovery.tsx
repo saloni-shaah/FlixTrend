@@ -1,16 +1,16 @@
-
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Play, Pause, Plus, Music, Search } from 'lucide-react';
 import { getFirestore, collection, addDoc, serverTimestamp, query, onSnapshot, orderBy, where, updateDoc, arrayUnion, doc } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { auth, app } from '@/utils/firebaseClient';
 import { useAppState } from '@/utils/AppStateContext';
-import { uploadFileToFirebaseStorage } from '@/app/actions';
 import AdModal from './AdModal';
 
 
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 function AddMusicModal({ onClose }: { onClose: () => void }) {
     const [form, setForm] = useState({
@@ -42,6 +42,12 @@ function AddMusicModal({ onClose }: { onClose: () => void }) {
             }
         }
     };
+    
+    const uploadFile = async (file: File, path: string) => {
+        const fileRef = ref(storage, path);
+        await uploadBytes(fileRef, file);
+        return await getDownloadURL(fileRef);
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -55,22 +61,13 @@ function AddMusicModal({ onClose }: { onClose: () => void }) {
             const user = auth.currentUser;
             if (!user) throw new Error("Not logged in");
 
-            const audioFormData = new FormData();
-            audioFormData.append('file', audioFile);
-            audioFormData.append('userId', user.uid);
-            const audioResult = await uploadFileToFirebaseStorage(audioFormData);
-            if (!audioResult.success?.url) throw new Error(audioResult.failure || "Audio upload failed.");
-
-            const artFormData = new FormData();
-            artFormData.append('file', albumArtFile);
-            artFormData.append('userId', user.uid);
-            const artResult = await uploadFileToFirebaseStorage(artFormData);
-            if (!artResult.success?.url) throw new Error(artResult.failure || "Album art upload failed.");
+            const audioUrl = await uploadFile(audioFile, `music/${user.uid}/${Date.now()}_${audioFile.name}`);
+            const artUrl = await uploadFile(albumArtFile, `album_art/${user.uid}/${Date.now()}_${albumArtFile.name}`);
 
             await addDoc(collection(db, 'songs'), {
                 ...form,
-                audioUrl: audioResult.success.url,
-                albumArtUrl: artResult.success.url,
+                audioUrl: audioUrl,
+                albumArtUrl: artUrl,
                 userId: user.uid,
                 username: user.displayName,
                 createdAt: serverTimestamp(),
@@ -296,7 +293,7 @@ export function MusicDiscovery() {
                         <motion.div
                             key={song.id}
                             className="glass-card flex flex-col items-center text-center group"
-                            whileHover={{ scale: 1.05 }}
+                            whileHover={{ y: -5 }}
                         >
                             <div className="relative w-full">
                                 <img src={song.albumArtUrl} alt={song.title} className="w-full h-auto rounded-t-2xl aspect-square object-cover"/>
