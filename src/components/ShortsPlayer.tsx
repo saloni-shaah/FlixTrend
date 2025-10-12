@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { OptimizedVideo } from './OptimizedVideo';
@@ -118,7 +117,7 @@ export function ShortsPlayer({ post }: { post: any }) {
             />
             
             {/* Overlay for UI elements */}
-            <div className="absolute inset-0 w-full h-full p-4 pr-6 flex justify-between items-end">
+            <div className="absolute inset-0 w-full h-full p-4 pr-8 flex justify-between items-end">
                 {/* Main content on the left */}
                 <div className="flex-1 flex flex-col gap-2 self-end mb-4 text-white drop-shadow-lg max-w-[calc(100%-80px)]">
                     <Link href={`/squad/${post.userId}`} className="flex items-center gap-2 group cursor-pointer w-fit">
@@ -136,7 +135,7 @@ export function ShortsPlayer({ post }: { post: any }) {
                 </div>
 
                 {/* Vertical action buttons on the right */}
-                <div className="flex flex-col gap-4 self-end mb-4">
+                <div className="flex flex-col gap-4 self-end mb-4 pointer-events-auto">
                     <PostActions post={post} isShortVibe={true} onCommentClick={() => setShowComments(true)} />
                 </div>
             </div>
