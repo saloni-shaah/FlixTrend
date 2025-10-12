@@ -1,3 +1,4 @@
+
 "use client";
 import React, { createContext, useState, useContext, ReactNode, useEffect, useRef } from 'react';
 import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp, Unsubscribe, updateDoc, collection, addDoc, getDoc, writeBatch, getDocs, deleteField } from 'firebase/firestore';
@@ -40,6 +41,8 @@ interface AppState {
   setSelectedChat: React.Dispatch<React.SetStateAction<any | null>>;
   drafts: { [chatId: string]: string };
   setDraft: (chatId: string, text: string) => void;
+  isScopeVideoPlaying: boolean;
+  setIsScopeVideoPlaying: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const AppStateContext = createContext<AppState | undefined>(undefined);
@@ -87,6 +90,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [selectedChat, setSelectedChat] = useState<any | null>(null);
   const [drafts, setDrafts] = useState<{ [chatId: string]: string }>({});
+  const [isScopeVideoPlaying, setIsScopeVideoPlaying] = useState(false);
 
 
   useEffect(() => {
@@ -318,6 +322,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setSelectedChat,
     drafts,
     setDraft,
+    isScopeVideoPlaying,
+    setIsScopeVideoPlaying,
   };
 
   return (

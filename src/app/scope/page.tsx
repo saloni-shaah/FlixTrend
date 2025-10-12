@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
 import { getFirestore, collection, query, where, orderBy, onSnapshot, limit } from "firebase/firestore";
@@ -9,18 +10,9 @@ import { Music, Gamepad2, TrendingUp } from 'lucide-react';
 import { MusicDiscovery } from '@/components/MusicDiscovery';
 import { GamesHub } from '@/components/GamesHub';
 import { ScopeNavBar } from "@/components/scope/ScopeNavBar";
+import { Trendboard } from "@/components/scope/Trendboard";
 
 const db = getFirestore(app);
-
-function Trendboard() {
-    return (
-        <div className="flex flex-col items-center justify-center h-full text-center text-gray-400">
-            <TrendingUp size={64} className="mb-4 text-accent-purple"/>
-            <h3 className="text-xl font-bold">Trending Board</h3>
-            <p>This feature is coming soon!</p>
-        </div>
-    )
-}
 
 export default function ScopePage() {
     const [posts, setPosts] = useState<any[]>([]);
@@ -66,7 +58,7 @@ export default function ScopePage() {
     };
 
     return (
-        <div className="w-full h-[calc(100vh-var(--nav-height,80px))] bg-black flex flex-col" onDoubleClick={handleDoubleClick}>
+        <div className="w-screen h-screen bg-black flex flex-col" onDoubleClick={handleDoubleClick}>
             <ScopeNavBar onDoubleClick={handleDoubleClick} />
             <AnimatePresence mode="wait">
                 {viewMode === 'videos' ? (
@@ -79,7 +71,7 @@ export default function ScopePage() {
                     >
                         {posts.length > 0 ? (
                             posts.map((post) => (
-                                <div key={post.id} className="h-full w-full snap-start flex items-center justify-center">
+                                <div key={post.id} className="h-screen w-screen snap-start flex items-center justify-center">
                                     <ShortsPlayer post={post} />
                                 </div>
                             ))

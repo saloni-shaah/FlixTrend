@@ -60,7 +60,7 @@ function NavButton({ href, icon: Icon, label, hasNotification }: { href: string;
 
 export default function AppNavBar() {
   const pathname = usePathname();
-  const { activeCall, selectedChat, setSelectedChat } = useAppState();
+  const { activeCall, selectedChat, setSelectedChat, isScopeVideoPlaying } = useAppState();
   const [isMobile, setIsMobile] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
 
@@ -172,9 +172,13 @@ export default function AppNavBar() {
   }, [currentUser, isOffline]);
 
 
-  const hideNav = pathname === "/login" || pathname === "/signup" || pathname === "/" || !!activeCall || pathname === "/guest" || pathname === "/about" || pathname.startsWith('/scope');
+  const isAuthPage = pathname === "/login" || pathname === "/signup" || pathname === "/";
+  const isSpecialPage = pathname === "/guest" || pathname === "/about";
+  const hideNav = isAuthPage || isSpecialPage || !!activeCall;
+  const hideForScopeVideo = pathname.startsWith('/scope') && isScopeVideoPlaying;
 
-  if (hideNav) return null;
+
+  if (hideNav || hideForScopeVideo) return null;
 
   const isSignalChatView = isMobile && pathname === '/signal' && selectedChat;
 
