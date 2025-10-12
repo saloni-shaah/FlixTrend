@@ -173,48 +173,48 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
     }
 
     const flash = allFlashes[currentUserFlashesIndex]?.flashes[currentFlashIndex];
-    if(!flash) return;
-    
+    if (!flash) return;
+
     const isVideo = flash.mediaUrl && (flash.mediaUrl.includes('.mp4') || flash.mediaUrl.includes('.webm') || flash.mediaUrl.includes('.ogg'));
     setProgress(0);
-    
+
     if (timerRef.current) clearInterval(timerRef.current);
     if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current = null;
     }
 
-    const duration = 15;
-    
-    if (flash.song && flash.song.preview_url) {
+    if (flash.song?.preview_url) {
         const audio = new Audio(flash.song.preview_url);
         audioRef.current = audio;
         audio.currentTime = flash.song.snippetStart || 0;
         audio.play().catch(e => console.error("Audio play failed", e));
-        
         audio.addEventListener('ended', goToNext);
     }
-    
+
     if (!isVideo) {
-      timerRef.current = setInterval(() => {
-        setProgress(p => {
-          if (p >= 100) {
-            goToNext();
-            return 0;
-          }
-          return p + (100 / (duration * 10));
-        });
-      }, 100);
+        const DURATION = 15; // 15 seconds for images
+        timerRef.current = setInterval(() => {
+            setProgress(p => {
+                const newProgress = p + (100 / (DURATION * 10)); // Update every 100ms
+                if (newProgress >= 100) {
+                    goToNext();
+                    return 0;
+                }
+                return newProgress;
+            });
+        }, 100);
     }
+     // Video time updates are handled by the <video> element's onTimeUpdate event
 
     return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-      if (audioRef.current) {
-          audioRef.current.pause();
-          audioRef.current.removeEventListener('ended', goToNext);
-      }
+        if (timerRef.current) clearInterval(timerRef.current);
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.removeEventListener('ended', goToNext);
+        }
     };
-  }, [currentUserFlashesIndex, currentFlashIndex, allFlashes, goToNext, showAd]);
+}, [currentUserFlashesIndex, currentFlashIndex, allFlashes, goToNext, showAd]);
   
   useEffect(() => {
       const handleKeyDown = (e: KeyboardEvent) => {
@@ -253,7 +253,7 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
   };
 
   const handleVideoTimeUpdate = () => {
-    if (videoRef.current) {
+    if (videoRef.current && videoRef.current.duration) {
       setProgress((videoRef.current.currentTime / videoRef.current.duration) * 100);
     }
   };
