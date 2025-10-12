@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useState, useRef, useCallback } from 'react';
 import { UploadCloud, X, MapPin, Smile, Hash, AtSign, Locate, Loader } from 'lucide-react';
