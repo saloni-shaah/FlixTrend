@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { OptimizedVideo } from '../OptimizedVideo';
@@ -175,6 +174,7 @@ export function InFeedVideoPlayer({ mediaUrls, post }: { mediaUrls: string[]; po
                     onLoadedMetadata={handleLoadedMetadata}
                     onPlay={handlePlay}
                     onPause={() => setIsPlaying(false)}
+                    loop={false}
                 />
                 <Watermark isAnimated={isPlaying} />
 
