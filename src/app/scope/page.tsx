@@ -11,6 +11,7 @@ import { MusicDiscovery } from '@/components/MusicDiscovery';
 import { GamesHub } from '@/components/GamesHub';
 import { ScopeNavBar } from "@/components/scope/ScopeNavBar";
 import { Trendboard } from "@/components/scope/Trendboard";
+import { useAppState } from "@/utils/AppStateContext";
 
 const db = getFirestore(app);
 
@@ -19,6 +20,7 @@ export default function ScopePage() {
     const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState<'videos' | 'hub'>('videos');
     const [activeTab, setActiveTab] = useState('music');
+    const { isScopeVideoPlaying } = useAppState();
 
     useEffect(() => {
         const q = query(
@@ -56,9 +58,32 @@ export default function ScopePage() {
             default: return null;
         }
     };
+    
+    // Determine if the main nav should be hidden
+    const hideAppNav = viewMode === 'videos' && isScopeVideoPlaying;
+    
+    useEffect(() => {
+        // This is a bit of a hack to control body scroll from a component
+        if (viewMode === 'videos') {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'auto';
+        }
+        // Cleanup on unmount
+        return () => {
+            document.body.style.overflow = 'auto';
+        };
+    }, [viewMode]);
+
 
     return (
-        <div className="w-screen h-screen bg-black flex flex-col" onDoubleClick={handleDoubleClick}>
+        <div className={`w-full h-screen bg-black flex flex-col`} onDoubleClick={handleDoubleClick}>
+             {/* This style tag will dynamically add/remove the class to hide the nav */}
+             <style jsx global>{`
+                nav[class*="AppNavBar"] {
+                    display: ${hideAppNav ? 'none' : 'flex'};
+                }
+             `}</style>
             <ScopeNavBar onDoubleClick={handleDoubleClick} />
             <AnimatePresence mode="wait">
                 {viewMode === 'videos' ? (
@@ -88,12 +113,12 @@ export default function ScopePage() {
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.95 }}
-                        className="w-full flex-1 flex flex-col p-4"
+                        className="w-full flex-1 flex flex-col p-4 overflow-y-auto"
                     >
                         <div className="flex justify-center gap-2 mb-4 p-1 rounded-full bg-black/30">
-                            <button onClick={() => setActiveTab('music')} className={`px-4 py-2 rounded-full font-bold flex items-center gap-2 transition-colors ${activeTab === 'music' ? 'bg-accent-pink text-white' : 'text-gray-400'}`}><Music size={16}/> Music</button>
-                            <button onClick={() => setActiveTab('games')} className={`px-4 py-2 rounded-full font-bold flex items-center gap-2 transition-colors ${activeTab === 'games' ? 'bg-accent-green text-black' : 'text-gray-400'}`}><Gamepad2 size={16}/> Games</button>
-                            <button onClick={() => setActiveTab('trending')} className={`px-4 py-2 rounded-full font-bold flex items-center gap-2 transition-colors ${activeTab === 'trending' ? 'bg-accent-purple text-white' : 'text-gray-400'}`}><TrendingUp size={16}/> Trending</button>
+                            <button onClick={() => setActiveTab('music')} className={`px-4 py-2 rounded-full font-bold flex items-center gap-2 transition-colors ${activeTab === 'music' ? 'bg-blue-500 text-white' : 'text-gray-400'}`}><Music size={16}/> Music</button>
+                            <button onClick={() => setActiveTab('games')} className={`px-4 py-2 rounded-full font-bold flex items-center gap-2 transition-colors ${activeTab === 'games' ? 'bg-green-500 text-white' : 'text-gray-400'}`}><Gamepad2 size={16}/> Games</button>
+                            <button onClick={() => setActiveTab('trending')} className={`px-4 py-2 rounded-full font-bold flex items-center gap-2 transition-colors ${activeTab === 'trending' ? 'bg-orange-500 text-white' : 'text-gray-400'}`}><TrendingUp size={16}/> Trending</button>
                         </div>
                         <div className="flex-1 glass-card p-4 overflow-y-auto">
                             {renderHubContent()}

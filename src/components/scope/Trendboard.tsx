@@ -10,14 +10,14 @@ const db = getFirestore(app);
 
 const UserRow = ({ user, index, metric, metricLabel }: { user: any, index: number, metric: number, metricLabel: string }) => {
     const getRankColor = () => {
-        if (index === 0) return 'border-brand-gold text-brand-gold';
+        if (index === 0) return 'border-yellow-400 text-yellow-400';
         if (index === 1) return 'border-gray-400 text-gray-400';
         if (index === 2) return 'border-orange-400 text-orange-400';
         return 'border-gray-600 text-gray-500';
     };
     return (
         <Link href={`/squad/${user.uid}`}>
-            <div className="flex items-center gap-4 p-2 rounded-lg hover:bg-accent-cyan/10 transition-colors">
+            <div className="flex items-center gap-4 p-2 rounded-lg hover:bg-white/10 transition-colors">
                 <span className={`w-8 text-center font-bold text-lg ${getRankColor()}`}>{index + 1}</span>
                 <img src={user.avatar_url} alt={user.username} className="w-10 h-10 rounded-full object-cover" />
                 <div className="flex-1">
@@ -83,7 +83,7 @@ export function Trendboard() {
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center h-full text-center">
-                <Loader className="animate-spin text-accent-purple mb-4" size={48} />
+                <Loader className="animate-spin text-orange-500 mb-4" size={48} />
                 <p className="text-gray-400">Calculating leaderboards...</p>
             </div>
         );
@@ -92,19 +92,19 @@ export function Trendboard() {
     return (
         <div className="space-y-8">
             <div>
-                <h3 className="text-xl font-bold text-accent-cyan flex items-center gap-2 mb-4"><Trophy /> Most Posts</h3>
+                <h3 className="text-xl font-bold text-blue-400 flex items-center gap-2 mb-4"><Trophy /> Most Posts</h3>
                 <div className="space-y-2">
                     {leaderboards.posts.map((user: any, index: number) => <UserRow key={user.uid} user={user} index={index} metric={user.postCount} metricLabel="posts" />)}
                 </div>
             </div>
              <div>
-                <h3 className="text-xl font-bold text-accent-pink flex items-center gap-2 mb-4"><User /> Most Followers</h3>
+                <h3 className="text-xl font-bold text-green-400 flex items-center gap-2 mb-4"><User /> Most Followers</h3>
                  <div className="space-y-2">
                     {leaderboards.followers.map((user: any, index: number) => <UserRow key={user.uid} user={user} index={index} metric={user.followerCount} metricLabel="followers" />)}
                 </div>
             </div>
              <div>
-                <h3 className="text-xl font-bold text-brand-gold flex items-center gap-2 mb-4"><Star /> Most Likes</h3>
+                <h3 className="text-xl font-bold text-orange-400 flex items-center gap-2 mb-4"><Star /> Most Likes</h3>
                  <div className="space-y-2">
                     {leaderboards.likes.map((user: any, index: number) => <UserRow key={user.uid} user={user} index={index} metric={user.totalLikes} metricLabel="likes" />)}
                 </div>
