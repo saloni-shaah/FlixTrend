@@ -23,7 +23,6 @@ import { generateLivekitToken } from '@/ai/flows/generate-livekit-token-flow';
 const MusicDiscovery = dynamic(() => import('@/components/MusicDiscovery').then(mod => mod.MusicDiscovery), { ssr: false });
 const FlashModal = dynamic(() => import('@/components/FlashModal'), { ssr: false });
 const NotificationPanel = dynamic(() => import('@/components/NotificationPanel'), { ssr: false });
-const ShortsPlayer = dynamic(() => import('@/components/ShortsPlayer'));
 
 const db = getFirestore(app);
 
@@ -41,7 +40,6 @@ function HomePageContent() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [lastVisible, setLastVisible] = useState<any>(null);
   const [hasMore, setHasMore] = useState(true);
-  const [showShortsPlayer, setShowShortsPlayer] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const [showWelcomeAnimation, setShowWelcomeAnimation] = useState(false);
@@ -215,10 +213,6 @@ function HomePageContent() {
     : posts;
     
 
-  if (showShortsPlayer) {
-    return <ShortsPlayer onClose={() => setShowShortsPlayer(false)} />;
-  }
-
   if (loading && posts.length === 0) {
     return <VibeSpaceLoader />;
   }
@@ -292,23 +286,6 @@ function HomePageContent() {
           ))}
         </div>
       </motion.section>
-
-      {/* Shorts Player Button */}
-      <section className="mb-6">
-        <motion.button
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          onClick={() => setShowShortsPlayer(true)}
-          className="w-full glass-card p-4 flex items-center justify-center gap-4 hover:border-accent-pink transition-colors"
-        >
-          <Video className="text-accent-pink" size={32} />
-          <div className="text-left">
-            <h3 className="font-headline text-xl font-bold">Watch Shorts</h3>
-            <p className="text-sm text-gray-400">Tap to dive into a full-screen video feed</p>
-          </div>
-        </motion.button>
-      </section>
 
       {/* Feed Section */}
       <section className="flex-1 flex flex-col items-center mt-4">
