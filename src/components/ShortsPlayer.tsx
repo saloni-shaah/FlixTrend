@@ -17,7 +17,8 @@ export function ShortsPlayer({ post }: { post: any }) {
     const containerRef = useRef<HTMLDivElement>(null);
     const { setIsScopeVideoPlaying } = useAppState();
     const [isPlaying, setIsPlaying] = useState(false);
-    const [isMuted, setIsMuted] = useState(true);
+    // Start unmuted by default as requested
+    const [isMuted, setIsMuted] = useState(false); 
     const [showComments, setShowComments] = useState(false);
     const viewCountedRef = useRef(false);
     const lastTap = useRef(0);
@@ -34,6 +35,16 @@ export function ShortsPlayer({ post }: { post: any }) {
     useEffect(() => {
         const video = videoRef.current;
         if (!video) return;
+
+        // Try to play unmuted first, if it fails, mute and try again
+        video.play().catch(error => {
+            if (error.name === "NotAllowedError") {
+                console.log("Autoplay with sound was prevented by the browser. Setting to muted.");
+                setIsMuted(true);
+                video.muted = true;
+                video.play();
+            }
+        });
 
         const observer = new IntersectionObserver(
             ([entry]) => {
@@ -100,6 +111,7 @@ export function ShortsPlayer({ post }: { post: any }) {
         const video = videoRef.current;
         if (video) {
             video.muted = !video.muted;
+            setIsMuted(video.muted);
         }
     };
     
@@ -137,14 +149,11 @@ export function ShortsPlayer({ post }: { post: any }) {
 
                 {/* Vertical action buttons on the right */}
                 <div className="flex flex-col gap-4 self-end pointer-events-auto">
+                    <button onClick={toggleMute} className="p-2 bg-black/50 rounded-full text-white">
+                        {isMuted ? <VolumeX /> : <Volume2 />}
+                    </button>
                     <PostActions post={post} isShortVibe={true} onCommentClick={() => setShowComments(true)} />
                 </div>
-            </div>
-
-            <div className="absolute top-4 right-4 z-20 pointer-events-auto">
-                <button onClick={toggleMute} className="p-2 bg-black/50 rounded-full text-white">
-                    {isMuted ? <VolumeX /> : <Volume2 />}
-                </button>
             </div>
 
             {!isPlaying && (
