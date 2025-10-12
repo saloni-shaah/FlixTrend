@@ -40,20 +40,17 @@ export const onNewUserCreate = functions.auth.user().onCreate(async (user) => {
  * This can be triggered by creating a new document in a 'notifications' collection.
  */
 export const sendNotification = functions.firestore
-  .document('notifications/{notificationId}')
-  .onCreate(async (snapshot) => {
+  .document('users/{userId}/notifications/{notificationId}')
+  .onCreate(async (snapshot, context) => {
+    const { userId } = context.params;
     const notification = snapshot.data();
     if (!notification) {
       logger.log('No notification data found');
       return;
     }
 
-    const { userId, type, message, author } = notification;
-    if (!userId) {
-      logger.log('User ID is missing');
-      return;
-    }
-
+    const { type, fromUsername } = notification;
+   
     // Fetch the user's FCM token
     const userRef = db.collection('users').doc(userId);
     const userDoc = await userRef.get();
@@ -69,25 +66,25 @@ export const sendNotification = functions.firestore
     }
 
     let notificationTitle = "You have a new notification";
-    let notificationBody = message;
+    let notificationBody = "Someone interacted with you on FlixTrend!";
 
     // Customize notification messages based on type
     switch(type) {
         case 'like':
             notificationTitle = `New Like!`;
-            notificationBody = `${author || 'Someone'} liked your post.`;
+            notificationBody = `${fromUsername || 'Someone'} liked your post.`;
             break;
         case 'comment':
             notificationTitle = `New Comment!`;
-            notificationBody = `${author || 'Someone'} commented on your post.`;
+            notificationBody = `${fromUsername || 'Someone'} commented: "${notification.postContent}"`;
             break;
         case 'follow':
             notificationTitle = `New Follower!`;
-            notificationBody = `${author || 'Someone'} started following you.`;
+            notificationBody = `${fromUsername || 'Someone'} started following you.`;
             break;
         case 'missed_call':
             notificationTitle = `Missed Call`;
-            notificationBody = `You missed a call from ${author || 'Someone'}.`;
+            notificationBody = `You missed a call from ${fromUsername || 'Someone'}.`;
             break;
     }
 
@@ -96,12 +93,12 @@ export const sendNotification = functions.firestore
         title: notificationTitle,
         body: notificationBody,
         icon: '/icon-192x192.png',
-        click_action: 'https://flixtrend.com/notifications', // Generic link, can be customized
+        click_action: 'https://flixtrend-v2.web.app/home', 
       },
     };
 
     try {
-      await messaging.sendToDevice(fcmToken, payload);
+      await getMessaging().sendToDevice(fcmToken, payload);
       logger.info('Successfully sent notification to user:', userId);
     } catch (error) {
       logger.error('Error sending notification:', error);
@@ -379,39 +376,33 @@ export const sendScheduledPostNotifications = functions.pubsub.schedule('every 1
         // 1. Send reminder notification to the creator
         const creatorDoc = await getDoc(doc(db, 'users', creatorId));
         if (creatorDoc.exists() && creatorDoc.data()?.fcmToken) {
-            const payload = {
-                notification: {
-                    title: 'Your stream is about to start!',
-                    body: `Your live stream "${post.title}" is scheduled to begin in a few minutes. Get ready!`,
-                    icon: '/icon-192x192.png',
-                },
-            };
-            notificationPromises.push(messaging.sendToDevice(creatorDoc.data()!.fcmToken, payload));
+            const notifRef = collection(db, 'users', creatorId, 'notifications');
+            notificationPromises.push(addDoc(notifRef, {
+                type: 'schedule_reminder',
+                fromUsername: 'FlixTrend',
+                postTitle: post.title,
+                createdAt: serverTimestamp(),
+                read: false,
+            }));
         }
 
         // 2. Send notification to followers
         const followersRef = collection(db, 'users', creatorId, 'followers');
         const followersSnap = await getDocs(followersRef);
         
-        const followerTokens: string[] = [];
-        for(const followerDoc of followersSnap.docs) {
-            const followerUserDoc = await getDoc(doc(db, 'users', followerDoc.id));
-            if(followerUserDoc.exists() && followerUserDoc.data()?.fcmToken) {
-                followerTokens.push(followerUserDoc.data()!.fcmToken);
-            }
-        }
+        followersSnap.forEach(followerDoc => {
+             const notifRef = collection(db, 'users', followerDoc.id, 'notifications');
+             notificationPromises.push(addDoc(notifRef, {
+                type: 'live_starting',
+                fromUsername: creatorUsername,
+                fromAvatarUrl: post.avatar_url,
+                postTitle: post.title,
+                postId: postDoc.id,
+                createdAt: serverTimestamp(),
+                read: false,
+             }));
+        });
         
-        if (followerTokens.length > 0) {
-            const payload = {
-                notification: {
-                    title: 'Live Stream Starting Soon!',
-                    body: `${creatorUsername} is going live soon with "${post.title}"!`,
-                    icon: '/icon-192x192.png',
-                },
-            };
-            notificationPromises.push(messaging.sendToDevice(followerTokens, payload));
-        }
-
         // 3. Mark the post as notified to prevent re-sending
         batch.update(postDoc.ref, { notificationSent: true });
     }
@@ -422,4 +413,3 @@ export const sendScheduledPostNotifications = functions.pubsub.schedule('every 1
     logger.info(`Sent notifications for ${scheduledPostsSnap.size} scheduled posts.`);
     return null;
 });
-

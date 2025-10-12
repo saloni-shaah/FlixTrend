@@ -244,10 +244,10 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
 
   if (isShortVibe) {
     return (
-        <div className="absolute inset-0 w-full h-full p-4 flex justify-between items-end pointer-events-none bg-gradient-to-t from-black/60 via-black/20 to-transparent">
+        <div className="absolute inset-0 w-full h-full p-4 pr-8 flex items-end justify-between pointer-events-none bg-gradient-to-t from-black/60 via-black/20 to-transparent">
             <div className="flex flex-col gap-2 max-w-[calc(100%-80px)] self-end pointer-events-auto mb-4">
                 <div className="flex items-center gap-2">
-                    <Link href={`/squad/${post.userId}`} className="flex items-center gap-2 group cursor-pointer">
+                    <Link href={`/squad/${post.userId}`} className="flex items-center gap-2 group cursor-pointer w-fit">
                         <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green flex items-center justify-center font-bold text-lg overflow-hidden border-2 border-accent-green group-hover:scale-105 transition-transform">
                             {post.avatar_url ? <img src={post.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : <span className="text-white">{post.displayName?.[0] || 'U'}</span>}
                         </div>
@@ -430,17 +430,18 @@ function CommentForm({ postId, postAuthorId, parentId, onCommentPosted, isReply 
     await addDoc(collection(db, "posts", postId, "comments"), commentData);
     
     if (postAuthorId !== user.uid) {
-      const notifRef = collection(db, "notifications", postAuthorId, "user_notifications");
-      await addDoc(notifRef, {
-        type: 'comment',
-        fromUserId: user.uid,
-        fromUsername: userData.username || user.displayName,
-        fromAvatarUrl: userData.avatar_url || user.photoURL,
-        postId: postId,
-        postContent: newComment.substring(0, 50),
-        createdAt: serverTimestamp(),
-        read: false,
-      });
+        // Create a notification for the post author
+        const notifRef = collection(db, "users", postAuthorId, "notifications");
+        await addDoc(notifRef, {
+            type: 'comment',
+            fromUserId: user.uid,
+            fromUsername: userData.username || user.displayName,
+            fromAvatarUrl: userData.avatar_url || user.photoURL,
+            postId: postId,
+            postContent: newComment.substring(0, 50),
+            createdAt: serverTimestamp(),
+            read: false,
+        });
     }
 
     setNewComment("");

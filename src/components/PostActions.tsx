@@ -53,11 +53,17 @@ export function PostActions({ post, isShortVibe = false, onCommentClick }: { pos
         await setDoc(starredDocRef, { ...post, starredAt: serverTimestamp() });
         await setDoc(postStarRef, { userId: currentUser.uid, starredAt: serverTimestamp() });
         if (post.userId !== currentUser.uid) {
-            const notifRef = collection(db, "notifications", post.userId, "user_notifications");
+            // Create a notification for the post author
+            const notifRef = collection(db, "users", post.userId, "notifications");
             await addDoc(notifRef, {
-                type: 'like', fromUserId: currentUser.uid, fromUsername: currentUser.displayName,
-                fromAvatarUrl: currentUser.photoURL, postId: post.id,
-                postContent: (post.content || "").substring(0, 50), createdAt: serverTimestamp(), read: false
+                type: 'like',
+                fromUserId: currentUser.uid,
+                fromUsername: currentUser.displayName,
+                fromAvatarUrl: currentUser.photoURL,
+                postId: post.id,
+                postContent: (post.content || "").substring(0, 50),
+                createdAt: serverTimestamp(),
+                read: false
             });
         }
     }
