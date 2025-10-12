@@ -66,9 +66,9 @@ export function Trendboard() {
 
                 // Sort and set leaderboards
                 setLeaderboards({
-                    followers: [...usersData].sort((a, b) => b.followerCount - a.followerCount).slice(0, 10),
-                    posts: [...usersData].sort((a, b) => b.postCount - a.postCount).slice(0, 10),
-                    creators: [...usersData].sort((a, b) => b.creatorScore - a.creatorScore).slice(0, 10),
+                    followers: [...usersData].sort((a, b) => b.followerCount - a.followerCount).slice(0, 3),
+                    posts: [...usersData].sort((a, b) => b.postCount - a.postCount).slice(0, 3),
+                    creators: [...usersData].sort((a, b) => b.creatorScore - a.creatorScore).slice(0, 3),
                 });
 
             } catch (error) {
