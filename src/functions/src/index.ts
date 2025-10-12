@@ -1,7 +1,7 @@
 
 
 import { initializeApp } from "firebase-admin/app";
-import { getFirestore, FieldValue, Timestamp, doc, collection, query, where, getDocs, limit, writeBatch } from "firebase-admin/firestore";
+import { getFirestore, FieldValue, Timestamp, doc, collection, query, where, getDocs, limit, writeBatch, setDoc } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 import * as functions from "firebase-functions";
 import * as logger from "firebase-functions/logger";
@@ -17,90 +17,22 @@ const messaging = getMessaging();
 const storage = getStorage();
 
 /**
- * Sets initial user data, but no longer grants premium access.
+ * Sets the creation timestamp for a new user.
+ * Premium access is no longer granted here.
  */
 export const onNewUserCreate = functions.auth.user().onCreate(async (user) => {
     const userRef = doc(db, 'users', user.uid);
     try {
         await setDoc(userRef, {
             createdAt: FieldValue.serverTimestamp(),
+            // Ensure profileComplete is initialized so it can be checked on the client
+            profileComplete: false 
         }, { merge: true });
         logger.info(`User document created for ${user.uid}`);
     } catch (error) {
         logger.error(`Error processing new user ${user.uid}:`, error);
     }
 });
-
-/**
- * Sends a push notification to the callee when a new call document is created.
- */
-export const onCallCreated = functions.firestore
-    .document('calls/{callId}')
-    .onCreate(async (snap) => {
-        const callData = snap.data();
-        if (!callData) {
-            logger.log('No call data found');
-            return;
-        }
-
-        const { calleeId, callerName } = callData;
-
-        if (!calleeId) {
-            logger.log('calleeId is missing');
-            return;
-        }
-
-        const userDocRef = db.collection('users').doc(calleeId);
-        const userDoc = await userDocRef.get();
-        if (!userDoc.exists) {
-            logger.log('Callee user document not found');
-            return;
-        }
-
-        const fcmToken = userDoc.data()?.fcmToken;
-        if (!fcmToken) {
-            logger.log(`FCM token not found for callee ${calleeId}`);
-            return;
-        }
-        
-        const payload = {
-            token: fcmToken,
-            notification: {
-                title: 'Incoming Call on FlixTrend',
-                body: `${callerName || 'Someone'} is calling you!`,
-            },
-            data: {
-                type: 'incoming_call',
-                callId: snap.id,
-            },
-            apns: {
-                headers: {
-                    'apns-priority': '10',
-                },
-                payload: {
-                    aps: {
-                        sound: 'ringtone.mp3',
-                        'content-available': 1,
-                    },
-                },
-            },
-            android: {
-                priority: 'high',
-                notification: {
-                    sound: 'ringtone',
-                    channel_id: 'incoming_calls',
-                },
-            },
-        };
-
-        try {
-            // @ts-ignore
-            await getMessaging().send(payload);
-            logger.info('Successfully sent call notification');
-        } catch (error) {
-            logger.error('Error sending call notification:', error);
-        }
-    });
 
 
 /**
@@ -175,6 +107,104 @@ export const sendNotification = functions.firestore
       logger.error('Error sending notification:', error);
     }
   });
+
+
+/**
+ * Cloud Function to delete a user's data upon account deletion.
+ * This cleans up Firestore and other related user data.
+ */
+export const onUserDelete = functions.auth.user().onDelete(async (user) => {
+  logger.info(`User ${user.uid} is being deleted. Cleaning up data.`);
+  const batch = db.batch();
+
+  // Delete user document from 'users' collection
+  const userRef = db.collection('users').doc(user.uid);
+  batch.delete(userRef);
+
+  // Here you can add more cleanup logic as your app grows. For example:
+  // - Delete user's posts
+  // - Delete user's comments
+  // - Invalidate sessions
+
+  try {
+    await batch.commit();
+    logger.info(`Successfully cleaned up data for user ${user.uid}.`);
+  } catch (error) {
+    logger.error(`Error cleaning up data for user ${user.uid}:`, error);
+  }
+});
+
+
+/**
+ * Sends a push notification to the callee when a new call document is created.
+ */
+export const onCallCreated = functions.firestore
+    .document('calls/{callId}')
+    .onCreate(async (snap) => {
+        const callData = snap.data();
+        if (!callData) {
+            logger.log('No call data found');
+            return;
+        }
+
+        const { calleeId, callerName } = callData;
+
+        if (!calleeId) {
+            logger.log('calleeId is missing');
+            return;
+        }
+
+        const userDocRef = db.collection('users').doc(calleeId);
+        const userDoc = await userDocRef.get();
+        if (!userDoc.exists) {
+            logger.log('Callee user document not found');
+            return;
+        }
+
+        const fcmToken = userDoc.data()?.fcmToken;
+        if (!fcmToken) {
+            logger.log(`FCM token not found for callee ${calleeId}`);
+            return;
+        }
+        
+        const payload = {
+            token: fcmToken,
+            notification: {
+                title: 'Incoming Call on FlixTrend',
+                body: `${callerName || 'Someone'} is calling you!`,
+            },
+            data: {
+                type: 'incoming_call',
+                callId: snap.id,
+            },
+            apns: {
+                headers: {
+                    'apns-priority': '10',
+                },
+                payload: {
+                    aps: {
+                        sound: 'ringtone.mp3',
+                        'content-available': 1,
+                    },
+                },
+            },
+            android: {
+                priority: 'high',
+                notification: {
+                    sound: 'ringtone',
+                    channel_id: 'incoming_calls',
+                },
+            },
+        };
+
+        try {
+            // @ts-ignore
+            await getMessaging().send(payload);
+            logger.info('Successfully sent call notification');
+        } catch (error) {
+            logger.error('Error sending call notification:', error);
+        }
+    });
 
 
 /**
@@ -392,3 +422,4 @@ export const sendScheduledPostNotifications = functions.pubsub.schedule('every 1
     logger.info(`Sent notifications for ${scheduledPostsSnap.size} scheduled posts.`);
     return null;
 });
+
