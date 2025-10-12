@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { OptimizedVideo } from './OptimizedVideo';
@@ -117,9 +118,9 @@ export function ShortsPlayer({ post }: { post: any }) {
             />
             
             {/* Overlay for UI elements */}
-            <div className="absolute inset-0 w-full h-full p-4 pr-8 flex justify-between items-end">
+            <div className="absolute inset-0 w-full h-full p-4 pr-8 flex items-end justify-between pointer-events-none">
                 {/* Main content on the left */}
-                <div className="flex-1 flex flex-col gap-2 self-end mb-4 text-white drop-shadow-lg max-w-[calc(100%-80px)]">
+                <div className="flex-1 flex flex-col gap-2 self-end text-white drop-shadow-lg max-w-[calc(100%-80px)] pointer-events-auto">
                     <Link href={`/squad/${post.userId}`} className="flex items-center gap-2 group cursor-pointer w-fit">
                         <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green flex items-center justify-center font-bold text-lg overflow-hidden border-2 border-accent-green group-hover:scale-105 transition-transform">
                             {post.avatar_url ? <img src={post.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : <span className="text-white">{post.displayName?.[0] || 'U'}</span>}
@@ -135,12 +136,12 @@ export function ShortsPlayer({ post }: { post: any }) {
                 </div>
 
                 {/* Vertical action buttons on the right */}
-                <div className="flex flex-col gap-4 self-end mb-4 pointer-events-auto">
+                <div className="flex flex-col gap-4 self-end pointer-events-auto">
                     <PostActions post={post} isShortVibe={true} onCommentClick={() => setShowComments(true)} />
                 </div>
             </div>
 
-            <div className="absolute top-4 right-4 z-20">
+            <div className="absolute top-4 right-4 z-20 pointer-events-auto">
                 <button onClick={toggleMute} className="p-2 bg-black/50 rounded-full text-white">
                     {isMuted ? <VolumeX /> : <Volume2 />}
                 </button>
