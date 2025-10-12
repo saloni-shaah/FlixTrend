@@ -103,7 +103,8 @@ export function ShortsPlayer({ post }: { post: any }) {
                 className="w-full h-full object-contain"
                 loop
                 playsInline
-                muted // Start muted for autoplay
+                muted={isMuted}
+                autoPlay
             />
             
             <PostCard post={post} isShortVibe={true} />

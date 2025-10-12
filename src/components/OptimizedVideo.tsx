@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from 'react';
@@ -10,14 +11,14 @@ function getCloudinaryId(url: string): string | null {
   return match ? match[2] : null;
 }
 
-export const OptimizedVideo = React.forwardRef<HTMLVideoElement, { src: string; thumbnailUrl?: string; className?: string; preload?: "auto" | "metadata" | "none"; loop?: boolean; [key: string]: any; }>(({ src, thumbnailUrl, className, preload, loop, ...props }, ref) => {
+export const OptimizedVideo = React.forwardRef<HTMLVideoElement, { src: string; thumbnailUrl?: string; className?: string; preload?: "auto" | "metadata" | "none"; loop?: boolean; muted?: boolean; [key: string]: any; }>(({ src, thumbnailUrl, className, preload, loop, muted, ...props }, ref) => {
     if (!src.startsWith(CLOUDINARY_BASE_URL)) {
-        return <video ref={ref} src={src} poster={thumbnailUrl} className={className} preload={preload || "metadata"} loop={loop} {...props} />;
+        return <video ref={ref} src={src} poster={thumbnailUrl} className={className} preload={preload || "metadata"} loop={loop} muted={muted} {...props} />;
     }
 
     const publicId = getCloudinaryId(src);
     if (!publicId) {
-        return <video ref={ref} src={src} poster={thumbnailUrl} className={className} preload={preload || "metadata"} loop={loop} {...props} />;
+        return <video ref={ref} src={src} poster={thumbnailUrl} className={className} preload={preload || "metadata"} loop={loop} muted={muted} {...props} />;
     }
 
     const transformedVideoUrl = `${CLOUDINARY_BASE_URL}/video/upload/f_auto,q_auto,w_800,c_limit/${publicId}`;
@@ -30,6 +31,7 @@ export const OptimizedVideo = React.forwardRef<HTMLVideoElement, { src: string; 
             className={className}
             preload={preload || "metadata"}
             loop={loop}
+            muted={muted}
             {...props}
         />
     );
