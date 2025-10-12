@@ -1,16 +1,30 @@
 
 "use client";
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { PostCard } from './PostCard';
 import { OptimizedVideo } from './OptimizedVideo';
 import { Play } from 'lucide-react';
 import { useAppState } from '@/utils/AppStateContext';
+import { doc, updateDoc, increment, getFirestore } from 'firebase/firestore';
+import { app } from '@/utils/firebaseClient';
+
+const db = getFirestore(app);
 
 export function ShortsPlayer({ post }: { post: any }) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const { setIsScopeVideoPlaying } = useAppState();
     const [isInternallyPlaying, setIsInternallyPlaying] = useState(false);
+    const viewCountedRef = useRef(false);
+
+    const incrementViewCount = useCallback(() => {
+        if (viewCountedRef.current || !post.id) return;
+        viewCountedRef.current = true;
+        const postRef = doc(db, 'posts', post.id);
+        updateDoc(postRef, {
+            viewCount: increment(1)
+        }).catch(error => console.error("Error incrementing view count:", error));
+    }, [post.id]);
 
     useEffect(() => {
         const video = videoRef.current;
@@ -33,6 +47,7 @@ export function ShortsPlayer({ post }: { post: any }) {
         const handlePlay = () => {
             setIsInternallyPlaying(true);
             setIsScopeVideoPlaying(true);
+            incrementViewCount();
         };
         const handlePause = () => {
             setIsInternallyPlaying(false);
@@ -48,10 +63,9 @@ export function ShortsPlayer({ post }: { post: any }) {
                 video.removeEventListener('play', handlePlay);
                 video.removeEventListener('pause', handlePause);
             }
-            // When component unmounts, assume video is not playing
             setIsScopeVideoPlaying(false);
         };
-    }, [setIsScopeVideoPlaying]);
+    }, [setIsScopeVideoPlaying, incrementViewCount]);
 
     const handleVideoClick = (e: React.MouseEvent) => {
         e.stopPropagation();
