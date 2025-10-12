@@ -1,10 +1,11 @@
 
 "use client";
 import React, { useState, useEffect } from 'react';
-import { getFirestore, collection, query as firestoreQuery, getDocs, where, collectionGroup, orderBy, limit } from 'firebase/firestore';
+import { getFirestore, collection, query as firestoreQuery, getDocs, where, orderBy, limit } from 'firebase/firestore';
 import { app } from '@/utils/firebaseClient';
-import { Loader, Trophy, User, Star } from 'lucide-react';
+import { Loader, Trophy, User, Star, Eye } from 'lucide-react';
 import Link from 'next/link';
+import { OptimizedImage } from '../OptimizedImage';
 
 const db = getFirestore(app);
 
@@ -31,22 +32,55 @@ const UserRow = ({ user, index, metric, metricLabel }: { user: any, index: numbe
             </div>
         </Link>
     );
-}
+};
+
+const PostRow = ({ post, index }: { post: any, index: number }) => {
+    const getRankColor = () => {
+        if (index === 0) return 'border-yellow-400 text-yellow-400';
+        if (index === 1) return 'border-gray-400 text-gray-400';
+        if (index === 2) return 'border-orange-400 text-orange-400';
+        return 'border-gray-600 text-gray-500';
+    };
+    
+    // Using a placeholder for thumbnail for now. A real app would generate this.
+    const thumbnailUrl = post.mediaUrl?.[0] || post.mediaUrl || `https://picsum.photos/seed/${post.id}/200`;
+
+    return (
+        <Link href={`/home`}>
+             <div className="flex items-center gap-4 p-2 rounded-lg hover:bg-white/10 transition-colors">
+                <span className={`w-8 text-center font-bold text-lg ${getRankColor()}`}>{index + 1}</span>
+                <OptimizedImage src={thumbnailUrl} alt={post.content} className="w-10 h-10 rounded-md object-cover" />
+                <div className="flex-1">
+                    <p className="font-bold text-white truncate">{post.content || "Video Post"}</p>
+                    <p className="text-xs text-gray-400">by @{post.username}</p>
+                </div>
+                <div className="text-right flex items-center gap-1">
+                    <Eye size={14}/>
+                    <p className="font-bold">{post.viewCount?.toLocaleString() || 0}</p>
+                </div>
+            </div>
+        </Link>
+    );
+};
 
 export function Trendboard() {
     const [leaderboards, setLeaderboards] = useState<any>({
         posts: [],
         followers: [],
         likes: [],
+        topPosts: [],
     });
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
 
     useEffect(() => {
         const fetchLeaderboards = async () => {
             setLoading(true);
+            setError('');
             try {
+                // Fetch all users
                 const usersSnap = await getDocs(collection(db, "users"));
-                const usersData = await Promise.all(usersSnap.docs.map(async (userDoc) => {
+                const usersDataPromises = usersSnap.docs.map(async (userDoc) => {
                     const user = { uid: userDoc.id, ...userDoc.data() };
                     
                     const followersSnap = await getDocs(collection(db, `users/${user.uid}/followers`));
@@ -63,17 +97,31 @@ export function Trendboard() {
                     });
 
                     return { ...user, postCount, followerCount, totalLikes };
-                }));
+                });
+                
+                const usersData = await Promise.all(usersDataPromises);
+
+                // Fetch top video posts
+                const topPostsQuery = firestoreQuery(
+                    collection(db, "posts"), 
+                    where('isVideo', '==', true), 
+                    orderBy('viewCount', 'desc'), 
+                    limit(5)
+                );
+                const topPostsSnap = await getDocs(topPostsQuery);
+                const topPostsData = topPostsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
                 // Sort and set leaderboards
                 setLeaderboards({
-                    posts: [...usersData].sort((a, b) => b.postCount - a.postCount).slice(0, 10),
-                    followers: [...usersData].sort((a, b) => b.followerCount - a.followerCount).slice(0, 10),
-                    likes: [...usersData].sort((a, b) => b.totalLikes - a.totalLikes).slice(0, 10),
+                    posts: [...usersData].sort((a, b) => b.postCount - a.postCount).slice(0, 5),
+                    followers: [...usersData].sort((a, b) => b.followerCount - a.followerCount).slice(0, 5),
+                    likes: [...usersData].sort((a, b) => b.totalLikes - a.totalLikes).slice(0, 5),
+                    topPosts: topPostsData,
                 });
 
             } catch (error) {
                 console.error("Error fetching leaderboards:", error);
+                setError("Could not load leaderboards. Please check your connection or permissions.");
             }
             setLoading(false);
         };
@@ -89,8 +137,21 @@ export function Trendboard() {
         );
     }
     
+    if (error) {
+        return <div className="text-center text-red-400">{error}</div>;
+    }
+    
     return (
         <div className="space-y-8">
+            <div>
+                <h3 className="text-xl font-bold text-accent-cyan flex items-center gap-2 mb-4"><Eye /> Top Posts</h3>
+                <div className="space-y-2">
+                    {leaderboards.topPosts.length > 0 ? 
+                        leaderboards.topPosts.map((post: any, index: number) => <PostRow key={post.id} post={post} index={index} />) :
+                        <p className="text-sm text-gray-500 text-center">No video posts have been viewed yet.</p>
+                    }
+                </div>
+            </div>
             <div>
                 <h3 className="text-xl font-bold text-blue-400 flex items-center gap-2 mb-4"><Trophy /> Most Posts</h3>
                 <div className="space-y-2">
