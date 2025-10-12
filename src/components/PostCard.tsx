@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState, useRef } from 'react';
@@ -19,6 +18,7 @@ import { CheckCircle, Award, Mic, Crown, Zap, Rocket, Search, Pin, Phone, Mail, 
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu"
 import { cn } from "@/lib/utils"
 import { InFeedVideoPlayer } from './video/InFeedVideoPlayer';
+import { PostActions } from './PostActions';
 
 
 // START: Copied DropdownMenu components
@@ -78,192 +78,39 @@ const Watermark = ({ isAnimated = false }: { isAnimated?: boolean }) => (
 
 
 export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe?: boolean }) {
-  const [isStarred, setIsStarred] = React.useState(false);
-  const [starCount, setStarCount] = React.useState(post.starCount || 0);
-  const [isRelayed, setIsRelayed] = React.useState(false);
-  const [relayCount, setRelayCount] = React.useState(post.relayCount || 0);
-  const [commentCount, setCommentCount] = React.useState(post.commentCount || 0);
   const [showComments, setShowComments] = React.useState(false);
   const [showEdit, setShowEdit] = React.useState(false);
   const [editContent, setEditContent] = React.useState(post.content || "");
-  const [showShareModal, setShowShareModal] = React.useState(false);
-  const [showSignalShare, setShowSignalShare] = React.useState(false);
-  const [showCollectionModal, setShowCollectionModal] = React.useState(false);
-  const [isSaved, setIsSaved] = React.useState(false);
-  const [isDownloaded, setIsDownloaded] = React.useState(false);
-  const currentUser = auth.currentUser;
   const [pollVotes, setPollVotes] = React.useState<{ [optionIdx: number]: { count: number, voters: string[] } }>({});
   const [userPollVote, setUserPollVote] = React.useState<number | null>(null);
-  const audioRef = React.useRef<HTMLAudioElement | null>(null);
+
+  const currentUser = auth.currentUser;
   const deletePostCallable = httpsCallable(functions, 'deletePost');
   
-
   React.useEffect(() => {
-    if (!currentUser) return;
-
-    const unsubscribes: (() => void)[] = [];
-
-    // Starred post check
-    const starredDocRef = fsDoc(db, "users", currentUser.uid, "starredPosts", post.id);
-    const unsubStarred = onSnapshot(starredDocRef, (docSnap) => {
-        setIsStarred(docSnap.exists());
-    });
-    unsubscribes.push(unsubStarred);
-
-    // Saved post check - this is a quick check, doesn't tell us *which* collection
-    const savedQuery = query(collection(db, "collections"), where("ownerId", "==", currentUser.uid), where("postIds", "array-contains", post.id));
-    const unsubSaved = onSnapshot(savedQuery, (snap) => {
-      const wasSaved = !snap.empty;
-      if (isSaved !== wasSaved) {
-        setIsSaved(wasSaved);
-      }
-    });
-    unsubscribes.push(unsubSaved);
+    if (!currentUser || post.type !== "poll" || !post.pollOptions) return;
     
-    // Relayed post check
-    const relayedDocRef = fsDoc(db, "posts", post.id, "relays", currentUser.uid);
-    const unsubRelayed = onSnapshot(relayedDocRef, (docSnap) => {
-        setIsRelayed(docSnap.exists());
-    });
-    unsubscribes.push(unsubRelayed);
-
-
-    // Counts
-    const unsubStars = onSnapshot(collection(db, "posts", post.id, "stars"), (snap) => setStarCount(snap.size));
-    unsubscribes.push(unsubStars);
-    const unsubRelays = onSnapshot(collection(db, "posts", post.id, "relays"), (snap) => setRelayCount(snap.size));
-    unsubscribes.push(unsubRelays);
-    const unsubComments = onSnapshot(collection(db, "posts", post.id, "comments"), (snap) => setCommentCount(snap.size));
-    unsubscribes.push(unsubComments);
-
-    // Polls
-    if (post.type === "poll" && post.pollOptions) {
-      const unsubPollVotes = onSnapshot(collection(db, "posts", post.id, "pollVotes"), (snap) => {
-        const votes: { [optionIdx: number]: { count: number, voters: string[] } } = {};
-        post.pollOptions.forEach((_:any, index:number) => {
-            votes[index] = { count: 0, voters: [] };
-        });
-
-        let userVote: number | null = null;
-        snap.forEach(doc => {
-          const { optionIdx, userId } = doc.data();
-          if (votes[optionIdx]) {
-              votes[optionIdx].count++;
-              votes[optionIdx].voters.push(userId);
-          }
-          if (userId === currentUser.uid) userVote = optionIdx;
-        });
-        setPollVotes(votes);
-        setUserPollVote(userVote);
+    const unsubPollVotes = onSnapshot(collection(db, "posts", post.id, "pollVotes"), (snap) => {
+      const votes: { [optionIdx: number]: { count: number, voters: string[] } } = {};
+      post.pollOptions.forEach((_:any, index:number) => {
+          votes[index] = { count: 0, voters: [] };
       });
-      unsubscribes.push(unsubPollVotes);
-    }
 
-    // Check if post is downloaded
-    isPostDownloaded(post.id).then(setIsDownloaded);
-    
-    return () => unsubscribes.forEach(unsub => unsub());
-  }, [post.id, currentUser, post.type, post.pollOptions, isSaved]);
-
-  const handleStar = async () => {
-    if (!currentUser) return;
-    const starredDocRef = fsDoc(db, "users", currentUser.uid, "starredPosts", post.id);
-    const postStarRef = fsDoc(db, "posts", post.id, "stars", currentUser.uid);
-    if (isStarred) {
-        await deleteDoc(starredDocRef);
-        await deleteDoc(postStarRef);
-    } else {
-        await setDoc(starredDocRef, { ...post, starredAt: serverTimestamp() });
-        await setDoc(postStarRef, { userId: currentUser.uid, starredAt: serverTimestamp() });
-        
-        // Create notification for post author
-        if (post.userId !== currentUser.uid) {
-            const notifRef = collection(db, "notifications", post.userId, "user_notifications");
-            await addDoc(notifRef, {
-                type: 'like',
-                fromUserId: currentUser.uid,
-                fromUsername: currentUser.displayName,
-                fromAvatarUrl: currentUser.photoURL,
-                postId: post.id,
-                postContent: (post.content || "").substring(0, 50),
-                createdAt: serverTimestamp(),
-                read: false,
-            });
+      let userVote: number | null = null;
+      snap.forEach(doc => {
+        const { optionIdx, userId } = doc.data();
+        if (votes[optionIdx]) {
+            votes[optionIdx].count++;
+            votes[optionIdx].voters.push(userId);
         }
-    }
-  };
+        if (userId === currentUser.uid) userVote = optionIdx;
+      });
+      setPollVotes(votes);
+      setUserPollVote(userVote);
+    });
 
-  const handleRelay = async () => {
-    if (!currentUser) return;
-
-    try {
-        await runTransaction(db, async (transaction) => {
-            const userDoc = await transaction.get(fsDoc(db, "users", currentUser.uid));
-            if (!userDoc.exists()) throw new Error("User profile not found");
-            const userData = userDoc.data();
-
-            const relayRef = fsDoc(db, "posts", post.id, "relays", currentUser.uid);
-            const relaySnap = await transaction.get(relayRef);
-
-            if (relaySnap.exists()) {
-                console.log("Already relayed");
-                return;
-            }
-
-            const newPostRef = doc(collection(db, "posts"));
-            transaction.set(newPostRef, {
-                type: 'relay',
-                originalPost: post,
-                originalPostId: post.id,
-                userId: currentUser.uid,
-                displayName: userData.name || currentUser.displayName,
-                username: userData.username,
-                avatar_url: userData.avatar_url,
-                createdAt: serverTimestamp(),
-                publishAt: serverTimestamp(),
-                category: post.category, // Carry over the category
-            });
-            
-            transaction.set(relayRef, {
-                userId: currentUser.uid,
-                relayedAt: serverTimestamp(),
-            });
-            
-            if (post.userId !== currentUser.uid) {
-                const notifRef = doc(collection(db, "notifications", post.userId, "user_notifications"));
-                transaction.set(notifRef, {
-                    type: 'relay',
-                    fromUserId: currentUser.uid,
-                    fromUsername: currentUser.displayName,
-                    fromAvatarUrl: currentUser.photoURL,
-                    postId: post.id,
-                    postContent: (post.content || "").substring(0, 50),
-                    createdAt: serverTimestamp(),
-                    read: false,
-                });
-            }
-        });
-
-    } catch (error) {
-        console.error("Error relaying post:", error);
-        alert("Could not relay post.");
-    }
-  };
-
-  const handleDownload = async () => {
-    try {
-      if (isDownloaded) {
-        await removeDownloadedPost(post.id);
-        setIsDownloaded(false);
-      } else {
-        await savePostForOffline(post);
-        setIsDownloaded(true);
-      }
-    } catch (error) {
-      console.error("Failed to save post for offline:", error);
-      alert("Could not download post.");
-    }
-  };
+    return () => unsubPollVotes();
+  }, [post.id, currentUser, post.type, post.pollOptions]);
 
   const handleDelete = async () => {
     if (window.confirm("Are you sure you want to permanently delete this post and all its interactions? This cannot be undone.")) {
@@ -286,17 +133,6 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
     await setDoc(fsDoc(db, "posts", post.id, "pollVotes", currentUser.uid), { userId: currentUser.uid, optionIdx, createdAt: serverTimestamp() });
   };
   
-  React.useEffect(() => {
-    if (post.song && post.song.preview_url) {
-        const audio = new Audio(post.song.preview_url);
-        audioRef.current = audio;
-    }
-    return () => {
-        audioRef.current?.pause();
-    }
-  }, [post.song]);
-  
-
   const renderPostContent = (p: any) => {
     const contentPost = p.type === 'relay' ? p.originalPost : p;
     const initials = contentPost.displayName?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || contentPost.username?.slice(0, 2).toUpperCase() || "U";
@@ -387,37 +223,6 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
         </>
     )
   }
-  
-  const ActionButtons = () => {
-    return (
-        <motion.div 
-          initial="hidden"
-          animate="visible"
-          variants={{
-            hidden: {},
-            visible: { transition: { staggerChildren: 0.05 }}
-          }}
-          className={`flex items-center justify-between mt-2 pt-2 ${isShortVibe ? 'flex-col gap-4' : 'border-t border-glass-border'}`}>
-            <div className={isShortVibe ? 'flex flex-col items-center gap-4' : 'flex items-center justify-start gap-6'}>
-              <motion.button variants={{hidden: {opacity:0, y:10}, visible: {opacity:1, y:0}}} className={`flex items-center gap-1.5 font-bold transition-all ${isShortVibe ? 'flex-col text-white animate-pop' : 'text-lg text-muted-foreground hover:text-brand-gold'}`} onClick={() => setShowComments(true)}>
-                <MessageCircle size={isShortVibe ? 32 : 20} /> <span className="text-sm">{commentCount}</span>
-              </motion.button>
-              <motion.button variants={{hidden: {opacity:0, y:10}, visible: {opacity:1, y:0}}} className={`flex items-center gap-1.5 font-bold transition-all ${isStarred ? "text-yellow-400" : isShortVibe ? 'text-white' : "text-lg text-muted-foreground hover:text-yellow-400"}`} onClick={handleStar}>
-                <Star size={isShortVibe ? 32 : 20} fill={isStarred ? "currentColor" : "none"} /> <span className="text-sm">{starCount}</span>
-              </motion.button>
-              <motion.button variants={{hidden: {opacity:0, y:10}, visible: {opacity:1, y:0}}} className={`flex items-center gap-1.5 font-bold transition-all ${isShortVibe ? 'flex-col text-white' : 'text-lg text-muted-foreground hover:text-accent-cyan'}`} onClick={(e) => { e.stopPropagation(); setShowShareModal(true); }}>
-                <Share size={isShortVibe ? 32 : 20} />
-              </motion.button>
-            </div>
-            <div className={isShortVibe ? 'flex flex-col items-center gap-4 mt-4' : 'flex items-center gap-4'}>
-                 <motion.button variants={{hidden: {opacity:0, y:10}, visible: {opacity:1, y:0}}} className={`flex items-center gap-1.5 font-bold transition-all ${isShortVibe ? 'flex-col text-white' : 'text-lg text-muted-foreground hover:text-accent-purple'}`} onClick={() => setShowCollectionModal(true)}>
-                    <Bookmark size={isShortVibe ? 32 : 20} fill={isSaved ? "currentColor" : "none"}/>
-                </motion.button>
-            </div>
-        </motion.div>
-    )
-  };
-
 
   if (isShortVibe) {
     return (
@@ -439,19 +244,16 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
                  )}
             </div>
             <div className="flex flex-col gap-4 self-end mb-4 pointer-events-auto">
-                <ActionButtons />
+                <PostActions post={post} isShortVibe={true} onCommentClick={() => setShowComments(true)} />
             </div>
             {showComments && <CommentModal postId={post.id} postAuthorId={post.userId} onClose={() => setShowComments(false)} post={post} />}
-            {showShareModal && <ShareModal isVideo={post.type === 'media'} url={`${window.location.origin}/post/${post.id}`} title={post.content} onSignalShare={() => { setShowShareModal(false); setShowSignalShare(true); }} onClose={() => setShowShareModal(false)} />}
-            {showSignalShare && <SignalShareModal post={post} onClose={() => setShowSignalShare(false)}/>}
-            {showCollectionModal && <AddToCollectionModal post={post} onClose={() => setShowCollectionModal(false)} />}
         </div>
     );
   }
 
   return (
     <>
-    <div className="glass-card p-5 flex flex-col gap-3 relative animate-fade-in">
+    <div className="glass-card p-5 flex flex-col gap-3 relative">
       {post.type === 'relay' && (
           <div className="text-xs text-muted-foreground font-bold mb-2 flex items-center gap-2">
               <Repeat2 size={14}/> Relayed by <Link href={`/squad/${post.userId}`} className="text-accent-cyan hover:underline">@{post.username}</Link>
@@ -475,26 +277,10 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
       )}
 
       {renderPostContent(post)}
-      <ActionButtons />
+      <PostActions post={post} onCommentClick={() => setShowComments(true)} />
       
       {showComments && <CommentModal postId={post.id} postAuthorId={post.userId} onClose={() => setShowComments(false)} post={post} />}
-      
-      {showShareModal && (
-        <ShareModal 
-            url={`${window.location.origin}/post/${post.id}`}
-            title={post.content}
-            isVideo={post.type === 'media' && post.mediaUrl && (Array.isArray(post.mediaUrl) ? post.mediaUrl.some((url: string) => url.includes('.mp4')) : post.mediaUrl.includes('.mp4'))}
-            onSignalShare={() => { setShowShareModal(false); setShowSignalShare(true); }}
-            onClose={() => setShowShareModal(false)}
-        />
-      )}
-      {showSignalShare && <SignalShareModal post={post} onClose={() => setShowSignalShare(false)}/>}
-      {showCollectionModal && (
-        <AddToCollectionModal 
-            post={post}
-            onClose={() => setShowCollectionModal(false)}
-        />
-      )}
+
     </div>
     </>
   );
