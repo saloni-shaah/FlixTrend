@@ -133,6 +133,7 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
                 mood: postData.mood || null,
                 isPortrait: postData.isPortrait || false,
                 videoDuration: postData.videoDuration || 0,
+                isVideo: postData.isVideo || false, // <-- THIS IS THE CRITICAL FIX
                 ...(postData.postType === 'text' && { 
                     backgroundColor: postData.backgroundColor || null, 
                     backgroundImage: postData.backgroundImage || null, 
