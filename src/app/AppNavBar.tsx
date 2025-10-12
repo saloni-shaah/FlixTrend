@@ -11,24 +11,6 @@ import { getDownloadedPosts } from "@/utils/offline-db";
 
 const db = getFirestore(app);
 
-// Custom SVG Icon for Scope
-const ScopeIcon = ({ className }: { className?: string }) => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-        <defs>
-            <linearGradient id="scopeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="var(--accent-pink)" />
-                <stop offset="100%" stopColor="var(--accent-cyan)" />
-            </linearGradient>
-        </defs>
-        <path d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4Z" stroke="url(#scopeGradient)" strokeWidth="1.5"/>
-        <path d="M15 12L10.5 9.11325V14.8868L15 12Z" fill="url(#scopeGradient)"/>
-        <g style={{ transformOrigin: 'center' }}>
-            <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="10s" repeatCount="indefinite" />
-            <path d="M12 6C8.68629 6 6 8.68629 6 12C6 15.3137 8.68629 18 12 18C15.3137 18 18 15.3137 18 12C18 8.68629 15.3137 6 12 6ZM12 16C9.79086 16 8 14.2091 8 12C8 9.79086 9.79086 8 12 8C14.2091 8 16 9.79086 16 12C16 14.2091 14.2091 16 12 16Z" fill="currentColor" fillOpacity="0.3"/>
-        </g>
-    </svg>
-);
-
 // Custom SVG for VibeSpace (Home)
 const VibeSpaceIcon = ({ className }: { className?: string }) => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
@@ -212,7 +194,6 @@ export default function AppNavBar() {
         ) : (
           <>
             <NavButton href="/home" icon={VibeSpaceIcon} label="VibeSpace" />
-            <NavButton href="/scope" icon={ScopeIcon} label="Scope" />
             <NavButton href="/squad" icon={SquadIcon} label="Squad" />
             <NavButton href="/signal" icon={MessageSquare} label="Signal" hasNotification={hasUnreadMessages} />
           </>
