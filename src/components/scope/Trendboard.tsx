@@ -3,12 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { getFirestore, collection, query as firestoreQuery, getDocs, where } from 'firebase/firestore';
 import { app } from '@/utils/firebaseClient';
-import { Loader, Trophy, User, MessageSquare } from 'lucide-react';
+import { Loader, Trophy, User, Star } from 'lucide-react';
 import Link from 'next/link';
 
 const db = getFirestore(app);
 
-const UserRow = ({ user, index }: { user: any, index: number }) => {
+const UserRow = ({ user, index, metric, metricLabel }: { user: any, index: number, metric: number, metricLabel: string }) => {
     const getRankColor = () => {
         if (index === 0) return 'border-brand-gold text-brand-gold';
         if (index === 1) return 'border-gray-400 text-gray-400';
@@ -25,9 +25,8 @@ const UserRow = ({ user, index }: { user: any, index: number }) => {
                     <p className="text-xs text-gray-400">{user.name}</p>
                 </div>
                 <div className="text-right">
-                    {user.followerCount !== undefined && <p className="font-bold">{user.followerCount} <span className="text-xs text-gray-500">followers</span></p>}
-                    {user.postCount !== undefined && <p className="font-bold">{user.postCount} <span className="text-xs text-gray-500">posts</span></p>}
-                    {user.creatorScore !== undefined && <p className="font-bold">{user.creatorScore.toFixed(0)} <span className="text-xs text-gray-500">score</span></p>}
+                    <p className="font-bold">{metric.toLocaleString()}</p>
+                    <p className="text-xs text-gray-500">{metricLabel}</p>
                 </div>
             </div>
         </Link>
@@ -36,9 +35,9 @@ const UserRow = ({ user, index }: { user: any, index: number }) => {
 
 export function Trendboard() {
     const [leaderboards, setLeaderboards] = useState<any>({
-        followers: [],
         posts: [],
-        creators: [],
+        followers: [],
+        likes: [],
     });
     const [loading, setLoading] = useState(true);
 
@@ -54,21 +53,23 @@ export function Trendboard() {
                     
                     const postsQuery = firestoreQuery(collection(db, "posts"), where('userId', '==', user.uid));
                     const postsSnap = await getDocs(postsQuery);
-
-                    const followerCount = followersSnap.size;
-                    const postCount = postsSnap.size;
                     
-                    // Simple creator score: followers are 5x more valuable than posts
-                    const creatorScore = followerCount * 5 + postCount;
+                    const postCount = postsSnap.size;
+                    const followerCount = followersSnap.size;
 
-                    return { ...user, followerCount, postCount, creatorScore };
+                    let totalLikes = 0;
+                    postsSnap.forEach(postDoc => {
+                        totalLikes += postDoc.data().starCount || 0;
+                    });
+
+                    return { ...user, postCount, followerCount, totalLikes };
                 }));
 
                 // Sort and set leaderboards
                 setLeaderboards({
-                    followers: [...usersData].sort((a, b) => b.followerCount - a.followerCount).slice(0, 3),
                     posts: [...usersData].sort((a, b) => b.postCount - a.postCount).slice(0, 3),
-                    creators: [...usersData].sort((a, b) => b.creatorScore - a.creatorScore).slice(0, 3),
+                    followers: [...usersData].sort((a, b) => b.followerCount - a.followerCount).slice(0, 3),
+                    likes: [...usersData].sort((a, b) => b.totalLikes - a.totalLikes).slice(0, 3),
                 });
 
             } catch (error) {
@@ -91,21 +92,21 @@ export function Trendboard() {
     return (
         <div className="space-y-8">
             <div>
-                <h3 className="text-xl font-bold text-accent-purple flex items-center gap-2 mb-4"><Trophy /> Top Creators</h3>
+                <h3 className="text-xl font-bold text-accent-cyan flex items-center gap-2 mb-4"><Trophy /> Most Posts</h3>
                 <div className="space-y-2">
-                    {leaderboards.creators.map((user: any, index: number) => <UserRow key={user.uid} user={user} index={index} />)}
+                    {leaderboards.posts.map((user: any, index: number) => <UserRow key={user.uid} user={user} index={index} metric={user.postCount} metricLabel="posts" />)}
                 </div>
             </div>
              <div>
                 <h3 className="text-xl font-bold text-accent-pink flex items-center gap-2 mb-4"><User /> Most Followers</h3>
                  <div className="space-y-2">
-                    {leaderboards.followers.map((user: any, index: number) => <UserRow key={user.uid} user={user} index={index} />)}
+                    {leaderboards.followers.map((user: any, index: number) => <UserRow key={user.uid} user={user} index={index} metric={user.followerCount} metricLabel="followers" />)}
                 </div>
             </div>
              <div>
-                <h3 className="text-xl font-bold text-accent-green flex items-center gap-2 mb-4"><MessageSquare /> Most Posts</h3>
+                <h3 className="text-xl font-bold text-brand-gold flex items-center gap-2 mb-4"><Star /> Most Likes</h3>
                  <div className="space-y-2">
-                    {leaderboards.posts.map((user: any, index: number) => <UserRow key={user.uid} user={user} index={index} />)}
+                    {leaderboards.likes.map((user: any, index: number) => <UserRow key={user.uid} user={user} index={index} metric={user.totalLikes} metricLabel="likes" />)}
                 </div>
             </div>
         </div>
