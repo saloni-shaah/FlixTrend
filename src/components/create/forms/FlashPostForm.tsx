@@ -3,24 +3,14 @@ import React, { useState, useRef, useEffect } from 'react';
 import { X, UploadCloud, Music as MusicIcon, MapPin, Smile, Camera, Image as ImageIcon, Zap, Locate, Loader } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getFirestore, collection, onSnapshot, query, orderBy, getDoc, doc } from 'firebase/firestore';
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { auth, app } from '@/utils/firebaseClient';
-import { uploadFileToFirebaseStorage } from '@/app/actions';
 import { Wand2 } from 'lucide-react';
 
 const db = getFirestore(app);
-
-const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve((reader.result as string).split(',')[1]);
-        reader.onerror = error => reject(error);
-    });
-};
-
+const storage = getStorage(app);
 
 export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange: (data: any) => void }) {
-    const [mediaFile, setMediaFile] = useState<File | null>(null);
     const [mediaPreview, setMediaPreview] = useState<string | null>(data.mediaUrl ? (Array.isArray(data.mediaUrl) ? data.mediaUrl[0] : data.mediaUrl) : null);
     const [showSongPicker, setShowSongPicker] = useState(false);
     const [appSongs, setAppSongs] = useState<any[]>([]);
@@ -91,20 +81,15 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
         setMediaPreview(previewUrl);
 
         try {
-            const base64 = await fileToBase64(file);
-            const result = await uploadFileToFirebaseStorage({
-                base64,
-                contentType: file.type,
-                fileName: file.name,
-                userId: user.uid,
-            });
+            const fileName = `${user.uid}-${Date.now()}-${file.name}`;
+            const fileRef = storageRef(storage, `user_uploads/flashes/${fileName}`);
             
-            if (result.success?.url) {
-                onDataChange({ ...data, mediaUrl: [result.success.url] });
-                setMediaPreview(result.success.url);
-            } else {
-                throw new Error(result.failure || "File upload failed.");
-            }
+            const snapshot = await uploadBytes(fileRef, file);
+            const downloadURL = await getDownloadURL(snapshot.ref);
+
+            onDataChange({ ...data, mediaUrl: [downloadURL] });
+            setMediaPreview(downloadURL);
+
         } catch (error: any) {
             console.error("Upload failed:", error);
             setUploadError(error.message);
