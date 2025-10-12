@@ -167,7 +167,7 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
 
   useEffect(() => {
     if (showAd) {
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (timerRef.current) clearTimeout(timerRef.current);
       if (audioRef.current) audioRef.current.pause();
       return;
     }
@@ -178,7 +178,7 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
     const isVideo = flash.mediaUrl && (flash.mediaUrl.includes('.mp4') || flash.mediaUrl.includes('.webm') || flash.mediaUrl.includes('.ogg'));
     setProgress(0);
 
-    if (timerRef.current) clearInterval(timerRef.current);
+    if (timerRef.current) clearTimeout(timerRef.current);
     if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current = null;
@@ -193,22 +193,19 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
     }
 
     if (!isVideo) {
-        const DURATION = 15; // 15 seconds for images
-        timerRef.current = setInterval(() => {
-            setProgress(p => {
-                const newProgress = p + (100 / (DURATION * 10)); // Update every 100ms
-                if (newProgress >= 100) {
-                    goToNext();
-                    return 0;
-                }
-                return newProgress;
-            });
-        }, 100);
+        // Use a simple timeout for image flashes
+        timerRef.current = setTimeout(goToNext, 15000);
+        // Animate progress bar with CSS transition
+        requestAnimationFrame(() => {
+            setProgress(100);
+        });
+    } else {
+        // Video progress is handled by onTimeUpdate
+        setProgress(0);
     }
-     // Video time updates are handled by the <video> element's onTimeUpdate event
 
     return () => {
-        if (timerRef.current) clearInterval(timerRef.current);
+        if (timerRef.current) clearTimeout(timerRef.current);
         if (audioRef.current) {
             audioRef.current.pause();
             audioRef.current.removeEventListener('ended', goToNext);
@@ -282,6 +279,7 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
   if (!currentFlash) return null;
 
   const isVideo = currentFlash.mediaUrl && (currentFlash.mediaUrl.includes('.mp4') || currentFlash.mediaUrl.includes('.webm') || currentFlash.mediaUrl.includes('.ogg'));
+  const duration = isVideo ? (videoRef.current?.duration || 15) : 15;
 
 
   return (
@@ -291,8 +289,14 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
         {/* Progress Bars */}
         <div className="absolute top-4 left-2 right-2 flex gap-1 z-20">
             {currentFlashUser.flashes.map((_:any, idx:number) => (
-                <div key={idx} className="flex-1 h-1 bg-white/30 rounded-full">
-                    <div className="h-full bg-white rounded-full" style={{ width: `${idx === currentFlashIndex ? progress : (idx < currentFlashIndex ? 100 : 0)}%` }}/>
+                <div key={idx} className="flex-1 h-1 bg-white/30 rounded-full overflow-hidden">
+                    <div 
+                        className="h-full bg-white rounded-full"
+                        style={{
+                            width: `${idx < currentFlashIndex ? 100 : idx === currentFlashIndex ? progress : 0}%`,
+                            transition: idx === currentFlashIndex && !isVideo ? `width ${duration}s linear` : 'none',
+                        }}
+                    />
                 </div>
             ))}
         </div>
