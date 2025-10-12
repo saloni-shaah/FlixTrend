@@ -4,7 +4,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { getFirestore, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, deleteDoc, updateDoc, doc as fsDoc, setDoc, getDoc, runTransaction } from "firebase/firestore";
 import { FaPlay, FaRegComment, FaExclamationTriangle, FaVolumeMute, FaUserSlash, FaLink, FaMusic } from "react-icons/fa";
-import { Repeat2, Star, Share, MessageCircle, Bookmark, MapPin, Smile, Download, X, MoreVertical, Check, ChevronRight, Circle, ThumbsUp, ThumbsDown } from "lucide-react";
+import { Repeat2, Star, Share, MessageCircle, Bookmark, MapPin, Smile, Download, X, MoreVertical, Check, ChevronRight, Circle, ThumbsUp, ThumbsDown, Edit, Trash } from "lucide-react";
 import { auth, app } from '@/utils/firebaseClient';
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -34,6 +34,7 @@ const DropdownMenuContent = React.forwardRef<
       sideOffset={sideOffset}
       className={cn(
         "z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+        "glass-card" /* Custom class for glassmorphism */,
         className
       )}
       {...props}
@@ -312,6 +313,17 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
                 </Link>
                 <div className="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
                     <span>{contentPost.createdAt?.toDate?.().toLocaleString?.() || "Just now"}</span>
+                    {currentUser?.uid === contentPost.userId && !isShortVibe && (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <button className="p-1 rounded-full hover:bg-white/10"><MoreVertical size={16}/></button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="glass-card">
+                                <DropdownMenuItem onClick={() => setShowEdit(true)}><Edit/> Edit Post</DropdownMenuItem>
+                                <DropdownMenuItem onClick={handleDelete} className="text-red-400 focus:bg-red-500/20 focus:text-red-300"><Trash/> Delete Post</DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    )}
                 </div>
             </div>
 
