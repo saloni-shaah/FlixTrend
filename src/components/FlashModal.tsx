@@ -281,7 +281,7 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
   const currentFlash = currentFlashUser.flashes[currentFlashIndex];
   if (!currentFlash) return null;
 
-  const isVideo = currentFlash.mediaUrl.includes('.mp4') || currentFlash.mediaUrl.includes('.webm') || currentFlash.mediaUrl.includes('.ogg');
+  const isVideo = currentFlash.mediaUrl && (currentFlash.mediaUrl.includes('.mp4') || currentFlash.mediaUrl.includes('.webm') || currentFlash.mediaUrl.includes('.ogg'));
 
 
   return (
@@ -312,7 +312,7 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
                 </div>
             ) : (
                 <div className="relative w-full h-full">
-                    <img src={currentFlash.mediaUrl} alt="flash" className="w-full h-full object-contain" />
+                    {currentFlash.mediaUrl && <img src={currentFlash.mediaUrl} alt="flash" className="w-full h-full object-contain" />}
                     <Watermark />
                 </div>
             )}
