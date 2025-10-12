@@ -42,8 +42,7 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
             
             if (result.success?.url) {
                 const newUrls = [...(data.mediaUrl || []), result.success.url];
-                const isVideo = file.type.startsWith('video/');
-                onDataChange({ ...data, mediaUrl: newUrls, isVideo: data.isVideo || isVideo });
+                onDataChange({ ...data, mediaUrl: newUrls });
             } else {
                 throw new Error(result.failure || "File upload failed.");
             }
@@ -70,14 +69,12 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
                 window.URL.revokeObjectURL(video.src);
                 const isPortrait = video.videoHeight > video.videoWidth;
                 const videoDuration = video.duration;
-                // Set isVideo to true here
-                onDataChange({ ...data, isPortrait: isPortrait, videoDuration: videoDuration, isVideo: true });
+                onDataChange({ ...data, isPortrait: isPortrait, videoDuration: videoDuration });
                 await uploadFile(file);
             };
             video.src = URL.createObjectURL(file);
         } else {
-             // For images, ensure isVideo is not set to true unless a video was already added
-             onDataChange({ ...data, isPortrait: false, videoDuration: 0, isVideo: data.isVideo || false });
+             onDataChange({ ...data, isPortrait: false, videoDuration: 0 });
              await uploadFile(file);
         }
     };
@@ -103,8 +100,7 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
     
     const removeMedia = (urlToRemove: string) => {
         const newUrls = (data.mediaUrl || []).filter((url: string) => url !== urlToRemove);
-        const hasVideo = newUrls.some(url => url.includes('.mp4') || url.includes('/video/'));
-        onDataChange({ ...data, mediaUrl: newUrls, isVideo: hasVideo });
+        onDataChange({ ...data, mediaUrl: newUrls });
     };
 
     const handleTextChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
