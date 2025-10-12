@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
-import { getFirestore, collection, query, where, orderBy, onSnapshot } from "firebase/firestore";
+import { getFirestore, collection, query, where, orderBy, onSnapshot, limit } from "firebase/firestore";
 import { app } from "@/utils/firebaseClient";
 import { VibeSpaceLoader } from "@/components/VibeSpaceLoader";
 import { ShortsPlayer } from "@/components/ShortsPlayer";
@@ -8,18 +8,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Music, Gamepad2, TrendingUp } from 'lucide-react';
 import { MusicDiscovery } from '@/components/MusicDiscovery';
 import { GamesHub } from '@/components/GamesHub';
+import { ScopeNavBar } from "@/components/scope/ScopeNavBar";
+import { Trendboard } from "@/components/scope/Trendboard";
 
 const db = getFirestore(app);
-
-function Trendboard() {
-    return (
-        <div className="flex flex-col items-center justify-center h-full text-center text-gray-400">
-            <TrendingUp size={64} className="mb-4 text-accent-purple"/>
-            <h3 className="text-xl font-bold">Trending Board</h3>
-            <p>This feature is coming soon!</p>
-        </div>
-    )
-}
 
 export default function ScopePage() {
     const [posts, setPosts] = useState<any[]>([]);
@@ -47,9 +39,9 @@ export default function ScopePage() {
         return () => unsub();
     }, []);
 
-    const handleDoubleClick = () => {
+    const handleDoubleClick = useCallback(() => {
         setViewMode(current => (current === 'videos' ? 'hub' : 'videos'));
-    };
+    }, []);
 
     if (loading) {
         return <VibeSpaceLoader />;
@@ -65,7 +57,8 @@ export default function ScopePage() {
     };
 
     return (
-        <div className="w-full h-full" onDoubleClick={handleDoubleClick}>
+        <div className="w-full h-[calc(100vh-var(--nav-height,80px))] bg-black flex flex-col" onDoubleClick={handleDoubleClick}>
+            <ScopeNavBar onDoubleClick={handleDoubleClick} />
             <AnimatePresence mode="wait">
                 {viewMode === 'videos' ? (
                     <motion.div
@@ -73,7 +66,7 @@ export default function ScopePage() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="w-full h-[calc(100vh-var(--nav-height,80px))] snap-y snap-mandatory overflow-y-scroll overflow-x-hidden"
+                        className="w-full flex-1 snap-y snap-mandatory overflow-y-scroll overflow-x-hidden"
                     >
                         {posts.length > 0 ? (
                             posts.map((post) => (
@@ -94,9 +87,8 @@ export default function ScopePage() {
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.95 }}
-                        className="w-full h-full flex flex-col p-4"
+                        className="w-full flex-1 flex flex-col p-4"
                     >
-                        <p className="text-center text-xs text-gray-500 mb-4">Double-tap screen to go back to videos</p>
                         <div className="flex justify-center gap-2 mb-4 p-1 rounded-full bg-black/30">
                             <button onClick={() => setActiveTab('music')} className={`px-4 py-2 rounded-full font-bold flex items-center gap-2 transition-colors ${activeTab === 'music' ? 'bg-accent-pink text-white' : 'text-gray-400'}`}><Music size={16}/> Music</button>
                             <button onClick={() => setActiveTab('games')} className={`px-4 py-2 rounded-full font-bold flex items-center gap-2 transition-colors ${activeTab === 'games' ? 'bg-accent-green text-black' : 'text-gray-400'}`}><Gamepad2 size={16}/> Games</button>
