@@ -1,7 +1,7 @@
 
 "use client";
 import React, { useState, useEffect } from 'react';
-import { getFirestore, collection, query as firestoreQuery, getDocs, where } from 'firebase/firestore';
+import { getFirestore, collection, query as firestoreQuery, getDocs, where, collectionGroup, orderBy, limit } from 'firebase/firestore';
 import { app } from '@/utils/firebaseClient';
 import { Loader, Trophy, User, Star } from 'lucide-react';
 import Link from 'next/link';
@@ -67,9 +67,9 @@ export function Trendboard() {
 
                 // Sort and set leaderboards
                 setLeaderboards({
-                    posts: [...usersData].sort((a, b) => b.postCount - a.postCount).slice(0, 3),
-                    followers: [...usersData].sort((a, b) => b.followerCount - a.followerCount).slice(0, 3),
-                    likes: [...usersData].sort((a, b) => b.totalLikes - a.totalLikes).slice(0, 3),
+                    posts: [...usersData].sort((a, b) => b.postCount - a.postCount).slice(0, 10),
+                    followers: [...usersData].sort((a, b) => b.followerCount - a.followerCount).slice(0, 10),
+                    likes: [...usersData].sort((a, b) => b.totalLikes - a.totalLikes).slice(0, 10),
                 });
 
             } catch (error) {

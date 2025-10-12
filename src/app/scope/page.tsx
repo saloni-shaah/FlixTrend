@@ -75,14 +75,14 @@ export default function ScopePage() {
     };
 
     return (
-        <div className={`w-full h-screen bg-black flex flex-col`} onDoubleClick={handleDoubleClick}>
+        <div className={`w-full h-screen bg-black flex flex-col relative`} onDoubleClick={handleDoubleClick}>
              {/* This style tag will dynamically add/remove the class to hide the nav */}
              <style jsx global>{`
                 nav.fixed.bottom-0 {
                     display: ${hideAppNav ? 'none' : 'flex'} !important;
                 }
              `}</style>
-            <ScopeNavBar onDoubleClick={handleDoubleClick} />
+            
             <AnimatePresence mode="wait">
                 {viewMode === 'videos' ? (
                     <motion.div
@@ -90,8 +90,9 @@ export default function ScopePage() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="w-full flex-1 snap-y snap-mandatory overflow-y-scroll overflow-x-hidden"
+                        className="absolute inset-0 w-full h-full snap-y snap-mandatory overflow-y-scroll overflow-x-hidden"
                     >
+                        <ScopeNavBar onDoubleClick={handleDoubleClick} />
                         {posts.length > 0 ? (
                             posts.map((post) => (
                                 <div key={post.id} className="h-screen w-screen snap-start flex items-center justify-center">
@@ -111,8 +112,9 @@ export default function ScopePage() {
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.95 }}
-                        className="w-full flex-1 flex flex-col p-4 overflow-y-auto"
+                        className="w-full flex-1 flex flex-col p-4 pt-20 overflow-y-auto"
                     >
+                         <ScopeNavBar onDoubleClick={handleDoubleClick} />
                         <div className="flex justify-center gap-2 mb-4 p-1 rounded-full bg-black/30">
                             <button onClick={() => setActiveTab('music')} className={`px-4 py-2 rounded-full font-bold flex items-center gap-2 transition-colors ${activeTab === 'music' ? 'bg-blue-500 text-white' : 'text-gray-400'}`}><Music size={16}/> Music</button>
                             <button onClick={() => setActiveTab('games')} className={`px-4 py-2 rounded-full font-bold flex items-center gap-2 transition-colors ${activeTab === 'games' ? 'bg-green-500 text-white' : 'text-gray-400'}`}><Gamepad2 size={16}/> Games</button>
