@@ -49,8 +49,8 @@ export function ShortsPlayer({ post }: { post: any }) {
         }
     };
     
-    // This component renders a full-screen vertical video player.
-    const videoUrl = Array.isArray(post.mediaUrl) ? post.mediaUrl.find(url => url.includes('.mp4')) : post.mediaUrl;
+    // The videoUrl is now guaranteed to be a single URL string for media posts.
+    const videoUrl = post.mediaUrl;
 
     return (
         <div ref={containerRef} className="relative w-full h-full max-h-[85vh] max-w-sm rounded-2xl overflow-hidden bg-black flex items-center justify-center">

@@ -1,6 +1,6 @@
 
 "use client";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { getFirestore, collection, query, where, orderBy, onSnapshot, limit, getDocs, startAfter } from "firebase/firestore";
 import { app } from "@/utils/firebaseClient";
 import { VibeSpaceLoader } from "@/components/VibeSpaceLoader";
@@ -13,13 +13,12 @@ export default function ScopePage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // This query fetches only posts that are videos, ordered by creation date.
-        // The isVideo flag is set during the upload process.
+        // This query now correctly and efficiently fetches only video posts.
         const q = query(
             collection(db, "posts"),
             where("isVideo", "==", true),
-            orderBy("createdAt", "desc"),
-            limit(20) // Let's start with a reasonable limit
+            orderBy("publishAt", "desc"),
+            limit(50) // A reasonable limit for a video feed
         );
 
         const unsub = onSnapshot(q, (snapshot) => {
