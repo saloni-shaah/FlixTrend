@@ -1,28 +1,51 @@
-
 'use client';
 
-import { getFirestore, collection, addDoc, serverTimestamp, doc, deleteDoc, writeBatch, getDoc, getDocs } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, serverTimestamp, doc, deleteDoc, writeBatch, getDoc, getDocs, updateDoc } from 'firebase/firestore';
 import { app } from './firebaseClient';
+import { auth } from './firebaseClient';
 
 const db = getFirestore(app);
 
 /**
- * Creates a new call document in Firestore to initiate the signaling process.
+ * Creates a new call document in Firestore and updates user documents to initiate the signaling process.
  * @param caller The user initiating the call.
  * @param callee The user being called.
  * @returns The ID of the newly created call document.
  */
-export async function createCall(caller: any, callee: any): Promise<string> {
-  const callCollection = collection(db, 'calls');
-  const callDocRef = await addDoc(callCollection, {
-    callerId: caller.uid,
-    callerName: caller.displayName || caller.email,
-    calleeId: callee.uid,
-    calleeName: callee.name || callee.username,
-    createdAt: serverTimestamp(),
-    status: 'pending', // Status can be 'pending', 'answered', 'ended'
-  });
-  return callDocRef.id;
+export async function createCall(caller: any, callee: any): Promise<string | null> {
+  const currentUser = auth.currentUser;
+  if (!currentUser) return null;
+
+  try {
+    // Use a batch write to ensure atomicity
+    const batch = writeBatch(db);
+
+    // 1. Create the call document
+    const callCollection = collection(db, 'calls');
+    const callDocRef = doc(callCollection); // Create a reference with a new ID
+    batch.set(callDocRef, {
+      callerId: caller.uid,
+      callerName: caller.displayName || caller.email,
+      calleeId: callee.uid,
+      calleeName: callee.name || callee.username,
+      createdAt: serverTimestamp(),
+      status: 'pending',
+    });
+
+    // 2. Update both users' documents with the currentCallId
+    const callerUserDocRef = doc(db, 'users', caller.uid);
+    batch.update(callerUserDocRef, { currentCallId: callDocRef.id });
+
+    const calleeUserDocRef = doc(db, 'users', callee.uid);
+    batch.update(calleeUserDocRef, { currentCallId: callDocRef.id });
+
+    await batch.commit();
+
+    return callDocRef.id;
+  } catch (error) {
+    console.error("Error creating call:", error);
+    return null;
+  }
 }
 
 /**

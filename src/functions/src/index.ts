@@ -31,6 +31,77 @@ export const onNewUserCreate = functions.auth.user().onCreate(async (user) => {
     }
 });
 
+/**
+ * Sends a push notification to the callee when a new call document is created.
+ */
+export const onCallCreated = functions.firestore
+    .document('calls/{callId}')
+    .onCreate(async (snap) => {
+        const callData = snap.data();
+        if (!callData) {
+            logger.log('No call data found');
+            return;
+        }
+
+        const { calleeId, callerName } = callData;
+
+        if (!calleeId) {
+            logger.log('calleeId is missing');
+            return;
+        }
+
+        const userDocRef = db.collection('users').doc(calleeId);
+        const userDoc = await userDocRef.get();
+        if (!userDoc.exists) {
+            logger.log('Callee user document not found');
+            return;
+        }
+
+        const fcmToken = userDoc.data()?.fcmToken;
+        if (!fcmToken) {
+            logger.log(`FCM token not found for callee ${calleeId}`);
+            return;
+        }
+        
+        const payload = {
+            token: fcmToken,
+            notification: {
+                title: 'Incoming Call on FlixTrend',
+                body: `${callerName || 'Someone'} is calling you!`,
+            },
+            data: {
+                type: 'incoming_call',
+                callId: snap.id,
+            },
+            apns: {
+                headers: {
+                    'apns-priority': '10',
+                },
+                payload: {
+                    aps: {
+                        sound: 'ringtone.mp3',
+                        'content-available': 1,
+                    },
+                },
+            },
+            android: {
+                priority: 'high',
+                notification: {
+                    sound: 'ringtone',
+                    channel_id: 'incoming_calls',
+                },
+            },
+        };
+
+        try {
+            // @ts-ignore
+            await getMessaging().send(payload);
+            logger.info('Successfully sent call notification');
+        } catch (error) {
+            logger.error('Error sending call notification:', error);
+        }
+    });
+
 
 /**
  * A generic function to send notifications.

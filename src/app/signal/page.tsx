@@ -7,7 +7,7 @@ import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, S
 import { useAppState } from "@/utils/AppStateContext";
 import { createCall } from "@/utils/callService";
 import { motion, AnimatePresence } from "framer-motion";
-import { uploadFileToFirebaseStorage } from "@/app/actions";
+import { uploadFileToFirebaseStorage } from '@/app/actions';
 
 const anonymousNames = ["Ram", "Shyam", "Sita", "Mohan", "Krishna", "Radha", "Anchal", "Anaya", "Advik", "Diya", "Rohan", "Priya", "Arjun", "Saanvi", "Kabir"];
 const generateAnonymousName = (userId: string, chatId: string) => {
@@ -719,9 +719,10 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
       return;
     };
     
-    await createCall(firebaseUser, selectedChat);
-
-    // This notification logic will be replaced by the Cloud Function
+    const callId = await createCall(firebaseUser, selectedChat);
+    if (!callId) {
+      alert("Failed to initiate call. Please try again.");
+    }
   };
   
   const handleJoinAnonymousGroup = async (group: any) => {
