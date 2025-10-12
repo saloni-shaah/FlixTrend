@@ -1,8 +1,9 @@
+
 "use client";
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { PostCard } from './PostCard';
 import { OptimizedVideo } from './OptimizedVideo';
-import { Play } from 'lucide-react';
+import { Play, Volume2, VolumeX } from 'lucide-react';
 import { useAppState } from '@/utils/AppStateContext';
 import { doc, updateDoc, increment, getFirestore } from 'firebase/firestore';
 import { app } from '@/utils/firebaseClient';
@@ -14,6 +15,7 @@ export function ShortsPlayer({ post }: { post: any }) {
     const containerRef = useRef<HTMLDivElement>(null);
     const { setIsScopeVideoPlaying } = useAppState();
     const [isInternallyPlaying, setIsInternallyPlaying] = useState(false);
+    const [isMuted, setIsMuted] = useState(true);
     const viewCountedRef = useRef(false);
 
     const incrementViewCount = useCallback(() => {
@@ -56,11 +58,16 @@ export function ShortsPlayer({ post }: { post: any }) {
         video.addEventListener('play', handlePlay);
         video.addEventListener('pause', handlePause);
 
+        // Sync local mute state with video's actual muted property
+        const handleVolumeChange = () => setIsMuted(video.muted);
+        video.addEventListener('volumechange', handleVolumeChange);
+
         return () => {
             if (video) {
                 observer.unobserve(video);
                 video.removeEventListener('play', handlePlay);
                 video.removeEventListener('pause', handlePause);
+                video.removeEventListener('volumechange', handleVolumeChange);
             }
             setIsScopeVideoPlaying(false);
         };
@@ -77,23 +84,36 @@ export function ShortsPlayer({ post }: { post: any }) {
             }
         }
     };
+
+    const toggleMute = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        const video = videoRef.current;
+        if (video) {
+            video.muted = !video.muted;
+        }
+    };
     
     const videoUrl = Array.isArray(post.mediaUrl) ? post.mediaUrl.find(url => /\.(mp4|webm|ogg)$/i.test(url)) : post.mediaUrl;
 
     return (
-        <div ref={containerRef} className="relative w-screen h-screen bg-black flex items-center justify-center">
+        <div ref={containerRef} className="relative w-screen h-screen bg-black flex items-center justify-center" onClick={handleVideoClick}>
             <OptimizedVideo
                 ref={videoRef}
                 src={videoUrl}
                 className="w-full h-full object-contain"
                 loop
                 playsInline
-                muted // Muted by default for autoplay policies
-                onClick={handleVideoClick}
+                muted // Start muted for autoplay
             />
             
             <PostCard post={post} isShortVibe={true} />
             
+            <div className="absolute top-4 right-4 z-20">
+                <button onClick={toggleMute} className="p-2 bg-black/50 rounded-full text-white">
+                    {isMuted ? <VolumeX /> : <Volume2 />}
+                </button>
+            </div>
+
             {!isInternallyPlaying && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
                     <Play size={64} className="text-white/70 drop-shadow-lg" />
