@@ -172,7 +172,7 @@ export default function AppNavBar() {
   }, [currentUser, isOffline]);
 
 
-  const hideNav = pathname === "/login" || pathname === "/signup" || pathname === "/" || !!activeCall || pathname === "/guest" || pathname === "/about";
+  const hideNav = pathname === "/login" || pathname === "/signup" || pathname === "/" || !!activeCall || pathname === "/guest" || pathname === "/about" || pathname.startsWith('/scope');
 
   if (hideNav) return null;
 
