@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useRef, useEffect, useState } from 'react';
 import { PostCard } from './PostCard';
@@ -50,7 +49,7 @@ export function ShortsPlayer({ post }: { post: any }) {
     };
     
     // The videoUrl is now guaranteed to be a single URL string for media posts.
-    const videoUrl = post.mediaUrl;
+    const videoUrl = Array.isArray(post.mediaUrl) ? post.mediaUrl.find(url => /\.(mp4|webm|ogg)$/i.test(url)) : post.mediaUrl;
 
     return (
         <div ref={containerRef} className="relative w-full h-full max-h-[85vh] max-w-sm rounded-2xl overflow-hidden bg-black flex items-center justify-center">
