@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -31,7 +32,8 @@ export function FollowButton({ profileUser, currentUser }: { profileUser: any; c
       await setDoc(followDocRef, { followedAt: serverTimestamp(), userId: currentUser.uid });
       await setDoc(followingDocRef, { followedAt: serverTimestamp(), userId: profileUser.uid });
       
-      const notifRef = collection(db, "notifications", profileUser.uid, "user_notifications");
+      // Create a notification for the user being followed
+      const notifRef = collection(db, "users", profileUser.uid, "notifications");
       await addDoc(notifRef, {
         type: 'follow',
         fromUserId: currentUser.uid,
