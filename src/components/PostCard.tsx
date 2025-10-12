@@ -1,9 +1,10 @@
+
 "use client";
 
 import React, { useEffect, useState, useRef } from 'react';
 import { getFirestore, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, deleteDoc, updateDoc, doc as fsDoc, setDoc, getDoc, runTransaction } from "firebase/firestore";
 import { FaPlay, FaRegComment, FaExclamationTriangle, FaVolumeMute, FaUserSlash, FaLink, FaMusic } from "react-icons/fa";
-import { Repeat2, Star, Share, MessageCircle, Bookmark, MapPin, Smile, Download, X, MoreVertical, Check, ChevronRight, Circle, ThumbsUp, ThumbsDown, Edit, Trash } from "lucide-react";
+import { Repeat2, Star, Share, MessageCircle, Bookmark, MapPin, Smile, Download, X, MoreVertical, Check, ChevronRight, Circle, ThumbsUp, ThumbsDown, Edit, Trash, Eye } from "lucide-react";
 import { auth, app } from '@/utils/firebaseClient';
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -83,6 +84,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
   const [editContent, setEditContent] = React.useState(post.content || "");
   const [pollVotes, setPollVotes] = React.useState<{ [optionIdx: number]: { count: number, voters: string[] } }>({});
   const [userPollVote, setUserPollVote] = React.useState<number | null>(null);
+  const [viewCount, setViewCount] = useState(post.viewCount || 0);
 
   const currentUser = auth.currentUser;
   const deletePostCallable = httpsCallable(functions, 'deletePost');
@@ -111,6 +113,17 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
 
     return () => unsubPollVotes();
   }, [post.id, currentUser, post.type, post.pollOptions]);
+
+  // Real-time listener for viewCount
+  useEffect(() => {
+    const postRef = fsDoc(db, 'posts', post.id);
+    const unsubscribe = onSnapshot(postRef, (doc) => {
+        if (doc.exists()) {
+            setViewCount(doc.data().viewCount || 0);
+        }
+    });
+    return () => unsubscribe();
+  }, [post.id]);
 
   const handleDelete = async () => {
     if (window.confirm("Are you sure you want to permanently delete this post and all its interactions? This cannot be undone.")) {
@@ -149,6 +162,11 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
                 </Link>
                 <div className="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
                     <span>{contentPost.createdAt?.toDate?.().toLocaleString?.() || "Just now"}</span>
+                    {contentPost.isVideo && (
+                        <span className="flex items-center gap-1">
+                            <Eye size={14} /> {viewCount.toLocaleString()}
+                        </span>
+                    )}
                     {currentUser?.uid === contentPost.userId && !isShortVibe && (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>

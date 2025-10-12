@@ -1,11 +1,16 @@
+
 "use client";
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { OptimizedVideo } from '../OptimizedVideo';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Pause, Volume2, VolumeX, Maximize, Minimize, FastForward, PictureInPicture2, Youtube } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Maximize, PictureInPicture2, Youtube } from 'lucide-react';
 import { Watermark } from './Watermark';
 import { TheaterModeContainer } from './TheaterModeContainer';
 import { OptimizedImage } from '../OptimizedImage';
+import { doc, updateDoc, increment, getFirestore } from 'firebase/firestore';
+import { app } from '@/utils/firebaseClient';
+
+const db = getFirestore(app);
 
 function formatTime(seconds: number) {
     if (isNaN(seconds)) return "00:00";
@@ -16,9 +21,9 @@ function formatTime(seconds: number) {
 
 export function InFeedVideoPlayer({ mediaUrls, post }: { mediaUrls: string[]; post: any }) {
     const videoUrl = mediaUrls.find(url => url.includes('.mp4') || url.includes('.webm') || url.includes('.ogg'));
+    const viewCountedRef = useRef(false);
 
     if (!videoUrl) {
-        // If there's no video, just show the first image if it exists.
         if (mediaUrls && mediaUrls.length > 0) {
             return (
                 <div className="mt-2 rounded-xl overflow-hidden">
@@ -26,7 +31,7 @@ export function InFeedVideoPlayer({ mediaUrls, post }: { mediaUrls: string[]; po
                 </div>
             );
         }
-        return null; // Or some fallback UI if no media at all
+        return null;
     }
     
     const containerRef = useRef<HTMLDivElement>(null);
@@ -40,6 +45,15 @@ export function InFeedVideoPlayer({ mediaUrls, post }: { mediaUrls: string[]; po
     const [showControls, setShowControls] = useState(false);
     const [isTheaterMode, setIsTheaterMode] = useState(false);
     const lastTap = useRef(0);
+
+    const incrementViewCount = useCallback(() => {
+        if (viewCountedRef.current || !post.id) return;
+        viewCountedRef.current = true;
+        const postRef = doc(db, 'posts', post.id);
+        updateDoc(postRef, {
+            viewCount: increment(1)
+        }).catch(error => console.error("Error incrementing view count:", error));
+    }, [post.id]);
     
     const togglePlay = useCallback((e?: React.MouseEvent) => {
         e?.stopPropagation();
@@ -102,6 +116,11 @@ export function InFeedVideoPlayer({ mediaUrls, post }: { mediaUrls: string[]; po
             containerRef.current?.requestFullscreen();
         }
     };
+
+    const handlePlay = () => {
+        setIsPlaying(true);
+        incrementViewCount();
+    };
     
     useEffect(() => {
         const video = videoRef.current;
@@ -154,7 +173,7 @@ export function InFeedVideoPlayer({ mediaUrls, post }: { mediaUrls: string[]; po
                     className="w-full h-full object-contain"
                     onTimeUpdate={handleTimeUpdate}
                     onLoadedMetadata={handleLoadedMetadata}
-                    onPlay={() => setIsPlaying(true)}
+                    onPlay={handlePlay}
                     onPause={() => setIsPlaying(false)}
                 />
                 <Watermark isAnimated={isPlaying} />
