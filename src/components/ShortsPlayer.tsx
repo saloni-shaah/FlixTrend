@@ -1,13 +1,16 @@
+
 "use client";
 import React, { useRef, useEffect, useState } from 'react';
 import { PostCard } from './PostCard';
 import { OptimizedVideo } from './OptimizedVideo';
 import { Play } from 'lucide-react';
+import { useAppState } from '@/utils/AppStateContext';
 
 export function ShortsPlayer({ post }: { post: any }) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
-    const [isPlaying, setIsPlaying] = useState(false);
+    const { setIsScopeVideoPlaying } = useAppState();
+    const [isInternallyPlaying, setIsInternallyPlaying] = useState(false);
 
     useEffect(() => {
         const video = videoRef.current;
@@ -19,16 +22,23 @@ export function ShortsPlayer({ post }: { post: any }) {
                     video.play().catch(e => console.log("Autoplay was prevented. User must interact first."));
                 } else {
                     video.pause();
-                    video.currentTime = 0; // Reset video on scroll away
+                    video.currentTime = 0;
                 }
             },
-            { threshold: 0.7 } // Start playing when 70% of the video is visible
+            { threshold: 0.7 }
         );
 
         observer.observe(video);
         
-        const handlePlay = () => setIsPlaying(true);
-        const handlePause = () => setIsPlaying(false);
+        const handlePlay = () => {
+            setIsInternallyPlaying(true);
+            setIsScopeVideoPlaying(true);
+        };
+        const handlePause = () => {
+            setIsInternallyPlaying(false);
+            setIsScopeVideoPlaying(false);
+        };
+        
         video.addEventListener('play', handlePlay);
         video.addEventListener('pause', handlePause);
 
@@ -38,11 +48,13 @@ export function ShortsPlayer({ post }: { post: any }) {
                 video.removeEventListener('play', handlePlay);
                 video.removeEventListener('pause', handlePause);
             }
+            // When component unmounts, assume video is not playing
+            setIsScopeVideoPlaying(false);
         };
-    }, []);
+    }, [setIsScopeVideoPlaying]);
 
     const handleVideoClick = (e: React.MouseEvent) => {
-        e.stopPropagation(); // Prevent double-click from bubbling up to the page container
+        e.stopPropagation();
         const video = videoRef.current;
         if (video) {
             if (video.paused) {
@@ -56,7 +68,7 @@ export function ShortsPlayer({ post }: { post: any }) {
     const videoUrl = Array.isArray(post.mediaUrl) ? post.mediaUrl.find(url => /\.(mp4|webm|ogg)$/i.test(url)) : post.mediaUrl;
 
     return (
-        <div ref={containerRef} className="relative w-full h-full max-h-[100vh] max-w-full sm:max-w-sm rounded-none sm:rounded-2xl overflow-hidden bg-black flex items-center justify-center">
+        <div ref={containerRef} className="relative w-screen h-screen bg-black flex items-center justify-center">
             <OptimizedVideo
                 ref={videoRef}
                 src={videoUrl}
@@ -69,7 +81,7 @@ export function ShortsPlayer({ post }: { post: any }) {
             
             <PostCard post={post} isShortVibe={true} />
             
-            {!isPlaying && (
+            {!isInternallyPlaying && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
                     <Play size={64} className="text-white/70 drop-shadow-lg" />
                 </div>
