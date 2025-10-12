@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { PostCard } from './PostCard';
@@ -7,6 +6,9 @@ import { Play, Volume2, VolumeX } from 'lucide-react';
 import { useAppState } from '@/utils/AppStateContext';
 import { doc, updateDoc, increment, getFirestore } from 'firebase/firestore';
 import { app } from '@/utils/firebaseClient';
+import { PostActions } from './PostActions';
+import Link from 'next/link';
+import { FaMusic } from 'react-icons/fa';
 
 const db = getFirestore(app);
 
@@ -14,9 +16,11 @@ export function ShortsPlayer({ post }: { post: any }) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const { setIsScopeVideoPlaying } = useAppState();
-    const [isInternallyPlaying, setIsInternallyPlaying] = useState(false);
+    const [isPlaying, setIsPlaying] = useState(false);
     const [isMuted, setIsMuted] = useState(true);
+    const [showComments, setShowComments] = useState(false);
     const viewCountedRef = useRef(false);
+    const lastTap = useRef(0);
 
     const incrementViewCount = useCallback(() => {
         if (viewCountedRef.current || !post.id) return;
@@ -46,19 +50,18 @@ export function ShortsPlayer({ post }: { post: any }) {
         observer.observe(video);
         
         const handlePlay = () => {
-            setIsInternallyPlaying(true);
+            setIsPlaying(true);
             setIsScopeVideoPlaying(true);
             incrementViewCount();
         };
         const handlePause = () => {
-            setIsInternallyPlaying(false);
+            setIsPlaying(false);
             setIsScopeVideoPlaying(false);
         };
         
         video.addEventListener('play', handlePlay);
         video.addEventListener('pause', handlePause);
 
-        // Sync local mute state with video's actual muted property
         const handleVolumeChange = () => setIsMuted(video.muted);
         video.addEventListener('volumechange', handleVolumeChange);
 
@@ -75,14 +78,21 @@ export function ShortsPlayer({ post }: { post: any }) {
 
     const handleVideoClick = (e: React.MouseEvent) => {
         e.stopPropagation();
-        const video = videoRef.current;
-        if (video) {
-            if (video.paused) {
-                video.play();
-            } else {
-                video.pause();
+        const now = Date.now();
+        const DOUBLE_TAP_DELAY = 300;
+        if (now - lastTap.current < DOUBLE_TAP_DELAY) {
+            // This is a double tap, you can add a like animation here if desired
+        } else {
+           const video = videoRef.current;
+            if (video) {
+                if (video.paused) {
+                    video.play();
+                } else {
+                    video.pause();
+                }
             }
         }
+        lastTap.current = now;
     };
 
     const toggleMute = (e: React.MouseEvent) => {
@@ -103,19 +113,41 @@ export function ShortsPlayer({ post }: { post: any }) {
                 className="w-full h-full object-contain"
                 loop
                 playsInline
-                muted={isMuted}
+                muted={isMuted} // Controlled by state
                 autoPlay
             />
             
-            <PostCard post={post} isShortVibe={true} />
-            
+            {/* Overlay for UI elements */}
+            <div className="absolute inset-0 w-full h-full p-4 flex items-end bg-gradient-to-t from-black/60 via-transparent to-transparent">
+                {/* Main content on the left */}
+                <div className="flex-1 flex flex-col gap-2 self-end mb-4 text-white drop-shadow-lg">
+                    <Link href={`/squad/${post.userId}`} className="flex items-center gap-2 group cursor-pointer w-fit">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green flex items-center justify-center font-bold text-lg overflow-hidden border-2 border-accent-green group-hover:scale-105 transition-transform">
+                            {post.avatar_url ? <img src={post.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : <span className="text-white">{post.displayName?.[0] || 'U'}</span>}
+                        </div>
+                        <span className="font-headline text-white text-base group-hover:underline">@{post.username || "user"}</span>
+                    </Link>
+                    <p className="text-white text-sm font-body line-clamp-3">{post.content}</p>
+                    {post.song && (
+                        <div className="flex items-center gap-2 text-white text-sm">
+                            <FaMusic /> <span>{post.song.name} - {post.song.artists.join(", ")}</span>
+                        </div>
+                    )}
+                </div>
+
+                {/* Vertical action buttons on the right */}
+                <div className="flex flex-col gap-4 self-end mb-4">
+                    <PostActions post={post} isShortVibe={true} onCommentClick={() => setShowComments(true)} />
+                </div>
+            </div>
+
             <div className="absolute top-4 right-4 z-20">
                 <button onClick={toggleMute} className="p-2 bg-black/50 rounded-full text-white">
                     {isMuted ? <VolumeX /> : <Volume2 />}
                 </button>
             </div>
 
-            {!isInternallyPlaying && (
+            {!isPlaying && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
                     <Play size={64} className="text-white/70 drop-shadow-lg" />
                 </div>
