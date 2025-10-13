@@ -2,7 +2,7 @@
 "use client";
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, ArrowLeft, UploadCloud, Eye, FileVideo, Gamepad2, Bot, Sparkles, X, DollarSign, Target, MousePointerClick, BarChart, Monitor } from 'lucide-react';
+import { ArrowRight, ArrowLeft, UploadCloud, Eye, FileVideo, Gamepad2, Sparkles, X, DollarSign, Target, MousePointerClick, BarChart, Monitor } from 'lucide-react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '@/utils/firebaseClient';
 import { useRouter } from 'next/navigation';
@@ -190,7 +190,6 @@ export default function CreateAdPage() {
                            <AdPlacementCard icon={<Sparkles/>} title="Flashes" description="Full-screen, skippable ad between user Flashes." selected={placements.includes('flashes')} onSelect={() => togglePlacement('flashes')} />
                            <AdPlacementCard icon={<FileVideo/>} title="Scope Videos" description="Short skippable video ad between Scope clips." selected={placements.includes('scope')} onSelect={() => togglePlacement('scope')} />
                            <AdPlacementCard icon={<Gamepad2/>} title="Game Start" description="Non-skippable ad shown before a game starts." selected={placements.includes('games')} onSelect={() => togglePlacement('games')} />
-                           <AdPlacementCard icon={<Bot/>} title="Almighty AI" description="Skippable ad shown when opening the AI chat." selected={placements.includes('almighty')} onSelect={() => togglePlacement('almighty')} />
                         </div>
                     </motion.div>
                 );

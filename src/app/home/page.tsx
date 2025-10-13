@@ -17,7 +17,6 @@ import Link from "next/link";
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import { CreatePostPrompt } from "@/components/CreatePostPrompt";
 import { WelcomeAnimation } from "@/components/WelcomeAnimation";
-import { generateLivekitToken } from '@/ai/flows/generate-livekit-token-flow';
 
 
 const MusicDiscovery = dynamic(() => import('@/components/MusicDiscovery').then(mod => mod.MusicDiscovery), { ssr: false });
@@ -98,7 +97,7 @@ function HomePageContent() {
         setUserProfile(profileData);
         
         // Setup notification listener
-        const q = query(collection(db, "notifications", user.uid, "user_notifications"), where("read", "==", false));
+        const q = query(collection(db, "users", user.uid, "notifications"), where("read", "==", false));
         const unsubNotifs = onSnapshot(q, (snapshot) => {
             setHasUnreadNotifs(!snapshot.empty);
         });

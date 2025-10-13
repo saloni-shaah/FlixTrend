@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { auth } from "@/utils/firebaseClient";
 import { FlixTrendLogo } from "@/components/FlixTrendLogo";
 import { motion } from "framer-motion";
-import { Music, ShieldCheck, Video, MessageSquare, Flame, Gift } from "lucide-react";
+import { Music, ShieldCheck, Video, MessageSquare, Flame } from "lucide-react";
 import { FaInstagram, FaYoutube, FaTwitter } from "react-icons/fa";
 
 
@@ -211,7 +211,7 @@ export default function LandingPage() {
                 whileInView={{ opacity: 1 }}
                 viewport={{ once: true, amount: 0.5 }}
                 className="text-gray-400 mb-8 max-w-2xl mx-auto">
-                We never track you. We never sell your data. Your privacy is our top priority. With end-to-end encryption and AI-powered moderation, your space is yours.
+                We never track you. We never sell your data. Your privacy is our top priority. With end-to-end encryption and moderation, your space is yours.
             </motion.p>
             <motion.div 
                 initial={{ opacity: 0, scale: 0.8 }}
