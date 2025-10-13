@@ -16,7 +16,7 @@ export function FollowButton({ profileUser, currentUser }: { profileUser: any; c
       setIsFollowing(doc.exists());
     });
     return () => unsub();
-  }, [profileUser, currentUser]);
+  }, [profileUser?.uid, currentUser?.uid]);
 
   const handleFollow = async () => {
     if (!currentUser || !profileUser) return;
