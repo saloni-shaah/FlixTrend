@@ -26,6 +26,7 @@ export default function GuestPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const feedEndRef = useRef<HTMLDivElement>(null);
   const observer = useRef<IntersectionObserver>();
+  const [isClient, setIsClient] = useState(false);
 
   const {
     transcript,
@@ -33,6 +34,10 @@ export default function GuestPage() {
     resetTranscript,
     browserSupportsSpeechRecognition
   } = useSpeechRecognition();
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   useEffect(() => {
     if (!listening && transcript) {
@@ -132,7 +137,7 @@ export default function GuestPage() {
       )
     : posts;
 
-  if (!browserSupportsSpeechRecognition) {
+  if (!browserSupportsSpeechRecognition && isClient) {
       console.log("Browser doesn't support speech recognition.");
   }
 
@@ -165,7 +170,7 @@ export default function GuestPage() {
                   onClick={handleVoiceSearch}
                   className={`p-1 rounded-full transition-colors text-gray-400 hover:text-brand-gold ${listening ? 'animate-pulse bg-red-500/50' : ''}`}
                   aria-label="Voice search"
-                  disabled={!browserSupportsSpeechRecognition}
+                  disabled={isClient && !browserSupportsSpeechRecognition}
               >
                   <Mic size={20} />
               </button>
