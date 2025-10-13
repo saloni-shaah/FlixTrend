@@ -7,6 +7,7 @@ const pwaConfig = {
   register: true,
   skipWaiting: true,
   disable: process.env.NODE_ENV === "development",
+  pwaExcludes: [/^(?!.*(?:@firebase|google-auth-library)).*/],
   runtimeCaching: [
     {
       urlPattern: ({ request }) => request.mode === 'navigate',
