@@ -2,7 +2,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { Providers } from "./providers";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://flixtrend-v2.web.app';
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://flixtrend.in';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -20,20 +20,26 @@ export const metadata: Metadata = {
     siteName: 'FlixTrend',
     images: [
       {
-        url: '/icons/icon-512x512.png',
-        width: 512,
-        height: 512,
-        alt: 'FlixTrend Logo',
+        url: '/og-image.png', // Using a more standard OG image name
+        width: 1200,
+        height: 630,
+        alt: 'FlixTrend - The Future of Social',
       },
     ],
-    locale: 'en_US',
+    locale: 'en_IN',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'FlixTrend',
+    title: 'FlixTrend: The Vibe is Here.',
     description: 'The Future of Social, Built for Gen-Z. Secure, Creative, Connected.',
-    images: ['/icons/icon-512x512.png'],
+    creator: '@flixtrend', // Placeholder for your Twitter handle
+    site: '@flixtrend',
+    images: [`${siteUrl}/og-image.png`],
+  },
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/apple-touch-icon.png',
   },
 };
 
