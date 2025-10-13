@@ -1,35 +1,17 @@
 {
   "name": "FlixTrend",
   "short_name": "FlixTrend",
-  "description": "Where Trends Find You First. India's first and its own secure social media, Built for Gen-Z. Secure. Creative. Connected.",
+  "description": "Where Trends Find You First",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#1B1B1E",
-  "theme_color": "#BF00FF",
+  "theme_color": "#1B1B1E",
   "icons": [
     {
-      "src": "/icons/icon-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
       "src": "/icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icons/icon-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "/icons/icon-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any maskable"
     }
   ]
 }
