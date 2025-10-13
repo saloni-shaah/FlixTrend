@@ -1,3 +1,4 @@
+
 import "./globals.css";
 import type { Metadata } from "next";
 import { Providers } from "./providers";
@@ -33,8 +34,8 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'FlixTrend: The Vibe is Here.',
     description: 'The Future of Social, Built for Gen-Z. Secure, Creative, Connected.',
-    creator: '@flixtrend', // Placeholder for your Twitter handle
-    site: '@flixtrend',
+    creator: '@flixtrendapp',
+    site: '@flixtrendapp',
     images: [`${siteUrl}/og-image.png`],
   },
   icons: {
