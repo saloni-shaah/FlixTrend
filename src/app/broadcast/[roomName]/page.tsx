@@ -9,6 +9,7 @@ import '@livekit/components-styles';
 export default function BroadcastPage({ params }: { params: { roomName: string } }) {
   const [user, setUser] = useState(auth.currentUser);
   const [token, setToken] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const roomName = params.roomName ? decodeURIComponent(params.roomName) : '';
 
   useEffect(() => {
@@ -23,24 +24,31 @@ export default function BroadcastPage({ params }: { params: { roomName: string }
 
     const fetchToken = async () => {
       try {
-        const { token: generatedToken } = await generateLivekitToken({
+        const result = await generateLivekitToken({
           roomName: roomName,
           identity: user.uid,
           name: user.displayName || user.email || 'Anonymous',
           isStreamer: true, // This is the broadcaster
         });
         
-        if (!generatedToken) throw new Error("Failed to generate a valid token.");
-        setToken(generatedToken);
+        if (result.error || !result.token) {
+            throw new Error(result.error || "Failed to generate a valid token.");
+        }
+        setToken(result.token);
 
-      } catch (error) {
-        console.error('Failed to get LiveKit token:', error);
+      } catch (e: any) {
+        console.error('Failed to get LiveKit token:', e);
+        setError(e.message);
       }
     };
 
     fetchToken();
   }, [user, roomName]);
 
+  if (error) {
+    return <div className="w-full h-screen flex items-center justify-center bg-black text-red-400 p-4 text-center">Error connecting to broadcast: {error}</div>;
+  }
+  
   if (!token) {
     return <div className="w-full h-screen flex items-center justify-center bg-black text-white">Connecting to broadcast...</div>;
   }
