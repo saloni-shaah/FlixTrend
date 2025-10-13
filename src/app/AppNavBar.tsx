@@ -30,6 +30,22 @@ const SquadIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
+// Custom animated SVG for Scope
+const ScopeIcon = ({ className }: { className?: string }) => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+        <defs>
+            <linearGradient id="scopeGradient" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="var(--accent-pink)" />
+                <stop offset="100%" stopColor="var(--accent-cyan)" />
+            </linearGradient>
+        </defs>
+        <rect width="24" height="24" rx="6" fill="url(#scopeGradient)" className="group-hover:opacity-80 transition-opacity">
+             <animate attributeName="opacity" values="0.7;1;0.7" dur="2s" repeatCount="indefinite" />
+        </rect>
+        <path d="M9.5 16V8L16.5 12L9.5 16Z" fill="white"/>
+    </svg>
+);
+
 
 function NavButton({ href, icon: Icon, label, hasNotification }: { href: string; icon: React.ElementType; label: string; hasNotification?: boolean }) {
   const pathname = usePathname();
@@ -42,7 +58,7 @@ function NavButton({ href, icon: Icon, label, hasNotification }: { href: string;
   };
 
   return (
-    <a href={href} onClick={handleClick} className="relative flex flex-col items-center gap-1 px-2 py-1 text-muted-foreground hover:text-foreground transition-colors">
+    <a href={href} onClick={handleClick} className="relative flex flex-col items-center gap-1 px-2 py-1 text-muted-foreground hover:text-foreground transition-colors group">
       <Icon className={`${isActive ? 'text-brand-gold' : ''}`} />
       <span className={`text-xs font-semibold ${isActive ? 'text-foreground' : ''}`}>{label}</span>
       {isActive && (
@@ -198,7 +214,7 @@ export default function AppNavBar() {
         ) : (
           <>
             <NavButton href="/home" icon={VibeSpaceIcon} label="VibeSpace" />
-            <NavButton href="/scope" icon={Flame} label="Scope" />
+            <NavButton href="/scope" icon={ScopeIcon} label="Scope" />
             <NavButton href="/squad" icon={SquadIcon} label="Squad" />
             <NavButton href="/signal" icon={MessageSquare} label="Signal" hasNotification={hasUnreadMessages} />
           </>
