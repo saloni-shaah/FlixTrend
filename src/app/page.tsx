@@ -22,7 +22,7 @@ export default function LandingPage() {
         "@type": "Organization",
         "name": "FlixTrend",
         "url": "https://flixtrend.in",
-        "logo": "https://flixtrend.in/icons/icon-512x512.png",
+        "logo": "https://flixtrend.in/logo.svg",
         "sameAs": [
           "https://twitter.com/FlxTrnd",
           "https://instagram.com/FlxTrnd",
