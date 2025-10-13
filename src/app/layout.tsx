@@ -34,8 +34,8 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'FlixTrend: The Vibe is Here.',
     description: 'The Future of Social, Built for Gen-Z. Secure, Creative, Connected.',
-    creator: '@flixtrendapp',
-    site: '@flixtrendapp',
+    creator: '@FlxTrnd',
+    site: '@FlxTrnd',
     images: [`${siteUrl}/og-image.png`],
   },
   icons: {

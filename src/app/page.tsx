@@ -24,9 +24,9 @@ export default function LandingPage() {
         "url": "https://flixtrend.in",
         "logo": "https://flixtrend.in/icons/icon-512x512.png",
         "sameAs": [
-          "https://twitter.com/flixtrendapp",
-          "https://instagram.com/flixtrendapp",
-          "https://youtube.com/@flixtrendapp"
+          "https://twitter.com/FlxTrnd",
+          "https://instagram.com/FlxTrnd",
+          "https://youtube.com/@FlxTrnd"
         ]
       },
       {
@@ -278,9 +278,9 @@ export default function LandingPage() {
               FlixTrend
             </h2>
             <div className="flex gap-8">
-                <SocialIcon href="https://instagram.com/flixtrendapp" icon={<FaInstagram />} />
-                <SocialIcon href="https://youtube.com/@flixtrendapp" icon={<FaYoutube />} />
-                <SocialIcon href="https://twitter.com/flixtrendapp" icon={<FaTwitter />} />
+                <SocialIcon href="https://instagram.com/FlxTrnd" icon={<FaInstagram />} />
+                <SocialIcon href="https://youtube.com/@FlxTrnd" icon={<FaYoutube />} />
+                <SocialIcon href="https://twitter.com/FlxTrnd" icon={<FaTwitter />} />
             </div>
             <div className="flex gap-4 text-xs text-gray-500">
                 <Link href="/privacy" className="hover:text-white">Privacy Policy</Link>
