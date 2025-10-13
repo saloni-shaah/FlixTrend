@@ -8,7 +8,7 @@ import { FlixTrendLogo } from "@/components/FlixTrendLogo";
 import { motion } from "framer-motion";
 import { Music, ShieldCheck, Video, MessageSquare, Flame } from "lucide-react";
 import { FaInstagram, FaYoutube, FaFacebook } from "react-icons/fa6";
-import { FaXTwitter } from "react-icons/fa6";
+import { FaXTwitter } from 'react-icons/fa6';
 import Head from 'next/head';
 
 
