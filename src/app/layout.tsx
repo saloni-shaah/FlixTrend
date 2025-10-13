@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     siteName: 'FlixTrend',
     images: [
       {
-        url: '/og-image.png', // Using a more standard OG image name
+        url: '/og-image.png', 
         width: 1200,
         height: 630,
         alt: 'FlixTrend - The Future of Social',
@@ -40,6 +40,7 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: '/favicon.ico',
+    shortcut: '/favicon-16x16.png',
     apple: '/apple-touch-icon.png',
   },
 };
