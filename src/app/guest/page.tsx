@@ -65,27 +65,26 @@ export default function GuestPage() {
 
 
   useEffect(() => {
-    const fetchPosts = async () => {
-        setLoading(true);
-
-        const first = query(
+    const q = query(
         collection(db, "posts"), 
         orderBy("createdAt", "desc"), 
         limit(POSTS_PER_PAGE)
-        );
+    );
 
-        const documentSnapshots = await getDocs(first);
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const firstBatch = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const lastDoc = snapshot.docs[snapshot.docs.length - 1];
         
-        const firstBatch = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
-
         setPosts(firstBatch);
         setLastVisible(lastDoc);
+        setHasMore(snapshot.docs.length === POSTS_PER_PAGE);
         setLoading(false);
-        setHasMore(documentSnapshots.docs.length === POSTS_PER_PAGE);
-    };
+    }, (error) => {
+        console.error("Error fetching posts:", error);
+        setLoading(false);
+    });
 
-    fetchPosts();
+    return () => unsubscribe();
   }, []);
 
    useEffect(() => {
