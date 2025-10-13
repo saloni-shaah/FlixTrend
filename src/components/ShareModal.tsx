@@ -3,7 +3,8 @@
 
 import React, { useEffect } from 'react';
 import { Copy, X, MessageSquare, Code } from 'lucide-react';
-import { FaWhatsapp, FaTwitter, FaTelegramPlane } from 'react-icons/fa';
+import { FaWhatsapp, FaTelegramPlane } from 'react-icons/fa';
+import { FaXTwitter } from 'react-icons/fa6';
 import { motion } from 'framer-motion';
 
 export function ShareModal({ url, title, isVideo, onSignalShare, onClose }: { url: string; title?: string; isVideo?: boolean; onSignalShare: () => void; onClose: () => void }) {
@@ -21,7 +22,7 @@ export function ShareModal({ url, title, isVideo, onSignalShare, onClose }: { ur
   
   const socialShares = [
     { name: 'WhatsApp', icon: <FaWhatsapp />, url: `https://api.whatsapp.com/send?text=${encodeURIComponent(`${shareText} ${url}`)}` },
-    { name: 'Twitter', icon: <FaTwitter />, url: `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(url)}` },
+    { name: 'X', icon: <FaXTwitter />, url: `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(url)}` },
     { name: 'Telegram', icon: <FaTelegramPlane />, url: `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(shareText)}` },
   ]
 
