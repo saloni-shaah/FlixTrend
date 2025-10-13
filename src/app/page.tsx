@@ -8,11 +8,42 @@ import { FlixTrendLogo } from "@/components/FlixTrendLogo";
 import { motion } from "framer-motion";
 import { Music, ShieldCheck, Video, MessageSquare, Flame } from "lucide-react";
 import { FaInstagram, FaYoutube, FaTwitter } from "react-icons/fa";
+import Head from 'next/head';
 
 
 export default function LandingPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "name": "FlixTrend",
+        "url": "https://flixtrend.in",
+        "logo": "https://flixtrend.in/icons/icon-512x512.png",
+        "sameAs": [
+          "https://twitter.com/flixtrend",
+          "https://instagram.com/flixtrend",
+          "https://youtube.com/flixtrend"
+        ]
+      },
+      {
+        "@type": "WebSite",
+        "name": "FlixTrend",
+        "url": "https://flixtrend.in",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": {
+            "@type": "EntryPoint",
+            "urlTemplate": "https://flixtrend.in/guest?q={search_term_string}"
+          },
+          "query-input": "required name=search_term_string"
+        }
+      }
+    ]
+  };
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(user => {
@@ -62,6 +93,12 @@ export default function LandingPage() {
 
   return (
     <>
+      <Head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
+      </Head>
       <style jsx global>{`
         body {
           background: #0a0118;
@@ -282,3 +319,5 @@ function SocialIcon({ icon, href }: { icon: React.ReactNode, href: string }) {
         </a>
     )
 }
+
+    
