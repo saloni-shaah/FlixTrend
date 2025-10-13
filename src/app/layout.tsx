@@ -39,7 +39,7 @@ export const metadata: Metadata = {
     images: [`${siteUrl}/og-image.png`],
   },
   icons: {
-    icon: '/favicon.ico',
+    icon: '/apple-touch-icon.png',
     apple: '/apple-touch-icon.png',
   },
 };
