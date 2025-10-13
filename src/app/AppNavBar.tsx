@@ -30,7 +30,7 @@ const SquadIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-// Custom animated SVG for Scope
+// Custom animated circular SVG for Scope
 const ScopeIcon = ({ className }: { className?: string }) => (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
         <defs>
@@ -39,9 +39,9 @@ const ScopeIcon = ({ className }: { className?: string }) => (
                 <stop offset="100%" stopColor="var(--accent-cyan)" />
             </linearGradient>
         </defs>
-        <rect width="24" height="24" rx="6" fill="url(#scopeGradient)" className="group-hover:opacity-80 transition-opacity">
+        <circle cx="12" cy="12" r="12" fill="url(#scopeGradient)" className="group-hover:opacity-80 transition-opacity">
              <animate attributeName="opacity" values="0.7;1;0.7" dur="2s" repeatCount="indefinite" />
-        </rect>
+        </circle>
         <path d="M9.5 16V8L16.5 12L9.5 16Z" fill="white"/>
     </svg>
 );
