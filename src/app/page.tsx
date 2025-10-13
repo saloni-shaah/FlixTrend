@@ -278,9 +278,9 @@ export default function LandingPage() {
               FlixTrend
             </h2>
             <div className="flex gap-8">
-                <SocialIcon href="#" icon={<FaInstagram />} />
-                <SocialIcon href="#" icon={<FaYoutube />} />
-                <SocialIcon href="#" icon={<FaTwitter />} />
+                <SocialIcon href="https://instagram.com/flixtrend" icon={<FaInstagram />} />
+                <SocialIcon href="https://youtube.com/flixtrend" icon={<FaYoutube />} />
+                <SocialIcon href="https://twitter.com/flixtrend" icon={<FaTwitter />} />
             </div>
             <div className="flex gap-4 text-xs text-gray-500">
                 <Link href="/privacy" className="hover:text-white">Privacy Policy</Link>
@@ -319,5 +319,7 @@ function SocialIcon({ icon, href }: { icon: React.ReactNode, href: string }) {
         </a>
     )
 }
+
+    
 
     
