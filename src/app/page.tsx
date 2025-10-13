@@ -7,7 +7,7 @@ import { auth } from "@/utils/firebaseClient";
 import { FlixTrendLogo } from "@/components/FlixTrendLogo";
 import { motion } from "framer-motion";
 import { Music, ShieldCheck, Video, MessageSquare, Flame } from "lucide-react";
-import { FaInstagram, FaYoutube, FaXTwitter } from "react-icons/fa6";
+import { FaInstagram, FaYoutube, FaXTwitter, FaFacebook } from "react-icons/fa6";
 import Head from 'next/head';
 
 
@@ -26,7 +26,8 @@ export default function LandingPage() {
         "sameAs": [
           "https://twitter.com/FlxTrnd",
           "https://instagram.com/FlxTrnd",
-          "https://youtube.com/@FlxTrnd"
+          "https://youtube.com/@FlxTrnd",
+          "https://facebook.com/FlxTrnd"
         ]
       },
       {
@@ -281,6 +282,7 @@ export default function LandingPage() {
                 <SocialIcon href="https://instagram.com/FlxTrnd" icon={<FaInstagram />} />
                 <SocialIcon href="https://youtube.com/@FlxTrnd" icon={<FaYoutube />} />
                 <SocialIcon href="https://twitter.com/FlxTrnd" icon={<FaXTwitter />} />
+                <SocialIcon href="https://facebook.com/FlxTrnd" icon={<FaFacebook />} />
             </div>
             <div className="flex gap-4 text-xs text-gray-500">
                 <Link href="/privacy" className="hover:text-white">Privacy Policy</Link>
