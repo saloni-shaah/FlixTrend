@@ -1,7 +1,7 @@
 
 
 import { initializeApp } from "firebase-admin/app";
-import { getFirestore, FieldValue, Timestamp, doc, collection, query, where, getDocs, limit, writeBatch, setDoc } from "firebase-admin/firestore";
+import { getFirestore, FieldValue, Timestamp, doc, collection, query, where, getDocs, limit, writeBatch, setDoc, updateDoc, arrayUnion, arrayRemove } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 import * as functions from "firebase-functions";
 import * as logger from "firebase-functions/logger";
@@ -17,16 +17,21 @@ const messaging = getMessaging();
 const storage = getStorage();
 
 /**
- * Sets the creation timestamp for a new user.
- * Premium access is no longer granted here.
+ * Sets the creation timestamp and initial accolades for a new user.
  */
 export const onNewUserCreate = functions.auth.user().onCreate(async (user) => {
     const userRef = doc(db, 'users', user.uid);
     try {
+        const postSnap = await getDocs(query(collection(db, 'posts'), where('userId', '==', user.uid), limit(1)));
+        const accolades = [];
+        if(!postSnap.empty) {
+            accolades.push('vibe_starter');
+        }
+
         await setDoc(userRef, {
             createdAt: FieldValue.serverTimestamp(),
-            // Ensure profileComplete is initialized so it can be checked on the client
-            profileComplete: false 
+            profileComplete: false,
+            accolades: accolades
         }, { merge: true });
         logger.info(`User document created for ${user.uid}`);
     } catch (error) {
@@ -37,7 +42,6 @@ export const onNewUserCreate = functions.auth.user().onCreate(async (user) => {
 
 /**
  * A generic function to send notifications.
- * This can be triggered by creating a new document in a 'notifications' collection.
  */
 export const sendNotification = functions.firestore
   .document('users/{userId}/notifications/{notificationId}')
@@ -108,7 +112,6 @@ export const sendNotification = functions.firestore
 
 /**
  * Cloud Function to delete a user's data upon account deletion.
- * This cleans up Firestore and other related user data.
  */
 export const onUserDelete = functions.auth.user().onDelete(async (user) => {
   logger.info(`User ${user.uid} is being deleted. Cleaning up data.`);
@@ -206,8 +209,6 @@ export const onCallCreated = functions.firestore
 
 /**
  * Deletes a post and all its associated subcollections (comments, stars, relays).
- * This ensures data integrity when a post is removed.
- * This is an HTTPS Callable function.
  */
 export const deletePost = onCall(async (request) => {
     const { postId } = request.data;
@@ -227,7 +228,6 @@ export const deletePost = onCall(async (request) => {
     const postData = postDoc.data();
     const isOwner = postData?.userId === uid;
 
-    // Fetch the admin user's document to check their role
     const adminUserDoc = await admin.firestore().collection('users').doc(uid).get();
     const adminUserData = adminUserDoc.data();
     const isAdmin = adminUserData?.role?.includes('founder') || adminUserData?.role?.includes('developer');
@@ -261,7 +261,6 @@ export const deletePost = onCall(async (request) => {
 
 /**
  * Deletes a user's account and all associated data.
- * This is an HTTPS Callable function that requires re-authentication.
  */
 export const deleteUserAccount = onCall(async (request) => {
   const uid = request.auth?.uid;
@@ -274,9 +273,7 @@ export const deleteUserAccount = onCall(async (request) => {
     const batch = admin.firestore().batch();
     const userRef = admin.firestore().collection('users').doc(uid);
     batch.delete(userRef);
-    // Add deletion of other user-related data (posts, comments, etc.) to the batch here.
-
-    // Finally, delete the user from Firebase Auth
+    
     await admin.auth().deleteUser(uid);
     await batch.commit();
     logger.info(`Successfully deleted account and all data for user ${uid}.`);
@@ -291,13 +288,11 @@ export const deleteUserAccount = onCall(async (request) => {
 
 /**
  * Automatically cleans up expired flashes from Firestore and Firebase Storage.
- * This function is scheduled to run periodically.
  */
 export const cleanupExpiredFlashes = functions.pubsub.schedule('every 1 hours').onRun(async (context) => {
     logger.info('Running expired flashes cleanup job.');
     const now = Timestamp.now();
     
-    // 1. Query for expired flash documents
     const expiredFlashesQuery = query(collection(db, 'flashes'), where('expiresAt', '<=', now));
     const expiredFlashesSnap = await getDocs(expiredFlashesQuery);
 
@@ -313,19 +308,15 @@ export const cleanupExpiredFlashes = functions.pubsub.schedule('every 1 hours').
         logger.info(`Processing expired flash: ${docSnap.id}`);
         const flashData = docSnap.data();
 
-        // 2. Delete the flash document from Firestore
         batch.delete(docSnap.ref);
 
-        // 3. Delete the associated media file from Storage
         if (flashData.mediaUrl) {
             try {
-                // Extract file path from the full URL
                 const fileUrl = new URL(flashData.mediaUrl);
                 const filePath = decodeURIComponent(fileUrl.pathname.split('/').pop() || '');
                 if (filePath) {
                     const fileRef = storage.bucket().file(filePath);
                     deletePromises.push(fileRef.delete().catch(err => {
-                        // Log error but don't stop the batch
                         logger.error(`Failed to delete storage file ${filePath} for flash ${docSnap.id}:`, err);
                     }));
                 }
@@ -335,7 +326,6 @@ export const cleanupExpiredFlashes = functions.pubsub.schedule('every 1 hours').
         }
     });
 
-    // 4. Commit all deletions
     deletePromises.push(batch.commit());
     
     await Promise.all(deletePromises);
@@ -346,7 +336,6 @@ export const cleanupExpiredFlashes = functions.pubsub.schedule('every 1 hours').
 
 /**
  * Checks for scheduled posts and sends notifications.
- * Runs every minute.
  */
 export const sendScheduledPostNotifications = functions.pubsub.schedule('every 1 minutes').onRun(async (context) => {
     const now = Timestamp.now();
@@ -373,7 +362,6 @@ export const sendScheduledPostNotifications = functions.pubsub.schedule('every 1
         const creatorId = post.userId;
         const creatorUsername = post.username;
 
-        // 1. Send reminder notification to the creator
         const creatorDoc = await getDoc(doc(db, 'users', creatorId));
         if (creatorDoc.exists() && creatorDoc.data()?.fcmToken) {
             const notifRef = collection(db, 'users', creatorId, 'notifications');
@@ -386,7 +374,6 @@ export const sendScheduledPostNotifications = functions.pubsub.schedule('every 1
             }));
         }
 
-        // 2. Send notification to followers
         const followersRef = collection(db, 'users', creatorId, 'followers');
         const followersSnap = await getDocs(followersRef);
         
@@ -403,7 +390,6 @@ export const sendScheduledPostNotifications = functions.pubsub.schedule('every 1
              }));
         });
         
-        // 3. Mark the post as notified to prevent re-sending
         batch.update(postDoc.ref, { notificationSent: true });
     }
 
@@ -412,4 +398,64 @@ export const sendScheduledPostNotifications = functions.pubsub.schedule('every 1
     
     logger.info(`Sent notifications for ${scheduledPostsSnap.size} scheduled posts.`);
     return null;
+});
+
+/**
+ * Periodically updates user accolades based on follower counts and other metrics.
+ */
+export const updateAccolades = functions.pubsub.schedule('every 1 hours').onRun(async (context) => {
+    logger.info('Running accolades update job.');
+
+    try {
+        const usersRef = collection(db, 'users');
+        const usersSnap = await getDocs(usersRef);
+
+        const usersWithFollowerCount = await Promise.all(usersSnap.docs.map(async (userDoc) => {
+            const followersSnap = await getDocs(collection(userDoc.ref, 'followers'));
+            return {
+                id: userDoc.id,
+                ...userDoc.data(),
+                followerCount: followersSnap.size,
+            };
+        }));
+
+        // --- Top Follower Accolades ---
+        usersWithFollowerCount.sort((a, b) => b.followerCount - a.followerCount);
+        const top3 = usersWithFollowerCount.slice(0, 3);
+        const topIds = top3.map(u => u.id);
+
+        // Remove old top follower badges
+        const oldTopUsersQuery = query(usersRef, where('accolades', 'array-contains-any', ['top_1_follower', 'top_2_follower', 'top_3_follower']));
+        const oldTopUsersSnap = await getDocs(oldTopUsersQuery);
+        for (const userDoc of oldTopUsersSnap.docs) {
+            if (!topIds.includes(userDoc.id)) {
+                await updateDoc(userDoc.ref, {
+                    accolades: arrayRemove('top_1_follower', 'top_2_follower', 'top_3_follower')
+                });
+            }
+        }
+
+        // Award new top follower badges
+        if (top3[0]) await updateDoc(doc(db, 'users', top3[0].id), { accolades: arrayUnion('top_1_follower') });
+        if (top3[1]) await updateDoc(doc(db, 'users', top3[1].id), { accolades: arrayUnion('top_2_follower') });
+        if (top3[2]) await updateDoc(doc(db, 'users', top3[2].id), { accolades: arrayUnion('top_3_follower') });
+
+        // --- Milestone Accolades ---
+        for (const user of usersWithFollowerCount) {
+            const userRef = doc(db, 'users', user.id);
+            const currentAccolades = user.accolades || [];
+
+            // Social Butterfly
+            if (user.followerCount >= 50 && !currentAccolades.includes('social_butterfly')) {
+                await updateDoc(userRef, { accolades: arrayUnion('social_butterfly') });
+            }
+        }
+
+        logger.info('Accolades update complete.');
+        return null;
+
+    } catch (error) {
+        logger.error("Error updating accolades:", error);
+        return null;
+    }
 });

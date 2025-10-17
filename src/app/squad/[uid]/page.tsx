@@ -6,9 +6,10 @@ import { getFirestore, doc, getDoc, collection, query, where, getDocs, onSnapsho
 import { auth, app } from "@/utils/firebaseClient";
 import { PostCard } from "@/components/PostCard";
 import { FollowButton } from "@/components/FollowButton";
-import { Star, MapPin, User, Tag, ShieldCheck, Heart, CheckCircle } from "lucide-react";
+import { Star, MapPin, User, Tag, ShieldCheck, Heart, CheckCircle, Trophy, Award, Sparkles, Users as UsersIcon } from "lucide-react";
 import { FollowListModal } from "@/components/FollowListModal";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { AccoladeBadge } from "@/components/AccoladeBadge";
 
 
 const db = getFirestore(app);
@@ -37,30 +38,28 @@ export default function UserProfilePage() {
   }, []);
 
   useEffect(() => {
-    async function fetchProfile() {
-      if (!uid) {
+    if (!uid) {
         setLoading(false);
         return;
-      }
-      setLoading(true);
-
-      const docRef = doc(db, "users", uid);
-      const docSnap = await getDoc(docRef);
-      setProfile(docSnap.exists() ? { uid: docSnap.id, ...docSnap.data() } : null);
-
-      // Fetch post count and posts
-      const postsQuery = query(collection(db, "posts"), where("userId", "==", uid));
-      const userPostsSnap = await getDocs(postsQuery);
-      setPostCount(userPostsSnap.size);
-      // Sort posts by creation date client-side
-      const postsData = userPostsSnap.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
-      setUserPosts(postsData);
-      
-      setLoading(false);
     }
-    fetchProfile();
+    setLoading(true);
+
+    const docRef = doc(db, "users", uid);
+    const unsubProfile = onSnapshot(docRef, (docSnap) => {
+        setProfile(docSnap.exists() ? { uid: docSnap.id, ...docSnap.data() } : null);
+        setLoading(false);
+    });
+
+    const postsQuery = query(collection(db, "posts"), where("userId", "==", uid), orderBy("createdAt", "desc"));
+    const unsubPosts = onSnapshot(postsQuery, (snap) => {
+        setUserPosts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        setPostCount(snap.size);
+    });
+    
+    return () => {
+        unsubProfile();
+        unsubPosts();
+    };
   }, [uid]);
 
   useEffect(() => {
@@ -91,6 +90,7 @@ export default function UserProfilePage() {
   const initials = profile.name?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || profile.username?.slice(0, 2).toUpperCase() || "U";
   const isPremium = profile.isPremium && (!profile.premiumUntil || profile.premiumUntil.toDate() > new Date());
   const isDeveloper = Array.isArray(profile.role) && (profile.role.includes('developer') || profile.role.includes('founder'));
+  const accolades = profile.accolades || [];
 
   
   return (
@@ -127,6 +127,16 @@ export default function UserProfilePage() {
             )}
         </div>
         <p className="text-accent-cyan font-semibold mb-1 text-center">@{profile.username || "username"}</p>
+        
+        {accolades.length > 0 && (
+            <div className="flex flex-wrap items-center justify-center gap-2 my-4">
+                {accolades.includes('top_1_follower') && <AccoladeBadge type="top_1_follower" />}
+                {accolades.includes('top_2_follower') && <AccoladeBadge type="top_2_follower" />}
+                {accolades.includes('top_3_follower') && <AccoladeBadge type="top_3_follower" />}
+                {accolades.includes('social_butterfly') && <AccoladeBadge type="social_butterfly" />}
+                {accolades.includes('vibe_starter') && <AccoladeBadge type="vibe_starter" />}
+            </div>
+        )}
 
         {/* Stats */}
         <div className="flex justify-center gap-8 my-4 w-full">
