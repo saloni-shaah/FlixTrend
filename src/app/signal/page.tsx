@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
@@ -464,7 +465,7 @@ function timeSince(date: Date) {
     return "just now";
 }
 
-function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
+function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any, userProfile: any }) {
   const [chats, setChats] = useState<any[]>([]);
   const [joinableGroups, setJoinableGroups] = useState<any[]>([]);
   const { selectedChat, setSelectedChat } = useAppState();
@@ -637,8 +638,8 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
         // In anonymous/pseudonymous groups, we don't send the real user info with the message
     } else {
         messageData.senderInfo = {
-            name: firebaseUser.name,
-            avatar_url: firebaseUser.avatar_url
+            name: userProfile?.name || firebaseUser.displayName,
+            avatar_url: userProfile?.avatar_url || firebaseUser.photoURL
         }
     }
 
@@ -1055,40 +1056,39 @@ function AvatarFallback({ children, className }: { children: React.ReactNode, cl
 
 function SignalPage() {
   const [firebaseUser, setFirebaseUser] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<any>(null);
+
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(async (user) => {
       if (user) {
-        // Fetch full user profile from Firestore to get all necessary details
+        setFirebaseUser(user);
         const userDocRef = doc(db, "users", user.uid);
         const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
-          setFirebaseUser({ ...user, ...userDocSnap.data() });
+          setUserProfile({ ...user, ...userDocSnap.data() });
         } else {
-          // Fallback or create a new profile if it doesn't exist
+          // This case should ideally not happen if signup process is correct
           const newProfile = {
             uid: user.uid,
             name: user.displayName || "",
             username: user.displayName ? user.displayName.replace(/\s+/g, "").toLowerCase() : `user${user.uid.substring(0,5)}`,
             email: user.email || "",
             avatar_url: `https://api.dicebear.com/8.x/bottts-neutral/svg?seed=${user.uid}`,
-            bio: "",
-            interests: "",
-            createdAt: new Date(),
           };
-          await setDoc(userDocRef, newProfile);
-          setFirebaseUser({ ...user, ...newProfile });
+          setUserProfile({ ...user, ...newProfile });
         }
       } else {
         setFirebaseUser(null);
+        setUserProfile(null);
       }
     });
     return () => unsub();
   }, []);
   
-  if (!firebaseUser) {
+  if (!firebaseUser || !userProfile) {
     return <div className="flex h-screen items-center justify-center text-accent-cyan">Loading Signal...</div>;
   }
-  return <ClientOnlySignalPage firebaseUser={firebaseUser} />;
+  return <ClientOnlySignalPage firebaseUser={firebaseUser} userProfile={userProfile} />;
 }
 
 export default function SignalPageWrapper() {
