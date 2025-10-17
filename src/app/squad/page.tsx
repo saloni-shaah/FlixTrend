@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef, Suspense } from "react";
 import { auth, app } from "@/utils/firebaseClient";
 import { getFirestore, doc, onSnapshot, collection, query, where, getCountFromServer, getDocs, orderBy, writeBatch, deleteDoc, arrayUnion, arrayRemove, serverTimestamp } from "firebase/firestore";
-import { Cog, Compass, MapPin, User, Tag, ShieldCheck, Music, Bookmark, Heart, Folder, Download, CheckCircle, Search, Users, Phone } from "lucide-react";
+import { Cog, Compass, MapPin, User, Tag, ShieldCheck, Music, Bookmark, Heart, Folder, Download, CheckCircle, Search, Users as UsersIcon, Phone, Trophy, Award, Sparkles } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -16,6 +16,7 @@ import { SettingsModal } from "@/components/squad/SettingsModal";
 import { UserPlaylists } from "@/components/squad/UserPlaylists";
 import { UserCollections } from "@/components/squad/UserCollections";
 import { UserDownloads } from "@/components/squad/UserDownloads";
+import { AccoladeBadge } from "@/components/AccoladeBadge";
 
 
 const db = getFirestore(app);
@@ -110,30 +111,24 @@ function SquadPageContent() {
   }, [router]);
 
   useEffect(() => {
-    async function fetchProfileData() {
-        if (!firebaseUser) return;
-        
-        const uid = firebaseUser.uid;
-
-        const postsQuery = query(collection(db, "posts"), where("userId", "==", uid), orderBy("createdAt", "desc"));
-        const unsubPosts = onSnapshot(postsQuery, (snapshot) => {
-            setUserPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-            setPostCount(snapshot.size);
-        });
-        
-        return () => unsubPosts();
-    }
-    if (firebaseUser) fetchProfileData();
-  }, [firebaseUser]);
-
-  useEffect(() => {
     if (!firebaseUser) return;
+    
     const uid = firebaseUser.uid;
 
+    const postsQuery = query(collection(db, "posts"), where("userId", "==", uid), orderBy("createdAt", "desc"));
+    const unsubPosts = onSnapshot(postsQuery, (snapshot) => {
+        setUserPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        setPostCount(snapshot.size);
+    });
+    
     const unsubFollowers = onSnapshot(collection(db, "users", uid, "followers"), snap => setFollowers(snap.size));
     const unsubFollowing = onSnapshot(collection(db, "users", uid, "following"), snap => setFollowing(snap.size));
     
-    // Calculate friends
+    const q = query(collection(db, "users", uid, "starredPosts"), orderBy("starredAt", "desc"));
+    const unsubStarred = onSnapshot(q, (snapshot) => {
+        setStarredPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
     const fetchFriends = async () => {
         const followersSnap = await getDocs(collection(db, "users", uid, "followers"));
         const followingSnap = await getDocs(collection(db, "users", uid, "following"));
@@ -143,13 +138,9 @@ function SquadPageContent() {
         setFriends(friendsIds.length);
     }
     fetchFriends();
-    
-    const q = query(collection(db, "users", uid, "starredPosts"), orderBy("starredAt", "desc"));
-    const unsubStarred = onSnapshot(q, (snapshot) => {
-        setStarredPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
 
     return () => {
+      unsubPosts();
       unsubFollowers();
       unsubFollowing();
       unsubStarred();
@@ -166,6 +157,7 @@ function SquadPageContent() {
   const initials = profile.name?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || profile.username?.slice(0, 2).toUpperCase() || "U";
   const isPremium = profile.isPremium && (!profile.premiumUntil || profile.premiumUntil.toDate() > new Date());
   const isDeveloper = Array.isArray(profile.role) && (profile.role.includes('developer') || profile.role.includes('founder'));
+  const accolades = profile.accolades || [];
 
 
   return (
@@ -222,6 +214,15 @@ function SquadPageContent() {
         </div>
         <p className="text-accent-cyan font-semibold mb-1 text-center">@{profile.username || "username"}</p>
         
+         {accolades.length > 0 && (
+            <div className="flex flex-wrap items-center justify-center gap-2 my-4">
+                {accolades.includes('top_1_follower') && <AccoladeBadge type="top_1_follower" />}
+                {accolades.includes('top_2_follower') && <AccoladeBadge type="top_2_follower" />}
+                {accolades.includes('top_3_follower') && <AccoladeBadge type="top_3_follower" />}
+                {accolades.includes('social_butterfly') && <AccoladeBadge type="social_butterfly" />}
+                {accolades.includes('vibe_starter') && <AccoladeBadge type="vibe_starter" />}
+            </div>
+        )}
 
         {/* Stats */}
         <div className="flex justify-center gap-8 my-4 w-full">
@@ -273,7 +274,7 @@ function SquadPageContent() {
                     searchResults.map(item => (
                         <div key={item.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent-cyan/10 cursor-pointer" onClick={() => handleSelectChat(item)}>
                             <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-lg overflow-hidden shrink-0">
-                                {item.avatar_url ? <img src={item.avatar_url} alt={item.name} className="w-full h-full object-cover" /> : (item.type === 'group' ? <Users/> : 'U')}
+                                {item.avatar_url ? <img src={item.avatar_url} alt={item.name} className="w-full h-full object-cover" /> : (item.type === 'group' ? <UsersIcon/> : 'U')}
                             </div>
                             <div>
                                 <div className="font-bold text-sm truncate">{item.name || item.username}</div>
