@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp, where, writeBatch, getDocs, updateDoc, deleteDoc, arrayUnion, arrayRemove, deleteField } from "firebase/firestore";
 import { auth, db } from "@/utils/firebaseClient";
-import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, Smile, Trash2, Users, CheckSquare, Square, MoreVertical, UserPlus, UserX, Edit, Shield, EyeOff, LogOut, UploadCloud, UserCircle, Cake, MapPin, AtSign, User, Bot, Search } from "lucide-react";
+import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, Smile, Trash2, Users, CheckSquare, Square, MoreVertical, UserPlus, UserX, Edit, Shield, EyeOff, LogOut, UploadCloud, UserCircle, Cake, MapPin, AtSign, User, Bot, Search, Check, CheckCheck } from "lucide-react";
 import { useAppState } from "@/utils/AppStateContext";
 import { createCall } from "@/utils/callService";
 import { motion, AnimatePresence } from "framer-motion";
@@ -770,7 +770,7 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
     if (groupData.groupType === 'simple') {
         const messageRef = doc(collection(db, "chats", groupId, "messages"));
         batch.set(messageRef, {
-            text: `${firebaseUser.displayName} left the group.`,
+            text: `${userProfile?.name || firebaseUser.displayName} left the group.`,
             sender: 'system',
             createdAt: serverTimestamp(),
             readBy: []
@@ -824,7 +824,7 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
 
   return (
     <div className="flex h-screen w-full bg-transparent font-body text-white overflow-hidden">
-        {showCreateGroup && <CreateGroupModal mutuals={chats.filter(c => !c.isGroup)} currentUser={firebaseUser} onClose={() => setShowCreateGroup(false)} onGroupCreated={(newGroup) => {
+        {showCreateGroup && <CreateGroupModal mutuals={chats.filter(c => !c.isGroup)} currentUser={userProfile} onClose={() => setShowCreateGroup(false)} onGroupCreated={(newGroup) => {
             setChats(prev => [newGroup, ...prev]);
             setSelectedChat(newGroup);
         }} />}
@@ -914,6 +914,7 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
                         <AnimatePresence initial={false}>
                         {messages.map(msg => {
                             const isUser = msg.sender === firebaseUser.uid;
+                            const isRead = selectedChat.isGroup ? msg.readBy.length === selectedChat.members.length : msg.readBy.includes(selectedChat.uid);
                             
                             const senderInfo = selectedChat.isGroup ?
                                 (selectedChat.groupType === 'simple' ? selectedChat.memberInfo?.[msg.sender] : null)
@@ -940,9 +941,14 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
                                           {msg.type === 'audio' && <audio src={msg.mediaUrl} controls />}
                                           {msg.text && <p className="mt-1 break-words">{msg.text}</p>}
                                           
-                                          {msg.sender !== 'system' && <div className="text-xs mt-1 text-right opacity-70">
-                                              {msg.createdAt?.toDate?.().toLocaleTimeString() || ""}
-                                          </div>}
+                                          {msg.sender !== 'system' && (
+                                            <div className={`text-xs mt-1 flex items-center gap-1 ${isUser ? 'justify-end' : 'justify-start'}`}>
+                                                <span>{msg.createdAt?.toDate?.().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || ""}</span>
+                                                {isUser && (
+                                                    isRead ? <CheckCheck size={16} className="text-blue-500"/> : <Check size={16} className="text-gray-500"/>
+                                                )}
+                                            </div>
+                                          )}
                                           {msg.reactions && Object.keys(msg.reactions).length > 0 && (
                                               <div className="absolute -bottom-4 -right-1 flex gap-1">
                                                   {Object.entries(msg.reactions).map(([emoji, uids]: [string, any]) => (
