@@ -2,181 +2,157 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // ---------------------------
-    // Helper Functions
-    // ---------------------------
-    function isSignedIn() {
-      return request.auth != null;
+    // Helper function to check if a user is an admin
+    function isAdmin(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.role[0] in ['developer', 'founder'];
     }
 
-    function isUser(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    function getUserData(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data;
-    }
-
-    function isUserAdmin(userId) {
-      let roles = getUserData(userId).role;
-      return isSignedIn() && ('founder' in roles || 'developer' in roles);
-    }
-    
-    function isGroupMember(groupId) {
-      return isSignedIn() && get(/databases/$(database)/documents/groups/$(groupId)).data.members.hasAny([request.auth.uid]);
-    }
-    
-     function isGroupAdmin(groupId) {
-      return isSignedIn() && get(/databases/$(database)/documents/groups/$(groupId)).data.admins.hasAny([request.auth.uid]);
-    }
-
-
-    // ---------------------------
-    // User Profiles
-    // ---------------------------
+    // Rules for user profiles
     match /users/{userId} {
-      // Anyone can view a user's public profile.
+      // Anyone can read a user's public profile
       allow read: if true;
-      // A user can create their own profile document.
-      allow create: if isUser(userId);
-      // A user can only update their own profile. Admins can also update profiles.
-      allow update: if isUser(userId) || isUserAdmin(request.auth.uid);
-      // A user can delete their own profile document (handled by a cloud function).
-      allow delete: if isUser(userId) || isUserAdmin(request.auth.uid);
-      
-      // Subcollections
-      match /following/{followingId} {
-      	allow read, write, delete: if isUser(userId);
-      }
-       match /followers/{followerId} {
-      	allow read: if true;
-        allow write, delete: if isSignedIn(); // Follow can be initiated by anyone
-      }
-       match /starredPosts/{postId} {
-      	allow read, write, delete: if isUser(userId);
-      }
-       match /notifications/{notificationId} {
-        allow read, write, delete: if isUser(userId);
+      // Only the user themselves or an admin can write to their profile
+      allow write: if request.auth.uid == userId || isAdmin(request.auth.uid);
+
+      // Subcollections for users
+      match /{subcollection}/{docId} {
+        // Only the user can manage their own subcollections (followers, following, etc.)
+        allow read, write, delete: if request.auth.uid == userId;
       }
     }
+    
+    // Rules for creating new user documents
+    match /users/{userId} {
+        // A user can create their own user document during signup
+        allow create: if request.auth.uid == userId;
+    }
 
-    // ---------------------------
-    // Posts, Flashes, and Subcollections
-    // ---------------------------
+
+    // Rules for posts
     match /posts/{postId} {
-      // Any signed-in user can read posts.
-      allow read: if isSignedIn();
-      // Any signed-in user can create a post.
-      allow create: if isSignedIn();
-      // Users can only update/delete their own posts. Admins can also delete.
-      allow update: if isUser(resource.data.userId);
-      allow delete: if isUser(resource.data.userId) || isUserAdmin(request.auth.uid);
+      // Anyone can read a post
+      allow read: if true;
+      // Allow create for any authenticated user
+      allow create: if request.auth != null;
+      // Allow update/delete only for the post owner or an admin
+      allow update, delete: if resource.data.userId == request.auth.uid || isAdmin(request.auth.uid);
 
-      match /comments/{commentId} {
-        allow read, write: if isSignedIn();
-      }
-      match /stars/{starId} {
-        allow read, write: if isSignedIn();
-      }
-       match /relays/{relayId} {
-        allow read, write: if isSignedIn();
-      }
-      match /pollVotes/{voteId} {
-        allow read: if isSignedIn();
-        allow write: if isUser(voteId); // Can only vote for yourself
+      // Subcollections for posts (comments, stars, relays)
+      match /{subcollection}/{docId} {
+        // Any authenticated user can create comments, stars, or relays
+        allow create: if request.auth != null;
+        // Anyone can read
+        allow read: if true;
+        // Only the creator of the subcollection document or an admin can delete
+        allow delete: if request.auth.uid == resource.data.userId || isAdmin(request.auth.uid);
       }
     }
-    
+
+    // Rules for flashes
     match /flashes/{flashId} {
-      // Any signed-in user can read flashes.
-      allow read, create: if isSignedIn();
-      // Only the creator can delete their own flash.
-      allow delete: if isUser(resource.data.userId);
+        // Anyone can read a flash
+        allow read: if true;
+        // Only authenticated users can create a flash
+        allow create: if request.auth != null;
+        // Only the owner can delete
+        allow delete: if request.auth.uid == resource.data.userId;
+    }
+
+    // Rules for chats and groups
+    match /chats/{chatId} {
+
+      // This is the core function to check membership for both DMs and Groups
+      function isChatMember() {
+        // Check if it's a group chat
+        let isGroup = exists(/databases/$(database)/documents/groups/$(chatId));
+        
+        if (isGroup) {
+          // It's a group, check if user is in the members list
+          return request.auth.uid in get(/databases/$(database)/documents/groups/$(chatId)).data.members;
+        } else {
+          // It's a 1-on-1 chat, check if user's ID is in the chatId
+          return request.auth.uid in chatId.split('_');
+        }
+      }
+
+      // Allow read/write access to the chat metadata if the user is a member
+      allow read, write: if isChatMember();
+
+      // Rules for messages within a chat
+      match /messages/{messageId} {
+        allow read: if isChatMember();
+        allow create: if isChatMember() && request.auth.uid == request.resource.data.sender;
+        allow update, delete: if isChatMember() && request.auth.uid == resource.data.sender;
+      }
     }
     
-    // ---------------------------
-    // App Status & Admin
-    // ---------------------------
+    // Rules for the groups collection itself
+    match /groups/{groupId} {
+        // Members can read group info
+        allow read: if request.auth.uid in resource.data.members;
+        // Any authenticated user can create a group
+        allow create: if request.auth != null;
+        // Only admins of the group can update its info
+        allow update: if request.auth.uid in resource.data.admins;
+        // Only the original creator can delete the group
+        allow delete: if request.auth.uid == resource.data.createdBy;
+    }
+
+    // Rules for call signaling
+    match /calls/{callId} {
+      // Allow read/write if the user is either the caller or the callee
+      allow read, write: if request.auth.uid == resource.data.callerId || request.auth.uid == resource.data.calleeId;
+      // Allow creation by any authenticated user
+      allow create: if request.auth != null;
+
+      match /{subcollection}/{candidateId} {
+        // Allow candidates to be added by either party
+        allow create: if request.auth.uid == get(/databases/$(database)/documents/calls/$(callId)).data.callerId ||
+                         request.auth.uid == get(/databases/$(database)/documents/calls/$(callId)).data.calleeId;
+      }
+    }
+
+    // App Status collection
     match /app_status/{statusId} {
+      // Allow read for everyone (e.g., to check maintenance mode)
       allow read: if true;
       // Only admins can write to app status
-      allow write: if isUserAdmin(request.auth.uid);
-    }
-
-    // ---------------------------
-    // Calls & Signal
-    // ---------------------------
-    match /calls/{callId} {
-      // Only participants of the call can read/write to the call document
-      allow read, write, delete: if isUser(resource.data.callerId) || isUser(resource.data.calleeId);
-
-      match /offerCandidates/{candidateId} {
-        allow write: if isUser(get(/databases/$(database)/documents/calls/$(callId)).data.callerId);
-      }
-      match /answerCandidates/{candidateId} {
-        allow write: if isUser(get(/databases/$(database)/documents/calls/$(callId)).data.calleeId);
-      }
+      allow write: if isAdmin(request.auth.uid);
     }
     
-    match /chats/{chatId}/messages/{messageId} {
-    	// Allow read/write if the user is a member of the group (for group chats)
-      // or if the chatId contains the user's ID (for 1-on-1 chats)
-    	allow read, write: if isSignedIn() && (
-      	 (exists(/databases/$(database)/documents/groups/$(chatId)) && isGroupMember(chatId)) ||
-         (!exists(/databases/$(database)/documents/groups/$(chatId)) && request.auth.uid in chatId.split('_'))
-      );
-      allow delete: if isUser(resource.data.sender); // Allow deleting own messages
-    }
-    
-    match /groups/{groupId} {
-    	allow read: if isGroupMember(groupId);
-      allow create: if isSignedIn();
-      allow update: if isGroupAdmin(groupId);
-      allow delete: if isUser(get(/databases/$(database)/documents/groups/$(groupId)).data.createdBy); // Only original creator can delete
-    }
-
-    // ---------------------------
-    // Store & Community Content
-    // ---------------------------
+    // Store Products
     match /products/{productId} {
-      // Anyone can see the products
-      allow read: if true;
-      // Only admins can add/update/delete products
-      allow write: if isUserAdmin(request.auth.uid);
-    }
-    
-    match /songs/{songId} {
-      allow read: if true;
-      allow create: if isCreator() || isUserAdmin(request.auth.uid);
-      allow update, delete: if isUser(resource.data.userId) || isUserAdmin(request.auth.uid);
+        // Everyone can read products
+        allow read: if true;
+        // Only admins can create, update, or delete products
+        allow write: if isAdmin(request.auth.uid);
     }
 
+    // Songs collection
+    match /songs/{songId} {
+        // Everyone can read songs
+        allow read: if true;
+        // Authenticated users can add songs
+        allow create: if request.auth != null;
+    }
+
+    // Playlists collection
     match /playlists/{playlistId} {
-      allow read, write, delete: if isUser(resource.data.ownerId);
+        // Read access for everyone
+        allow read: if true;
+        // Create, update, delete only for the owner
+        allow write: if request.auth.uid == resource.data.ownerId;
+        allow create: if request.auth.uid == request.resource.data.ownerId;
     }
-    
-    match /collections/{collectionId} {
-      allow read, write, delete: if isUser(resource.data.ownerId);
-    }
-    
-     match /games/{gameId} {
-      allow read: if true;
-      allow create: if isUserAdmin(request.auth.uid); // Only admins can add new games
-      allow write: if isUserAdmin(request.auth.uid);
-    }
-    
-    // ---------------------------
-    // Ad Campaign Data
-    // ---------------------------
+
+    // Ad Campaigns & Creatives
     match /adCampaigns/{campaignId} {
-      allow read: if true; // Ads are public
-      allow create: if isSignedIn(); // Any signed-in business user can create
-      allow update: if isUser(resource.data.advertiserId);
-      
+      allow read: if true;
+      allow write: if request.auth.uid == request.resource.data.advertiserId;
+
       match /creatives/{creativeId} {
         allow read: if true;
-        allow create: if isSignedIn();
+        allow write: if get(/databases/$(database)/documents/adCampaigns/$(campaignId)).data.advertiserId == request.auth.uid;
       }
     }
 
