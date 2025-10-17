@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useRef, Suspense } from "react";
 import { auth, app } from "@/utils/firebaseClient";
 import { getFirestore, doc, onSnapshot, collection, query, where, getCountFromServer, getDocs, orderBy, writeBatch, deleteDoc, arrayUnion, arrayRemove, serverTimestamp } from "firebase/firestore";
-import { Cog, Compass, MapPin, User, Tag, ShieldCheck, Music, Bookmark, Heart, Folder, Download, CheckCircle, Search, Users as UsersIcon, Phone, Trophy, Award, Sparkles } from "lucide-react";
+import { Cog, Compass, MapPin, User, Tag, ShieldCheck, Music, Bookmark, Heart, Folder, Download, CheckCircle, Search, Users as UsersIcon, Phone, Trophy, Award, Sparkles, Image, BarChart3, AlignLeft, Radio, Zap } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -32,6 +32,7 @@ function SquadPageContent() {
   const [showSettings, setShowSettings] = useState(false);
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'posts');
+  const [postTypeFilter, setPostTypeFilter] = useState('all');
   const [userPosts, setUserPosts] = useState<any[]>([]);
   const [starredPosts, setStarredPosts] = useState<any[]>([]);
   const [showFollowList, setShowFollowList] = useState<null | 'followers' | 'following' | 'friends'>(null);
@@ -117,6 +118,12 @@ function SquadPageContent() {
     };
   }, [firebaseUser]);
   
+  const filteredUserPosts = userPosts.filter(post => {
+      if (postTypeFilter === 'all') return true;
+      return post.type === postTypeFilter;
+  });
+
+
   if (loading) {
     return <div className="flex flex-col min-h-screen items-center justify-center text-accent-cyan">Loading profile...</div>;
   }
@@ -238,19 +245,24 @@ function SquadPageContent() {
       {/* Tab Content */}
       <div className="flex-1 flex flex-col items-center justify-center w-full">
         {activeTab === "posts" && (
-          userPosts.length > 0 ? (
             <div className="w-full max-w-xl flex flex-col gap-6">
-              {userPosts.map((post) => (
-                <PostCard key={post.id} post={post} />
-              ))}
+                <div className="flex justify-center gap-2 p-1 rounded-full bg-black/30">
+                    <button onClick={() => setPostTypeFilter('all')} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'all' ? 'bg-white/10 text-white' : 'text-gray-400'}`}>All</button>
+                    <button onClick={() => setPostTypeFilter('text')} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'text' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><AlignLeft size={14} className="inline"/></button>
+                    <button onClick={() => setPostTypeFilter('media')} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'media' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><Image size={14} className="inline"/></button>
+                    <button onClick={() => setPostTypeFilter('poll')} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'poll' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><BarChart3 size={14} className="inline"/></button>
+                    <button onClick={() => setPostTypeFilter('flash')} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'flash' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><Zap size={14} className="inline"/></button>
+                    <button onClick={() => setPostTypeFilter('live')} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'live' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><Radio size={14} className="inline"/></button>
+                </div>
+                 {filteredUserPosts.length > 0 ? (
+                    filteredUserPosts.map((post) => <PostCard key={post.id} post={post} />)
+                ) : (
+                    <div className="text-gray-400 text-center mt-16">
+                        <div className="text-4xl mb-2">🪐</div>
+                        <div className="text-lg font-semibold">No posts of this type yet.</div>
+                    </div>
+                )}
             </div>
-          ) : (
-            <div className="text-gray-400 text-center mt-16">
-              <div className="text-4xl mb-2">🪐</div>
-              <div className="text-lg font-semibold">No posts yet</div>
-              <div className="text-sm">Your posts will appear here!</div>
-            </div>
-          )
         )}
         {activeTab === "likes" && (
             starredPosts.length > 0 ? (
