@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
@@ -500,9 +501,9 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
         const followersRef = collection(db, "users", firebaseUser.uid, "followers");
         const [followingSnap, followersSnap] = await Promise.all([getDocs(followingRef), getDocs(followersRef)]);
         
-        const following = followingSnap.docs.map(doc => doc.id);
-        const followers = followersSnap.docs.map(doc => doc.id);
-        const mutualUids = Array.from(new Set([...following, ...followers])).filter(uid => uid !== firebaseUser.uid);
+        const followingIds = followingSnap.docs.map(doc => doc.id);
+        const followerIds = followersSnap.docs.map(doc => doc.id);
+        const mutualUids = followingIds.filter(id => followerIds.includes(id));
         
         const mutualProfiles = await Promise.all(
           mutualUids.map(async (uid) => {
