@@ -7,7 +7,7 @@ import { useAppState } from '@/utils/AppStateContext';
 import { auth } from '@/utils/firebaseClient';
 
 export function CallScreen({ call }: { call: any }) {
-  // CORRECTED: All call logic and state now comes from the central AppStateContext.
+  // All call logic and state now comes from the central AppStateContext.
   const { pc, answerCall, handleEndCall } = useAppState();
   
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
@@ -97,9 +97,7 @@ export function CallScreen({ call }: { call: any }) {
         <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center gap-6">
             <h2 className="text-3xl font-bold animate-pulse">Incoming Call from {call.callerName}...</h2>
             <div className="flex gap-8">
-                {/* CORRECTED: Uses answerCall from context */}
                 <button onClick={answerCall} className="p-4 bg-green-500 rounded-full text-white"><Phone size={32}/></button>
-                {/* CORRECTED: Uses handleEndCall from context */}
                 <button onClick={handleEndCall} className="p-4 bg-red-500 rounded-full text-white"><Phone size={32}/></button>
             </div>
         </div>
@@ -113,7 +111,6 @@ export function CallScreen({ call }: { call: any }) {
         <button onClick={toggleVideo} className={`p-3 rounded-full ${isVideoOff ? 'bg-red-500' : 'bg-gray-600'}`}>
             {isVideoOff ? <VideoOff size={24} /> : <Video size={24} />}
         </button>
-        {/* CORRECTED: Uses handleEndCall from context */}
         <button onClick={handleEndCall} className="p-4 bg-red-500 rounded-full">
           <Phone size={24} />
         </button>
