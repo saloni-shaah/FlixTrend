@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp, where, writeBatch, getDocs, updateDoc, deleteDoc, arrayUnion, arrayRemove, deleteField } from "firebase/firestore";
+import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp, where, writeBatch, getDocs, updateDoc, deleteDoc, arrayUnion, arrayRemove, deleteField, limit } from "firebase/firestore";
 import { auth, db } from "@/utils/firebaseClient";
 import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, Smile, Trash2, Users, CheckSquare, Square, MoreVertical, UserPlus, UserX, Edit, Shield, EyeOff, LogOut, UploadCloud, UserCircle, Cake, MapPin, AtSign, User, Bot, Search, Check, CheckCheck } from "lucide-react";
 import { useAppState } from "@/utils/AppStateContext";
@@ -827,7 +827,7 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
     const groupRef = doc(db, "groups", group.id);
     await updateDoc(groupRef, {
         members: arrayUnion(firebaseUser.uid),
-        [`memberInfo.${firebaseUser.uid}`]: { name: firebaseUser.name, avatar_url: firebaseUser.avatar_url, username: firebaseUser.username }
+        [`memberInfo.${firebaseUser.uid}`]: { name: userProfile.name, avatar_url: userProfile.avatar_url, username: userProfile.username }
     });
     handleSelectChat({ ...group, members: [...group.members, firebaseUser.uid] }); 
   };
