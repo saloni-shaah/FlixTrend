@@ -1,71 +1,159 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+
+    // Helper function to check if a user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if the user is the owner of a document
     function isOwner(userId) {
-      return request.auth != null && request.auth.uid == userId;
+      return request.auth.uid == userId;
+    }
+    
+    // Helper function to check if a user has an admin-level role
+    function isAdmin() {
+        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['developer', 'founder', 'cto']);
     }
 
-    function isFounder() {
-      // The unique UID for the original founder, granting super-admin access.
-      return request.auth.uid == 'uQpi9hoaX9dQQ2YHOYv05orx1rQ2';
-    }
-
-    function getRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-    }
-
+    // Users Collection
     match /users/{userId} {
+      // Anyone can read a user's public profile
       allow read: if true;
-      allow create: if request.auth.uid == userId;
-      // Allow owners to update their own profile, but NOT their role.
-      // Allow founders to ONLY update the role field of any user.
-      allow update: if (isOwner(userId) && !('role' in request.resource.data)) ||
-                      (isFounder() && request.resource.data.keys().hasOnly(['role']));
+      // Only the authenticated owner of the profile can create or update it
+      allow write: if isOwner(userId);
+      
+      // Subcollections for a user
+      match /followers/{followerId} {
+        // Logged-in users can read who follows who.
+        allow read: if isAuthenticated();
+        // A user can only add/remove themselves from another user's followers list.
+        allow write: if isOwner(followerId);
+      }
+      match /following/{followingId} {
+        allow read: if isAuthenticated();
+        // A user can only manage their own following list.
+        allow write: if isOwner(userId);
+      }
+      match /starredPosts/{postId} {
+        allow read, write: if isOwner(userId);
+      }
+      match /notifications/{notificationId} {
+        allow read, write: if isOwner(userId);
+      }
     }
 
-    match /posts/{postId}/{document=**} {
-      allow read, write: if request.auth != null;
+    // Posts Collection
+    match /posts/{postId} {
+        // Any authenticated user can read any post
+        allow read: if isAuthenticated();
+        // Any authenticated user can create a post
+        allow create: if isAuthenticated();
+        // Only the owner of a post or an admin can update/delete it
+        allow update, delete: if isOwner(resource.data.userId) || isAdmin();
+        
+        // Subcollections for posts
+        match /comments/{commentId} {
+            allow read, create: if isAuthenticated();
+            allow delete: if isOwner(resource.data.userId) || isOwner(get(/databases/$(database)/documents/posts/$(postId)).data.userId);
+        }
+        match /stars/{userId} {
+             allow read, create, delete: if isAuthenticated();
+        }
+        match /relays/{userId} {
+            allow read, create, delete: if isAuthenticated();
+        }
+        match /pollVotes/{userId} {
+            allow read: if isAuthenticated();
+            allow create: if isOwner(userId); // Users can only cast their own vote
+        }
     }
-
+    
+    // Flashes (Stories)
     match /flashes/{flashId} {
-      allow read, write: if request.auth != null;
-    }
-
-    match /chats/{chatId}/{document=**} {
-      allow read, write: if request.auth != null; // Simplified for MVP
+        allow read, create: if isAuthenticated();
+        // Only owner or admin can delete. Expires via a Cloud Function.
+        allow delete: if isOwner(resource.data.userId) || isAdmin();
     }
     
+    // Chats
+    match /chats/{chatId}/{message=**} {
+      // A user can only read/write to chats they are a member of
+      allow read, write: if request.auth.uid in get(/databases/$(database)/documents/groups/$(chatId)).data.members;
+    }
+    
+    // Groups
     match /groups/{groupId} {
-      allow read, write: if request.auth != null; // Simplified for MVP
+        allow read: if request.auth.uid in resource.data.members;
+        allow create: if isAuthenticated();
+        allow update: if request.auth.uid in resource.data.admins;
+        allow delete: if request.auth.uid == resource.data.createdBy || isAdmin();
     }
 
-    match /notifications/{userId}/{document=**} {
-      allow read, write: if isOwner(userId);
+    // Calls
+    match /calls/{callId} {
+      allow read, create: if isAuthenticated();
+      allow update: if isAuthenticated() && (isOwner(resource.data.callerId) || isOwner(resource.data.calleeId));
+      // Deletion is handled by the cloud function for cleanup
+      allow delete: if isAdmin(); 
+      
+      match /offerCandidates/{candidateId} {
+        allow read, write: if isAuthenticated();
+      }
+       match /answerCandidates/{candidateId} {
+        allow read, write: if isAuthenticated();
+      }
     }
     
+    // App Status & Config
     match /app_status/{statusId} {
         allow read: if true;
-        allow write: if isFounder();
+        allow write: if isAdmin(); // Only admins can change app status
+    }
+    
+    // Songs, Products, Games - Generally readable by all authenticated users
+    match /songs/{songId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated(); // Let any user upload music
     }
     
     match /products/{productId} {
-      allow read: if true;
-      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['founder', 'developer']);
-    }
-
-    match /collections/{collectionId} {
-      allow read, write: if request.auth != null && request.auth.uid == resource.data.ownerId;
-    }
-
-    match /playlists/{playlistId} {
-       allow read, write: if request.auth != null && request.auth.uid == resource.data.ownerId;
-    }
-
-    match /songs/{songId} {
         allow read: if true;
-        allow create: if request.auth != null;
+        allow create, update, delete: if isAdmin();
+    }
+
+    match /games/{gameId} {
+        allow read: if true;
+        allow create, update, delete: if isAdmin();
+    }
+
+    match /tictactoe/{gameId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated();
+        allow update: if isAuthenticated() && gameId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.activeGames;
+    }
+
+    // Playlists & Collections are user-specific
+    match /playlists/{playlistId} {
+        allow read, write: if isOwner(resource.data.ownerId);
+    }
+    
+    match /collections/{collectionId} {
+        allow read, write: if isOwner(resource.data.ownerId);
+    }
+    
+     // Ad Campaigns are business-specific
+    match /adCampaigns/{campaignId} {
+        allow read: if isAuthenticated();
+        allow write: if isOwner(resource.data.advertiserId) || isAdmin();
+        
+        match /creatives/{creativeId} {
+            allow read: if isAuthenticated();
+            allow write: if isOwner(get(/databases/$(database)/documents/adCampaigns/$(campaignId)).data.advertiserId) || isAdmin();
+        }
     }
   }
 }
