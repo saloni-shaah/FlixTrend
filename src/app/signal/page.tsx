@@ -101,6 +101,7 @@ function CreateGroupModal({ mutuals, currentUser, onClose, onGroupCreated }: { m
                 isGroup: true,
                 groupType: groupType,
                 pseudonyms: groupType === 'pseudonymous' ? pseudonyms : {},
+                typing: [],
             });
             
             const groupData = (await getDoc(groupDocRef)).data();
@@ -217,7 +218,7 @@ function GroupInfoPanel({ group, currentUser, mutuals, onClose, onGroupUpdate, o
         };
         
         if(group.groupType === 'pseudonymous'){
-            updateData[`pseudonyms.${userToAdd.uid}`] = generateAnonymousName(userToAdd.uid, group.id);
+             updateData[`pseudonyms.${userToAdd.uid}`] = generateAnonymousName(userToAdd.uid, group.id);
         }
         
         await updateDoc(groupRef, updateData);
@@ -466,94 +467,141 @@ function timeSince(date: Date) {
 }
 
 function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any, userProfile: any }) {
-  const [chats, setChats] = useState<any[]>([]);
-  const [joinableGroups, setJoinableGroups] = useState<any[]>([]);
-  const { selectedChat, setSelectedChat } = useAppState();
-  const [messages, setMessages] = useState<any[]>([]);
-  const [newMessage, setNewMessage] = useState("");
-  const [unreadCounts, setUnreadCounts] = useState<{ [key: string]: number }>({});
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    const checkIsMobile = () => setIsMobile(window.innerWidth < 768);
-    checkIsMobile();
-    window.addEventListener('resize', checkIsMobile);
-    return () => window.removeEventListener('resize', checkIsMobile);
-  }, []);
-  const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
-  const [showCreateGroup, setShowCreateGroup] = useState(false);
-  const [showGroupInfo, setShowGroupInfo] = useState(false);
-  const [showUserInfo, setShowUserInfo] = useState(false);
-  const [onlineStatus, setOnlineStatus] = useState<any>(null);
-  const [searchTerm, setSearchTerm] = useState('');
+    const [chats, setChats] = useState<any[]>([]);
+    const [joinableGroups, setJoinableGroups] = useState<any[]>([]);
+    const { selectedChat, setSelectedChat, drafts, setDraft } = useAppState();
+    const [messages, setMessages] = useState<any[]>([]);
+    const [newMessage, setNewMessage] = useState("");
+    const [unreadCounts, setUnreadCounts] = useState<{ [key: string]: number }>({});
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isMobile, setIsMobile] = useState(false);
+    useEffect(() => {
+        const checkIsMobile = () => setIsMobile(window.innerWidth < 768);
+        checkIsMobile();
+        window.addEventListener('resize', checkIsMobile);
+        return () => window.removeEventListener('resize', checkIsMobile);
+    }, []);
+    const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
+    const [showCreateGroup, setShowCreateGroup] = useState(false);
+    const [showGroupInfo, setShowGroupInfo] = useState(false);
+    const [showUserInfo, setShowUserInfo] = useState(false);
+    const [onlineStatus, setOnlineStatus] = useState<any>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [typingStatus, setTypingStatus] = useState<string[]>([]);
 
+    useEffect(() => {
+        if (selectedChat?.id && drafts[selectedChat.id]) {
+            setNewMessage(drafts[selectedChat.id]);
+        } else {
+            setNewMessage('');
+        }
+    }, [selectedChat, drafts]);
 
-  useEffect(() => {
-    if (!firebaseUser) return;
+    const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setNewMessage(e.target.value);
+        setDraft(selectedChat.id, e.target.value);
 
-    // Fetch user's chats (groups and DMs)
-    const qGroups = query(collection(db, "groups"), where("members", "array-contains", firebaseUser.uid));
-    const unsubGroups = onSnapshot(qGroups, async (groupsSnap) => {
-        const groupChats = groupsSnap.docs.map(doc => ({ id: doc.id, ...doc.data(), isGroup: true }));
-
-        const followingRef = collection(db, "users", firebaseUser.uid, "following");
-        const followersRef = collection(db, "users", firebaseUser.uid, "followers");
-        const [followingSnap, followersSnap] = await Promise.all([getDocs(followingRef), getDocs(followersRef)]);
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
         
-        const followingIds = followingSnap.docs.map(doc => doc.id);
-        const followerIds = followersSnap.docs.map(doc => doc.id);
-        const allConnections = Array.from(new Set([...followingIds, ...followerIds]));
-        
-        const userProfiles = await Promise.all(
-          allConnections.map(async (uid) => {
-            const userDoc = await getDoc(doc(db, "users", uid));
-            return userDoc.exists() ? { uid, ...userDoc.data(), isGroup: false, id: uid } : null;
-          })
-        );
-        
-        const oneOnOneChats = userProfiles.filter(Boolean) as any[];
-        const allUserChats = [...groupChats, ...oneOnOneChats].filter((v,i,a)=>a.findIndex(t=>(t.id === v.id))===i);
-        
-        allUserChats.sort((a,b) => (b.lastMessageAt?.toDate() || b.createdAt?.toDate() || 0) - (a.lastMessageAt?.toDate() || a.createdAt?.toDate() || 0));
+        updateDoc(doc(db, selectedChat.isGroup ? "groups" : "users", selectedChat.id), {
+            typing: arrayUnion(firebaseUser.uid)
+        }).catch(() => {});
 
-        setChats(allUserChats);
-    });
-
-    // Fetch joinable anonymous groups
-    const qJoinable = query(collection(db, "groups"), where("groupType", "==", "anonymous"));
-    const unsubJoinable = onSnapshot(qJoinable, (snap) => {
-        const allAnonGroups = snap.docs.map(doc => ({ id: doc.id, ...doc.data(), isGroup: true }));
-        const nonMemberGroups = allAnonGroups.filter(g => !(g.members as any[])?.includes(firebaseUser.uid));
-        setJoinableGroups(nonMemberGroups);
-    });
-
-
-    return () => {
-        unsubGroups();
-        if (unsubJoinable) unsubJoinable();
+        typingTimeoutRef.current = setTimeout(() => {
+            updateDoc(doc(db, selectedChat.isGroup ? "groups" : "users", selectedChat.id), {
+                typing: arrayRemove(firebaseUser.uid)
+            }).catch(() => {});
+        }, 3000);
     };
 
-  }, [firebaseUser]);
+
+    useEffect(() => {
+        if (!firebaseUser) return;
+
+        // Fetch user's chats (groups and DMs)
+        const qGroups = query(collection(db, "groups"), where("members", "array-contains", firebaseUser.uid));
+        const unsubGroups = onSnapshot(qGroups, async (groupsSnap) => {
+            const groupChats = await Promise.all(groupsSnap.docs.map(async (d) => {
+                const groupData = { id: d.id, ...d.data(), isGroup: true };
+                const lastMsgQuery = query(collection(db, "chats", d.id, "messages"), orderBy("createdAt", "desc"), limit(1));
+                const lastMsgSnap = await getDocs(lastMsgQuery);
+                const lastMessage = lastMsgSnap.empty ? null : lastMsgSnap.docs[0].data();
+                return { ...groupData, lastMessage };
+            }));
+
+            const followingRef = collection(db, "users", firebaseUser.uid, "following");
+            const followersRef = collection(db, "users", firebaseUser.uid, "followers");
+            const [followingSnap, followersSnap] = await Promise.all([getDocs(followingRef), getDocs(followersRef)]);
+            
+            const followingIds = followingSnap.docs.map(doc => doc.id);
+            const followerIds = followersSnap.docs.map(doc => doc.id);
+            const allConnections = Array.from(new Set([...followingIds, ...followerIds]));
+            
+            const userProfiles = await Promise.all(
+              allConnections.map(async (uid) => {
+                const userDoc = await getDoc(doc(db, "users", uid));
+                if (!userDoc.exists()) return null;
+                
+                const chatId = getChatId(firebaseUser.uid, uid);
+                const lastMsgQuery = query(collection(db, "chats", chatId, "messages"), orderBy("createdAt", "desc"), limit(1));
+                const lastMsgSnap = await getDocs(lastMsgQuery);
+                const lastMessage = lastMsgSnap.empty ? null : lastMsgSnap.docs[0].data();
+
+                return { uid, ...userDoc.data(), isGroup: false, id: uid, lastMessage };
+              })
+            );
+            
+            const oneOnOneChats = userProfiles.filter(Boolean) as any[];
+            const allUserChats = [...groupChats, ...oneOnOneChats].filter((v,i,a)=>a.findIndex(t=>(t.id === v.id))===i);
+            
+            allUserChats.sort((a,b) => (b.lastMessage?.createdAt?.toDate() || b.createdAt?.toDate() || 0) - (a.lastMessage?.createdAt?.toDate() || a.createdAt?.toDate() || 0));
+
+            setChats(allUserChats);
+        });
+
+        const qJoinable = query(collection(db, "groups"), where("groupType", "==", "anonymous"));
+        const unsubJoinable = onSnapshot(qJoinable, (snap) => {
+            const allAnonGroups = snap.docs.map(doc => ({ id: doc.id, ...doc.data(), isGroup: true }));
+            const nonMemberGroups = allAnonGroups.filter(g => !(g.members as any[])?.includes(firebaseUser.uid));
+            setJoinableGroups(nonMemberGroups);
+        });
+
+        return () => {
+            unsubGroups();
+            if (unsubJoinable) unsubJoinable();
+        };
+
+    }, [firebaseUser]);
 
    useEffect(() => {
-    if (!selectedChat || selectedChat.isGroup) {
-      setOnlineStatus(null);
-      return;
-    }
+        if (!selectedChat) return;
 
-    const unsub = onSnapshot(doc(db, 'users', selectedChat.uid), (doc) => {
-      const data = doc.data();
-      if (data) {
-        setOnlineStatus({
-          status: data.status,
-          lastSeen: data.lastSeen?.toDate(),
-        });
-      }
-    });
-
-    return () => unsub();
-  }, [selectedChat]);
+        let unsub: Unsubscribe;
+        if (selectedChat.isGroup) {
+            unsub = onSnapshot(doc(db, 'groups', selectedChat.id), (doc) => {
+                const data = doc.data();
+                if (data?.typing) {
+                    setTypingStatus(data.typing.filter((uid: string) => uid !== firebaseUser.uid));
+                }
+            });
+        } else {
+             unsub = onSnapshot(doc(db, 'users', selectedChat.uid), (doc) => {
+                const data = doc.data();
+                if (data) {
+                    setOnlineStatus({ status: data.status, lastSeen: data.lastSeen?.toDate() });
+                    if(data.typing?.includes(firebaseUser.uid)) {
+                        setTypingStatus([selectedChat.uid]);
+                    } else {
+                        setTypingStatus([]);
+                    }
+                }
+            });
+        }
+       
+        return () => unsub();
+   }, [selectedChat, firebaseUser.uid]);
 
 
   const handleSelectChat = async (chat: any) => {
@@ -561,6 +609,7 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
     setShowGroupInfo(false);
     setShowUserInfo(false);
     setShowEmojiPicker(null);
+    setNewMessage(drafts[chat.id] || '');
     
     let chatId: string;
     chatId = chat.isGroup ? chat.id : getChatId(firebaseUser.uid, chat.uid);
@@ -574,7 +623,6 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
       setMessages(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
     });
 
-    // Mark messages as read
     const unreadQuery = query(
         collection(db, "chats", chatId, "messages"), 
         where("readBy", "not-in", [[firebaseUser.uid]])
@@ -590,7 +638,6 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
       }
     });
     if(hasUnread) await batch.commit();
-
 
     return () => unsubMessages();
   };
@@ -617,6 +664,11 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
     
     const textToSend = newMessage;
     setNewMessage("");
+    setDraft(selectedChat.id, '');
+    updateDoc(doc(db, selectedChat.isGroup ? "groups" : "users", selectedChat.id), {
+        typing: arrayRemove(firebaseUser.uid)
+    }).catch(() => {});
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
 
     const chatId = selectedChat.isGroup ? selectedChat.id : getChatId(firebaseUser.uid, selectedChat.uid);
     const messageData: any = {
@@ -668,17 +720,14 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
         const uidsForEmoji = currentReactions[emoji] || [];
 
         if (uidsForEmoji.includes(firebaseUser.uid)) {
-            // User is removing their reaction
             const newUids = uidsForEmoji.filter((uid: string) => uid !== firebaseUser.uid);
             if (newUids.length > 0) {
                 await updateDoc(messageRef, { [`reactions.${emoji}`]: newUids });
             } else {
-                // If no one is left, remove the emoji key
                 delete currentReactions[emoji];
                 await updateDoc(messageRef, { reactions: currentReactions });
             }
         } else {
-            // User is adding a reaction
             await updateDoc(messageRef, {
               [`reactions.${emoji}`]: arrayUnion(firebaseUser.uid)
             });
@@ -732,7 +781,6 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
         members: arrayUnion(firebaseUser.uid),
         [`memberInfo.${firebaseUser.uid}`]: { name: firebaseUser.name, avatar_url: firebaseUser.avatar_url, username: firebaseUser.username }
     });
-    // This will trigger the main chat listener to move it to the top list
     handleSelectChat({ ...group, members: [...group.members, firebaseUser.uid] }); 
   };
 
@@ -754,7 +802,6 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
 
     if (groupData.admins?.includes(firebaseUser.uid)) {
         updateData.admins = arrayRemove(firebaseUser.uid);
-        // If the leaving user is the last admin, assign a new admin
         if (updateData.admins.length === 0 && remainingMembers.length > 0) {
             updateData.admins = [remainingMembers[0]];
         }
@@ -766,7 +813,6 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
     
     batch.update(groupRef, updateData);
 
-    // Add a system message about the user leaving, only for simple groups
     if (groupData.groupType === 'simple') {
         const messageRef = doc(collection(db, "chats", groupId, "messages"));
         batch.set(messageRef, {
@@ -807,15 +853,23 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
   const defaultReactions = ["👍", "❤️", "😂", "😢", "😮", "🙏"];
 
   const renderStatus = () => {
-    if (!selectedChat) return null;
-    if (onlineStatus?.status === 'online') {
-        return <p className="text-xs text-green-400">Online</p>;
+        if (!selectedChat) return null;
+        if (typingStatus.length > 0) {
+             const typingNames = selectedChat.isGroup 
+                ? typingStatus.map(uid => selectedChat.memberInfo?.[uid]?.name.split(' ')[0] || 'Someone').slice(0, 2)
+                : [];
+             const text = selectedChat.isGroup ? `${typingNames.join(', ')} ${typingNames.length > 1 ? 'are' : 'is'} typing...` : 'typing...';
+            return <p className="text-xs text-accent-cyan animate-pulse">{text}</p>;
+        }
+        if (onlineStatus?.status === 'online') {
+            return <p className="text-xs text-green-400">Online</p>;
+        }
+        if (onlineStatus?.lastSeen) {
+            return <p className="text-xs text-gray-400">Last seen {timeSince(onlineStatus.lastSeen)}</p>;
+        }
+        return <p className="text-xs text-gray-400">{selectedChat.isGroup ? `${selectedChat.members.length} members` : 'Offline'}</p>;
     }
-    if (onlineStatus?.lastSeen) {
-        return <p className="text-xs text-gray-400">Last seen {timeSince(onlineStatus.lastSeen)}</p>;
-    }
-    return <p className="text-xs text-gray-400">{selectedChat.isGroup ? `${selectedChat.members.length} members` : 'Offline'}</p>;
-  }
+
 
   const filteredChats = chats.filter(chat => 
     chat.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -861,7 +915,9 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
                             </div>
                             <div className="flex-1 overflow-hidden">
                                 <span className="font-bold text-white block truncate">{chat.name || chat.username}</span>
-                                {!chat.isGroup && <span className="text-xs text-gray-400 block truncate">@{chat.username}</span>}
+                                <span className="text-xs text-gray-400 block truncate italic">
+                                    {drafts[chat.id] ? <span className="text-red-400">[Draft] {drafts[chat.id]}</span> : chat.lastMessage?.text || "No messages yet"}
+                                </span>
                             </div>
                             {unreadCounts[chat.id] > 0 && (
                                 <span className="bg-accent-pink text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
@@ -998,7 +1054,7 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
                             <Paperclip size={20}/>
                          </button>
                          <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*,video/*,audio/*" />
-                        <input type="text" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Type a message..." className="flex-1 bg-gray-700 rounded-full px-4 py-2 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-accent-cyan"/>
+                        <input type="text" value={newMessage} onChange={handleInputChange} placeholder="Type a message..." className="flex-1 bg-gray-700 rounded-full px-4 py-2 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-accent-cyan"/>
                         <button type="submit" className="p-3 rounded-full bg-accent-cyan text-black" disabled={!newMessage.trim() && !fileInputRef.current?.files?.length}>
                             <Send size={20}/>
                         </button>
