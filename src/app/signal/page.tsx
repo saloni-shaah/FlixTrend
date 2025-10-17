@@ -956,7 +956,7 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
                     <div className="text-gray-400 text-center p-8">No chats found.</div>
                 ) : (
                     filteredChats.map((chat) => (
-                        <button key={chat.isGroup ? chat.id : `dm-${chat.uid}`} className={`w-full flex items-center gap-4 px-4 py-3 text-left hover:bg-accent-cyan/10 transition-colors duration-200 ${selectedChat?.id === chat.id ? "bg-accent-cyan/20" : ""}`} onClick={() => handleSelectChat(chat)}>
+                        <button key={chat.isGroup ? chat.id : `dm-${chat.uid}`} className={`w-full flex items-center gap-4 px-4 py-3 text-left transition-colors duration-200 group relative ${selectedChat?.id === chat.id ? "bg-accent-cyan/20" : ""}`} onClick={() => handleSelectChat(chat)}>
                             <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-xl overflow-hidden shrink-0">
                                 {chat.isGroup ? 
                                     (chat.avatar_url ? <img src={chat.avatar_url} alt={chat.name} className="w-full h-full object-cover"/> : (chat.groupType === 'anonymous' ? <Shield/> : chat.groupType === 'pseudonymous' ? <EyeOff/> : <Users/>)) :
@@ -968,6 +968,9 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
                                 <span className="text-xs text-gray-400 block truncate italic">
                                     {drafts[chat.id] ? <span className="text-red-400">[Draft] {drafts[chat.id]}</span> : chat.lastMessage?.text || "No messages yet"}
                                 </span>
+                            </div>
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-2xl transition-opacity">
+                                💬
                             </div>
                             {unreadCounts[chat.id] > 0 && (
                                 <span className="bg-accent-pink text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
@@ -1020,7 +1023,7 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
                         <AnimatePresence initial={false}>
                         {messages.map(msg => {
                             const isUser = msg.sender === firebaseUser.uid;
-                            const isRead = selectedChat.isGroup ? msg.readBy.length === selectedChat.members.length : msg.readBy.includes(selectedChat.uid);
+                            const isReadByAll = selectedChat.isGroup ? msg.readBy.length === selectedChat.members.length : msg.readBy.includes(selectedChat.id);
                             
                             const senderInfo = selectedChat.isGroup ?
                                 (selectedChat.groupType === 'simple' ? selectedChat.memberInfo?.[msg.sender] : null)
@@ -1038,7 +1041,7 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
                                 key={msg.id} className={`group flex w-full items-end gap-2 ${isUser ? "justify-end" : msg.sender === 'system' ? 'justify-center' : "justify-start"}`}>
                                 <div className={`flex items-end gap-2 max-w-[80%] md:max-w-[70%]`}>
                                     <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
-                                      <div className={`relative px-4 py-2 rounded-2xl transition-all duration-300 ${isUser ? "bg-accent-cyan text-white rounded-br-none" : msg.sender === 'system' ? "bg-gray-800 text-gray-400 text-xs italic" : "bg-gray-700 text-white rounded-bl-none"} ${isUser && isRead ? 'shadow-glow' : ''}`}>
+                                      <div className={`relative px-4 py-2 rounded-2xl transition-all duration-300 ${isUser ? "bg-accent-cyan text-white rounded-br-none" : msg.sender === 'system' ? "bg-gray-800 text-gray-400 text-xs italic" : "bg-gray-700 text-white rounded-bl-none"} ${isUser && isReadByAll ? 'shadow-glow' : ''}`}>
                                           {!isUser && msg.sender !== 'system' && (
                                               <div className="font-bold text-sm text-accent-pink">{displayName}</div>
                                           )}
@@ -1124,7 +1127,7 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
                                 animate={{ scale: 1, opacity: 1 }}
                                 exit={{ scale: 0.5, opacity: 0 }}
                                 type="submit" 
-                                className="p-3 rounded-full bg-accent-cyan text-black"
+                                className="p-3 rounded-full bg-accent-cyan text-white"
                              >
                                 <Send size={20}/>
                              </motion.button>
