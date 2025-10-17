@@ -1,7 +1,7 @@
 
 
 import { initializeApp } from "firebase-admin/app";
-import { getFirestore, FieldValue, Timestamp, doc, collection, query, where, getDocs, limit, writeBatch, setDoc, updateDoc, arrayUnion, arrayRemove } from "firebase-admin/firestore";
+import { getFirestore, FieldValue, Timestamp, doc, collection, query, where, getDocs, limit, writeBatch, setDoc, updateDoc, arrayUnion, arrayRemove, deleteField } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 import * as functions from "firebase-functions";
 import * as logger from "firebase-functions/logger";
@@ -270,17 +270,31 @@ export const deleteUserAccount = onCall(async (request) => {
   }
 
   try {
-    const batch = admin.firestore().batch();
-    const userRef = admin.firestore().collection('users').doc(uid);
-    batch.delete(userRef);
+    // This function must be called after re-authentication on the client.
+    // The SDK automatically verifies the auth token.
+
+    // 1. Delete user from Firestore
+    await admin.firestore().collection('users').doc(uid).delete();
     
-    await admin.auth().deleteUser(uid);
+    // 2. Delete user's posts, comments, etc. (add more as needed)
+    const postsQuery = admin.firestore().collection('posts').where('userId', '==', uid);
+    const postsSnap = await postsQuery.get();
+    const batch = admin.firestore().batch();
+    postsSnap.forEach(doc => {
+      batch.delete(doc.ref);
+    });
     await batch.commit();
+
+    // 3. Finally, delete the user from Firebase Auth
+    await admin.auth().deleteUser(uid);
+    
     logger.info(`Successfully deleted account and all data for user ${uid}.`);
     return { success: true, message: 'Account deleted successfully.' };
 
   } catch (error) {
     logger.error(`Error deleting user account ${uid}:`, error);
+    // It's crucial to give a generic error message to the client
+    // to avoid revealing internal system state.
     throw new HttpsError("internal", "Failed to delete account. Please try again later.");
   }
 });
