@@ -1,7 +1,8 @@
+
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { getFirestore, doc, setDoc } from "firebase/firestore";
+import { getFirestore, doc, setDoc, updateDoc } from "firebase/firestore";
 import { auth, app } from "@/utils/firebaseClient";
 import { RecaptchaVerifier, signInWithPhoneNumber, PhoneAuthProvider, linkWithCredential } from "firebase/auth";
 
@@ -26,7 +27,21 @@ export function CompleteProfileModal({ profile, onClose }: { profile: any, onClo
     const [error, setError] = useState("");
     const [verificationId, setVerificationId] = useState('');
     const [code, setCode] = useState('');
-    const [step, setStep] = useState(profile.profileComplete ? 2 : 1);
+    const [step, setStep] = useState(1);
+
+    const isMissingDetails = !form.dob || !form.gender || !form.location;
+    const isMissingPhone = !form.phoneNumber;
+
+    useEffect(() => {
+        if (!isMissingDetails && isMissingPhone) {
+            setStep(2); // If only phone is missing, go straight to phone step
+        } else if (!isMissingDetails && !isMissingPhone) {
+            // All details are already present, just mark as complete and close
+            handleSubmit(true); 
+        } else {
+            setStep(1); // Default to details step if anything is missing
+        }
+    }, [isMissingDetails, isMissingPhone]);
 
     const setupRecaptcha = () => {
         if (!window.recaptchaVerifier) {
@@ -102,7 +117,7 @@ export function CompleteProfileModal({ profile, onClose }: { profile: any, onClo
                 // If we are skipping phone verification because it already exists
                 delete dataToUpdate.phoneNumber;
             }
-            await setDoc(docRef, dataToUpdate, { merge: true });
+            await updateDoc(docRef, dataToUpdate);
             onClose();
         } catch (err: any) {
             setError(err.message);
@@ -126,22 +141,20 @@ export function CompleteProfileModal({ profile, onClose }: { profile: any, onClo
                 {step === 1 && (
                     <div className="flex flex-col gap-4">
                         <p className="text-sm text-gray-300 mb-4">Help others get to know you better by adding a few more details!</p>
-                        <input type="text" name="location" placeholder="Location (e.g., City, Country)" className="input-glass w-full" value={form.location} onChange={handleChange}/>
-                        <input type="date" name="dob" placeholder="Date of Birth" className="input-glass w-full" value={form.dob} onChange={handleChange}/>
-                        <select name="gender" className="input-glass w-full" value={form.gender} onChange={handleChange}>
-                            <option value="" disabled>Select Gender...</option>
-                            <option value="male">Male</option>
-                            <option value="female">Female</option>
-                            <option value="non-binary">Non-binary</option>
-                            <option value="other">Other</option>
-                            <option value="prefer-not-to-say">Prefer not to say</option>
-                        </select>
-                        <select name="accountType" className="input-glass w-full" value={form.accountType} onChange={handleChange}>
-                            <option value="user">I'm a User</option>
-                            <option value="creator">I'm a Creator</option>
-                        </select>
+                        {!form.location && <input type="text" name="location" placeholder="Location (e.g., City, Country)" className="input-glass w-full" value={form.location} onChange={handleChange}/>}
+                        {!form.dob && <input type="date" name="dob" placeholder="Date of Birth" className="input-glass w-full" value={form.dob} onChange={handleChange}/>}
+                        {!form.gender && (
+                            <select name="gender" className="input-glass w-full" value={form.gender} onChange={handleChange}>
+                                <option value="" disabled>Select Gender...</option>
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                                <option value="non-binary">Non-binary</option>
+                                <option value="other">Other</option>
+                                <option value="prefer-not-to-say">Prefer not to say</option>
+                            </select>
+                        )}
                         <button type="button" className="btn-glass bg-accent-cyan text-black mt-4" disabled={loading} onClick={() => handleSubmit(false)}>
-                            {loading ? "Saving..." : "Save Details"}
+                            {loading ? "Saving..." : "Save & Continue"}
                         </button>
                     </div>
                 )}
