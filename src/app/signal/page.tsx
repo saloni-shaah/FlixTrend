@@ -269,6 +269,7 @@ function GroupInfoPanel({ group, currentUser, mutuals, onClose, onGroupUpdate, o
     };
 
     const handleDelete = async () => {
+        if (!window.confirm("Are you sure you want to PERMANENTLY DELETE this group and all its messages? This cannot be undone.")) return;
         onGroupDeleted(group.id);
     };
 
