@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
@@ -489,6 +488,9 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
     const [onlineStatus, setOnlineStatus] = useState<any>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [typingStatus, setTypingStatus] = useState<string[]>([]);
+    const [isRecording, setIsRecording] = useState(false);
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const audioChunksRef = useRef<Blob[]>([]);
 
     useEffect(() => {
         if (selectedChat?.id && drafts[selectedChat.id]) {
@@ -501,6 +503,7 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setNewMessage(e.target.value);
+        if(!selectedChat) return;
         setDraft(selectedChat.id, e.target.value);
 
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
@@ -578,7 +581,7 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
    useEffect(() => {
         if (!selectedChat) return;
 
-        let unsub: Unsubscribe;
+        let unsub: any;
         if (selectedChat.isGroup) {
             unsub = onSnapshot(doc(db, 'groups', selectedChat.id), (doc) => {
                 const data = doc.data();
@@ -772,6 +775,51 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
     if (!callId) {
       alert("Failed to initiate call. Please try again.");
     }
+  };
+
+  const handleMicPress = async () => {
+    if (isRecording) return;
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorderRef.current = new MediaRecorder(stream);
+        audioChunksRef.current = [];
+
+        mediaRecorderRef.current.ondataavailable = (event) => {
+            audioChunksRef.current.push(event.data);
+        };
+
+        mediaRecorderRef.current.start();
+        setIsRecording(true);
+    } catch (err) {
+        console.error("Error starting recording:", err);
+    }
+  };
+
+  const handleMicRelease = async () => {
+    if (!mediaRecorderRef.current || !isRecording) return;
+    mediaRecorderRef.current.stop();
+    mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+
+    mediaRecorderRef.current.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const audioFile = new File([audioBlob], `voice-note-${Date.now()}.webm`, { type: 'audio/webm' });
+
+        try {
+            const formData = new FormData();
+            formData.append('file', audioFile);
+            formData.append('userId', firebaseUser.uid);
+            const result = await uploadFileToFirebaseStorage(formData);
+            if (result.success?.url) {
+                handleSend(new Event('submit') as any, result.success.url, 'audio');
+            } else {
+                throw new Error(result.failure || "Voice note upload failed.");
+            }
+        } catch (error) {
+            console.error("Upload failed:", error);
+            alert("Sorry, the voice note upload failed.");
+        }
+    };
+    setIsRecording(false);
   };
   
   const handleJoinAnonymousGroup = async (group: any) => {
@@ -1054,10 +1102,36 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
                             <Paperclip size={20}/>
                          </button>
                          <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*,video/*,audio/*" />
-                        <input type="text" value={newMessage} onChange={handleInputChange} placeholder="Type a message..." className="flex-1 bg-gray-700 rounded-full px-4 py-2 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-accent-cyan"/>
-                        <button type="submit" className="p-3 rounded-full bg-accent-cyan text-black" disabled={!newMessage.trim() && !fileInputRef.current?.files?.length}>
-                            <Send size={20}/>
-                        </button>
+                        <AnimatePresence mode="wait">
+                        {newMessage.trim() === "" ? (
+                             <motion.button 
+                                key="mic"
+                                initial={{ scale: 0.5, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.5, opacity: 0 }}
+                                type="button" 
+                                className={`p-3 rounded-full transition-colors ${isRecording ? 'bg-red-500 animate-pulse' : 'bg-accent-pink text-white'}`}
+                                onMouseDown={handleMicPress}
+                                onMouseUp={handleMicRelease}
+                                onTouchStart={handleMicPress}
+                                onTouchEnd={handleMicRelease}
+                             >
+                                <Mic size={20}/>
+                             </motion.button>
+                        ) : (
+                             <motion.button 
+                                key="send"
+                                initial={{ scale: 0.5, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.5, opacity: 0 }}
+                                type="submit" 
+                                className="p-3 rounded-full bg-accent-cyan text-black"
+                             >
+                                <Send size={20}/>
+                             </motion.button>
+                        )}
+                        </AnimatePresence>
+                        <input type="text" value={newMessage} onChange={handleInputChange} placeholder={isRecording ? "Recording..." : "Type a message..."} className="flex-1 bg-gray-700 rounded-full px-4 py-2 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-accent-cyan"/>
                     </form>
                     
                     {selectedChat.isGroup && showGroupInfo && (
