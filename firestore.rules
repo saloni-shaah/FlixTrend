@@ -1,159 +1,184 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if a user is authenticated
-    function isAuthenticated() {
+    // ---------------------------
+    // Helper Functions
+    // ---------------------------
+    function isSignedIn() {
       return request.auth != null;
     }
 
-    // Helper function to check if the user is the owner of a document
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-    
-    // Helper function to check if a user has an admin-level role
-    function isAdmin() {
-        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['developer', 'founder', 'cto']);
+    function isUser(userId) {
+      return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Users Collection
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
+    }
+
+    function isUserAdmin(userId) {
+      let roles = getUserData(userId).role;
+      return isSignedIn() && ('founder' in roles || 'developer' in roles);
+    }
+    
+    function isGroupMember(groupId) {
+      return isSignedIn() && get(/databases/$(database)/documents/groups/$(groupId)).data.members.hasAny([request.auth.uid]);
+    }
+    
+     function isGroupAdmin(groupId) {
+      return isSignedIn() && get(/databases/$(database)/documents/groups/$(groupId)).data.admins.hasAny([request.auth.uid]);
+    }
+
+
+    // ---------------------------
+    // User Profiles
+    // ---------------------------
     match /users/{userId} {
-      // Anyone can read a user's public profile
+      // Anyone can view a user's public profile.
       allow read: if true;
-      // Only the authenticated owner of the profile can create or update it
-      allow write: if isOwner(userId);
+      // A user can create their own profile document.
+      allow create: if isUser(userId);
+      // A user can only update their own profile. Admins can also update profiles.
+      allow update: if isUser(userId) || isUserAdmin(request.auth.uid);
+      // A user can delete their own profile document (handled by a cloud function).
+      allow delete: if isUser(userId) || isUserAdmin(request.auth.uid);
       
-      // Subcollections for a user
-      match /followers/{followerId} {
-        // Logged-in users can read who follows who.
-        allow read: if isAuthenticated();
-        // A user can only add/remove themselves from another user's followers list.
-        allow write: if isOwner(followerId);
-      }
+      // Subcollections
       match /following/{followingId} {
-        allow read: if isAuthenticated();
-        // A user can only manage their own following list.
-        allow write: if isOwner(userId);
+      	allow read, write, delete: if isUser(userId);
       }
-      match /starredPosts/{postId} {
-        allow read, write: if isOwner(userId);
+       match /followers/{followerId} {
+      	allow read: if true;
+        allow write, delete: if isSignedIn(); // Follow can be initiated by anyone
       }
-      match /notifications/{notificationId} {
-        allow read, write: if isOwner(userId);
+       match /starredPosts/{postId} {
+      	allow read, write, delete: if isUser(userId);
+      }
+       match /notifications/{notificationId} {
+        allow read, write, delete: if isUser(userId);
       }
     }
 
-    // Posts Collection
+    // ---------------------------
+    // Posts, Flashes, and Subcollections
+    // ---------------------------
     match /posts/{postId} {
-        // Any authenticated user can read any post
-        allow read: if isAuthenticated();
-        // Any authenticated user can create a post
-        allow create: if isAuthenticated();
-        // Only the owner of a post or an admin can update/delete it
-        allow update, delete: if isOwner(resource.data.userId) || isAdmin();
-        
-        // Subcollections for posts
-        match /comments/{commentId} {
-            allow read, create: if isAuthenticated();
-            allow delete: if isOwner(resource.data.userId) || isOwner(get(/databases/$(database)/documents/posts/$(postId)).data.userId);
-        }
-        match /stars/{userId} {
-             allow read, create, delete: if isAuthenticated();
-        }
-        match /relays/{userId} {
-            allow read, create, delete: if isAuthenticated();
-        }
-        match /pollVotes/{userId} {
-            allow read: if isAuthenticated();
-            allow create: if isOwner(userId); // Users can only cast their own vote
-        }
+      // Any signed-in user can read posts.
+      allow read: if isSignedIn();
+      // Any signed-in user can create a post.
+      allow create: if isSignedIn();
+      // Users can only update/delete their own posts. Admins can also delete.
+      allow update: if isUser(resource.data.userId);
+      allow delete: if isUser(resource.data.userId) || isUserAdmin(request.auth.uid);
+
+      match /comments/{commentId} {
+        allow read, write: if isSignedIn();
+      }
+      match /stars/{starId} {
+        allow read, write: if isSignedIn();
+      }
+       match /relays/{relayId} {
+        allow read, write: if isSignedIn();
+      }
+      match /pollVotes/{voteId} {
+        allow read: if isSignedIn();
+        allow write: if isUser(voteId); // Can only vote for yourself
+      }
     }
     
-    // Flashes (Stories)
     match /flashes/{flashId} {
-        allow read, create: if isAuthenticated();
-        // Only owner or admin can delete. Expires via a Cloud Function.
-        allow delete: if isOwner(resource.data.userId) || isAdmin();
+      // Any signed-in user can read flashes.
+      allow read, create: if isSignedIn();
+      // Only the creator can delete their own flash.
+      allow delete: if isUser(resource.data.userId);
     }
     
-    // Chats
-    match /chats/{chatId}/{message=**} {
-      // A user can only read/write to chats they are a member of
-      allow read, write: if request.auth.uid in get(/databases/$(database)/documents/groups/$(chatId)).data.members;
-    }
-    
-    // Groups
-    match /groups/{groupId} {
-        allow read: if request.auth.uid in resource.data.members;
-        allow create: if isAuthenticated();
-        allow update: if request.auth.uid in resource.data.admins;
-        allow delete: if request.auth.uid == resource.data.createdBy || isAdmin();
-    }
-
-    // Calls
-    match /calls/{callId} {
-      allow read, create: if isAuthenticated();
-      allow update: if isAuthenticated() && (isOwner(resource.data.callerId) || isOwner(resource.data.calleeId));
-      // Deletion is handled by the cloud function for cleanup
-      allow delete: if isAdmin(); 
-      
-      match /offerCandidates/{candidateId} {
-        allow read, write: if isAuthenticated();
-      }
-       match /answerCandidates/{candidateId} {
-        allow read, write: if isAuthenticated();
-      }
-    }
-    
-    // App Status & Config
+    // ---------------------------
+    // App Status & Admin
+    // ---------------------------
     match /app_status/{statusId} {
-        allow read: if true;
-        allow write: if isAdmin(); // Only admins can change app status
+      allow read: if true;
+      // Only admins can write to app status
+      allow write: if isUserAdmin(request.auth.uid);
+    }
+
+    // ---------------------------
+    // Calls & Signal
+    // ---------------------------
+    match /calls/{callId} {
+      // Only participants of the call can read/write to the call document
+      allow read, write, delete: if isUser(resource.data.callerId) || isUser(resource.data.calleeId);
+
+      match /offerCandidates/{candidateId} {
+        allow write: if isUser(get(/databases/$(database)/documents/calls/$(callId)).data.callerId);
+      }
+      match /answerCandidates/{candidateId} {
+        allow write: if isUser(get(/databases/$(database)/documents/calls/$(callId)).data.calleeId);
+      }
     }
     
-    // Songs, Products, Games - Generally readable by all authenticated users
-    match /songs/{songId} {
-        allow read: if isAuthenticated();
-        allow create: if isAuthenticated(); // Let any user upload music
+    match /chats/{chatId}/messages/{messageId} {
+    	// Allow read/write if the user is a member of the group (for group chats)
+      // or if the chatId contains the user's ID (for 1-on-1 chats)
+    	allow read, write: if isSignedIn() && (
+      	 (exists(/databases/$(database)/documents/groups/$(chatId)) && isGroupMember(chatId)) ||
+         (!exists(/databases/$(database)/documents/groups/$(chatId)) && request.auth.uid in chatId.split('_'))
+      );
+      allow delete: if isUser(resource.data.sender); // Allow deleting own messages
     }
     
+    match /groups/{groupId} {
+    	allow read: if isGroupMember(groupId);
+      allow create: if isSignedIn();
+      allow update: if isGroupAdmin(groupId);
+      allow delete: if isUser(get(/databases/$(database)/documents/groups/$(groupId)).data.createdBy); // Only original creator can delete
+    }
+
+    // ---------------------------
+    // Store & Community Content
+    // ---------------------------
     match /products/{productId} {
-        allow read: if true;
-        allow create, update, delete: if isAdmin();
+      // Anyone can see the products
+      allow read: if true;
+      // Only admins can add/update/delete products
+      allow write: if isUserAdmin(request.auth.uid);
+    }
+    
+    match /songs/{songId} {
+      allow read: if true;
+      allow create: if isCreator() || isUserAdmin(request.auth.uid);
+      allow update, delete: if isUser(resource.data.userId) || isUserAdmin(request.auth.uid);
     }
 
-    match /games/{gameId} {
-        allow read: if true;
-        allow create, update, delete: if isAdmin();
-    }
-
-    match /tictactoe/{gameId} {
-        allow read: if isAuthenticated();
-        allow create: if isAuthenticated();
-        allow update: if isAuthenticated() && gameId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.activeGames;
-    }
-
-    // Playlists & Collections are user-specific
     match /playlists/{playlistId} {
-        allow read, write: if isOwner(resource.data.ownerId);
+      allow read, write, delete: if isUser(resource.data.ownerId);
     }
     
     match /collections/{collectionId} {
-        allow read, write: if isOwner(resource.data.ownerId);
+      allow read, write, delete: if isUser(resource.data.ownerId);
     }
     
-     // Ad Campaigns are business-specific
-    match /adCampaigns/{campaignId} {
-        allow read: if isAuthenticated();
-        allow write: if isOwner(resource.data.advertiserId) || isAdmin();
-        
-        match /creatives/{creativeId} {
-            allow read: if isAuthenticated();
-            allow write: if isOwner(get(/databases/$(database)/documents/adCampaigns/$(campaignId)).data.advertiserId) || isAdmin();
-        }
+     match /games/{gameId} {
+      allow read: if true;
+      allow create: if isUserAdmin(request.auth.uid); // Only admins can add new games
+      allow write: if isUserAdmin(request.auth.uid);
     }
+    
+    // ---------------------------
+    // Ad Campaign Data
+    // ---------------------------
+    match /adCampaigns/{campaignId} {
+      allow read: if true; // Ads are public
+      allow create: if isSignedIn(); // Any signed-in business user can create
+      allow update: if isUser(resource.data.advertiserId);
+      
+      match /creatives/{creativeId} {
+        allow read: if true;
+        allow create: if isSignedIn();
+      }
+    }
+
   }
 }
