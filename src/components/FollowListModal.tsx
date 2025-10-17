@@ -1,7 +1,7 @@
 
 "use client";
 import React, { useState, useEffect } from 'react';
-import { getFirestore, collection, getDocs, doc, getDoc } from 'firebase/firestore';
+import { getFirestore, collection, onSnapshot, doc, getDoc, query } from 'firebase/firestore';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { FollowButton } from './FollowButton';
@@ -14,38 +14,56 @@ export function FollowListModal({ userId, type, onClose, currentUser }: { userId
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        async function fetchUsers() {
-            setLoading(true);
-            try {
-                let userIds: string[] = [];
+        setLoading(true);
+        let unsubscribe: (() => void) | null = null;
 
+        const fetchUsers = async () => {
+            try {
                 if (type === 'friends') {
                     const followersSnap = await getDocs(collection(db, "users", userId, "followers"));
                     const followingSnap = await getDocs(collection(db, "users", userId, "following"));
                     const followerIds = followersSnap.docs.map(d => d.id);
                     const followingIds = followingSnap.docs.map(d => d.id);
-                    userIds = followerIds.filter(id => followingIds.includes(id));
+                    const userIds = followerIds.filter(id => followingIds.includes(id));
+                    
+                    if (userIds.length > 0) {
+                        const userPromises = userIds.map(id => getDoc(doc(db, "users", id)));
+                        const userDocs = await Promise.all(userPromises);
+                        const usersData = userDocs.map(docSnap => docSnap.exists() ? { uid: docSnap.id, ...docSnap.data() } : null).filter(Boolean);
+                        setUsers(usersData);
+                    } else {
+                        setUsers([]);
+                    }
+                    setLoading(false);
                 } else {
+                    // For 'followers' or 'following', set up a real-time listener
                     const listCollectionRef = collection(db, "users", userId, type);
-                    const listSnap = await getDocs(listCollectionRef);
-                    userIds = listSnap.docs.map(d => d.id);
+                    unsubscribe = onSnapshot(query(listCollectionRef), async (listSnap) => {
+                        const userIds = listSnap.docs.map(d => d.id);
+                        if (userIds.length > 0) {
+                            const userPromises = userIds.map(id => getDoc(doc(db, "users", id)));
+                            const userDocs = await Promise.all(userPromises);
+                            const usersData = userDocs.map(docSnap => docSnap.exists() ? { uid: docSnap.id, ...docSnap.data() } : null).filter(Boolean);
+                            setUsers(usersData);
+                        } else {
+                            setUsers([]);
+                        }
+                        setLoading(false);
+                    });
                 }
-                
-                if (userIds.length > 0) {
-                    const userPromises = userIds.map(id => getDoc(doc(db, "users", id)));
-                    const userDocs = await Promise.all(userPromises);
-                    const usersData = userDocs.map(docSnap => docSnap.exists() ? { uid: docSnap.id, ...docSnap.data() } : null).filter(Boolean);
-                    setUsers(usersData);
-                } else {
-                    setUsers([]);
-                }
-
             } catch (error) {
                 console.error(`Error fetching ${type}:`, error);
+                setLoading(false);
             }
-            setLoading(false);
-        }
+        };
+
         fetchUsers();
+
+        return () => {
+            if (unsubscribe) {
+                unsubscribe();
+            }
+        };
     }, [userId, type]);
 
     return (
