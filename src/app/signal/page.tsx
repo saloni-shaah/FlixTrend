@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
@@ -492,27 +491,27 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
   useEffect(() => {
     if (!firebaseUser) return;
 
-    // Fetch user's chats (groups and mutuals)
-    const qChats = query(collection(db, "groups"), where("members", "array-contains", firebaseUser.uid));
-    const unsubChats = onSnapshot(qChats, async (groupsSnap) => {
+    // Fetch user's chats (groups and DMs)
+    const qGroups = query(collection(db, "groups"), where("members", "array-contains", firebaseUser.uid));
+    const unsubGroups = onSnapshot(qGroups, async (groupsSnap) => {
         const groupChats = groupsSnap.docs.map(doc => ({ id: doc.id, ...doc.data(), isGroup: true }));
-        
+
         const followingRef = collection(db, "users", firebaseUser.uid, "following");
         const followersRef = collection(db, "users", firebaseUser.uid, "followers");
         const [followingSnap, followersSnap] = await Promise.all([getDocs(followingRef), getDocs(followersRef)]);
         
         const followingIds = followingSnap.docs.map(doc => doc.id);
         const followerIds = followersSnap.docs.map(doc => doc.id);
-        const mutualUids = followingIds.filter(id => followerIds.includes(id));
+        const allConnections = Array.from(new Set([...followingIds, ...followerIds]));
         
-        const mutualProfiles = await Promise.all(
-          mutualUids.map(async (uid) => {
+        const userProfiles = await Promise.all(
+          allConnections.map(async (uid) => {
             const userDoc = await getDoc(doc(db, "users", uid));
             return userDoc.exists() ? { uid, ...userDoc.data(), isGroup: false, id: uid } : null;
           })
         );
         
-        const oneOnOneChats = mutualProfiles.filter(Boolean) as any[];
+        const oneOnOneChats = userProfiles.filter(Boolean) as any[];
         const allUserChats = [...groupChats, ...oneOnOneChats].filter((v,i,a)=>a.findIndex(t=>(t.id === v.id))===i);
         
         allUserChats.sort((a,b) => (b.lastMessageAt?.toDate() || b.createdAt?.toDate() || 0) - (a.lastMessageAt?.toDate() || a.createdAt?.toDate() || 0));
@@ -524,14 +523,13 @@ function ClientOnlySignalPage({ firebaseUser }: { firebaseUser: any }) {
     const qJoinable = query(collection(db, "groups"), where("groupType", "==", "anonymous"));
     const unsubJoinable = onSnapshot(qJoinable, (snap) => {
         const allAnonGroups = snap.docs.map(doc => ({ id: doc.id, ...doc.data(), isGroup: true }));
-        // Client-side filter to avoid needing a composite index
         const nonMemberGroups = allAnonGroups.filter(g => !(g.members as any[])?.includes(firebaseUser.uid));
         setJoinableGroups(nonMemberGroups);
     });
 
 
     return () => {
-        unsubChats();
+        unsubGroups();
         if (unsubJoinable) unsubJoinable();
     };
 
