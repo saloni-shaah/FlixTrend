@@ -36,37 +36,8 @@ function SquadPageContent() {
   const [starredPosts, setStarredPosts] = useState<any[]>([]);
   const [showFollowList, setShowFollowList] = useState<null | 'followers' | 'following' | 'friends'>(null);
   const [showCompleteProfile, setShowCompleteProfile] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
   const router = useRouter();
 
-
-  const handleSearch = async (term: string) => {
-      setSearchTerm(term);
-      if (term.trim() === '') {
-          setIsSearching(false);
-          setSearchResults([]);
-          return;
-      }
-      setIsSearching(true);
-      const userQuery = query(collection(db, 'users'), where('username', '>=', term.toLowerCase()), where('username', '<=', term.toLowerCase() + '\uf8ff'));
-      const groupQuery = query(collection(db, 'groups'), where('name', '>=', term), where('name', '<=', term + '\uf8ff'));
-      
-      const [userSnap, groupSnap] = await Promise.all([getDocs(userQuery), getDocs(groupQuery)]);
-      
-      const users = userSnap.docs.map(doc => ({ ...doc.data(), id: doc.id, type: 'user' }));
-      const groups = groupSnap.docs.map(doc => ({ ...doc.data(), id: doc.id, type: 'group' }));
-      
-      setSearchResults([...users, ...groups]);
-  };
-  
-  const handleSelectChat = (item: any) => {
-      // This is a placeholder. In a real app, you would navigate to the chat.
-      alert(`Navigating to chat with ${item.name || item.username}`);
-      setSearchTerm('');
-      setIsSearching(false);
-  }
 
   useEffect(() => {
     const unsubAuth = auth.onAuthStateChanged(async (user) => {
@@ -255,38 +226,6 @@ function SquadPageContent() {
 
         <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="btn-glass mt-6" onClick={() => setShowEdit(true)}>Edit Profile</motion.button>
       </motion.div>
-
-       <div className="w-full max-w-2xl mx-auto my-8 relative">
-        <div className="relative">
-            <input
-                type="text"
-                className="input-glass w-full pl-10"
-                placeholder="Search users or groups..."
-                value={searchTerm}
-                onChange={(e) => handleSearch(e.target.value)}
-            />
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-        </div>
-        {isSearching && (
-            <div className="absolute top-full mt-2 w-full glass-card max-h-80 overflow-y-auto z-30 p-2">
-                {searchResults.length > 0 ? (
-                    searchResults.map(item => (
-                        <div key={item.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent-cyan/10 cursor-pointer" onClick={() => handleSelectChat(item)}>
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-lg overflow-hidden shrink-0">
-                                {item.avatar_url ? <img src={item.avatar_url} alt={item.name} className="w-full h-full object-cover" /> : (item.type === 'group' ? <UsersIcon/> : 'U')}
-                            </div>
-                            <div>
-                                <div className="font-bold text-sm truncate">{item.name || item.username}</div>
-                                <div className="text-xs text-gray-400">{item.type === 'user' ? `@${item.username}` : `${item.members?.length || 0} members`}</div>
-                            </div>
-                        </div>
-                    ))
-                ) : (
-                    <div className="p-4 text-center text-gray-400">No results found.</div>
-                )}
-            </div>
-        )}
-      </div>
 
       {/* Tabs */}
       <div className="flex justify-center gap-2 md:gap-4 my-8 flex-wrap">
