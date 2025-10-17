@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp, where, writeBatch, getDocs, updateDoc, deleteDoc, arrayUnion, arrayRemove, deleteField, limit } from "firebase/firestore";
 import { auth, db } from "@/utils/firebaseClient";
-import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, Smile, Trash2, Users, CheckSquare, Square, MoreVertical, UserPlus, UserX, Edit, Shield, EyeOff, LogOut, UploadCloud, UserCircle, Cake, MapPin, AtSign, User, Bot, Search, Check, CheckCheck } from "lucide-react";
+import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, Smile, Trash2, Users, CheckSquare, Square, MoreVertical, UserPlus, UserX, Edit, Shield, EyeOff, LogOut, UploadCloud, UserCircle, Cake, MapPin, AtSign, User, Bot, Search } from "lucide-react";
 import { useAppState } from "@/utils/AppStateContext";
 import { createCall } from "@/utils/callService";
 import { motion, AnimatePresence } from "framer-motion";
@@ -1036,7 +1036,7 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
                                 key={msg.id} className={`group flex w-full items-end gap-2 ${isUser ? "justify-end" : msg.sender === 'system' ? 'justify-center' : "justify-start"}`}>
                                 <div className={`flex items-end gap-2 max-w-[80%] md:max-w-[70%]`}>
                                     <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
-                                      <div className={`relative px-4 py-2 rounded-2xl ${isUser ? "bg-accent-cyan text-black rounded-br-none" : msg.sender === 'system' ? "bg-gray-800 text-gray-400 text-xs italic" : "bg-gray-700 text-white rounded-bl-none"}`}>
+                                      <div className={`relative px-4 py-2 rounded-2xl transition-all duration-300 ${isUser ? "bg-accent-cyan text-black rounded-br-none" : msg.sender === 'system' ? "bg-gray-800 text-gray-400 text-xs italic" : "bg-gray-700 text-white rounded-bl-none"} ${isUser && isRead ? 'shadow-glow' : ''}`}>
                                           {!isUser && msg.sender !== 'system' && (
                                               <div className="font-bold text-sm text-accent-pink">{displayName}</div>
                                           )}
@@ -1048,9 +1048,6 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
                                           {msg.sender !== 'system' && (
                                             <div className={`text-xs mt-1 flex items-center gap-1 ${isUser ? 'justify-end' : 'justify-start'}`}>
                                                 <span>{msg.createdAt?.toDate?.().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || ""}</span>
-                                                {isUser && (
-                                                    isRead ? <CheckCheck size={16} className="text-blue-500"/> : <Check size={16} className="text-gray-500"/>
-                                                )}
                                             </div>
                                           )}
                                           {msg.reactions && Object.keys(msg.reactions).length > 0 && (

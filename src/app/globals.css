@@ -137,6 +137,16 @@ body {
   }
 }
 
+@keyframes shadow-glow {
+  0% { box-shadow: 0 0 5px var(--accent-cyan), 0 0 10px var(--accent-cyan); }
+  50% { box-shadow: 0 0 20px var(--accent-cyan), 0 0 30px var(--accent-cyan); }
+  100% { box-shadow: 0 0 5px var(--accent-cyan), 0 0 10px var(--accent-cyan); }
+}
+
+.shadow-glow {
+  animation: shadow-glow 2s infinite ease-in-out;
+}
+
 
 /* Base card style */
 .glass-card {
