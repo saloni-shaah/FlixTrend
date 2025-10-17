@@ -247,7 +247,6 @@ function SquadPageContent() {
         <div className="mt-4 w-full max-w-lg">
             <p className="text-gray-400 text-center mb-4 text-sm">{profile.bio || "This user hasn't set a bio yet."}</p>
             <div className="flex justify-center flex-wrap gap-x-4 gap-y-2 text-xs text-gray-500">
-                {profile.phoneNumber && <span className="flex items-center gap-1.5"><Phone size={12}/> {profile.phoneNumber}</span>}
                 {profile.location && <span className="flex items-center gap-1.5"><MapPin size={12}/> {profile.location}</span>}
                 {profile.gender && <span className="flex items-center gap-1.5"><User size={12}/> {profile.gender}</span>}
                 {profile.interests && <span className="flex items-center gap-1.5"><Tag size={12}/> {profile.interests}</span>}
