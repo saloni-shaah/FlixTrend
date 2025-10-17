@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useState, useEffect } from 'react';
 import { getFirestore, collection, onSnapshot, doc, getDoc, query } from 'firebase/firestore';
