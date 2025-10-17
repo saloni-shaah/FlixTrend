@@ -77,13 +77,12 @@ function SquadPageContent() {
             if (docSnap.exists()) {
                 const data = docSnap.data();
                 setProfile({ uid: docSnap.id, ...data });
-                 const isProfileActuallyComplete = data.profileComplete || (data.dob && data.gender && data.location);
-                 if (!isProfileActuallyComplete) {
-                    setShowCompleteProfile(true);
-                 } else if (data.profileComplete === false) {
-                    updateDoc(userDocRef, { profileComplete: true });
-                 }
+                // Only show the completion modal if the flag is explicitly false.
+                if (data.profileComplete === false) {
+                   setShowCompleteProfile(true);
+                }
             } else {
+                // If the user doc doesn't exist, we should create it and prompt for completion.
                 const defaultUsername = user.email ? user.email.split('@')[0] : `user${user.uid.substring(0,5)}`;
                 setDoc(userDocRef, {
                     uid: user.uid,
@@ -94,7 +93,7 @@ function SquadPageContent() {
                     bio: "",
                     interests: "",
                     createdAt: serverTimestamp(),
-                    profileComplete: false,
+                    profileComplete: false, // Set to false to trigger the modal
                 }).then(() => setShowCompleteProfile(true));
             }
         });
@@ -397,5 +396,3 @@ export default function SquadPage() {
         </Suspense>
     );
 }
-
-    
