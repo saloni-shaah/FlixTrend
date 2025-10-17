@@ -1,8 +1,7 @@
-
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
-import { getFirestore, collection, query, where, orderBy, onSnapshot, limit } from "firebase/firestore";
-import { app } from "@/utils/firebaseClient";
+import { getFirestore, collection, query, where, orderBy, onSnapshot, limit, getDocs } from "firebase/firestore";
+import { auth, app } from "@/utils/firebaseClient";
 import { VibeSpaceLoader } from "@/components/VibeSpaceLoader";
 import { ShortsPlayer } from "@/components/ShortsPlayer";
 import { motion, AnimatePresence } from "framer-motion";
@@ -12,6 +11,7 @@ import { GamesHub } from '@/components/GamesHub';
 import { ScopeNavBar } from "@/components/scope/ScopeNavBar";
 import { Trendboard } from "@/components/scope/Trendboard";
 import { useAppState } from "@/utils/AppStateContext";
+import { useAuthState } from "react-firebase-hooks/auth";
 
 const db = getFirestore(app);
 
@@ -21,26 +21,65 @@ export default function ScopePage() {
     const [viewMode, setViewMode] = useState<'videos' | 'hub'>('videos');
     const [activeTab, setActiveTab] = useState('music');
     const { isScopeVideoPlaying } = useAppState();
+    const [user] = useAuthState(auth);
 
     useEffect(() => {
-        const q = query(
-            collection(db, "posts"),
-            where("isVideo", "==", true),
-            orderBy("publishAt", "desc"),
-            limit(50)
-        );
+        if (!user) {
+            setLoading(false);
+            return;
+        }
 
-        const unsub = onSnapshot(q, (snapshot) => {
-            const videoPosts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setPosts(videoPosts);
-            setLoading(false);
-        }, (error) => {
-            console.error("Error fetching video posts:", error);
-            setLoading(false);
+        const fetchFollowingAndPosts = async () => {
+            setLoading(true);
+            const followingRef = collection(db, "users", user.uid, "following");
+            const followingSnap = await getDocs(followingRef);
+            const followingIds = followingSnap.docs.map(doc => doc.id);
+
+            // Include user's own posts in the scope feed
+            const userAndFollowingIds = [...new Set([user.uid, ...followingIds])];
+            
+            if (userAndFollowingIds.length === 0) {
+                 setPosts([]);
+                 setLoading(false);
+                 return;
+            }
+
+            // Firestore 'in' query is limited to 30 items in the array. 
+            // For a real app with many followed users, you'd need a more complex data model or multiple queries.
+            const q = query(
+                collection(db, "posts"),
+                where("isVideo", "==", true),
+                where("userId", "in", userAndFollowingIds.slice(0, 30)),
+                orderBy("publishAt", "desc"),
+                limit(50)
+            );
+
+            const unsub = onSnapshot(q, (snapshot) => {
+                const videoPosts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setPosts(videoPosts);
+                setLoading(false);
+            }, (error) => {
+                console.error("Error fetching video posts:", error);
+                setLoading(false);
+            });
+
+            return unsub;
+        };
+        
+        let unsubscribe: (() => void) | undefined;
+        fetchFollowingAndPosts().then(unsub => {
+            if (unsub) {
+                unsubscribe = unsub;
+            }
         });
 
-        return () => unsub();
-    }, []);
+        return () => {
+            if (unsubscribe) {
+                unsubscribe();
+            }
+        };
+
+    }, [user]);
 
     const handleDoubleClick = useCallback(() => {
         setViewMode(current => (current === 'videos' ? 'hub' : 'videos'));
@@ -102,7 +141,7 @@ export default function ScopePage() {
                         ) : (
                              <div className="flex flex-col h-full items-center justify-center text-center">
                                 <h1 className="text-3xl font-headline font-bold text-accent-cyan">The Scope is Clear</h1>
-                                <p className="text-gray-400 mt-2">No short vibes have been posted yet. Be the first!</p>
+                                <p className="text-gray-400 mt-2">Follow some creators to see their short vibes here!</p>
                             </div>
                         )}
                     </motion.div>
