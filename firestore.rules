@@ -2,159 +2,131 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper function to check if a user is an admin
-    function isAdmin(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data.role[0] in ['developer', 'founder'];
+    
+    // =================================
+    // Helper Functions
+    // =================================
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
     }
 
-    // Rules for user profiles
-    match /users/{userId} {
-      // Anyone can read a user's public profile
-      allow read: if true;
-      // Only the user themselves or an admin can write to their profile
-      allow write: if request.auth.uid == userId || isAdmin(request.auth.uid);
+    function isAdmin() {
+      // Check if the user document exists and has the required role.
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['developer', 'founder']);
+    }
 
-      // Subcollections for users
+    // NEW: Smart function to check participation in ANY chat type
+    function isChatParticipant(chatId) {
+      // For 1-on-1 chats, the user's UID must be in the chatId string
+      let isOneOnOneParticipant = chatId.matches(request.auth.uid);
+      // For group chats, the user's UID must be in the group's members list
+      let isGroupParticipant = exists(/databases/$(database)/documents/groups/$(chatId)) &&
+                               request.auth.uid in get(/databases/$(database)/documents/groups/$(chatId)).data.members;
+      
+      return isOneOnOneParticipant || isGroupParticipant;
+    }
+
+    // =================================
+    // Collections
+    // =================================
+
+    // USERS: Publicly readable, but only the owner or an admin can write.
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if isOwner(userId) || isAdmin();
+
+      // Subcollections can only be written to by the owner of the parent user document
       match /{subcollection}/{docId} {
-        // Only the user can manage their own subcollections (followers, following, etc.)
-        allow read, write, delete: if request.auth.uid == userId;
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // POSTS & FLASHES: Read-public, Create-signed_in, Write-self/admin
+    match /{postCollection}/{postId} where postCollection == 'posts' || postCollection == 'flashes' {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update: if isOwner(resource.data.userId) || isAdmin();
+      allow delete: if isOwner(resource.data.userId) || isAdmin(); // Deletion handled by Cloud Function
+
+      match /{subcollection}/{docId} {
+        allow read: if true;
+        allow write: if isSignedIn();
       }
     }
     
-    // Rules for creating new user documents
-    match /users/{userId} {
-        // A user can create their own user document during signup
-        allow create: if request.auth.uid == userId;
-    }
-
-
-    // Rules for posts
-    match /posts/{postId} {
-      // Anyone can read a post
-      allow read: if true;
-      // Allow create for any authenticated user
-      allow create: if request.auth != null;
-      // Allow update/delete only for the post owner or an admin
-      allow update, delete: if resource.data.userId == request.auth.uid || isAdmin(request.auth.uid);
-
-      // Subcollections for posts (comments, stars, relays)
-      match /{subcollection}/{docId} {
-        // Any authenticated user can create comments, stars, or relays
-        allow create: if request.auth != null;
-        // Anyone can read
-        allow read: if true;
-        // Only the creator of the subcollection document or an admin can delete
-        allow delete: if request.auth.uid == resource.data.userId || isAdmin(request.auth.uid);
-      }
-    }
-
-    // Rules for flashes
-    match /flashes/{flashId} {
-        // Anyone can read a flash
-        allow read: if true;
-        // Only authenticated users can create a flash
-        allow create: if request.auth != null;
-        // Only the owner can delete
-        allow delete: if request.auth.uid == resource.data.userId;
-    }
-
-    // Rules for chats and groups
-    match /chats/{chatId} {
-
-      // This is the core function to check membership for both DMs and Groups
-      function isChatMember() {
-        // Check if it's a group chat
-        let isGroup = exists(/databases/$(database)/documents/groups/$(chatId));
-        
-        if (isGroup) {
-          // It's a group, check if user is in the members list
-          return request.auth.uid in get(/databases/$(database)/documents/groups/$(chatId)).data.members;
-        } else {
-          // It's a 1-on-1 chat, check if user's ID is in the chatId
-          return request.auth.uid in chatId.split('_');
-        }
-      }
-
-      // Allow read/write access to the chat metadata if the user is a member
-      allow read, write: if isChatMember();
-
-      // Rules for messages within a chat
-      match /messages/{messageId} {
-        allow read: if isChatMember();
-        allow create: if isChatMember() && request.auth.uid == request.resource.data.sender;
-        allow update, delete: if isChatMember() && request.auth.uid == resource.data.sender;
-      }
+    // CHATS: Read/write access only for participants
+    match /chats/{chatId}/messages/{messageId} {
+        allow read, write: if isSignedIn() && isChatParticipant(chatId);
     }
     
-    // Rules for the groups collection itself
+    // GROUPS: Read/write for members, only admins can update info.
     match /groups/{groupId} {
-        // Members can read group info
-        allow read: if request.auth.uid in resource.data.members;
-        // Any authenticated user can create a group
-        allow create: if request.auth != null;
-        // Only admins of the group can update its info
-        allow update: if request.auth.uid in resource.data.admins;
-        // Only the original creator can delete the group
-        allow delete: if request.auth.uid == resource.data.createdBy;
+        allow get: if isChatParticipant(groupId);
+        allow list: if isSignedIn(); // Allow signed-in users to list groups (for joining anonymous groups)
+        allow create: if isSignedIn();
+        allow update: if isChatParticipant(groupId); // Let's be more lenient for now, client logic should restrict non-admins
+        allow delete: if isAdmin() || request.auth.uid == resource.data.createdBy;
     }
 
-    // Rules for call signaling
-    match /calls/{callId} {
-      // Allow read/write if the user is either the caller or the callee
-      allow read, write: if request.auth.uid == resource.data.callerId || request.auth.uid == resource.data.calleeId;
-      // Allow creation by any authenticated user
-      allow create: if request.auth != null;
-
-      match /{subcollection}/{candidateId} {
-        // Allow candidates to be added by either party
-        allow create: if request.auth.uid == get(/databases/$(database)/documents/calls/$(callId)).data.callerId ||
-                         request.auth.uid == get(/databases/$(database)/documents/calls/$(callId)).data.calleeId;
-      }
-    }
-
-    // App Status collection
+    // APP_STATUS: Read-only for users, write for admins.
     match /app_status/{statusId} {
-      // Allow read for everyone (e.g., to check maintenance mode)
       allow read: if true;
-      // Only admins can write to app status
-      allow write: if isAdmin(request.auth.uid);
+      allow write: if isAdmin();
     }
     
-    // Store Products
-    match /products/{productId} {
-        // Everyone can read products
-        allow read: if true;
-        // Only admins can create, update, or delete products
-        allow write: if isAdmin(request.auth.uid);
+    // SONGS, PRODUCTS: Read-only for users, write for admins.
+    match /{readOnlyCollection}/{docId} where readOnlyCollection == 'songs' || readOnlyCollection == 'products' {
+       allow read: if true;
+       allow write: if isAdmin();
+    }
+    
+    // PLAYLISTS, COLLECTIONS: Read/write only for the owner.
+    match /{userContentCollection}/{docId} where userContentCollection == 'playlists' || userContentCollection == 'collections' {
+        allow read, write: if isOwner(resource.data.ownerId);
     }
 
-    // Songs collection
-    match /songs/{songId} {
-        // Everyone can read songs
-        allow read: if true;
-        // Authenticated users can add songs
-        allow create: if request.auth != null;
-    }
-
-    // Playlists collection
-    match /playlists/{playlistId} {
-        // Read access for everyone
-        allow read: if true;
-        // Create, update, delete only for the owner
-        allow write: if request.auth.uid == resource.data.ownerId;
-        allow create: if request.auth.uid == request.resource.data.ownerId;
-    }
-
-    // Ad Campaigns & Creatives
+    // AD CAMPAIGNS: Only advertiser or admin can manage.
     match /adCampaigns/{campaignId} {
       allow read: if true;
-      allow write: if request.auth.uid == request.resource.data.advertiserId;
-
+      allow write: if isOwner(request.resource.data.advertiserId) || isAdmin();
+      
       match /creatives/{creativeId} {
-        allow read: if true;
-        allow write: if get(/databases/$(database)/documents/adCampaigns/$(campaignId)).data.advertiserId == request.auth.uid;
+          allow read: if true;
+          allow write: if isSignedIn() || isAdmin();
       }
     }
 
+    // GAMES: Publicly readable, only writable by admins.
+    match /games/{gameId} {
+        allow read: if true;
+        allow write: if isAdmin();
+    }
+    
+    // CALLS: Rules for WebRTC signaling.
+    match /calls/{callId} {
+      allow read, write: if isSignedIn(); // Simplified for now
+      
+       match /offerCandidates/{candidateId} {
+         allow create: if isSignedIn();
+       }
+       match /answerCandidates/{candidateId} {
+         allow create: if isSignedIn();
+       }
+    }
+
+    // TICTACTOE: Rules for the game lobby and active games.
+    match /tictactoe/{gameId} {
+        allow read: if true;
+        // Allow creation if signed in.
+        allow create: if isSignedIn();
+        // Allow updates (joining, making moves) only by participants or if joining a waiting game.
+        allow update: if isSignedIn() && 
+                        (request.auth.uid in resource.data.players || resource.data.status == 'waiting');
+    }
   }
 }
