@@ -1036,7 +1036,7 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
                                 key={msg.id} className={`group flex w-full items-end gap-2 ${isUser ? "justify-end" : msg.sender === 'system' ? 'justify-center' : "justify-start"}`}>
                                 <div className={`flex items-end gap-2 max-w-[80%] md:max-w-[70%]`}>
                                     <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
-                                      <div className={`relative px-4 py-2 rounded-2xl transition-all duration-300 ${isUser ? "bg-accent-cyan text-black rounded-br-none" : msg.sender === 'system' ? "bg-gray-800 text-gray-400 text-xs italic" : "bg-gray-700 text-white rounded-bl-none"} ${isUser && isRead ? 'shadow-glow' : ''}`}>
+                                      <div className={`relative px-4 py-2 rounded-2xl transition-all duration-300 ${isUser ? "bg-accent-cyan text-white rounded-br-none" : msg.sender === 'system' ? "bg-gray-800 text-gray-400 text-xs italic" : "bg-gray-700 text-white rounded-bl-none"} ${isUser && isRead ? 'shadow-glow' : ''}`}>
                                           {!isUser && msg.sender !== 'system' && (
                                               <div className="font-bold text-sm text-accent-pink">{displayName}</div>
                                           )}
