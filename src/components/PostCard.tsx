@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState, useRef } from 'react';
@@ -129,8 +128,9 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
     if (window.confirm("Are you sure you want to permanently delete this post and all its interactions? This cannot be undone.")) {
       try {
         await deletePostCallable({ postId: post.id });
+        alert(`Post ${post.id} has been successfully deleted.`);
       } catch (error: any) {
-        alert(`Failed to delete post: ${(error as any).message}`);
+         alert(`Failed to delete post: ${(error as any).message}`);
       }
     }
   };
