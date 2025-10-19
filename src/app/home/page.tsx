@@ -121,7 +121,7 @@ function HomePageContent() {
 
   useEffect(() => {
     fetchPosts(activeCategory);
-  }, [activeCategory, fetchPosts]); 
+  }, [activeCategory]); 
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async user => {
