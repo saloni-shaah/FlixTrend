@@ -14,7 +14,7 @@ import { useAuthState } from "react-firebase-hooks/auth";
 import { Trendboard } from "@/components/scope/Trendboard";
 
 const db = getFirestore(app);
-const POSTS_PER_PAGE = 5; // Reduced for faster initial load and quicker subsequent fetches
+const POSTS_PER_PAGE = 5;
 
 const ScopeHub = ({ activeTab, setActiveTab, onBack, currentPost }: { activeTab: string, setActiveTab: (tab: string) => void, onBack: () => void, currentPost: any }) => {
     return (
@@ -70,31 +70,24 @@ export default function ScopePage() {
     const [hasMore, setHasMore] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
     const observer = useRef<IntersectionObserver>();
-    
-    // Create a ref for the second to last item
     const prefetchTriggerRef = useRef<HTMLDivElement>(null);
-
 
     const fetchMorePosts = useCallback(async () => {
       if (!hasMore || loadingMore) return;
       setLoadingMore(true);
 
       let q;
+      const baseQuery = [
+          collection(db, "posts"),
+          where("isVideo", "==", true),
+          orderBy("publishAt", "desc"),
+          limit(POSTS_PER_PAGE)
+      ];
+
       if (lastVisible) {
-        q = query(
-            collection(db, "posts"),
-            where("isVideo", "==", true),
-            orderBy("publishAt", "desc"),
-            startAfter(lastVisible),
-            limit(POSTS_PER_PAGE)
-        );
+        q = query(collection(db, "posts"), where("isVideo", "==", true), orderBy("publishAt", "desc"), startAfter(lastVisible), limit(POSTS_PER_PAGE));
       } else {
-         q = query(
-            collection(db, "posts"),
-            where("isVideo", "==", true),
-            orderBy("publishAt", "desc"),
-            limit(POSTS_PER_PAGE)
-        );
+         q = query(collection(db, "posts"), where("isVideo", "==", true), orderBy("publishAt", "desc"), limit(POSTS_PER_PAGE));
       }
 
       try {
@@ -102,7 +95,9 @@ export default function ScopePage() {
         const newPosts = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
 
-        setPosts(prevPosts => [...prevPosts, ...newPosts]);
+        const newIds = new Set(newPosts.map(p => p.id));
+        setPosts(prevPosts => [...prevPosts.filter(p => !newIds.has(p.id)), ...newPosts]);
+        
         setLastVisible(lastDoc);
         setHasMore(documentSnapshots.docs.length === POSTS_PER_PAGE);
 
@@ -114,15 +109,14 @@ export default function ScopePage() {
       }
     }, [hasMore, loadingMore, lastVisible]);
     
-    // Initial fetch
+    // Initial fetch trigger
     useEffect(() => {
-        if (user) {
-            setLoading(true);
+        if (user && posts.length === 0) {
             fetchMorePosts();
-        } else {
+        } else if (!user) {
             setLoading(false);
         }
-    }, [user, fetchMorePosts]);
+    }, [user, posts.length, fetchMorePosts]);
 
     // Intersection Observer for infinite scroll
     useEffect(() => {
