@@ -2,8 +2,8 @@
 "use client";
 import "regenerator-runtime/runtime";
 import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
-import dynamic from 'next/dynamic';
-import { getFirestore, collection, query, orderBy, getDoc, doc, limit, startAfter, getDocs, where, Timestamp, onSnapshot } from "firebase/firestore";
+import dynamic from 'dynamic';
+import { getFirestore, collection, query, orderBy, getDoc, doc, limit, startAfter, getDocs, where, Timestamp, onSnapshot, or } from "firebase/firestore";
 import { Plus, Bell, Search, Mic, Video, Flame, Gamepad2, Tv, Music, Rss, Compass, Smile, Code, Atom, LandPlot, Handshake, PenTool, Bot, Sparkles, Book, Camera, Palette, Shirt, Utensils, Plane, Film, BrainCircuit, Landmark, Drama, CookingPot, UtensilsCrossed, Scroll, Music4, HelpingHand, Sprout, Rocket, Briefcase, Heart, Trophy, AlignLeft, BarChart3, Zap, Radio, Image as ImageIcon } from "lucide-react";
 import { auth } from "@/utils/firebaseClient";
 import { useAppState } from "@/utils/AppStateContext";
@@ -106,26 +106,30 @@ function HomePageContent() {
 
   const fetchPosts = useCallback(async (category = 'for-you', loadMore = false) => {
     if (!auth.currentUser) return;
+
+    const currentLastVisible = loadMore ? lastVisible : null;
     
     if (loadMore) {
         setLoadingMore(true);
     } else {
         setLoading(true);
         setPosts([]);
-        setLastVisible(null);
     }
     
     let postQuery;
     const baseQuery = collection(db, "posts");
-
     let constraints: any[] = [orderBy("publishAt", "desc")];
+
     if (category !== 'for-you') {
-        constraints.unshift(where("creatorType", "==", category));
+        constraints.unshift(
+            or(
+                where("creatorType", "==", category),
+                where("hashtags", "array-contains", category)
+            )
+        );
     }
     
-    // Pass `lastVisible` directly if it exists for pagination
-    const currentLastVisible = lastVisible;
-    if (loadMore && currentLastVisible) {
+    if (currentLastVisible) {
         constraints.push(startAfter(currentLastVisible));
     }
 
@@ -144,11 +148,11 @@ function HomePageContent() {
 
     setLoading(false);
     setLoadingMore(false);
-  }, []); // Empty dependency array makes it stable
+  }, [lastVisible]);
 
   useEffect(() => {
     fetchPosts(activeCategory);
-  }, [activeCategory]); 
+  }, [activeCategory, fetchPosts]); 
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async user => {
@@ -417,3 +421,5 @@ export default function HomePage() {
         </Suspense>
     )
 }
+
+    
