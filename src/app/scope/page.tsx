@@ -1,7 +1,7 @@
 
 "use client";
-import React, { useState, useEffect, useCallback } from "react";
-import { getFirestore, collection, query, where, orderBy, onSnapshot, limit, getDocs } from "firebase/firestore";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { getFirestore, collection, query, where, orderBy, onSnapshot, limit, getDocs, startAfter } from "firebase/firestore";
 import { auth, app } from "@/utils/firebaseClient";
 import { VibeSpaceLoader } from "@/components/VibeSpaceLoader";
 import { ShortsPlayer } from "@/components/ShortsPlayer";
@@ -14,6 +14,7 @@ import { useAuthState } from "react-firebase-hooks/auth";
 import { Trendboard } from "@/components/scope/Trendboard";
 
 const db = getFirestore(app);
+const POSTS_PER_PAGE = 5;
 
 const ScopeHub = ({ activeTab, setActiveTab, onBack, currentPost }: { activeTab: string, setActiveTab: (tab: string) => void, onBack: () => void, currentPost: any }) => {
     return (
@@ -65,59 +66,85 @@ export default function ScopePage() {
     const [user] = useAuthState(auth);
     const [currentPost, setCurrentPost] = useState<any>(null);
     const [currentPostIndex, setCurrentPostIndex] = useState(0);
+    const [lastVisible, setLastVisible] = useState<any>(null);
+    const [hasMore, setHasMore] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const observer = useRef<IntersectionObserver>();
+    const sentinelRef = useRef<HTMLDivElement>(null);
 
+
+    const fetchMorePosts = useCallback(async () => {
+      if (!hasMore || loadingMore) return;
+      setLoadingMore(true);
+
+      let q;
+      if (lastVisible) {
+        q = query(
+            collection(db, "posts"),
+            where("isVideo", "==", true),
+            orderBy("publishAt", "desc"),
+            startAfter(lastVisible),
+            limit(POSTS_PER_PAGE)
+        );
+      } else {
+         q = query(
+            collection(db, "posts"),
+            where("isVideo", "==", true),
+            orderBy("publishAt", "desc"),
+            limit(POSTS_PER_PAGE)
+        );
+      }
+
+      try {
+        const documentSnapshots = await getDocs(q);
+        const newPosts = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+
+        setPosts(prevPosts => [...prevPosts, ...newPosts]);
+        setLastVisible(lastDoc);
+        setHasMore(documentSnapshots.docs.length === POSTS_PER_PAGE);
+
+      } catch (error) {
+        console.error("Error fetching more video posts:", error);
+      } finally {
+        setLoadingMore(false);
+        setLoading(false);
+      }
+    }, [hasMore, loadingMore, lastVisible]);
+    
+    // Initial fetch
     useEffect(() => {
-        if (!user) {
+        if (user) {
+            setLoading(true);
+            fetchMorePosts();
+        } else {
             setLoading(false);
-            return;
+        }
+    }, [user]);
+
+    // Intersection Observer for infinite scroll
+    useEffect(() => {
+        observer.current = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting && hasMore && !loadingMore && !loading) {
+                    fetchMorePosts();
+                }
+            },
+            { threshold: 1.0 }
+        );
+
+        const currentSentinel = sentinelRef.current;
+        if (currentSentinel) {
+            observer.current.observe(currentSentinel);
         }
 
-        const fetchFollowingAndPosts = async () => {
-            setLoading(true);
-            try {
-                // Fetch videos from followed users and some random popular videos
-                const videoQuery = query(
-                    collection(db, "posts"),
-                    where("isVideo", "==", true),
-                    orderBy("publishAt", "desc"),
-                    limit(50) // Increased limit for more variety
-                );
-
-                const unsub = onSnapshot(videoQuery, (snapshot) => {
-                    const videoPosts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    // Simple shuffle for variety
-                    const shuffledPosts = videoPosts.sort(() => 0.5 - Math.random());
-                    setPosts(shuffledPosts);
-                    if(shuffledPosts.length > 0) {
-                        setCurrentPost(shuffledPosts[0]);
-                    }
-                    setLoading(false);
-                }, (error) => {
-                    console.error("Error fetching video posts:", error);
-                    setLoading(false);
-                });
-
-                return unsub;
-            } catch (error) {
-                console.error("Error setting up video feed:", error);
-                setLoading(false);
-            }
-        };
-        
-        let unsubscribe: (() => void) | undefined;
-        fetchFollowingAndPosts().then(unsub => {
-            if (unsub) {
-                unsubscribe = unsub;
-            }
-        });
-
         return () => {
-            if (unsubscribe) {
-                unsubscribe();
+            if (currentSentinel) {
+                observer.current?.unobserve(currentSentinel);
             }
         };
+    }, [fetchMorePosts, hasMore, loading, loadingMore]);
 
-    }, [user]);
 
     const handleDoubleClick = () => {
         setCurrentPost(posts[currentPostIndex]);
@@ -127,7 +154,6 @@ export default function ScopePage() {
     }
     
     useEffect(() => {
-        // When hub is open, App nav should be visible. When closed, video might play, so hide it.
         if (showHub) {
             setIsScopeVideoPlaying(false);
         }
@@ -158,14 +184,19 @@ export default function ScopePage() {
             {!showHub && (
                  <div className="absolute inset-0 w-full h-full snap-y snap-mandatory overflow-y-scroll overflow-x-hidden">
                     {posts.length > 0 ? (
-                        posts.map((post, index) => (
-                            <div key={post.id} className="h-screen w-screen snap-start flex items-center justify-center">
-                                <ShortsPlayer 
-                                    post={post} 
-                                    onView={() => setCurrentPostIndex(index)}
-                                />
+                        <>
+                            {posts.map((post, index) => (
+                                <div key={post.id} className="h-screen w-screen snap-start flex items-center justify-center">
+                                    <ShortsPlayer 
+                                        post={post} 
+                                        onView={() => setCurrentPostIndex(index)}
+                                    />
+                                </div>
+                            ))}
+                            <div ref={sentinelRef} className="h-10 w-full flex justify-center items-center">
+                               {hasMore && <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-cyan"></div>}
                             </div>
-                        ))
+                        </>
                     ) : (
                          <div className="flex flex-col h-full items-center justify-center text-center p-4">
                             <h1 className="text-3xl font-headline font-bold text-accent-cyan">The Scope is Clear</h1>
@@ -178,4 +209,3 @@ export default function ScopePage() {
         </div>
     );
 }
-
