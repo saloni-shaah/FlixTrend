@@ -2,7 +2,7 @@
 "use client";
 import "regenerator-runtime/runtime";
 import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
-import dynamic from 'dynamic';
+import dynamic from 'next/dynamic';
 import { getFirestore, collection, query, orderBy, getDoc, doc, limit, startAfter, getDocs, where, Timestamp, onSnapshot, or } from "firebase/firestore";
 import { Plus, Bell, Search, Mic, Video, Flame, Gamepad2, Tv, Music, Rss, Compass, Smile, Code, Atom, LandPlot, Handshake, PenTool, Bot, Sparkles, Book, Camera, Palette, Shirt, Utensils, Plane, Film, BrainCircuit, Landmark, Drama, CookingPot, UtensilsCrossed, Scroll, Music4, HelpingHand, Sprout, Rocket, Briefcase, Heart, Trophy, AlignLeft, BarChart3, Zap, Radio, Image as ImageIcon } from "lucide-react";
 import { auth } from "@/utils/firebaseClient";
@@ -104,27 +104,29 @@ function HomePageContent() {
     }
   }, [listening, transcript, resetTranscript]);
 
-  const fetchPosts = useCallback(async (category = 'for-you', loadMore = false) => {
+  const fetchPosts = useCallback(async (loadMore = false) => {
     if (!auth.currentUser) return;
-
-    const currentLastVisible = loadMore ? lastVisible : null;
+    
+    let currentLastVisible = loadMore ? lastVisible : null;
     
     if (loadMore) {
+        if (!hasMore) return;
         setLoadingMore(true);
     } else {
         setLoading(true);
         setPosts([]);
+        currentLastVisible = null;
     }
     
     let postQuery;
     const baseQuery = collection(db, "posts");
     let constraints: any[] = [orderBy("publishAt", "desc")];
 
-    if (category !== 'for-you') {
+    if (activeCategory !== 'for-you') {
         constraints.unshift(
             or(
-                where("creatorType", "==", category),
-                where("hashtags", "array-contains", category)
+                where("creatorType", "==", activeCategory),
+                where("hashtags", "array-contains", activeCategory)
             )
         );
     }
@@ -148,11 +150,11 @@ function HomePageContent() {
 
     setLoading(false);
     setLoadingMore(false);
-  }, [lastVisible]);
+  }, [activeCategory, hasMore]); // lastVisible is removed to stabilize the function
 
   useEffect(() => {
-    fetchPosts(activeCategory);
-  }, [activeCategory, fetchPosts]); 
+    fetchPosts();
+  }, [activeCategory]); // fetchPosts is now stable and doesn't need to be a dependency
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async user => {
@@ -178,8 +180,8 @@ function HomePageContent() {
   }, [router]);
   
   const fetchMorePosts = useCallback(() => {
-      fetchPosts(activeCategory, true);
-  }, [activeCategory, fetchPosts]);
+      fetchPosts(true);
+  }, [fetchPosts]);
 
 
   useEffect(() => {
