@@ -71,36 +71,37 @@ export default function ScopePage() {
 
         const fetchFollowingAndPosts = async () => {
             setLoading(true);
-            const followingRef = collection(db, "users", user.uid, "following");
-            const followingSnap = await getDocs(followingRef);
-            const followingIds = followingSnap.docs.map(doc => doc.id);
+            try {
+                const followingRef = collection(db, "users", user.uid, "following");
+                const followingSnap = await getDocs(followingRef);
+                const followingIds = followingSnap.docs.map(doc => doc.id);
 
-            const userAndFollowingIds = [...new Set([user.uid, ...followingIds])];
-            
-            if (userAndFollowingIds.length === 0) {
-                 setPosts([]);
-                 setLoading(false);
-                 return;
+                const userAndFollowingIds = [...new Set([user.uid, ...followingIds])];
+                
+                // Fetch videos from followed users and some random popular videos
+                const videoQuery = query(
+                    collection(db, "posts"),
+                    where("isVideo", "==", true),
+                    orderBy("publishAt", "desc"),
+                    limit(50) // Increased limit for more variety
+                );
+
+                const unsub = onSnapshot(videoQuery, (snapshot) => {
+                    const videoPosts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    // Simple shuffle for variety
+                    const shuffledPosts = videoPosts.sort(() => 0.5 - Math.random());
+                    setPosts(shuffledPosts);
+                    setLoading(false);
+                }, (error) => {
+                    console.error("Error fetching video posts:", error);
+                    setLoading(false);
+                });
+
+                return unsub;
+            } catch (error) {
+                console.error("Error setting up video feed:", error);
+                setLoading(false);
             }
-
-            const q = query(
-                collection(db, "posts"),
-                where("isVideo", "==", true),
-                where("userId", "in", userAndFollowingIds.slice(0, 30)),
-                orderBy("publishAt", "desc"),
-                limit(50)
-            );
-
-            const unsub = onSnapshot(q, (snapshot) => {
-                const videoPosts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                setPosts(videoPosts);
-                setLoading(false);
-            }, (error) => {
-                console.error("Error fetching video posts:", error);
-                setLoading(false);
-            });
-
-            return unsub;
         };
         
         let unsubscribe: (() => void) | undefined;
@@ -139,8 +140,13 @@ export default function ScopePage() {
     return (
         <div className="w-full h-screen bg-black flex flex-col relative" onDoubleClick={handleDoubleClick}>
              <style jsx global>{`
-                nav.fixed.bottom-0 {
-                    display: ${showHub ? 'flex' : 'none'} !important;
+                /* Hide AppNavBar when not in hub mode */
+                nav.fixed {
+                    display: ${showHub ? 'flex' : 'none !important'};
+                }
+                /* Ensure main content doesn't have extra padding when nav is hidden */
+                main {
+                    padding-bottom: ${showHub ? '5rem' : '0'} !important;
                 }
              `}</style>
             

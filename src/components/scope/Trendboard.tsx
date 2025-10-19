@@ -10,6 +10,17 @@ import { PostCard } from '../PostCard';
 const db = getFirestore(app);
 
 function LeaderboardSection({ title, icon, data, renderItem }: { title: string; icon: React.ReactNode; data: any[]; renderItem: (item: any, index: number) => React.ReactNode }) {
+    if (!data || data.length === 0) {
+        return (
+             <section>
+                <h3 className="flex items-center gap-2 text-xl font-bold text-accent-cyan mb-3">
+                    {icon} {title}
+                </h3>
+                <p className="text-gray-500 text-sm">Nothing to show here yet.</p>
+            </section>
+        )
+    }
+
     return (
         <section>
             <h3 className="flex items-center gap-2 text-xl font-bold text-accent-cyan mb-3">
@@ -31,14 +42,18 @@ export function Trendboard() {
     useEffect(() => {
         setLoading(true);
         const postQuery = query(collection(db, "posts"), where("isVideo", "==", true), orderBy("viewCount", "desc"), limit(5));
-        const creatorQuery = query(collection(db, "users"), orderBy("followerCount", "desc"), limit(5));
+        
+        // Firestore does not support ordering by a field that isn't in the query, so we fetch and sort client-side.
+        const creatorQuery = query(collection(db, "users"), limit(50));
 
         const unsubPosts = onSnapshot(postQuery, (snapshot) => {
             setTopPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         });
 
         const unsubCreators = onSnapshot(creatorQuery, (snapshot) => {
-             setTopCreators(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+             const creators = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+             creators.sort((a,b) => (b.followerCount || 0) - (a.followerCount || 0));
+             setTopCreators(creators.slice(0, 5));
         });
         
         // This is a simplified loading state.
