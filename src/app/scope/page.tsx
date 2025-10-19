@@ -14,7 +14,7 @@ import { useAuthState } from "react-firebase-hooks/auth";
 import { Trendboard } from "@/components/scope/Trendboard";
 
 const db = getFirestore(app);
-const POSTS_PER_PAGE = 3;
+const POSTS_PER_PAGE = 3; // Fetch in batches of 3 for a good balance of pre-loading.
 
 const ScopeHub = ({ activeTab, setActiveTab, onBack, currentPost }: { activeTab: string, setActiveTab: (tab: string) => void, onBack: () => void, currentPost: any }) => {
     return (
@@ -77,13 +77,6 @@ export default function ScopePage() {
       setLoadingMore(true);
 
       let q;
-      const baseQuery = [
-          collection(db, "posts"),
-          where("isVideo", "==", true),
-          orderBy("publishAt", "desc"),
-          limit(POSTS_PER_PAGE)
-      ];
-
       if (lastVisible) {
         q = query(collection(db, "posts"), where("isVideo", "==", true), orderBy("publishAt", "desc"), startAfter(lastVisible), limit(POSTS_PER_PAGE));
       } else {
@@ -158,7 +151,7 @@ export default function ScopePage() {
     }, [showHub, setIsScopeVideoPlaying]);
 
 
-    if (loading) {
+    if (loading && posts.length === 0) {
         return <VibeSpaceLoader />;
     }
 
@@ -168,11 +161,6 @@ export default function ScopePage() {
                 body {
                     overflow-y: hidden;
                 }
-                /* Hide AppNavBar when not in hub mode */
-                nav.fixed {
-                    display: ${showHub ? 'flex' : 'none !important'};
-                }
-                /* Ensure main content doesn't have extra padding when nav is hidden */
                 main {
                     padding: 0 !important;
                 }
