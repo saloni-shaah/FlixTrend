@@ -3,7 +3,7 @@
 import "regenerator-runtime/runtime";
 import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import dynamic from 'next/dynamic';
-import { getFirestore, collection, query, orderBy, getDoc, doc, limit, startAfter, getDocs, where, Timestamp } from "firebase/firestore";
+import { getFirestore, collection, query, orderBy, getDoc, doc, limit, startAfter, getDocs, where, Timestamp, onSnapshot } from "firebase/firestore";
 import { Plus, Bell, Search, Mic, Video, Flame, Gamepad2, Tv, Music, Rss } from "lucide-react";
 import { auth } from "@/utils/firebaseClient";
 import { useAppState } from "@/utils/AppStateContext";
@@ -89,7 +89,7 @@ function HomePageContent() {
     let postQuery;
     const baseQuery = collection(db, "posts");
 
-    let constraints = [orderBy("publishAt", "desc")];
+    let constraints: any[] = [orderBy("publishAt", "desc")];
     if (category !== 'for-you') {
         constraints.unshift(where("creatorType", "==", category));
     }
@@ -98,7 +98,7 @@ function HomePageContent() {
     }
     constraints.push(limit(POSTS_PER_PAGE));
     
-    postQuery = query(baseQuery, ...constraints as any);
+    postQuery = query(baseQuery, ...constraints);
 
     const documentSnapshots = await getDocs(postQuery);
     
