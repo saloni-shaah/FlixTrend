@@ -60,22 +60,22 @@ export function Trendboard({ currentPost }: { currentPost: any }) {
         setLoading(true);
         const fetchData = async () => {
             try {
-                // Top Videos by Views
+                // Top 3 Videos by Views
                 const postQuery = query(collection(db, "posts"), orderBy("viewCount", "desc"), limit(3));
                 const postSnap = await getDocs(postQuery);
                 setTopPosts(postSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     
-                // Top Creators by Followers
+                // Top 3 Creators by Followers
                 const userQueryFollowers = query(collection(db, "users"), orderBy("followerCount", "desc"), limit(3));
                 const userSnapFollowers = await getDocs(userQueryFollowers);
                 setTopCreators(userSnapFollowers.docs.map(doc => ({ id: doc.id, ...doc.data() })));
 
-                // Top Posters by postCount
-                const userQueryPosts = query(collection(db, "users"), orderBy("postCount", "desc"), limit(3));
+                // Top 5 Posters by postCount
+                const userQueryPosts = query(collection(db, "users"), orderBy("postCount", "desc"), limit(5));
                 const userSnapPosts = await getDocs(userQueryPosts);
                 setTopPosters(userSnapPosts.docs.map(doc => ({ id: doc.id, ...doc.data() })));
 
-                // Top Liked Users (more complex)
+                // Top 3 Liked Users (more complex)
                 const allPostsSnap = await getDocs(query(collection(db, "posts"), limit(500))); // Limit to recent 500 for performance
                 const userLikes: Record<string, number> = {};
                 allPostsSnap.forEach(doc => {
