@@ -42,8 +42,8 @@ const PostRow = ({ post, index }: { post: any, index: number }) => {
         return 'border-gray-600 text-gray-500';
     };
     
-    // Using a placeholder for thumbnail for now. A real app would generate this.
-    const thumbnailUrl = post.mediaUrl?.[0] || post.mediaUrl || `https://picsum.photos/seed/${post.id}/200`;
+    const mediaUrl = Array.isArray(post.mediaUrl) ? post.mediaUrl[0] : post.mediaUrl;
+    const thumbnailUrl = post.thumbnailUrl || mediaUrl || `https://picsum.photos/seed/${post.id}/200`;
 
     return (
         <Link href={`/home`}>
@@ -106,16 +106,15 @@ export function Trendboard() {
                     collection(db, "posts"), 
                     where('isVideo', '==', true), 
                     orderBy('viewCount', 'desc'), 
-                    limit(5)
+                    limit(10)
                 );
                 const topPostsSnap = await getDocs(topPostsQuery);
                 const topPostsData = topPostsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-                // Sort and set leaderboards
                 setLeaderboards({
-                    posts: [...usersData].sort((a, b) => b.postCount - a.postCount).slice(0, 5),
-                    followers: [...usersData].sort((a, b) => b.followerCount - a.followerCount).slice(0, 5),
-                    likes: [...usersData].sort((a, b) => b.totalLikes - a.totalLikes).slice(0, 5),
+                    posts: [...usersData].sort((a, b) => b.postCount - a.postCount).slice(0, 10),
+                    followers: [...usersData].sort((a, b) => b.followerCount - a.followerCount).slice(0, 10),
+                    likes: [...usersData].sort((a, b) => b.totalLikes - a.totalLikes).slice(0, 10),
                     topPosts: topPostsData,
                 });
 
@@ -142,32 +141,26 @@ export function Trendboard() {
     }
     
     return (
-        <div className="space-y-8">
-            <div>
-                <h3 className="text-xl font-bold text-accent-cyan flex items-center gap-2 mb-4"><Eye /> Top Posts</h3>
-                <div className="space-y-2">
-                    {leaderboards.topPosts.length > 0 ? 
-                        leaderboards.topPosts.map((post: any, index: number) => <PostRow key={post.id} post={post} index={index} />) :
-                        <p className="text-sm text-gray-500 text-center">No video posts have been viewed yet.</p>
-                    }
+        <div className="space-y-8 glass-card p-4">
+            <h2 className="text-3xl font-headline bg-gradient-to-r from-orange-400 to-amber-300 bg-clip-text text-transparent mb-8 text-center">
+                Trendboard
+            </h2>
+
+            <div className="grid md:grid-cols-2 gap-8">
+                <div>
+                    <h3 className="text-xl font-bold text-accent-cyan flex items-center gap-2 mb-4"><Eye /> Top Posts</h3>
+                    <div className="space-y-2">
+                        {leaderboards.topPosts.length > 0 ? 
+                            leaderboards.topPosts.map((post: any, index: number) => <PostRow key={post.id} post={post} index={index} />) :
+                            <p className="text-sm text-gray-500 text-center">No video posts have been viewed yet.</p>
+                        }
+                    </div>
                 </div>
-            </div>
-            <div>
-                <h3 className="text-xl font-bold text-blue-400 flex items-center gap-2 mb-4"><Trophy /> Most Posts</h3>
-                <div className="space-y-2">
-                    {leaderboards.posts.map((user: any, index: number) => <UserRow key={user.uid} user={user} index={index} metric={user.postCount} metricLabel="posts" />)}
-                </div>
-            </div>
-             <div>
-                <h3 className="text-xl font-bold text-green-400 flex items-center gap-2 mb-4"><User /> Most Followers</h3>
-                 <div className="space-y-2">
-                    {leaderboards.followers.map((user: any, index: number) => <UserRow key={user.uid} user={user} index={index} metric={user.followerCount} metricLabel="followers" />)}
-                </div>
-            </div>
-             <div>
-                <h3 className="text-xl font-bold text-orange-400 flex items-center gap-2 mb-4"><Star /> Most Likes</h3>
-                 <div className="space-y-2">
-                    {leaderboards.likes.map((user: any, index: number) => <UserRow key={user.uid} user={user} index={index} metric={user.totalLikes} metricLabel="likes" />)}
+                 <div>
+                    <h3 className="text-xl font-bold text-green-400 flex items-center gap-2 mb-4"><User /> Most Followers</h3>
+                     <div className="space-y-2">
+                        {leaderboards.followers.map((user: any, index: number) => <UserRow key={user.uid} user={user} index={index} metric={user.followerCount} metricLabel="followers" />)}
+                    </div>
                 </div>
             </div>
         </div>
