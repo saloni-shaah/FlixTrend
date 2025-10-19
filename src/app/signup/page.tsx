@@ -8,7 +8,7 @@ import { getFirestore, doc, setDoc, collection, query, where, getDocs, serverTim
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, ArrowLeft, Camera, UploadCloud, Gift, Tv, Mic, Gamepad2, Video, Code, Feather, Atom, LandPlot, Handshake, PenTool } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Camera, UploadCloud, Gift, Tv, Mic, Gamepad2, Video, Code, Feather, Atom, LandPlot, Handshake, PenTool, Smile } from 'lucide-react';
 
 const db = getFirestore(app);
 const storage = getStorage(app);
@@ -25,6 +25,7 @@ const creatorCategories = [
     { id: 'gaming', name: 'Gamer', icon: <Gamepad2 size={14}/> },
     { id: 'music', name: 'Musician', icon: <Mic size={14}/> },
     { id: 'vlogs', name: 'Vlogger', icon: <Video size={14}/> },
+    { id: 'comedy', name: 'Comedian', icon: <Smile size={14}/> },
     { id: 'tech', name: 'Tech', icon: <Code size={14}/> },
     { id: 'lifestyle', name: 'Lifestyle', icon: <Feather size={14}/> },
     { id: 'science', name: 'Science', icon: <Atom size={14}/> },

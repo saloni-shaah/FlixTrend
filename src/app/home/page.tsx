@@ -4,7 +4,7 @@ import "regenerator-runtime/runtime";
 import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import dynamic from 'next/dynamic';
 import { getFirestore, collection, query, orderBy, getDoc, doc, limit, startAfter, getDocs, where, Timestamp, onSnapshot } from "firebase/firestore";
-import { Plus, Bell, Search, Mic, Video, Flame, Gamepad2, Tv, Music, Rss, Compass } from "lucide-react";
+import { Plus, Bell, Search, Mic, Video, Flame, Gamepad2, Tv, Music, Rss, Compass, Smile, Code, Atom, LandPlot, Handshake, PenTool } from "lucide-react";
 import { auth } from "@/utils/firebaseClient";
 import { useAppState } from "@/utils/AppStateContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -31,6 +31,11 @@ const categories = [
     { id: 'gaming', name: 'Gaming', icon: <Gamepad2 /> },
     { id: 'music', name: 'Music', icon: <Music /> },
     { id: 'vlogs', name: 'Vlogs', icon: <Video /> },
+    { id: 'comedy', name: 'Comedy', icon: <Smile /> },
+    { id: 'tech', name: 'Tech', icon: <Code /> },
+    { id: 'science', name: 'Science', icon: <Atom /> },
+    { id: 'politics', name: 'Politics', icon: <Handshake /> },
+    { id: 'education', name: 'Education', icon: <PenTool /> },
 ];
 
 function HomePageContent() {
@@ -48,6 +53,7 @@ function HomePageContent() {
   const [lastVisible, setLastVisible] = useState<any>(null);
   const [hasMore, setHasMore] = useState(true);
   const [activeCategory, setActiveCategory] = useState('for-you');
+  const [showAllCategories, setShowAllCategories] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const [showWelcomeAnimation, setShowWelcomeAnimation] = useState(false);
@@ -115,7 +121,7 @@ function HomePageContent() {
 
   useEffect(() => {
     fetchPosts(activeCategory);
-  }, [activeCategory]); // Refetch when category changes
+  }, [activeCategory, fetchPosts]); 
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async user => {
@@ -220,6 +226,8 @@ function HomePageContent() {
       )
     : posts;
     
+  const visibleCategories = showAllCategories ? categories : categories.slice(0, 5);
+  const hiddenCategories = categories.slice(5);
 
   if (loading && posts.length === 0) {
     return <VibeSpaceLoader />;
@@ -258,7 +266,7 @@ function HomePageContent() {
 
         {/* Category Filters */}
         <div className="flex gap-2 overflow-x-auto pb-4 mb-4">
-            {categories.map(cat => (
+             {visibleCategories.map(cat => (
                 <button
                     key={cat.id}
                     onClick={() => setActiveCategory(cat.id)}
@@ -267,10 +275,16 @@ function HomePageContent() {
                     {cat.icon} {cat.name}
                 </button>
             ))}
-             <Link href="/squad/explore" className="btn-glass text-sm flex items-center gap-2 shrink-0 bg-accent-purple/20 text-accent-purple">
-                <Compass /> Explore
-            </Link>
+            {!showAllCategories && hiddenCategories.length > 0 && (
+                <button
+                    onClick={() => setShowAllCategories(true)}
+                    className="btn-glass text-sm flex items-center gap-2 shrink-0 bg-accent-purple/20 text-accent-purple"
+                >
+                    More...
+                </button>
+            )}
         </div>
+
 
         <motion.section 
             initial={{ opacity: 0, y: 10 }}
