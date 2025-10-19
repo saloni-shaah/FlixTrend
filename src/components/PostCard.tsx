@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect, useState, useRef } from 'react';
@@ -414,7 +415,7 @@ function CommentForm({ postId, postAuthorId, parentId, onCommentPosted, isReply 
     if (!newComment.trim() || !user) return;
     setLoading(true);
 
-    const userDoc = await getDoc(doc(db, "users", user.uid));
+    const userDoc = await getDoc(fsDoc(db, "users", user.uid));
     const userData = userDoc.data() || { name: user.displayName, username: user.displayName, avatar_url: user.photoURL };
 
     const commentData: any = {
