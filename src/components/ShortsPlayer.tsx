@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { OptimizedVideo } from './OptimizedVideo';
@@ -130,7 +129,7 @@ export function ShortsPlayer({ post }: { post: any }) {
             />
             
             {/* Overlay for UI elements */}
-            <div className="absolute inset-0 w-full h-full p-4 pr-8 flex items-end justify-between pointer-events-none">
+            <div className="absolute inset-0 w-full h-full p-4 pr-8 flex items-end justify-between pointer-events-none bg-gradient-to-t from-black/60 via-black/20 to-transparent">
                 {/* Main content on the left */}
                 <div className="flex-1 flex flex-col gap-2 self-end text-white drop-shadow-lg max-w-[calc(100%-80px)] pointer-events-auto">
                     <Link href={`/squad/${post.userId}`} className="flex items-center gap-2 group cursor-pointer w-fit">
