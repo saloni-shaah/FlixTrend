@@ -4,7 +4,7 @@ import "regenerator-runtime/runtime";
 import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import dynamic from 'next/dynamic';
 import { getFirestore, collection, query, orderBy, getDoc, doc, limit, startAfter, getDocs, where, Timestamp, onSnapshot } from "firebase/firestore";
-import { Plus, Bell, Search, Mic, Video, Flame, Gamepad2, Tv, Music, Rss, Compass, Smile, Code, Atom, LandPlot, Handshake, PenTool, Bot, Sparkles, Book, Camera, Palette, Shirt, Utensils, Plane, Film, BrainCircuit, Landmark, Drama, CookingPot, UtensilsCrossed, Scroll, Music4, HelpingHand, Sprout, Rocket, Briefcase, Heart, Trophy } from "lucide-react";
+import { Plus, Bell, Search, Mic, Video, Flame, Gamepad2, Tv, Music, Rss, Compass, Smile, Code, Atom, LandPlot, Handshake, PenTool, Bot, Sparkles, Book, Camera, Palette, Shirt, Utensils, Plane, Film, BrainCircuit, Landmark, Drama, CookingPot, UtensilsCrossed, Scroll, Music4, HelpingHand, Sprout, Rocket, Briefcase, Heart, Trophy, AlignLeft, BarChart3, Zap, Radio, Image as ImageIcon } from "lucide-react";
 import { auth } from "@/utils/firebaseClient";
 import { useAppState } from "@/utils/AppStateContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -53,7 +53,7 @@ const categories = [
     { id: 'bollywood', name: 'Bollywood', icon: <Film /> },
     { id: 'bhakti', name: 'Bhakti', icon: <HelpingHand /> },
     { id: 'regional-cinema', name: 'Regional Cinema', icon: <Drama /> },
-    { id: 'street-food', name: 'Street Food', icon: <CookingPot /> },
+    { id: 'street-food', name: 'Street Food', icon: <UtensilsCrossed /> },
     { id: 'indian-mythology', name: 'Mythology', icon: <Scroll /> },
     { id: 'classical-music-dance', name: 'Classical Arts', icon: <Music4 /> },
     { id: 'festivals-of-india', name: 'Festivals', icon: <Landmark /> },
@@ -111,7 +111,7 @@ function HomePageContent() {
         setLoadingMore(true);
     } else {
         setLoading(true);
-        setPosts([]); // Clear posts when changing category
+        setPosts([]);
         setLastVisible(null);
     }
     
@@ -122,9 +122,13 @@ function HomePageContent() {
     if (category !== 'for-you') {
         constraints.unshift(where("creatorType", "==", category));
     }
-    if (loadMore && lastVisible) {
-        constraints.push(startAfter(lastVisible));
+    
+    // Pass `lastVisible` directly if it exists for pagination
+    const currentLastVisible = lastVisible;
+    if (loadMore && currentLastVisible) {
+        constraints.push(startAfter(currentLastVisible));
     }
+
     constraints.push(limit(POSTS_PER_PAGE));
     
     postQuery = query(baseQuery, ...constraints);
@@ -140,11 +144,11 @@ function HomePageContent() {
 
     setLoading(false);
     setLoadingMore(false);
-  }, [lastVisible]); // Keep lastVisible to manage pagination state
+  }, []); // Empty dependency array makes it stable
 
   useEffect(() => {
     fetchPosts(activeCategory);
-  }, [activeCategory, fetchPosts]); 
+  }, [activeCategory]); 
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async user => {
@@ -194,7 +198,7 @@ function HomePageContent() {
         observer.unobserve(currentRef);
       }
     };
-  }, [feedEndRef, fetchMorePosts, hasMore, loading, loadingMore]);
+  }, [fetchMorePosts, hasMore, loading, loadingMore]);
 
 
   useEffect(() => {
