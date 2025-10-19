@@ -17,7 +17,7 @@ export function ShortsPlayer({ post, onView }: { post: any, onView: () => void }
     const containerRef = useRef<HTMLDivElement>(null);
     const { setIsScopeVideoPlaying } = useAppState();
     const [isPlaying, setIsPlaying] = useState(false);
-    const [isMuted, setIsMuted] = useState(false); 
+    const [isMuted, setIsMuted] = useState(true); 
     const [showComments, setShowComments] = useState(false);
     const viewCountedRef = useRef(false);
     const lastTap = useRef(0);
@@ -126,6 +126,7 @@ export function ShortsPlayer({ post, onView }: { post: any, onView: () => void }
                 loop
                 playsInline
                 muted={isMuted}
+                preload="metadata"
             />
             
             <div className="absolute inset-0 w-full h-full p-4 pr-8 flex items-end justify-between pointer-events-none bg-gradient-to-t from-black/60 via-black/20 to-transparent">
