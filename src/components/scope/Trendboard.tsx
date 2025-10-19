@@ -10,7 +10,7 @@ import { InFeedVideoPlayer } from '../video/InFeedVideoPlayer';
 
 const db = getFirestore(app);
 
-function LeaderboardSection({ title, icon, data, loading, renderItem }: { title: string; icon: React.ReactNode; data: any[]; loading: boolean; renderItem: (item: any, index: number) => React.ReactNode }) {
+function LeaderboardSection({ title, icon, data, loading, renderItem, error }: { title: string; icon: React.ReactNode; data: any[]; loading: boolean; renderItem: (item: any, index: number) => React.ReactNode; error?: string | null }) {
     if (loading) {
         return (
             <section>
@@ -32,13 +32,13 @@ function LeaderboardSection({ title, icon, data, loading, renderItem }: { title:
         );
     }
     
-    if (!data || data.length === 0) {
+    if (error || !data || data.length === 0) {
         return (
              <section>
                 <h3 className="flex items-center gap-2 text-xl font-bold text-accent-cyan mb-3">
                     {icon} {title}
                 </h3>
-                <p className="text-gray-500 text-sm p-4 text-center glass-card">Nothing to show here yet.</p>
+                <p className="text-gray-500 text-sm p-4 text-center glass-card">{error || "Nothing to show here yet."}</p>
             </section>
         )
     }
@@ -82,50 +82,38 @@ export function Trendboard({ currentPost }: { currentPost: any }) {
         const fetchData = async () => {
             try {
                 // Top 3 Videos by Views
-                const postQuery = query(collection(db, "posts"), orderBy("viewCount", "desc"), limit(3));
+                const postQuery = query(collection(db, "posts"), where("isVideo", "==", true), orderBy("viewCount", "desc"), limit(3));
                 const postSnap = await getDocs(postQuery);
                 setTopPosts(postSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     
-                // Top 3 Creators by Followers - this requires a followerCount field on user documents
+                // Top 3 Creators by Followers
                 const userQueryFollowers = query(collection(db, "users"), orderBy("followerCount", "desc"), limit(3));
                 const userSnapFollowers = await getDocs(userQueryFollowers);
                 setTopCreators(userSnapFollowers.docs.map(doc => ({ id: doc.id, ...doc.data() })));
 
-                // Top 5 Posters by postCount - this requires a postCount field on user documents
+                // Top 5 Posters by postCount
                 const userQueryPosts = query(collection(db, "users"), orderBy("postCount", "desc"), limit(5));
                 const userSnapPosts = await getDocs(userQueryPosts);
                 setTopPosters(userSnapPosts.docs.map(doc => ({ id: doc.id, ...doc.data() })));
 
-                // Top 3 Liked Users (more complex)
-                const allPostsSnap = await getDocs(query(collection(db, "posts"), orderBy("starCount", "desc"), limit(100)));
-                const userLikes: Record<string, { totalLikes: number, userDetails: any }> = {};
-                
-                allPostsSnap.forEach(doc => {
+                // Top 3 Liked Users (by finding users with the most liked posts)
+                const likedPostsQuery = query(collection(db, "posts"), orderBy("starCount", "desc"), limit(10));
+                const likedPostsSnap = await getDocs(likedPostsQuery);
+                const userLikes: Record<string, any> = {};
+                likedPostsSnap.docs.forEach(doc => {
                     const post = doc.data();
-                    if(post.starCount > 0 && post.userId) {
-                        if (!userLikes[post.userId]) {
-                             userLikes[post.userId] = { totalLikes: 0, userDetails: {id: post.userId, name: post.displayName, username: post.username, avatar_url: post.avatar_url} };
-                        }
-                        userLikes[post.userId].totalLikes += post.starCount;
+                    if (post.userId && !userLikes[post.userId]) {
+                         userLikes[post.userId] = {
+                            id: post.userId,
+                            name: post.displayName,
+                            username: post.username,
+                            avatar_url: post.avatar_url,
+                            starCount: post.starCount
+                        };
                     }
                 });
-                
-                const sortedUsers = Object.values(userLikes).sort((a,b) => b.totalLikes - a.totalLikes).slice(0,3);
-                
-                // If user details are incomplete, fetch them now
-                const enrichedUsers = await Promise.all(sortedUsers.map(async (user) => {
-                    if (user.userDetails.name) return user;
-                    const userDoc = await getDoc(doc(db, "users", user.userDetails.id));
-                    if (userDoc.exists()) {
-                        const data = userDoc.data();
-                        user.userDetails.name = data.name;
-                        user.userDetails.username = data.username;
-                        user.userDetails.avatar_url = data.avatar_url;
-                    }
-                    return user;
-                }));
-
-                setTopLikedUsers(enrichedUsers);
+                const sortedLikedUsers = Object.values(userLikes).sort((a,b) => b.starCount - a.starCount).slice(0,3);
+                setTopLikedUsers(sortedLikedUsers);
 
             } catch (error) {
                 console.error("Error fetching trendboard data:", error);
@@ -170,15 +158,15 @@ export function Trendboard({ currentPost }: { currentPost: any }) {
                 data={topLikedUsers}
                 loading={loading}
                 renderItem={(item, index) => (
-                    <motion.div key={item.userDetails.id} initial={{opacity:0, x: -20}} animate={{opacity:1, x:0}} transition={{delay: index * 0.1}}>
-                        <Link href={`/squad/${item.userDetails.id}`} className="glass-card p-3 flex items-center gap-4 hover:border-accent-green">
+                    <motion.div key={item.id} initial={{opacity:0, x: -20}} animate={{opacity:1, x:0}} transition={{delay: index * 0.1}}>
+                        <Link href={`/squad/${item.id}`} className="glass-card p-3 flex items-center gap-4 hover:border-accent-green">
                              <span className="font-bold text-xl text-gray-500 w-6">#{index + 1}</span>
-                             <img src={item.userDetails.avatar_url} alt={item.userDetails.username} className="w-12 h-12 rounded-full object-cover"/>
+                             <img src={item.avatar_url} alt={item.username} className="w-12 h-12 rounded-full object-cover"/>
                              <div className="flex-1">
-                                <p className="font-bold text-white">{item.userDetails.name}</p>
-                                <p className="text-sm text-gray-400">@{item.userDetails.username}</p>
+                                <p className="font-bold text-white">{item.name}</p>
+                                <p className="text-sm text-gray-400">@{item.username}</p>
                              </div>
-                             <span className="font-bold text-accent-green">{item.totalLikes || 0} likes</span>
+                             <span className="font-bold text-accent-green flex items-center gap-1"><Star size={14}/> {item.starCount || 0}</span>
                         </Link>
                     </motion.div>
                 )}
