@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
 import { getFirestore, collection, query, where, orderBy, onSnapshot, limit, getDocs } from "firebase/firestore";
@@ -14,7 +15,7 @@ import { Trendboard } from "@/components/scope/Trendboard";
 
 const db = getFirestore(app);
 
-const ScopeHub = ({ activeTab, setActiveTab, onBack }: { activeTab: string, setActiveTab: (tab: string) => void, onBack: () => void }) => {
+const ScopeHub = ({ activeTab, setActiveTab, onBack, currentPost }: { activeTab: string, setActiveTab: (tab: string) => void, onBack: () => void, currentPost: any }) => {
     return (
         <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -44,7 +45,7 @@ const ScopeHub = ({ activeTab, setActiveTab, onBack }: { activeTab: string, setA
             </div>
             
             <div className="flex-1 overflow-y-auto">
-                {activeTab === 'foryou' && <Trendboard />}
+                {activeTab === 'foryou' && <Trendboard currentPost={currentPost} />}
                 {activeTab === 'music' && <MusicDiscovery />}
                 {activeTab === 'games' && <GamesHub />}
             </div>
@@ -62,6 +63,8 @@ export default function ScopePage() {
     const [hubActiveTab, setHubActiveTab] = useState('foryou');
     const { setIsScopeVideoPlaying } = useAppState();
     const [user] = useAuthState(auth);
+    const [currentPost, setCurrentPost] = useState<any>(null);
+    const [currentPostIndex, setCurrentPostIndex] = useState(0);
 
     useEffect(() => {
         if (!user) {
@@ -72,12 +75,6 @@ export default function ScopePage() {
         const fetchFollowingAndPosts = async () => {
             setLoading(true);
             try {
-                const followingRef = collection(db, "users", user.uid, "following");
-                const followingSnap = await getDocs(followingRef);
-                const followingIds = followingSnap.docs.map(doc => doc.id);
-
-                const userAndFollowingIds = [...new Set([user.uid, ...followingIds])];
-                
                 // Fetch videos from followed users and some random popular videos
                 const videoQuery = query(
                     collection(db, "posts"),
@@ -91,6 +88,9 @@ export default function ScopePage() {
                     // Simple shuffle for variety
                     const shuffledPosts = videoPosts.sort(() => 0.5 - Math.random());
                     setPosts(shuffledPosts);
+                    if(shuffledPosts.length > 0) {
+                        setCurrentPost(shuffledPosts[0]);
+                    }
                     setLoading(false);
                 }, (error) => {
                     console.error("Error fetching video posts:", error);
@@ -120,6 +120,7 @@ export default function ScopePage() {
     }, [user]);
 
     const handleDoubleClick = () => {
+        setCurrentPost(posts[currentPostIndex]);
         setHubActiveTab('foryou'); // Default to 'For You' on double click
         setShowHub(true);
         setIsScopeVideoPlaying(false);
@@ -151,22 +152,25 @@ export default function ScopePage() {
              `}</style>
             
             <AnimatePresence>
-                {showHub && <ScopeHub activeTab={hubActiveTab} setActiveTab={setHubActiveTab} onBack={() => setShowHub(false)}/>}
+                {showHub && <ScopeHub activeTab={hubActiveTab} setActiveTab={setHubActiveTab} onBack={() => setShowHub(false)} currentPost={currentPost} />}
             </AnimatePresence>
 
             {!showHub && (
                  <div className="absolute inset-0 w-full h-full snap-y snap-mandatory overflow-y-scroll overflow-x-hidden">
                     {posts.length > 0 ? (
-                        posts.map((post) => (
+                        posts.map((post, index) => (
                             <div key={post.id} className="h-screen w-screen snap-start flex items-center justify-center">
-                                <ShortsPlayer post={post} />
+                                <ShortsPlayer 
+                                    post={post} 
+                                    onView={() => setCurrentPostIndex(index)}
+                                />
                             </div>
                         ))
                     ) : (
                          <div className="flex flex-col h-full items-center justify-center text-center p-4">
                             <h1 className="text-3xl font-headline font-bold text-accent-cyan">The Scope is Clear</h1>
                             <p className="text-gray-400 mt-2">Follow some creators to see their short vibes here!</p>
-                            <p className="text-gray-500 mt-8 text-sm animate-pulse">Double-tap anywhere to explore music and games.</p>
+                            <p className="text-gray-500 mt-8 text-sm animate-pulse">Double-tap anywhere to explore.</p>
                         </div>
                     )}
                 </div>
@@ -174,3 +178,4 @@ export default function ScopePage() {
         </div>
     );
 }
+
