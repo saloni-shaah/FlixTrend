@@ -4,7 +4,7 @@ import "regenerator-runtime/runtime";
 import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import dynamic from 'next/dynamic';
 import { getFirestore, collection, query, orderBy, getDoc, doc, limit, startAfter, getDocs, where, Timestamp, onSnapshot } from "firebase/firestore";
-import { Plus, Bell, Search, Mic, Video, Flame, Gamepad2, Tv, Music, Rss, Compass, Smile, Code, Atom, LandPlot, Handshake, PenTool } from "lucide-react";
+import { Plus, Bell, Search, Mic, Video, Flame, Gamepad2, Tv, Music, Rss, Compass, Smile, Code, Atom, LandPlot, Handshake, PenTool, Bot, Sparkles, Book, Camera, Palette, Shirt, Utensils, Plane, Film, BrainCircuit, Landmark, Drama, CookingPot, UtensilsCrossed, Scroll, Music4, HelpingHand, Sprout } from "lucide-react";
 import { auth } from "@/utils/firebaseClient";
 import { useAppState } from "@/utils/AppStateContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -36,6 +36,26 @@ const categories = [
     { id: 'science', name: 'Science', icon: <Atom /> },
     { id: 'politics', name: 'Politics', icon: <Handshake /> },
     { id: 'education', name: 'Education', icon: <PenTool /> },
+    { id: 'art-design', name: 'Art & Design', icon: <Palette /> },
+    { id: 'diy-crafts', name: 'DIY & Crafts', icon: <Sparkles /> },
+    { id: 'fashion-style', name: 'Fashion', icon: <Shirt /> },
+    { id: 'food-cooking', name: 'Food', icon: <Utensils /> },
+    { id: 'travel', name: 'Travel', icon: <Plane /> },
+    { id: 'photography-videography', name: 'Photography', icon: <Camera /> },
+    { id: 'books-literature', name: 'Books', icon: <Book /> },
+    { id: 'movies-tv', name: 'Movies & TV', icon: <Film /> },
+    { id: 'ai-future', name: 'AI & Future', icon: <Bot /> },
+    { id: 'spirituality-wellness', name: 'Wellness', icon: <BrainCircuit /> },
+    // India-Specific
+    { id: 'bollywood', name: 'Bollywood', icon: <Film /> },
+    { id: 'bhakti', name: 'Bhakti', icon: <HelpingHand /> },
+    { id: 'regional-cinema', name: 'Regional Cinema', icon: <Drama /> },
+    { id: 'street-food', name: 'Street Food', icon: <CookingPot /> },
+    { id: 'indian-mythology', name: 'Mythology', icon: <Scroll /> },
+    { id: 'classical-music-dance', name: 'Classical Arts', icon: <Music4 /> },
+    { id: 'festivals-of-india', name: 'Festivals', icon: <Landmark /> },
+    { id: 'startups-india', name: 'Startups India', icon: <Rocket /> },
+    { id: 'vedic-science', name: 'Vedic Science', icon: <Sprout /> },
 ];
 
 function HomePageContent() {
@@ -121,7 +141,7 @@ function HomePageContent() {
 
   useEffect(() => {
     fetchPosts(activeCategory);
-  }, [activeCategory]); 
+  }, [activeCategory, fetchPosts]); 
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async user => {

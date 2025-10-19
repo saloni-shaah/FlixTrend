@@ -8,7 +8,7 @@ import { getFirestore, doc, setDoc, collection, query, where, getDocs, serverTim
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, ArrowLeft, Camera, UploadCloud, Gift, Tv, Mic, Gamepad2, Video, Code, Feather, Atom, LandPlot, Handshake, PenTool, Smile } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Camera, UploadCloud, Gift, Tv, Mic, Gamepad2, Video, Code, Feather, Atom, LandPlot, Handshake, PenTool, Smile, Palette, Sparkles, Shirt, Utensils, Plane, Film, BrainCircuit, Landmark, Drama, CookingPot, UtensilsCrossed, Scroll, Music4, HelpingHand, Sprout, Rocket, Briefcase, Heart, Book } from 'lucide-react';
 
 const db = getFirestore(app);
 const storage = getStorage(app);
@@ -31,6 +31,29 @@ const creatorCategories = [
     { id: 'science', name: 'Science', icon: <Atom size={14}/> },
     { id: 'politics', name: 'Politics', icon: <Handshake size={14}/> },
     { id: 'education', name: 'Education', icon: <PenTool size={14}/> },
+    { id: 'art-design', name: 'Art & Design', icon: <Palette size={14}/> },
+    { id: 'diy-crafts', name: 'DIY & Crafts', icon: <Sparkles size={14}/> },
+    { id: 'fashion-style', name: 'Fashion', icon: <Shirt size={14}/> },
+    { id: 'food-cooking', name: 'Food', icon: <Utensils size={14}/> },
+    { id: 'travel', name: 'Travel', icon: <Plane size={14}/> },
+    { id: 'photography-videography', name: 'Photography', icon: <Camera size={14}/> },
+    { id: 'books-literature', name: 'Books', icon: <Book size={14}/> },
+    { id: 'movies-tv', name: 'Movies & TV', icon: <Film size={14}/> },
+    { id: 'ai-future', name: 'AI & Future', icon: <Bot size={14}/> },
+    { id: 'spirituality-wellness', name: 'Wellness', icon: <BrainCircuit size={14}/> },
+    { id: 'business', name: 'Business', icon: <Briefcase size={14}/> },
+    { id: 'health-fitness', name: 'Fitness', icon: <Heart size={14}/> },
+    { id: 'sports', name: 'Sports', icon: <Trophy size={14}/> },
+    // India-Specific
+    { id: 'bollywood', name: 'Bollywood', icon: <Film size={14}/> },
+    { id: 'bhakti', name: 'Bhakti', icon: <HelpingHand size={14}/> },
+    { id: 'regional-cinema', name: 'Regional Cinema', icon: <Drama size={14}/> },
+    { id: 'street-food', name: 'Street Food', icon: <CookingPot size={14}/> },
+    { id: 'indian-mythology', name: 'Mythology', icon: <Scroll size={14}/> },
+    { id: 'classical-music-dance', name: 'Classical Arts', icon: <Music4 size={14}/> },
+    { id: 'festivals-of-india', name: 'Festivals', icon: <Landmark size={14}/> },
+    { id: 'startups-india', name: 'Startups India', icon: <Rocket size={14}/> },
+    { id: 'vedic-science', name: 'Vedic Science', icon: <Sprout size={14}/> },
 ];
 
 export default function SignupPage() {
