@@ -111,7 +111,7 @@ function HomePageContent() {
 
     setLoading(false);
     setLoadingMore(false);
-  }, [lastVisible, POSTS_PER_PAGE]);
+  }, []); // Removed dependencies
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async user => {
@@ -122,7 +122,7 @@ function HomePageContent() {
         const profileData = userProfileSnap.exists() ? userProfileSnap.data() : null;
         setUserProfile(profileData);
         
-        const q = query(collection(db, "users", user.uid, "notifications"), where("read", "==", false));
+        const q = query(collection(db, "notifications", user.uid, "user_notifications"), where("read", "==", false));
         const unsubNotifs = onSnapshot(q, (snapshot) => {
             setHasUnreadNotifs(!snapshot.empty);
         });
@@ -136,7 +136,7 @@ function HomePageContent() {
       }
     });
     return () => unsubscribe();
-  }, [router, activeCategory, fetchPosts]);
+  }, [router, activeCategory]); // Removed fetchPosts dependency
   
   const fetchMorePosts = useCallback(() => {
       fetchPosts(activeCategory, true);
