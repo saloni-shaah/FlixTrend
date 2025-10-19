@@ -270,13 +270,8 @@ export const deleteUserAccount = onCall(async (request) => {
   }
 
   try {
-    // This function must be called after re-authentication on the client.
-    // The SDK automatically verifies the auth token.
-
-    // 1. Delete user from Firestore
     await admin.firestore().collection('users').doc(uid).delete();
     
-    // 2. Delete user's posts, comments, etc. (add more as needed)
     const postsQuery = admin.firestore().collection('posts').where('userId', '==', uid);
     const postsSnap = await postsQuery.get();
     const batch = admin.firestore().batch();
@@ -285,7 +280,6 @@ export const deleteUserAccount = onCall(async (request) => {
     });
     await batch.commit();
 
-    // 3. Finally, delete the user from Firebase Auth
     await admin.auth().deleteUser(uid);
     
     logger.info(`Successfully deleted account and all data for user ${uid}.`);
@@ -293,8 +287,6 @@ export const deleteUserAccount = onCall(async (request) => {
 
   } catch (error) {
     logger.error(`Error deleting user account ${uid}:`, error);
-    // It's crucial to give a generic error message to the client
-    // to avoid revealing internal system state.
     throw new HttpsError("internal", "Failed to delete account. Please try again later.");
   }
 });
@@ -471,5 +463,42 @@ export const updateAccolades = functions.pubsub.schedule('every 1 hours').onRun(
     } catch (error) {
         logger.error("Error updating accolades:", error);
         return null;
+    }
+});
+
+/**
+ * Toggles a user's account between enabled and disabled.
+ * This is a callable function that requires admin privileges.
+ */
+export const toggleAccountStatus = onCall(async (request) => {
+    const callingUid = request.auth?.uid;
+    if (!callingUid) {
+        throw new HttpsError("unauthenticated", "Authentication is required.");
+    }
+    
+    // Check if the caller is an admin
+    const adminUserDoc = await admin.firestore().collection('users').doc(callingUid).get();
+    const adminUserData = adminUserDoc.data();
+    const isAdmin = adminUserData?.role?.includes('founder') || adminUserData?.role?.includes('developer');
+
+    // Or if the user is disabling their own account
+    const isSelf = callingUid === request.data.uid;
+
+    if (!isAdmin && !isSelf) {
+        throw new HttpsError("permission-denied", "You do not have permission to perform this action.");
+    }
+
+    const { uid, disable } = request.data;
+    if (!uid || typeof disable !== 'boolean') {
+        throw new HttpsError("invalid-argument", "Missing uid or disable status.");
+    }
+
+    try {
+        await admin.auth().updateUser(uid, { disabled: disable });
+        logger.info(`Successfully ${disable ? 'disabled' : 'enabled'} account for user ${uid} by ${callingUid}.`);
+        return { success: true, message: `Account has been ${disable ? 'disabled' : 'enabled'}.` };
+    } catch (error) {
+        logger.error(`Error toggling account status for ${uid}:`, error);
+        throw new HttpsError("internal", "Failed to update account status.");
     }
 });

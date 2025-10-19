@@ -46,8 +46,7 @@
 }
 
 /* Dark Mode Theme */
-@media (prefers-color-scheme: dark) {
-  :root {
+.dark {
     --background: 240 4% 11%; /* #1B1B1E Deep Space Gray */
     --foreground: 0 0 92%; /* #EAEAEA Soft White */
 
@@ -85,8 +84,8 @@
 
     --card-background: rgba(40, 40, 44, 0.7); /* Increased translucency */
     --glass-border: rgba(234, 234, 234, 0.15); /* Slightly more visible border */
-  }
 }
+
 
 body {
   background-color: hsl(var(--background));

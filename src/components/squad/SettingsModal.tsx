@@ -1,14 +1,17 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Cog, Palette, Lock, MessageCircle, LogOut, Trash2, AtSign, Mail, CheckCircle } from 'lucide-react';
+import { Cog, Palette, Lock, MessageCircle, LogOut, Trash2, AtSign, Mail, CheckCircle, UserX } from 'lucide-react';
 import Link from 'next/link';
 import { signOut, sendEmailVerification } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { auth, db } from '@/utils/firebaseClient';
 import { doc, updateDoc } from "firebase/firestore";
 import { DeleteAccountModal } from './DeleteAccountModal';
+import { getFunctions, httpsCallable } from "firebase/functions";
+import { app } from '@/utils/firebaseClient';
 
+const functions = getFunctions(app);
 
 export function SettingsModal({ profile, firebaseUser, onClose }: { profile: any; firebaseUser: any; onClose: () => void }) {
   const [settings, setSettings] = useState({
@@ -24,6 +27,8 @@ export function SettingsModal({ profile, firebaseUser, onClose }: { profile: any
   const [resendStatus, setResendStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
   const router = useRouter();
 
+  const toggleAccountStatusCallable = httpsCallable(functions, 'toggleAccountStatus');
+
   useEffect(() => {
     // Load initial settings from profile
     setSettings({
@@ -34,11 +39,6 @@ export function SettingsModal({ profile, firebaseUser, onClose }: { profile: any
         pushNotifications: profile.settings?.pushNotifications ?? true,
         emailNotifications: profile.settings?.emailNotifications ?? false,
     });
-
-    // Apply theme settings immediately
-    document.documentElement.classList.toggle('dark', localStorage.getItem('theme') === 'dark');
-    document.documentElement.style.setProperty('--accent-cyan', profile.settings?.accentColor || '#00F0FF');
-    document.documentElement.style.setProperty('--brand-gold', profile.settings?.accentColor || '#FFB400');
   }, [profile]);
   
   const handleSettingChange = async (key: keyof typeof settings, value: any) => {
@@ -56,7 +56,6 @@ export function SettingsModal({ profile, firebaseUser, onClose }: { profile: any
       document.documentElement.style.setProperty('--brand-gold', value);
     }
     
-    // Save to Firestore
     try {
         const userDocRef = doc(db, "users", firebaseUser.uid);
         await updateDoc(userDocRef, {
@@ -68,6 +67,25 @@ export function SettingsModal({ profile, firebaseUser, onClose }: { profile: any
         setIsSaving(false);
     }
   };
+
+  const handleToggleAccountStatus = async () => {
+      const action = firebaseUser.disabled ? "re-enable" : "disable";
+      if (!window.confirm(`Are you sure you want to ${action} your account? You will be logged out.`)) return;
+
+      setIsSaving(true);
+      try {
+          await toggleAccountStatusCallable({ uid: firebaseUser.uid, disable: !firebaseUser.disabled });
+          alert(`Account successfully ${action}d.`);
+          await signOut(auth);
+          router.push('/login');
+      } catch (error) {
+          console.error(`Failed to ${action} account:`, error);
+          alert(`Could not ${action} your account. Please try again.`);
+      } finally {
+          setIsSaving(false);
+      }
+  };
+
 
   const handleResendVerification = async () => {
     if (firebaseUser) {
@@ -162,9 +180,16 @@ export function SettingsModal({ profile, firebaseUser, onClose }: { profile: any
             </div>
             
             <div className="bg-white/5 rounded-xl p-4">
-              <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan">Account</h3>
+              <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan">Account Actions</h3>
+               <button 
+                className={`btn-glass w-full mt-2 ${firebaseUser.disabled ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}
+                onClick={handleToggleAccountStatus} 
+                disabled={isSaving}
+              >
+                  <UserX className="inline-block mr-2" /> {firebaseUser.disabled ? 'Re-enable Account' : 'Disable Account'}
+              </button>
               <button className="btn-glass bg-red-500/20 text-red-400 hover:bg-red-500/40 hover:text-white w-full mt-4" onClick={() => setShowDeleteModal(true)}>
-                  <Trash2 className="inline-block mr-2" /> Delete Account
+                  <Trash2 className="inline-block mr-2" /> Permanently Delete Account
               </button>
             </div>
 
