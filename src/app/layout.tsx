@@ -50,9 +50,30 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const themeScript = `
+    (function() {
+      try {
+        const theme = localStorage.getItem('theme');
+        if (theme === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else if (theme === 'light') {
+          document.documentElement.classList.remove('dark');
+        }
+        const accentColor = localStorage.getItem('accentColor');
+        if (accentColor) {
+            document.documentElement.style.setProperty('--accent-cyan', accentColor);
+            document.documentElement.style.setProperty('--brand-gold', accentColor);
+        }
+      } catch (e) {
+        console.error('Failed to set theme from localStorage', e);
+      }
+    })();
+  `;
+
   return (
     <html lang="en">
       <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <meta name="theme-color" content="#1B1B1E" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
