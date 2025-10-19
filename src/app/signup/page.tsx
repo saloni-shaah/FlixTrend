@@ -8,7 +8,7 @@ import { getFirestore, doc, setDoc, collection, query, where, getDocs, serverTim
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, ArrowLeft, Camera, UploadCloud, Gift, Tv, Mic, Gamepad2, Video, Code, Feather, Atom, LandPlot, Handshake, PenTool, Smile, Palette, Sparkles, Shirt, Utensils, Plane, Film, BrainCircuit, Landmark, Drama, CookingPot, UtensilsCrossed, Scroll, Music4, HelpingHand, Sprout, Rocket, Briefcase, Heart, Book } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Camera, UploadCloud, Gift, Tv, Mic, Gamepad2, Video, Code, Feather, Atom, LandPlot, Handshake, PenTool, Smile, Palette, Sparkles, Shirt, Utensils, Plane, Film, BrainCircuit, Landmark, Drama, CookingPot, UtensilsCrossed, Scroll, Music4, HelpingHand, Sprout, Rocket, Briefcase, Heart, Book, Trophy, Bot } from 'lucide-react';
 
 const db = getFirestore(app);
 const storage = getStorage(app);

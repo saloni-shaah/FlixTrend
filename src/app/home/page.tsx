@@ -4,7 +4,7 @@ import "regenerator-runtime/runtime";
 import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import dynamic from 'next/dynamic';
 import { getFirestore, collection, query, orderBy, getDoc, doc, limit, startAfter, getDocs, where, Timestamp, onSnapshot } from "firebase/firestore";
-import { Plus, Bell, Search, Mic, Video, Flame, Gamepad2, Tv, Music, Rss, Compass, Smile, Code, Atom, LandPlot, Handshake, PenTool, Bot, Sparkles, Book, Camera, Palette, Shirt, Utensils, Plane, Film, BrainCircuit, Landmark, Drama, CookingPot, UtensilsCrossed, Scroll, Music4, HelpingHand, Sprout } from "lucide-react";
+import { Plus, Bell, Search, Mic, Video, Flame, Gamepad2, Tv, Music, Rss, Compass, Smile, Code, Atom, LandPlot, Handshake, PenTool, Bot, Sparkles, Book, Camera, Palette, Shirt, Utensils, Plane, Film, BrainCircuit, Landmark, Drama, CookingPot, UtensilsCrossed, Scroll, Music4, HelpingHand, Sprout, Rocket, Briefcase, Heart, Trophy } from "lucide-react";
 import { auth } from "@/utils/firebaseClient";
 import { useAppState } from "@/utils/AppStateContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -46,6 +46,9 @@ const categories = [
     { id: 'movies-tv', name: 'Movies & TV', icon: <Film /> },
     { id: 'ai-future', name: 'AI & Future', icon: <Bot /> },
     { id: 'spirituality-wellness', name: 'Wellness', icon: <BrainCircuit /> },
+    { id: 'business', name: 'Business', icon: <Briefcase /> },
+    { id: 'health-fitness', name: 'Fitness', icon: <Heart /> },
+    { id: 'sports', name: 'Sports', icon: <Trophy /> },
     // India-Specific
     { id: 'bollywood', name: 'Bollywood', icon: <Film /> },
     { id: 'bhakti', name: 'Bhakti', icon: <HelpingHand /> },
@@ -141,7 +144,7 @@ function HomePageContent() {
 
   useEffect(() => {
     fetchPosts(activeCategory);
-  }, [activeCategory, fetchPosts]); 
+  }, [activeCategory]); 
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async user => {
@@ -168,7 +171,7 @@ function HomePageContent() {
   
   const fetchMorePosts = useCallback(() => {
       fetchPosts(activeCategory, true);
-  }, [fetchPosts, activeCategory]);
+  }, [activeCategory, fetchPosts]);
 
 
   useEffect(() => {
@@ -247,7 +250,6 @@ function HomePageContent() {
     : posts;
     
   const visibleCategories = showAllCategories ? categories : categories.slice(0, 5);
-  const hiddenCategories = categories.slice(5);
 
   if (loading && posts.length === 0) {
     return <VibeSpaceLoader />;
@@ -295,7 +297,7 @@ function HomePageContent() {
                     {cat.icon} {cat.name}
                 </button>
             ))}
-            {!showAllCategories && hiddenCategories.length > 0 && (
+            {!showAllCategories && categories.length > 5 && (
                 <button
                     onClick={() => setShowAllCategories(true)}
                     className="btn-glass text-sm flex items-center gap-2 shrink-0 bg-accent-purple/20 text-accent-purple"
