@@ -14,7 +14,7 @@ import { useAuthState } from "react-firebase-hooks/auth";
 import { Trendboard } from "@/components/scope/Trendboard";
 
 const db = getFirestore(app);
-const POSTS_PER_PAGE = 5;
+const POSTS_PER_PAGE = 5; // Reduced for faster initial load and quicker subsequent fetches
 
 const ScopeHub = ({ activeTab, setActiveTab, onBack, currentPost }: { activeTab: string, setActiveTab: (tab: string) => void, onBack: () => void, currentPost: any }) => {
     return (
@@ -70,7 +70,9 @@ export default function ScopePage() {
     const [hasMore, setHasMore] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
     const observer = useRef<IntersectionObserver>();
-    const sentinelRef = useRef<HTMLDivElement>(null);
+    
+    // Create a ref for the second to last item
+    const prefetchTriggerRef = useRef<HTMLDivElement>(null);
 
 
     const fetchMorePosts = useCallback(async () => {
@@ -120,30 +122,32 @@ export default function ScopePage() {
         } else {
             setLoading(false);
         }
-    }, [user]);
+    }, [user, fetchMorePosts]);
 
     // Intersection Observer for infinite scroll
     useEffect(() => {
+        if (observer.current) observer.current.disconnect();
+
         observer.current = new IntersectionObserver(
             (entries) => {
                 if (entries[0].isIntersecting && hasMore && !loadingMore && !loading) {
                     fetchMorePosts();
                 }
             },
-            { threshold: 1.0 }
+            { threshold: 0.8 } // Start fetching when the trigger is 80% visible
         );
 
-        const currentSentinel = sentinelRef.current;
-        if (currentSentinel) {
-            observer.current.observe(currentSentinel);
+        const currentPrefetchTrigger = prefetchTriggerRef.current;
+        if (currentPrefetchTrigger) {
+            observer.current.observe(currentPrefetchTrigger);
         }
 
         return () => {
-            if (currentSentinel) {
-                observer.current?.unobserve(currentSentinel);
+            if (currentPrefetchTrigger) {
+                observer.current?.unobserve(currentPrefetchTrigger);
             }
         };
-    }, [fetchMorePosts, hasMore, loading, loadingMore]);
+    }, [fetchMorePosts, hasMore, loading, loadingMore, posts]); // Re-attach observer when posts change
 
 
     const handleDoubleClick = () => {
@@ -182,20 +186,26 @@ export default function ScopePage() {
             </AnimatePresence>
 
             {!showHub && (
-                 <div className="absolute inset-0 w-full h-full snap-y snap-mandatory overflow-y-scroll overflow-x-hidden">
+                 <div className="absolute inset-0 w-full h-full snap-y snap-mandatory overflow-y-scroll overflow-x-hidden scroll-smooth">
                     {posts.length > 0 ? (
                         <>
                             {posts.map((post, index) => (
-                                <div key={post.id} className="h-screen w-screen snap-start flex items-center justify-center">
+                                <div
+                                    key={post.id}
+                                    ref={index === posts.length - 2 ? prefetchTriggerRef : null} // Attach ref to the second to last item
+                                    className="h-screen w-screen snap-start flex items-center justify-center"
+                                >
                                     <ShortsPlayer 
                                         post={post} 
                                         onView={() => setCurrentPostIndex(index)}
                                     />
                                 </div>
                             ))}
-                            <div ref={sentinelRef} className="h-10 w-full flex justify-center items-center">
-                               {hasMore && <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-cyan"></div>}
-                            </div>
+                            {loadingMore && (
+                               <div className="h-screen w-screen snap-start flex items-center justify-center">
+                                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-cyan"></div>
+                               </div>
+                            )}
                         </>
                     ) : (
                          <div className="flex flex-col h-full items-center justify-center text-center p-4">
