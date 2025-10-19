@@ -8,7 +8,7 @@ import { getFirestore, doc, setDoc, collection, query, where, getDocs, serverTim
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, ArrowLeft, Camera, UploadCloud, Gift, Tv, Mic, Gamepad2, Video } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Camera, UploadCloud, Gift, Tv, Mic, Gamepad2, Video, Code, Feather, Atom, LandPlot, Handshake, PenTool } from 'lucide-react';
 
 const db = getFirestore(app);
 const storage = getStorage(app);
@@ -19,6 +19,18 @@ async function isUsernameUnique(username: string): Promise<boolean> {
     const querySnapshot = await getDocs(q);
     return querySnapshot.empty;
 }
+
+const creatorCategories = [
+    { id: 'news', name: 'News', icon: <Tv size={14}/> },
+    { id: 'gaming', name: 'Gamer', icon: <Gamepad2 size={14}/> },
+    { id: 'music', name: 'Musician', icon: <Mic size={14}/> },
+    { id: 'vlogs', name: 'Vlogger', icon: <Video size={14}/> },
+    { id: 'tech', name: 'Tech', icon: <Code size={14}/> },
+    { id: 'lifestyle', name: 'Lifestyle', icon: <Feather size={14}/> },
+    { id: 'science', name: 'Science', icon: <Atom size={14}/> },
+    { id: 'politics', name: 'Politics', icon: <Handshake size={14}/> },
+    { id: 'education', name: 'Education', icon: <PenTool size={14}/> },
+];
 
 export default function SignupPage() {
     const [step, setStep] = useState(1);
@@ -207,11 +219,12 @@ export default function SignupPage() {
                         {form.accountType === 'creator' && (
                             <div className="flex flex-col gap-2">
                                 <h4 className="text-sm font-bold text-accent-cyan">What kind of creator are you?</h4>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <button type="button" onClick={() => setForm(f => ({...f, creatorType: 'news'}))} className={`btn-glass text-xs flex items-center gap-2 ${form.creatorType === 'news' ? 'bg-accent-cyan text-black' : ''}`}><Tv size={14}/> News</button>
-                                    <button type="button" onClick={() => setForm(f => ({...f, creatorType: 'gamer'}))} className={`btn-glass text-xs flex items-center gap-2 ${form.creatorType === 'gamer' ? 'bg-accent-cyan text-black' : ''}`}><Gamepad2 size={14}/> Gamer</button>
-                                    <button type="button" onClick={() => setForm(f => ({...f, creatorType: 'musician'}))} className={`btn-glass text-xs flex items-center gap-2 ${form.creatorType === 'musician' ? 'bg-accent-cyan text-black' : ''}`}><Mic size={14}/> Musician</button>
-                                    <button type="button" onClick={() => setForm(f => ({...f, creatorType: 'vlogger'}))} className={`btn-glass text-xs flex items-center gap-2 ${form.creatorType === 'vlogger' ? 'bg-accent-cyan text-black' : ''}`}><Video size={14}/> Vlogger</button>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                    {creatorCategories.map(cat => (
+                                        <button key={cat.id} type="button" onClick={() => setForm(f => ({...f, creatorType: cat.id}))} className={`btn-glass text-xs flex items-center justify-center gap-2 ${form.creatorType === cat.id ? 'bg-accent-cyan text-black' : ''}`}>
+                                            {cat.icon} {cat.name}
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
                         )}
@@ -288,8 +301,8 @@ export default function SignupPage() {
         </AnimatePresence>
 
         <div className="text-center mt-4">
-          <span className="text-gray-400">Don't have an account? </span>
-          <Link href="/login" className="text-accent-cyan hover:underline">Login</Link>
+          <span className="text-gray-400">Already have an account? </span>
+          <Link href="/login" className="text-accent-cyan hover:underline">Log In</Link>
         </div>
       </form>
     </div>
