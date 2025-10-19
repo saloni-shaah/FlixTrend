@@ -4,7 +4,7 @@ import "regenerator-runtime/runtime";
 import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import dynamic from 'next/dynamic';
 import { getFirestore, collection, query, orderBy, getDoc, doc, limit, startAfter, getDocs, where, Timestamp, onSnapshot } from "firebase/firestore";
-import { Plus, Bell, Search, Mic, Video, Flame, Gamepad2, Tv, Music, Rss } from "lucide-react";
+import { Plus, Bell, Search, Mic, Video, Flame, Gamepad2, Tv, Music, Rss, Compass } from "lucide-react";
 import { auth } from "@/utils/firebaseClient";
 import { useAppState } from "@/utils/AppStateContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -111,7 +111,11 @@ function HomePageContent() {
 
     setLoading(false);
     setLoadingMore(false);
-  }, []); // Removed dependencies
+  }, [lastVisible]); // Keep lastVisible to manage pagination state
+
+  useEffect(() => {
+    fetchPosts(activeCategory);
+  }, [activeCategory]); // Refetch when category changes
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async user => {
@@ -127,8 +131,6 @@ function HomePageContent() {
             setHasUnreadNotifs(!snapshot.empty);
         });
         
-        fetchPosts(activeCategory);
-        
         return () => unsubNotifs();
 
       } else {
@@ -136,7 +138,7 @@ function HomePageContent() {
       }
     });
     return () => unsubscribe();
-  }, [router, activeCategory]); // Removed fetchPosts dependency
+  }, [router]);
   
   const fetchMorePosts = useCallback(() => {
       fetchPosts(activeCategory, true);
@@ -265,6 +267,9 @@ function HomePageContent() {
                     {cat.icon} {cat.name}
                 </button>
             ))}
+             <Link href="/squad/explore" className="btn-glass text-sm flex items-center gap-2 shrink-0 bg-accent-purple/20 text-accent-purple">
+                <Compass /> Explore
+            </Link>
         </div>
 
         <motion.section 
