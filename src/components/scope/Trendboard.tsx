@@ -1,11 +1,12 @@
+
 "use client";
 import React, { useState, useEffect } from 'react';
-import { getFirestore, collection, query, orderBy, limit, onSnapshot, where } from 'firebase/firestore';
+import { getFirestore, collection, query, orderBy, limit, onSnapshot, getDocs } from 'firebase/firestore';
 import { app } from '@/utils/firebaseClient';
-import { Flame, Star, Users } from 'lucide-react';
+import { Flame, Star, Users, Trophy } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { PostCard } from '../PostCard';
+import { InFeedVideoPlayer } from '../video/InFeedVideoPlayer';
 
 const db = getFirestore(app);
 
@@ -33,37 +34,74 @@ function LeaderboardSection({ title, icon, data, renderItem }: { title: string; 
     );
 }
 
+function MiniPlayer({ post }: { post: any }) {
+    if (!post) return null;
+    return (
+        <div className="w-full rounded-2xl overflow-hidden mb-8 glass-card">
+            <div className="aspect-video">
+                 <InFeedVideoPlayer mediaUrls={Array.isArray(post.mediaUrl) ? post.mediaUrl : [post.mediaUrl]} post={post} />
+            </div>
+            <div className="p-3">
+                <p className="font-bold text-sm truncate">{post.content || 'Video'}</p>
+                <p className="text-xs text-gray-400">Continue watching or scroll down to explore trends.</p>
+            </div>
+        </div>
+    );
+}
 
-export function Trendboard() {
+export function Trendboard({ currentPost }: { currentPost: any }) {
     const [topPosts, setTopPosts] = useState<any[]>([]);
     const [topCreators, setTopCreators] = useState<any[]>([]);
+    const [topLikedUsers, setTopLikedUsers] = useState<any[]>([]);
+    const [topPosters, setTopPosters] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         setLoading(true);
-        const postQuery = query(collection(db, "posts"), where("isVideo", "==", true), orderBy("viewCount", "desc"), limit(5));
-        
-        // Firestore does not support ordering by a field that isn't in the query, so we fetch and sort client-side.
-        const creatorQuery = query(collection(db, "users"), limit(50));
+        const fetchData = async () => {
+            try {
+                // Top Videos by Views
+                const postQuery = query(collection(db, "posts"), orderBy("viewCount", "desc"), limit(3));
+                const postSnap = await getDocs(postQuery);
+                setTopPosts(postSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    
+                // Top Creators by Followers
+                const userQueryFollowers = query(collection(db, "users"), orderBy("followerCount", "desc"), limit(3));
+                const userSnapFollowers = await getDocs(userQueryFollowers);
+                setTopCreators(userSnapFollowers.docs.map(doc => ({ id: doc.id, ...doc.data() })));
 
-        const unsubPosts = onSnapshot(postQuery, (snapshot) => {
-            setTopPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        });
+                // Top Posters by postCount
+                const userQueryPosts = query(collection(db, "users"), orderBy("postCount", "desc"), limit(3));
+                const userSnapPosts = await getDocs(userQueryPosts);
+                setTopPosters(userSnapPosts.docs.map(doc => ({ id: doc.id, ...doc.data() })));
 
-        const unsubCreators = onSnapshot(creatorQuery, (snapshot) => {
-             const creators = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-             creators.sort((a,b) => (b.followerCount || 0) - (a.followerCount || 0));
-             setTopCreators(creators.slice(0, 5));
-        });
-        
-        // This is a simplified loading state.
-        const timer = setTimeout(() => setLoading(false), 1500);
+                // Top Liked Users (more complex)
+                const allPostsSnap = await getDocs(query(collection(db, "posts"), limit(500))); // Limit to recent 500 for performance
+                const userLikes: Record<string, number> = {};
+                allPostsSnap.forEach(doc => {
+                    const post = doc.data();
+                    if(post.starCount && post.userId) {
+                        userLikes[post.userId] = (userLikes[post.userId] || 0) + post.starCount;
+                    }
+                });
+                
+                const sortedUserIds = Object.keys(userLikes).sort((a,b) => userLikes[b] - userLikes[a]).slice(0,3);
 
-        return () => {
-            unsubPosts();
-            unsubCreators();
-            clearTimeout(timer);
+                if (sortedUserIds.length > 0) {
+                    const userDocs = await Promise.all(sortedUserIds.map(id => getDoc(doc(db, "users", id))));
+                    const likedUsers = userDocs.map(docSnap => docSnap.exists() ? { id: docSnap.id, totalLikes: userLikes[docSnap.id], ...docSnap.data() } : null).filter(Boolean);
+                    setTopLikedUsers(likedUsers as any[]);
+                }
+
+            } catch (error) {
+                console.error("Error fetching trendboard data:", error);
+            } finally {
+                setLoading(false);
+            }
         };
+
+        fetchData();
+        
     }, []);
 
     if (loading) {
@@ -72,19 +110,12 @@ export function Trendboard() {
 
     return (
         <div className="w-full flex flex-col items-center gap-12">
+            
+            {currentPost && <MiniPlayer post={currentPost} />}
+
             <LeaderboardSection
-                title="Trending Videos"
-                icon={<Flame className="text-accent-pink" />}
-                data={topPosts}
-                renderItem={(item, index) => (
-                    <motion.div key={item.id} initial={{opacity:0, x: -20}} animate={{opacity:1, x:0}} transition={{delay: index * 0.1}}>
-                        <PostCard post={item} />
-                    </motion.div>
-                )}
-            />
-             <LeaderboardSection
                 title="Top Creators"
-                icon={<Users className="text-accent-green" />}
+                icon={<Trophy className="text-yellow-400" />}
                 data={topCreators}
                 renderItem={(item, index) => (
                     <motion.div key={item.id} initial={{opacity:0, x: -20}} animate={{opacity:1, x:0}} transition={{delay: index * 0.1}}>
@@ -96,6 +127,65 @@ export function Trendboard() {
                                 <p className="text-sm text-gray-400">@{item.username}</p>
                              </div>
                              <span className="font-bold text-accent-green">{item.followerCount || 0} followers</span>
+                        </Link>
+                    </motion.div>
+                )}
+            />
+
+            <LeaderboardSection
+                title="Most Liked Users"
+                icon={<Star className="text-yellow-400" />}
+                data={topLikedUsers}
+                renderItem={(item, index) => (
+                    <motion.div key={item.id} initial={{opacity:0, x: -20}} animate={{opacity:1, x:0}} transition={{delay: index * 0.1}}>
+                        <Link href={`/squad/${item.id}`} className="glass-card p-3 flex items-center gap-4 hover:border-accent-green">
+                             <span className="font-bold text-xl text-gray-500 w-6">#{index + 1}</span>
+                             <img src={item.avatar_url} alt={item.username} className="w-12 h-12 rounded-full object-cover"/>
+                             <div className="flex-1">
+                                <p className="font-bold text-white">{item.name}</p>
+                                <p className="text-sm text-gray-400">@{item.username}</p>
+                             </div>
+                             <span className="font-bold text-accent-green">{item.totalLikes || 0} likes</span>
+                        </Link>
+                    </motion.div>
+                )}
+            />
+
+             <LeaderboardSection
+                title="Most Active Posters"
+                icon={<Flame className="text-accent-pink" />}
+                data={topPosters}
+                renderItem={(item, index) => (
+                    <motion.div key={item.id} initial={{opacity:0, x: -20}} animate={{opacity:1, x:0}} transition={{delay: index * 0.1}}>
+                        <Link href={`/squad/${item.id}`} className="glass-card p-3 flex items-center gap-4 hover:border-accent-green">
+                             <span className="font-bold text-xl text-gray-500 w-6">#{index + 1}</span>
+                             <img src={item.avatar_url} alt={item.username} className="w-12 h-12 rounded-full object-cover"/>
+                             <div className="flex-1">
+                                <p className="font-bold text-white">{item.name}</p>
+                                <p className="text-sm text-gray-400">@{item.username}</p>
+                             </div>
+                             <span className="font-bold text-accent-green">{item.postCount || 0} posts</span>
+                        </Link>
+                    </motion.div>
+                )}
+            />
+
+            <LeaderboardSection
+                title="Top Videos"
+                icon={<Flame className="text-accent-pink" />}
+                data={topPosts}
+                renderItem={(item, index) => (
+                    <motion.div key={item.id} initial={{opacity:0, x: -20}} animate={{opacity:1, x:0}} transition={{delay: index * 0.1}}>
+                        <Link href={`/post/${item.id}`} className="glass-card p-3 flex items-center gap-4 hover:border-accent-pink">
+                             <span className="font-bold text-xl text-gray-500 w-6">#{index + 1}</span>
+                             <div className="w-16 h-20 rounded-md bg-black overflow-hidden shrink-0">
+                                 <InFeedVideoPlayer mediaUrls={Array.isArray(item.mediaUrl) ? item.mediaUrl : [item.mediaUrl]} post={item} />
+                             </div>
+                             <div className="flex-1">
+                                <p className="font-bold text-white truncate">{item.content || "Video"}</p>
+                                <p className="text-sm text-gray-400">by @{item.username}</p>
+                             </div>
+                             <span className="font-bold text-accent-pink">{item.viewCount || 0} views</span>
                         </Link>
                     </motion.div>
                 )}
