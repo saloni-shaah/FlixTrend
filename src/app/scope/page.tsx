@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
 import { getFirestore, collection, query, where, orderBy, onSnapshot, limit, getDocs } from "firebase/firestore";
@@ -6,11 +5,12 @@ import { auth, app } from "@/utils/firebaseClient";
 import { VibeSpaceLoader } from "@/components/VibeSpaceLoader";
 import { ShortsPlayer } from "@/components/ShortsPlayer";
 import { motion, AnimatePresence } from "framer-motion";
-import { Music, Gamepad2 } from 'lucide-react';
+import { Music, Gamepad2, Flame } from 'lucide-react';
 import { MusicDiscovery } from '@/components/MusicDiscovery';
 import { GamesHub } from '@/components/GamesHub';
 import { useAppState } from "@/utils/AppStateContext";
 import { useAuthState } from "react-firebase-hooks/auth";
+import { Trendboard } from "@/components/scope/Trendboard";
 
 const db = getFirestore(app);
 
@@ -23,6 +23,12 @@ const ScopeHub = ({ activeTab, setActiveTab, onBack }: { activeTab: string, setA
             className="absolute inset-0 z-10 bg-black/80 backdrop-blur-lg flex flex-col p-4 pt-12"
         >
             <div className="flex justify-center gap-2 p-1 rounded-full bg-black/30 mb-4">
+                <button 
+                    className={`px-4 py-2 rounded-full text-sm font-bold transition-colors ${activeTab === 'foryou' ? 'bg-accent-pink text-white' : 'text-gray-300'}`}
+                    onClick={() => setActiveTab('foryou')}
+                >
+                    <Flame className="inline mr-2" size={16}/> For You
+                </button>
                 <button 
                     className={`px-4 py-2 rounded-full text-sm font-bold transition-colors ${activeTab === 'music' ? 'bg-accent-pink text-white' : 'text-gray-300'}`}
                     onClick={() => setActiveTab('music')}
@@ -38,6 +44,7 @@ const ScopeHub = ({ activeTab, setActiveTab, onBack }: { activeTab: string, setA
             </div>
             
             <div className="flex-1 overflow-y-auto">
+                {activeTab === 'foryou' && <Trendboard />}
                 {activeTab === 'music' && <MusicDiscovery />}
                 {activeTab === 'games' && <GamesHub />}
             </div>
@@ -52,7 +59,7 @@ export default function ScopePage() {
     const [posts, setPosts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [showHub, setShowHub] = useState(false);
-    const [hubActiveTab, setHubActiveTab] = useState('music');
+    const [hubActiveTab, setHubActiveTab] = useState('foryou');
     const { setIsScopeVideoPlaying } = useAppState();
     const [user] = useAuthState(auth);
 
@@ -112,6 +119,7 @@ export default function ScopePage() {
     }, [user]);
 
     const handleDoubleClick = () => {
+        setHubActiveTab('foryou'); // Default to 'For You' on double click
         setShowHub(true);
         setIsScopeVideoPlaying(false);
     }
