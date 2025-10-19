@@ -14,7 +14,7 @@ import { useAuthState } from "react-firebase-hooks/auth";
 import { Trendboard } from "@/components/scope/Trendboard";
 
 const db = getFirestore(app);
-const POSTS_PER_PAGE = 5;
+const POSTS_PER_PAGE = 3;
 
 const ScopeHub = ({ activeTab, setActiveTab, onBack, currentPost }: { activeTab: string, setActiveTab: (tab: string) => void, onBack: () => void, currentPost: any }) => {
     return (
@@ -165,13 +165,16 @@ export default function ScopePage() {
     return (
         <div className="w-full h-screen bg-black flex flex-col relative" onDoubleClick={handleDoubleClick}>
              <style jsx global>{`
+                body {
+                    overflow-y: hidden;
+                }
                 /* Hide AppNavBar when not in hub mode */
                 nav.fixed {
                     display: ${showHub ? 'flex' : 'none !important'};
                 }
                 /* Ensure main content doesn't have extra padding when nav is hidden */
                 main {
-                    padding-bottom: ${showHub ? '5rem' : '0'} !important;
+                    padding: 0 !important;
                 }
              `}</style>
             
