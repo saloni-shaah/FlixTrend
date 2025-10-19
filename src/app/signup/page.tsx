@@ -8,7 +8,7 @@ import { getFirestore, doc, setDoc, collection, query, where, getDocs, serverTim
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, ArrowLeft, Camera, UploadCloud, Gift } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Camera, UploadCloud, Gift, Tv, Mic, Gamepad2, Video } from 'lucide-react';
 
 const db = getFirestore(app);
 const storage = getStorage(app);
@@ -34,7 +34,8 @@ export default function SignupPage() {
         location: "",
         phoneNumber: "",
         accountType: "user",
-        referredBy: "", // New field for referral code
+        creatorType: "", // New field for creator category
+        referredBy: "",
     });
     const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
     const [profilePicturePreview, setProfilePicturePreview] = useState<string | null>(null);
@@ -133,11 +134,8 @@ export default function SignupPage() {
             const randomSuffix = Math.floor(100 + Math.random() * 900);
             const referralCode = `${form.username.toLowerCase().replace(/\s/g, '')}${randomSuffix}`;
 
-            // Step 4: Create the user document in Firestore.
-            // The onNewUserCreate function will run in the background to add premium details.
-            // We set the initial data here that the function might need (like 'referredBy').
             await setDoc(doc(db, "users", userCredential.user.uid), {
-                uid: userCredential.user.uid, // Add UID to the document
+                uid: userCredential.user.uid,
                 email: form.email,
                 name: form.name,
                 username: form.username.toLowerCase(),
@@ -147,15 +145,14 @@ export default function SignupPage() {
                 location: form.location,
                 phoneNumber: form.phoneNumber,
                 accountType: form.accountType,
+                creatorType: form.accountType === 'creator' ? form.creatorType : null,
                 avatar_url: avatarUrl,
                 banner_url: bannerUrl,
                 profileComplete: !!(form.dob && form.gender && form.location),
                 referredBy: form.referredBy || null,
                 referralCode: referralCode,
-                // Do NOT set premium fields here; the Cloud Function handles it.
             });
 
-            // Step 5: Send verification email
             await sendEmailVerification(userCredential.user);
 
             setSuccess("Welcome to the Vibe! Your account is created & premium access is activated. Redirecting...");
@@ -207,6 +204,17 @@ export default function SignupPage() {
                             <option value="creator">I'm a Creator</option>
                             <option value="business">I'm a Business</option>
                         </select>
+                        {form.accountType === 'creator' && (
+                            <div className="flex flex-col gap-2">
+                                <h4 className="text-sm font-bold text-accent-cyan">What kind of creator are you?</h4>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button type="button" onClick={() => setForm(f => ({...f, creatorType: 'news'}))} className={`btn-glass text-xs flex items-center gap-2 ${form.creatorType === 'news' ? 'bg-accent-cyan text-black' : ''}`}><Tv size={14}/> News</button>
+                                    <button type="button" onClick={() => setForm(f => ({...f, creatorType: 'gamer'}))} className={`btn-glass text-xs flex items-center gap-2 ${form.creatorType === 'gamer' ? 'bg-accent-cyan text-black' : ''}`}><Gamepad2 size={14}/> Gamer</button>
+                                    <button type="button" onClick={() => setForm(f => ({...f, creatorType: 'musician'}))} className={`btn-glass text-xs flex items-center gap-2 ${form.creatorType === 'musician' ? 'bg-accent-cyan text-black' : ''}`}><Mic size={14}/> Musician</button>
+                                    <button type="button" onClick={() => setForm(f => ({...f, creatorType: 'vlogger'}))} className={`btn-glass text-xs flex items-center gap-2 ${form.creatorType === 'vlogger' ? 'bg-accent-cyan text-black' : ''}`}><Video size={14}/> Vlogger</button>
+                                </div>
+                            </div>
+                        )}
                      </motion.div>
                 );
             case 3:
@@ -249,7 +257,6 @@ export default function SignupPage() {
                     <h2 className="text-3xl font-headline font-bold text-accent-pink mb-2 text-center">Join FlixTrend</h2>
                     <p className="text-center text-brand-gold font-bold mb-4 text-sm">Every new user gets free premium access!</p>
                     
-                    {/* Progress Bar */}
                     <div className="w-full bg-black/20 rounded-full h-2.5 mb-4">
                         <motion.div 
                             className="bg-gradient-to-r from-accent-pink to-accent-cyan h-2.5 rounded-full"
@@ -281,7 +288,7 @@ export default function SignupPage() {
         </AnimatePresence>
 
         <div className="text-center mt-4">
-          <span className="text-gray-400">Already have an account? </span>
+          <span className="text-gray-400">Don't have an account? </span>
           <Link href="/login" className="text-accent-cyan hover:underline">Login</Link>
         </div>
       </form>
