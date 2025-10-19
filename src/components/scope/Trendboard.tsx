@@ -1,7 +1,7 @@
 
 "use client";
 import React, { useState, useEffect } from 'react';
-import { getFirestore, collection, query, orderBy, limit, onSnapshot, getDocs, doc, getDoc } from 'firebase/firestore';
+import { getFirestore, collection, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
 import { app } from '@/utils/firebaseClient';
 import { Flame, Star, Users, Trophy, Loader } from 'lucide-react';
 import { motion } from 'framer-motion';
