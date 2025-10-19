@@ -144,7 +144,7 @@ function HomePageContent() {
 
   useEffect(() => {
     fetchPosts(activeCategory);
-  }, [activeCategory]); 
+  }, [activeCategory, fetchPosts]); 
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async user => {
@@ -251,6 +251,8 @@ function HomePageContent() {
     
   const visibleCategories = showAllCategories ? categories : categories.slice(0, 5);
 
+  const canCreatePost = activeCategory === 'for-you' || (userProfile?.accountType === 'creator' && userProfile?.creatorType === activeCategory);
+
   if (loading && posts.length === 0) {
     return <VibeSpaceLoader />;
   }
@@ -307,44 +309,45 @@ function HomePageContent() {
             )}
         </div>
 
-
-        <motion.section 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="mb-6 glass-card p-4">
-            <h2 className="text-lg font-headline bg-gradient-to-r from-accent-pink to-accent-green bg-clip-text text-transparent mb-2">Flashes</h2>
-            <div className="flex gap-3 overflow-x-auto pb-2">
-                <motion.button
-                  className="w-20 h-20 rounded-full bg-gradient-to-tr from-gray-800 to-gray-700 border-4 border-dashed border-gray-600 flex flex-col items-center justify-center focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background focus:ring-accent-green transition-transform hover:scale-105"
-                  onClick={() => router.push('/create?type=flash')}
-                  title="Create a Flash"
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
-                >
-                  <Plus className="text-gray-400 mb-1" />
-                  <span className="text-xs text-gray-400">Add New</span>
-                </motion.button>
-              {flashUsers.map((userFlashes: any, index: number) => (
-                <motion.button
-                  key={userFlashes.userId}
-                  className="w-20 h-20 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green border-4 border-accent-green/40 flex items-center justify-center overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background focus:ring-accent-green transition-transform hover:scale-105"
-                  onClick={() => setSelectedFlashUser(userFlashes)}
-                  title={userFlashes.username || "Flash"}
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.2 + index * 0.05, type: "spring", stiffness: 200 }}
-                >
-                  {userFlashes.avatar_url ? (
-                      <img src={userFlashes.avatar_url} alt="flash" className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-2xl text-white">⚡</span>
-                  )}
-                </motion.button>
-              ))}
-            </div>
-        </motion.section>
+        {activeCategory === 'for-you' && (
+          <motion.section 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="mb-6 glass-card p-4">
+              <h2 className="text-lg font-headline bg-gradient-to-r from-accent-pink to-accent-green bg-clip-text text-transparent mb-2">Flashes</h2>
+              <div className="flex gap-3 overflow-x-auto pb-2">
+                  <motion.button
+                    className="w-20 h-20 rounded-full bg-gradient-to-tr from-gray-800 to-gray-700 border-4 border-dashed border-gray-600 flex flex-col items-center justify-center focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background focus:ring-accent-green transition-transform hover:scale-105"
+                    onClick={() => router.push('/create?type=flash')}
+                    title="Create a Flash"
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
+                  >
+                    <Plus className="text-gray-400 mb-1" />
+                    <span className="text-xs text-gray-400">Add New</span>
+                  </motion.button>
+                {flashUsers.map((userFlashes: any, index: number) => (
+                  <motion.button
+                    key={userFlashes.userId}
+                    className="w-20 h-20 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green border-4 border-accent-green/40 flex items-center justify-center overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background focus:ring-accent-green transition-transform hover:scale-105"
+                    onClick={() => setSelectedFlashUser(userFlashes)}
+                    title={userFlashes.username || "Flash"}
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: 0.2 + index * 0.05, type: "spring", stiffness: 200 }}
+                  >
+                    {userFlashes.avatar_url ? (
+                        <img src={userFlashes.avatar_url} alt="flash" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-2xl text-white">⚡</span>
+                    )}
+                  </motion.button>
+                ))}
+              </div>
+          </motion.section>
+        )}
 
         <section className="flex-1 flex flex-col items-center mt-4">
             <h2 className="text-xl font-headline self-start bg-gradient-to-r from-accent-pink to-accent-green bg-clip-text text-transparent mb-4">VibeSpace</h2>
@@ -352,7 +355,7 @@ function HomePageContent() {
               <VibeSpaceLoader />
             ) : (
               <div className="w-full max-w-xl flex flex-col gap-6">
-                <CreatePostPrompt onGoLive={handleGoLive} />
+                {canCreatePost && <CreatePostPrompt onGoLive={handleGoLive} />}
                 {filteredPosts.length > 0 ? filteredPosts.map((post, index) => (
                   <React.Fragment key={post.id}>
                     <PostCard post={post} />
