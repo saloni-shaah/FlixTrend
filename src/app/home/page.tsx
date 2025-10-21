@@ -83,6 +83,7 @@ function HomePageContent() {
   const feedEndRef = useRef<HTMLDivElement>(null);
   const [hasUnreadNotifs, setHasUnreadNotifs] = useState(false);
   const [viewedFlashes, setViewedFlashes] = useState<string[]>([]);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   
   const {
     transcript,
@@ -327,7 +328,7 @@ function HomePageContent() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
         >
-            <div className="input-glass w-full flex items-center px-4 focus-within:ring-2 focus-within:ring-brand-gold transition-shadow">
+            <div className="input-glass w-full flex items-center px-4 focus-within:ring-2 focus-within:ring-brand-gold transition-shadow duration-300">
                   <button
                       onClick={handleVoiceSearch}
                       className={`p-1 rounded-full transition-colors text-gray-400 hover:text-brand-gold ${listening ? 'animate-pulse bg-red-500/50' : ''}`}
@@ -342,11 +343,15 @@ function HomePageContent() {
                     placeholder={listening ? "Listening..." : "Search posts..."}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
+                    onFocus={() => setIsSearchFocused(true)}
+                    onBlur={() => setIsSearchFocused(false)}
                     autoFocus={false}
                   />
-                  <button className="p-2 rounded-full text-brand-gold hover:bg-brand-gold/10">
-                    <Search />
-                  </button>
+                  <motion.div animate={{ rotate: isSearchFocused ? 10 : 0, scale: isSearchFocused ? 1.1 : 1 }}>
+                    <button className="p-2 rounded-full text-brand-gold hover:bg-brand-gold/10">
+                        <Search />
+                    </button>
+                  </motion.div>
               </div>
         </motion.div>
 
@@ -382,16 +387,14 @@ function HomePageContent() {
         {activeCategory === 'for-you' && (
           <motion.section 
               className="mb-6 glass-card p-4"
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, ease: 'easeOut', delay: 0.2 }}
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
           >
               <h2 className="text-lg font-headline bg-gradient-to-r from-accent-pink to-accent-green bg-clip-text text-transparent mb-2">Flashes</h2>
               <motion.div 
                 className="flex gap-3 overflow-x-auto pb-2" 
                 variants={containerVariants}
-                initial="hidden"
-                animate="visible"
               >
                   <motion.button
                     variants={itemVariants}
