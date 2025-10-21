@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp, where, writeBatch, getDocs, updateDoc, deleteDoc, arrayUnion, arrayRemove, deleteField, limit } from "firebase/firestore";
-import { auth, db, app } from "@/utils/firebaseClient";
+import { auth, app } from "@/utils/firebaseClient";
 import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, Smile, Trash2, Users, CheckSquare, Square, MoreVertical, UserPlus, UserX, Edit, Shield, EyeOff, LogOut, UploadCloud, UserCircle, Cake, MapPin, AtSign, User, Bot, Search, Check } from "lucide-react";
 import { useAppState } from "@/utils/AppStateContext";
 import { createCall } from "@/utils/callService";
@@ -528,7 +528,7 @@ const ChatItem = React.memo(({ chat, selectionMode, isSelected, onLongPress, dra
 });
 ChatItem.displayName = 'ChatItem';
 
-const MessageItem = React.memo(({ msg, isUser, selectedChat, firebaseUser, isSelected, onLongPress, onClick, onReact, onShowEmojiPicker, showEmojiPicker, onShowDeleteConfirm }: any) => {
+const MessageItem = React.memo(({ msg, isUser, selectedChat, firebaseUser, isSelected, onLongPress, onClick, onReact, onShowEmojiPicker, showEmojiPicker, onShowDeleteConfirm, selectionMode }: any) => {
     const longPressProps = useLongPress(onLongPress);
     const senderInfo = selectedChat.isGroup ?
         (selectedChat.groupType === 'simple' ? selectedChat.memberInfo?.[msg.sender] : null)
@@ -1238,10 +1238,22 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
                     </div>
 
                     <form onSubmit={handleSend} className="flex items-center gap-2 p-2 border-t border-accent-cyan/10 bg-black/60 shrink-0">
-                         <button type="button" onClick={() => fileInputRef.current?.click()} className="p-3 rounded-full hover:bg-accent-cyan/20 transition-colors">
-                            <Paperclip size={20}/>
-                         </button>
-                         <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*,video/*,audio/*" />
+                        <div className="flex-1 bg-gray-700 rounded-full flex items-center border border-gray-600 focus-within:ring-2 focus-within:ring-accent-cyan">
+                            <input 
+                                type="text" 
+                                value={newMessage} 
+                                onChange={handleInputChange} 
+                                placeholder={isRecording ? "Recording..." : "Type a message..."} 
+                                className="flex-1 bg-transparent px-4 py-2 text-white focus:outline-none"
+                            />
+                            <button type="button" onClick={() => alert("Emoji picker coming soon!")} className="p-2 text-gray-400 hover:text-accent-cyan">
+                                <Smile size={20}/>
+                            </button>
+                            <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2 text-gray-400 hover:text-accent-cyan">
+                                <Paperclip size={20}/>
+                            </button>
+                            <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*,video/*,audio/*" />
+                        </div>
                         <AnimatePresence mode="wait">
                         {newMessage.trim() === "" ? (
                              <motion.button 
@@ -1271,7 +1283,6 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
                              </motion.button>
                         )}
                         </AnimatePresence>
-                        <input type="text" value={newMessage} onChange={handleInputChange} placeholder={isRecording ? "Recording..." : "Type a message..."} className="flex-1 bg-gray-700 rounded-full px-4 py-2 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-accent-cyan"/>
                     </form>
                     
                     {selectedChat.isGroup && showGroupInfo && (
