@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
@@ -10,6 +11,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { uploadFileToFirebaseStorage } from '@/app/actions';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { getFunctions, httpsCallable } from "firebase/functions";
+
+
+const functions = getFunctions(app);
+const deleteMessageCallable = httpsCallable(functions, 'deleteMessage');
 
 
 const anonymousNames = ["Ram", "Shyam", "Sita", "Mohan", "Krishna", "Radha", "Anchal", "Anaya", "Advik", "Diya", "Rohan", "Priya", "Arjun", "Saanvi", "Kabir"];
@@ -469,12 +475,33 @@ function timeSince(date: Date) {
     return "just now";
 }
 
+// Custom hook for long press
+const useLongPress = (callback: () => void, ms = 300) => {
+    const timerRef = useRef<NodeJS.Timeout>();
+
+    const onTouchStart = () => {
+        timerRef.current = setTimeout(callback, ms);
+    };
+    const onTouchEnd = () => {
+        if (timerRef.current) {
+            clearTimeout(timerRef.current);
+        }
+    };
+
+    return {
+        onTouchStart,
+        onTouchEnd,
+        onMouseDown: onTouchStart,
+        onMouseUp: onTouchEnd,
+        onMouseLeave: onTouchEnd,
+    };
+};
+
 function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any, userProfile: any }) {
     const [chats, setChats] = useState<any[]>([]);
     const [joinableGroups, setJoinableGroups] = useState<any[]>([]);
     const { selectedChat, setSelectedChat, drafts, setDraft } = useAppState();
     const [messages, setMessages] = useState<any[]>([]);
-    const [newMessage, setNewMessage] = useState("");
     const [unreadCounts, setUnreadCounts] = useState<{ [key: string]: number }>({});
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -500,8 +527,7 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
     const [selectionMode, setSelectionMode] = useState<'chats' | 'messages' | null>(null);
     const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-    const longPressTimerRef = useRef<NodeJS.Timeout>();
-
+    
     useEffect(() => {
         if (selectedChat?.id && drafts[selectedChat.id]) {
             setNewMessage(drafts[selectedChat.id]);
@@ -673,7 +699,7 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
-
+  const [newMessage, setNewMessage] = useState("");
   const handleSend = async (e: React.FormEvent, mediaUrl: string | null = null, type: 'text' | 'image' | 'video' | 'audio' = 'text') => {
     e.preventDefault();
     if ((!newMessage.trim() && !mediaUrl) || !firebaseUser || !selectedChat) return;
@@ -718,22 +744,25 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
   
     const handleDeleteMessages = async (mode: 'me' | 'everyone') => {
         if (!selectedChat || selectedItems.size === 0) return;
-
-        const chatId = selectedChat.isGroup ? selectedChat.id : getChatId(firebaseUser.uid, selectedChat.uid);
-        const batch = writeBatch(db);
-
-        selectedItems.forEach(messageId => {
-            const messageRef = doc(db, "chats", chatId, "messages", messageId);
-            if (mode === 'me') {
-                batch.update(messageRef, { deletedFor: arrayUnion(firebaseUser.uid) });
-            } else {
-                batch.delete(messageRef);
+    
+        const itemsToDelete = Array.from(selectedItems);
+    
+        for (const messageId of itemsToDelete) {
+            try {
+                await deleteMessageCallable({
+                    chatId: selectedChat.isGroup ? selectedChat.id : getChatId(firebaseUser.uid, selectedChat.uid),
+                    messageId: messageId,
+                    mode: mode
+                });
+            } catch (error) {
+                console.error(`Failed to delete message ${messageId}:`, error);
+                // Optionally show a toast to the user
             }
-        });
-
-        await batch.commit();
+        }
+    
         setSelectedItems(new Set());
         setSelectionMode(null);
+        setShowDeleteConfirm(false);
     };
 
     const handleDeleteChats = async () => {
@@ -742,8 +771,7 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
         selectedItems.forEach(chatId => {
             const userDeletedChatRef = doc(db, 'users', firebaseUser.uid, 'deletedChats', chatId);
             batch.set(userDeletedChatRef, {
-                deletedAt: serverTimestamp(),
-                participants: chats.find(c => c.id === chatId)?.members || []
+                deletedAt: serverTimestamp()
             });
         });
         await batch.commit();
@@ -995,28 +1023,6 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
         setSelectedItems(new Set());
     };
     
-    // Custom hook for long press
-    const useLongPress = (callback: () => void, ms = 300) => {
-        const timerRef = useRef<NodeJS.Timeout>();
-
-        const onTouchStart = () => {
-            timerRef.current = setTimeout(callback, ms);
-        };
-        const onTouchEnd = () => {
-            if (timerRef.current) {
-                clearTimeout(timerRef.current);
-            }
-        };
-
-        return {
-            onTouchStart,
-            onTouchEnd,
-            onMouseDown: onTouchStart,
-            onMouseUp: onTouchEnd,
-            onMouseLeave: onTouchEnd,
-        };
-    };
-
   return (
     <div className="flex h-screen w-full bg-transparent font-body text-white overflow-hidden">
         {showCreateGroup && <CreateGroupModal mutuals={chats.filter(c => !c.isGroup)} currentUser={userProfile} onClose={() => setShowCreateGroup(false)} onGroupCreated={(newGroup) => {
@@ -1031,7 +1037,7 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
                 <div className="p-4 border-b border-accent-cyan/10 flex items-center justify-between shrink-0 bg-accent-cyan/10">
                     <button onClick={cancelSelectionMode}><X size={24} /></button>
                     <span className="font-bold">{selectedItems.size} selected</span>
-                    <button onClick={() => { if (window.confirm(`Delete ${selectedItems.size} chat(s)?`)) handleDeleteChats(); }}><Trash2 size={24} /></button>
+                    <button onClick={() => { if (window.confirm(`Hide ${selectedItems.size} chat(s) from your list?`)) handleDeleteChats(); }}><Trash2 size={24} /></button>
                 </div>
             ) : (
                 <div className="p-4 border-b border-accent-cyan/10 flex items-center justify-between shrink-0">
@@ -1062,7 +1068,7 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
                         <div 
                             key={chat.id}
                             className={cn("w-full flex items-center gap-4 px-4 py-3 text-left transition-colors duration-200 group relative", isSelected ? "bg-accent-cyan/30" : "hover:bg-accent-cyan/10")} 
-                            onClick={() => handleItemClick('chats', chat.id)}
+                            onClick={() => selectionMode === 'chats' ? handleItemClick('chats', chat.id) : handleSelectChat(chat)}
                             {...longPressProps}
                         >
                             {selectionMode === 'chats' && (
@@ -1189,7 +1195,7 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
                                               </div>
                                           </>
                                       }
-                                      {isUser && <button onClick={() => handleDeleteMessages('everyone')} className="p-1 rounded-full bg-gray-600 hover:bg-red-500"><Trash2 size={16}/></button>}
+                                      {isUser && <button onClick={() => setShowDeleteConfirm(true)} className="p-1 rounded-full bg-gray-600 hover:bg-red-500"><Trash2 size={16}/></button>}
                                       </div>
                                     </div>
                                   </div>
