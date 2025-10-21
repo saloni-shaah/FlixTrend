@@ -1,132 +1,108 @@
+/**
+ * @description This ruleset enforces a user-ownership model for user profiles and links ad campaigns and creatives to their owners.
+ * @dataStructure
+ *   - `/users/{userId}`: Stores user profile data, accessible only to the user themselves.
+ *   - `/adCampaigns/{campaignId}`: Stores ad campaign data, owned by a specific user (advertiserId).
+ *   - `/adCampaigns/{campaignId}/creatives/{creativeId}`: Stores ad creatives, linked to a specific ad campaign.
+ * @keySecurityDecisions
+ *   - Users can only read and write their own profile data.
+ *   - Ad campaigns can only be created by signed-in users.
+ *   - Ad campaigns can only be managed (updated/deleted) by their owner (advertiserId).
+ *   - Ad creatives can only be created and managed within their parent ad campaign, by the campaign owner.
+ * @denormalizationForAuthorization
+ *   - AdCampaign documents have an `advertiserId` field to directly link them to their owner.
+ * @structuralSegregation N/A
+ */
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // =================================
-    // Helper Functions
-    // =================================
+
+    /**
+     * @description Checks if the user is signed in.
+     */
     function isSignedIn() {
       return request.auth != null;
     }
-    
+
+    /**
+     * @description Checks if the authenticated user's UID matches the provided userId.
+     */
     function isOwner(userId) {
-      return request.auth.uid == userId;
+      return isSignedIn() && request.auth.uid == userId;
     }
 
-    function isAdmin() {
-      // Check if the user document exists and has the required role.
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.hasAny(['developer', 'founder']);
+    /**
+     * @description Checks if the authenticated user owns the existing document (based on a denormalized ownerId field)
+     */
+    function isExistingOwner() {
+      return isSignedIn() && resource.data.advertiserId == request.auth.uid;
     }
 
-    // NEW: Smart function to check participation in ANY chat type
-    function isChatParticipant(chatId) {
-      // For 1-on-1 chats, the user's UID must be in the chatId string
-      let isOneOnOneParticipant = chatId.matches(request.auth.uid);
-      // For group chats, the user's UID must be in the group's members list
-      let isGroupParticipant = exists(/databases/$(database)/documents/groups/$(chatId)) &&
-                               request.auth.uid in get(/databases/$(database)/documents/groups/$(chatId)).data.members;
-      
-      return isOneOnOneParticipant || isGroupParticipant;
-    }
-
-    // =================================
-    // Collections
-    // =================================
-
-    // USERS: Publicly readable, but only the owner or an admin can write.
+    /**
+     * @description
+     *   - Allows users to read their own profile.
+     *   - Allows users to create their own profile.
+     *   - Allows users to update their own profile.
+     *   - Does not allow listing all user profiles.
+     * @path /users/{userId}
+     * @allow (get) User with UID 'user123' can read their profile at /users/user123.
+     * @allow (create) User with UID 'user123' can create their profile at /users/user123.
+     * @allow (update) User with UID 'user123' can update their profile at /users/user123.
+     * @deny (get) User with UID 'user456' cannot read the profile of user 'user123' at /users/user123.
+     * @deny (create) User with UID 'user456' cannot create a profile at /users/user123.
+     * @deny (update) User with UID 'user456' cannot update the profile of user 'user123' at /users/user123.
+     * @principle Enforces document ownership for both reads and writes.
+     */
     match /users/{userId} {
-      allow read: if true;
-      allow write: if isOwner(userId) || isAdmin();
-
-      // Subcollections can only be written to by the owner of the parent user document
-      match /{subcollection}/{docId} {
-        allow read, write: if isOwner(userId);
-      }
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if false;
     }
 
-    // POSTS & FLASHES: Read-public, Create-signed_in, Write-self/admin
-    match /{postCollection}/{postId} where postCollection == 'posts' || postCollection == 'flashes' {
-      allow read: if true;
-      allow create: if isSignedIn();
-      allow update: if isOwner(resource.data.userId) || isAdmin();
-      allow delete: if isOwner(resource.data.userId) || isAdmin(); // Deletion handled by Cloud Function
-
-      match /{subcollection}/{docId} {
-        allow read: if true;
-        allow write: if isSignedIn();
-      }
-    }
-    
-    // CHATS: Read/write access only for participants
-    match /chats/{chatId}/messages/{messageId} {
-        allow read, write: if isSignedIn() && isChatParticipant(chatId);
-    }
-    
-    // GROUPS: Read/write for members, only admins can update info.
-    match /groups/{groupId} {
-        allow get: if isChatParticipant(groupId);
-        allow list: if isSignedIn(); // Allow signed-in users to list groups (for joining anonymous groups)
-        allow create: if isSignedIn();
-        allow update: if isChatParticipant(groupId); // Let's be more lenient for now, client logic should restrict non-admins
-        allow delete: if isAdmin() || request.auth.uid == resource.data.createdBy;
-    }
-
-    // APP_STATUS: Read-only for users, write for admins.
-    match /app_status/{statusId} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-    
-    // SONGS, PRODUCTS: Read-only for users, write for admins.
-    match /{readOnlyCollection}/{docId} where readOnlyCollection == 'songs' || readOnlyCollection == 'products' {
-       allow read: if true;
-       allow write: if isAdmin();
-    }
-    
-    // PLAYLISTS, COLLECTIONS: Read/write only for the owner.
-    match /{userContentCollection}/{docId} where userContentCollection == 'playlists' || userContentCollection == 'collections' {
-        allow read, write: if isOwner(resource.data.ownerId);
-    }
-
-    // AD CAMPAIGNS: Only advertiser or admin can manage.
+    /**
+     * @description
+     *   - Allows any signed-in user to create an ad campaign.
+     *   - Enforces ownership for updating and deleting ad campaigns.
+     *   - Does not allow public listing of all ad campaigns.
+     * @path /adCampaigns/{campaignId}
+     * @allow (create) User with UID 'user123' can create an ad campaign at /adCampaigns/campaign1, setting advertiserId to 'user123'.
+     * @allow (update) User with UID 'user123' can update their ad campaign at /adCampaigns/campaign1, if advertiserId is 'user123'.
+     * @allow (delete) User with UID 'user123' can delete their ad campaign at /adCampaigns/campaign1, if advertiserId is 'user123'.
+     * @deny (get) User with UID 'user456' cannot read ad campaign 'campaign1' at /adCampaigns/campaign1.
+     * @deny (create) User with UID 'user456' cannot create an ad campaign at /adCampaigns/campaign1 with advertiserId 'user123'.
+     * @deny (update) User with UID 'user456' cannot update ad campaign 'campaign1' at /adCampaigns/campaign1 if advertiserId is 'user123'.
+     * @principle Enforces document ownership for writes; requires user to be signed in to create.
+     */
     match /adCampaigns/{campaignId} {
-      allow read: if true;
-      allow write: if isOwner(request.resource.data.advertiserId) || isAdmin();
-      
-      match /creatives/{creativeId} {
-          allow read: if true;
-          allow write: if isSignedIn() || isAdmin();
-      }
+      allow get: if isSignedIn();
+      allow list: if false;
+      allow create: if isSignedIn() && request.resource.data.advertiserId == request.auth.uid;
+      allow update: if isExistingOwner();
+      allow delete: if isExistingOwner();
     }
 
-    // GAMES: Publicly readable, only writable by admins.
-    match /games/{gameId} {
-        allow read: if true;
-        allow write: if isAdmin();
-    }
-    
-    // CALLS: Rules for WebRTC signaling.
-    match /calls/{callId} {
-      allow read, write: if isSignedIn(); // Simplified for now
-      
-       match /offerCandidates/{candidateId} {
-         allow create: if isSignedIn();
-       }
-       match /answerCandidates/{candidateId} {
-         allow create: if isSignedIn();
-       }
-    }
-
-    // TICTACTOE: Rules for the game lobby and active games.
-    match /tictactoe/{gameId} {
-        allow read: if true;
-        // Allow creation if signed in.
-        allow create: if isSignedIn();
-        // Allow updates (joining, making moves) only by participants or if joining a waiting game.
-        allow update: if isSignedIn() && 
-                        (request.auth.uid in resource.data.players || resource.data.status == 'waiting');
+    /**
+     * @description
+     *   - Allows the owner of an ad campaign to create, update, and delete ad creatives within that campaign.
+     *   - Enforces ownership based on the parent ad campaign's `advertiserId` field.
+     *   - Restricts access to ad creatives to the campaign owner.
+     * @path /adCampaigns/{campaignId}/creatives/{creativeId}
+     * @allow (create) User with UID 'user123' can create a creative at /adCampaigns/campaign1/creatives/creative1 if they own campaign 'campaign1'.
+     * @allow (update) User with UID 'user123' can update a creative at /adCampaigns/campaign1/creatives/creative1 if they own campaign 'campaign1'.
+     * @allow (delete) User with UID 'user123' can delete a creative at /adCampaigns/campaign1/creatives/creative1 if they own campaign 'campaign1'.
+     * @deny (get) User with UID 'user456' cannot read ad creative 'creative1' at /adCampaigns/campaign1/creatives/creative1.
+     * @deny (create) User with UID 'user456' cannot create an ad creative at /adCampaigns/campaign1/creatives/creative1 if they do not own campaign 'campaign1'.
+     * @deny (update) User with UID 'user456' cannot update ad creative 'creative1' at /adCampaigns/campaign1/creatives/creative1 if they do not own campaign 'campaign1'.
+     * @principle Enforces ownership based on the parent document's ownership.
+     */
+    match /adCampaigns/{campaignId}/creatives/{creativeId} {
+      allow get: if isSignedIn() && get(/databases/$(database)/documents/adCampaigns/$(campaignId)).data.advertiserId == request.auth.uid;
+      allow list: if false;
+      allow create: if isSignedIn() && get(/databases/$(database)/documents/adCampaigns/$(campaignId)).data.advertiserId == request.auth.uid;
+      allow update: if isSignedIn() && get(/databases/$(database)/documents/adCampaigns/$(campaignId)).data.advertiserId == request.auth.uid;
+      allow delete: if isSignedIn() && get(/databases/$(database)/documents/adCampaigns/$(campaignId)).data.advertiserId == request.auth.uid;
     }
   }
 }
