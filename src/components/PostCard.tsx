@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils"
 import { InFeedVideoPlayer } from './video/InFeedVideoPlayer';
 import { PostActions } from './PostActions';
 import { StreamViewer } from './StreamViewer';
-import { EditPostModal } from './squad/EditPostModal';
+import { EditPostModal } from './squad/EditProfileModal';
 
 
 // START: Copied DropdownMenu components
