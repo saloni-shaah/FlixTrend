@@ -82,6 +82,7 @@ function HomePageContent() {
   const POSTS_PER_PAGE = 5;
   const feedEndRef = useRef<HTMLDivElement>(null);
   const [hasUnreadNotifs, setHasUnreadNotifs] = useState(false);
+  const [viewedFlashes, setViewedFlashes] = useState<string[]>([]);
   
   const {
     transcript,
@@ -91,10 +92,23 @@ function HomePageContent() {
   } = useSpeechRecognition();
 
   useEffect(() => {
+      const storedViewed = localStorage.getItem('viewedFlashes');
+      if (storedViewed) {
+          setViewedFlashes(JSON.parse(storedViewed));
+      }
       if (searchParams.get('new') === 'true') {
           setShowWelcomeAnimation(true);
       }
   }, [searchParams]);
+
+  const handleFlashModalClose = (viewedUserId?: string) => {
+    if (viewedUserId && !viewedFlashes.includes(viewedUserId)) {
+      const newViewed = [...viewedFlashes, viewedUserId];
+      setViewedFlashes(newViewed);
+      localStorage.setItem('viewedFlashes', JSON.stringify(newViewed));
+    }
+    setSelectedFlashUser(null);
+  };
 
   useEffect(() => {
     if (!listening && transcript) {
@@ -264,6 +278,26 @@ function HomePageContent() {
 
   const canCreatePost = activeCategory === 'for-you' || (userProfile?.accountType === 'creator' && userProfile?.creatorType === activeCategory);
 
+  const containerVariants = {
+    hidden: { opacity: 0, y: -20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        type: "spring",
+        stiffness: 120,
+        damping: 14,
+        when: "beforeChildren",
+        staggerChildren: 0.1,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, scale: 0.8 },
+    visible: { opacity: 1, scale: 1 },
+  };
+
   if (loading && posts.length === 0) {
     return <VibeSpaceLoader />;
   }
@@ -322,41 +356,41 @@ function HomePageContent() {
 
         {activeCategory === 'for-you' && (
           <motion.section 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="mb-6 glass-card p-4">
+              className="mb-6 glass-card p-4"
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+          >
               <h2 className="text-lg font-headline bg-gradient-to-r from-accent-pink to-accent-green bg-clip-text text-transparent mb-2">Flashes</h2>
-              <div className="flex gap-3 overflow-x-auto pb-2">
+              <motion.div className="flex gap-3 overflow-x-auto pb-2" variants={containerVariants}>
                   <motion.button
-                    className="w-20 h-20 rounded-full bg-gradient-to-tr from-gray-800 to-gray-700 border-4 border-dashed border-gray-600 flex flex-col items-center justify-center focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background focus:ring-accent-green transition-transform hover:scale-105"
+                    className="w-20 h-20 shrink-0 rounded-full bg-gradient-to-tr from-gray-800 to-gray-700 border-4 border-dashed border-gray-600 flex flex-col items-center justify-center focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background focus:ring-accent-green transition-transform hover:scale-105"
                     onClick={() => router.push('/create?type=flash')}
                     title="Create a Flash"
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
+                    variants={itemVariants}
                   >
                     <Plus className="text-gray-400 mb-1" />
                     <span className="text-xs text-gray-400">Add New</span>
                   </motion.button>
-                {flashUsers.map((userFlashes: any, index: number) => (
+                {flashUsers.map((userFlashes: any) => {
+                  const hasBeenViewed = viewedFlashes.includes(userFlashes.userId);
+                  return (
                   <motion.button
                     key={userFlashes.userId}
-                    className="w-20 h-20 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green border-4 border-accent-green/40 flex items-center justify-center overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background focus:ring-accent-green transition-transform hover:scale-105"
+                    className={`w-20 h-20 shrink-0 rounded-full bg-gradient-to-tr flex items-center justify-center overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background focus:ring-accent-green transition-transform hover:scale-105
+                        ${hasBeenViewed ? 'border-4 border-gray-600' : 'from-accent-pink to-accent-green border-4 border-accent-green/40'}`}
                     onClick={() => setSelectedFlashUser(userFlashes)}
                     title={userFlashes.username || "Flash"}
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ delay: 0.2 + index * 0.05, type: "spring", stiffness: 200 }}
+                    variants={itemVariants}
                   >
                     {userFlashes.avatar_url ? (
-                        <img src={userFlashes.avatar_url} alt="flash" className="w-full h-full object-cover" />
+                        <img src={userFlashes.avatar_url} alt="flash" className={`w-full h-full object-cover transition-opacity ${hasBeenViewed ? 'opacity-60' : ''}`} />
                     ) : (
                       <span className="text-2xl text-white">⚡</span>
                     )}
                   </motion.button>
-                ))}
-              </div>
+                )})}
+              </motion.div>
           </motion.section>
         )}
 
@@ -410,7 +444,7 @@ function HomePageContent() {
 
       <AnimatePresence>
         {showMusicModal && <MusicDiscovery onClose={() => setShowMusicModal(false)} />}
-        {selectedFlashUser && <FlashModal userFlashes={selectedFlashUser} onClose={() => setSelectedFlashUser(null)} />}
+        {selectedFlashUser && <FlashModal userFlashes={selectedFlashUser} onClose={() => handleFlashModalClose(selectedFlashUser?.userId)} />}
         {showNotifications && <NotificationPanel onClose={() => setShowNotifications(false)} />}
       </AnimatePresence>
     </div>

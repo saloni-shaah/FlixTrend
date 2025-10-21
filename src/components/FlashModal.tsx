@@ -112,7 +112,7 @@ function FlashInteraction({ flash, currentUser, onClose }: { flash: any; current
     );
 }
 
-export default function FlashModal({ userFlashes, onClose }: { userFlashes: any; onClose: () => void }) {
+export default function FlashModal({ userFlashes, onClose }: { userFlashes: any; onClose: (viewedUserId?: string) => void }) {
   const [currentUserFlashesIndex, setCurrentUserFlashesIndex] = useState(0);
   const [currentFlashIndex, setCurrentFlashIndex] = useState(0);
   const [viewedCount, setViewedCount] = useState(0);
@@ -128,6 +128,10 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
   const AD_INTERVAL = 9;
 
   const allFlashes = Array.isArray(userFlashes) ? userFlashes : [userFlashes];
+
+  const handleClose = () => {
+    onClose(allFlashes[currentUserFlashesIndex]?.userId);
+  };
 
   const goToNext = useCallback(() => {
     // Check for ad break first
@@ -147,10 +151,10 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
             setCurrentUserFlashesIndex(i => i + 1);
             setCurrentFlashIndex(0);
         } else {
-            onClose(); // End of all flashes
+            handleClose(); // End of all flashes
         }
     }
-  }, [allFlashes, currentFlashIndex, currentUserFlashesIndex, onClose, viewedCount, AD_INTERVAL]);
+  }, [allFlashes, currentFlashIndex, currentUserFlashesIndex, handleClose, viewedCount, AD_INTERVAL]);
 
   const goToPrev = useCallback(() => {
     if (currentFlashIndex > 0) {
@@ -263,7 +267,7 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
               setCurrentUserFlashesIndex(i => i + 1);
               setCurrentFlashIndex(0);
           } else {
-              onClose();
+              handleClose();
           }
       }
   }
@@ -290,7 +294,7 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
       <div className="relative w-full max-w-lg h-[90vh] flex flex-col items-center justify-center cursor-pointer" onClick={handleContainerClick}>
-        <button onClick={(e) => { e.stopPropagation(); onClose();}} className="absolute top-2 right-2 text-white text-3xl z-20">&times;</button>
+        <button onClick={(e) => { e.stopPropagation(); handleClose();}} className="absolute top-2 right-2 text-white text-3xl z-20">&times;</button>
         {/* Progress Bars */}
         <div className="absolute top-4 left-2 right-2 flex gap-1 z-20">
             {currentFlashUser.flashes.map((_:any, idx:number) => (
@@ -333,9 +337,8 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
           </div>
         )}
 
-        <FlashInteraction flash={currentFlash} currentUser={currentUser} onClose={onClose} />
+        <FlashInteraction flash={currentFlash} currentUser={currentUser} onClose={handleClose} />
       </div>
     </div>
   );
 }
-
