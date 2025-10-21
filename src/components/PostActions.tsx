@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import { getFirestore, collection, onSnapshot, addDoc, serverTimestamp, deleteDoc, updateDoc, doc as fsDoc, setDoc, runTransaction } from "firebase/firestore";
+import { getFirestore, collection, onSnapshot, addDoc, serverTimestamp, deleteDoc, updateDoc, doc, setDoc, runTransaction } from "firebase/firestore";
 import { Repeat2, Star, Share, MessageCircle, Bookmark, Download } from "lucide-react";
 import { auth, app } from '@/utils/firebaseClient';
 import { ShareModal } from './ShareModal';
@@ -47,7 +47,7 @@ export function PostActions({ post, onCommentClick, isShortVibe = false }: { pos
     const handleLike = async (e: React.MouseEvent) => {
         e.stopPropagation();
         if (!currentUser) return;
-        const likeRef = fsDoc(db, "posts", post.id, "stars", currentUser.uid);
+        const likeRef = doc(db, "posts", post.id, "stars", currentUser.uid);
         if (userHasLiked) {
             await deleteDoc(likeRef);
         } else {
@@ -79,8 +79,8 @@ export function PostActions({ post, onCommentClick, isShortVibe = false }: { pos
         if (!currentUser) return;
         
         await runTransaction(db, async (transaction) => {
-            const userRelayRef = fsDoc(db, 'users', currentUser.uid, 'relayedPosts', post.id);
-            const postRelayRef = fsDoc(db, 'posts', post.id, 'relays', currentUser.uid);
+            const userRelayRef = doc(db, 'users', currentUser.uid, 'relayedPosts', post.id);
+            const postRelayRef = doc(db, 'posts', post.id, 'relays', currentUser.uid);
             
             const userRelayDoc = await transaction.get(userRelayRef);
 
