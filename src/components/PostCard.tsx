@@ -270,7 +270,13 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
 
   return (
     <>
-    <div className="glass-card p-5 flex flex-col gap-3 relative">
+    <motion.div 
+      className="glass-card p-5 flex flex-col gap-3 relative"
+      initial={{ opacity: 0, y: 50 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.2 }}
+      transition={{ duration: 0.5, ease: "easeOut" }}
+    >
       {post.type === 'relay' && (
           <div className="text-xs text-muted-foreground font-bold mb-2 flex items-center gap-2">
               <Repeat2 size={14}/> Relayed by <Link href={`/squad/${post.userId}`} className="text-accent-cyan hover:underline">@{post.username}</Link>
@@ -286,7 +292,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
       
       {showComments && <CommentModal postId={post.id} postAuthorId={post.userId} onClose={() => setShowComments(false)} post={post} />}
 
-    </div>
+    </motion.div>
     </>
   );
 }
