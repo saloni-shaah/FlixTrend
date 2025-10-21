@@ -2,8 +2,9 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { auth } from '@/utils/firebaseClient';
-import { LiveKitRoom, VideoConference, formatChatMessageLinks } from '@livekit/components-react';
+import { LiveKitRoom, VideoConference } from '@livekit/components-react';
 import '@livekit/components-styles';
+import { generateLivekitToken } from '@/ai/flows/generate-livekit-token-flow';
 
 export default function BroadcastPage({ params }: { params: { roomName: string } }) {
   const [user, setUser] = useState(auth.currentUser);
@@ -23,25 +24,17 @@ export default function BroadcastPage({ params }: { params: { roomName: string }
 
     const fetchToken = async () => {
       try {
-        const response = await fetch('/api/livekit-token', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
+        const { token: generatedToken } = await generateLivekitToken({
             roomName: roomName,
             identity: user.uid,
             name: user.displayName || user.email || 'Anonymous',
             isStreamer: true, // This is the broadcaster
-          }),
         });
-
-        const result = await response.json();
         
-        if (result.error || !result.token) {
-            throw new Error(result.error || "Failed to generate a valid token.");
+        if (!generatedToken) {
+            throw new Error("Failed to generate a valid token.");
         }
-        setToken(result.token);
+        setToken(generatedToken);
 
       } catch (e: any) {
         console.error('Failed to get LiveKit token:', e);
@@ -70,9 +63,7 @@ export default function BroadcastPage({ params }: { params: { roomName: string }
             data-lk-theme="default"
             style={{ height: '100%' }}
         >
-            <VideoConference 
-                chatMessageFormatter={formatChatMessageLinks} 
-            />
+            <VideoConference />
         </LiveKitRoom>
     </div>
   );
