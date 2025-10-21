@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp, where, writeBatch, getDocs, updateDoc, deleteDoc, arrayUnion, arrayRemove, deleteField, limit } from "firebase/firestore";
-import { auth, db } from "@/utils/firebaseClient";
+import { auth, db, app } from "@/utils/firebaseClient";
 import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, Smile, Trash2, Users, CheckSquare, Square, MoreVertical, UserPlus, UserX, Edit, Shield, EyeOff, LogOut, UploadCloud, UserCircle, Cake, MapPin, AtSign, User, Bot, Search, Check } from "lucide-react";
 import { useAppState } from "@/utils/AppStateContext";
 import { createCall } from "@/utils/callService";
@@ -1206,7 +1206,7 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
                     </div>
 
                     <form onSubmit={handleSend} className="flex items-center gap-2 p-2 border-t border-accent-cyan/10 bg-black/60 shrink-0">
-                         <button type="button" onClick={() => fileInputRef.current?.click()} className="p-3 rounded-full hover:bg-accent-cyan/20 transition-colors">
+                         <button type="button" onClick={() to fileInputRef.current?.click()} className="p-3 rounded-full hover:bg-accent-cyan/20 transition-colors">
                             <Paperclip size={20}/>
                          </button>
                          <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*,video/*,audio/*" />
@@ -1360,3 +1360,4 @@ export default function SignalPageWrapper() {
         </Suspense>
     )
 }
+
