@@ -1,108 +1,117 @@
 /**
- * @description This ruleset enforces a user-ownership model for user profiles and links ad campaigns and creatives to their owners.
- * @dataStructure
- *   - `/users/{userId}`: Stores user profile data, accessible only to the user themselves.
- *   - `/adCampaigns/{campaignId}`: Stores ad campaign data, owned by a specific user (advertiserId).
- *   - `/adCampaigns/{campaignId}/creatives/{creativeId}`: Stores ad creatives, linked to a specific ad campaign.
- * @keySecurityDecisions
- *   - Users can only read and write their own profile data.
- *   - Ad campaigns can only be created by signed-in users.
- *   - Ad campaigns can only be managed (updated/deleted) by their owner (advertiserId).
- *   - Ad creatives can only be created and managed within their parent ad campaign, by the campaign owner.
- * @denormalizationForAuthorization
- *   - AdCampaign documents have an `advertiserId` field to directly link them to their owner.
- * @structuralSegregation N/A
+ * @fileoverview Firestore Security Rules for Flixtrend Prototype
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership model for user profiles
+ * and an advertiser-ownership model for ad campaigns and creatives.
+ *
+ * Data Structure:
+ * - /users/{userId}: Stores user profiles, accessible only to the user themselves.
+ * - /adCampaigns/{campaignId}: Stores ad campaigns, accessible only to the campaign's owner (advertiserId).
+ * - /adCampaigns/{campaignId}/creatives/{creativeId}: Stores ad creatives, accessible only to the campaign's owner.
+ *
+ * Key Security Decisions:
+ * - Users can only read and write their own profile data.
+ * - Ad campaigns and creatives can only be created, updated, and deleted by the advertiser who owns the campaign.
+ * - No public listing of users, campaigns, or creatives is allowed.
+ *
+ * Denormalization for Authorization:
+ * - AdCampaigns: Documents must contain an `advertiserId` field matching the owner's UID.
+ * - AdCreatives: Documents must contain a `campaignId` field linking them to their parent campaign, and authorization is derived from the parent campaign's `advertiserId`.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Checks if the user is signed in.
-     */
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    /**
-     * @description Checks if the authenticated user's UID matches the provided userId.
-     */
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    /**
-     * @description Checks if the authenticated user owns the existing document (based on a denormalized ownerId field)
-     */
-    function isExistingOwner() {
-      return isSignedIn() && resource.data.advertiserId == request.auth.uid;
-    }
-
-    /**
-     * @description
-     *   - Allows users to read their own profile.
-     *   - Allows users to create their own profile.
-     *   - Allows users to update their own profile.
-     *   - Does not allow listing all user profiles.
+     * @description Protects user profile data, ensuring only the user can read and write their own profile.
      * @path /users/{userId}
-     * @allow (get) User with UID 'user123' can read their profile at /users/user123.
-     * @allow (create) User with UID 'user123' can create their profile at /users/user123.
-     * @allow (update) User with UID 'user123' can update their profile at /users/user123.
-     * @deny (get) User with UID 'user456' cannot read the profile of user 'user123' at /users/user123.
-     * @deny (create) User with UID 'user456' cannot create a profile at /users/user123.
-     * @deny (update) User with UID 'user456' cannot update the profile of user 'user123' at /users/user123.
-     * @principle Enforces document ownership for both reads and writes.
+     * @allow (create) User with UID 'user123' creates a profile with "uid": "user123".
+     * @allow (get, update, delete) User with UID 'user123' reads/updates/deletes their own profile at /users/user123.
+     * @deny (create) User with UID 'user123' tries to create a profile with "uid": "user456".
+     * @deny (get, update, delete) User with UID 'user456' tries to access profile at /users/user123.
+     * @principle Enforces document ownership for user profiles; only the owner can read/write.
      */
     match /users/{userId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return isSignedIn() && request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
       allow get: if isOwner(userId);
       allow list: if false;
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
-      allow delete: if false;
+      allow create: if isOwner(userId) && request.resource.data.uid == request.auth.uid;
+      allow update: if isExistingOwner(userId) && request.resource.data.uid == resource.data.uid;
+      allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description
-     *   - Allows any signed-in user to create an ad campaign.
-     *   - Enforces ownership for updating and deleting ad campaigns.
-     *   - Does not allow public listing of all ad campaigns.
+     * @description Protects ad campaigns, ensuring only the campaign owner can manage them.
      * @path /adCampaigns/{campaignId}
-     * @allow (create) User with UID 'user123' can create an ad campaign at /adCampaigns/campaign1, setting advertiserId to 'user123'.
-     * @allow (update) User with UID 'user123' can update their ad campaign at /adCampaigns/campaign1, if advertiserId is 'user123'.
-     * @allow (delete) User with UID 'user123' can delete their ad campaign at /adCampaigns/campaign1, if advertiserId is 'user123'.
-     * @deny (get) User with UID 'user456' cannot read ad campaign 'campaign1' at /adCampaigns/campaign1.
-     * @deny (create) User with UID 'user456' cannot create an ad campaign at /adCampaigns/campaign1 with advertiserId 'user123'.
-     * @deny (update) User with UID 'user456' cannot update ad campaign 'campaign1' at /adCampaigns/campaign1 if advertiserId is 'user123'.
-     * @principle Enforces document ownership for writes; requires user to be signed in to create.
+     * @allow (create) User with UID 'business123' creates a campaign with "advertiserId": "business123".
+     * @allow (get, update, delete) User with UID 'business123' manages their campaign at /adCampaigns/campaignXYZ.
+     * @deny (create) User with UID 'user456' tries to create a campaign with "advertiserId": "business123".
+     * @deny (get, update, delete) User with UID 'user456' tries to access campaign at /adCampaigns/campaignXYZ.
+     * @principle Enforces document ownership for ad campaigns; only the advertiser can manage.
      */
     match /adCampaigns/{campaignId} {
-      allow get: if isSignedIn();
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(advertiserId) {
+        return isSignedIn() && request.auth.uid == advertiserId;
+      }
+
+      function isExistingOwner(advertiserId) {
+        return isOwner(advertiserId) && resource != null;
+      }
+
+      allow get: if isOwner(resource.data.advertiserId);
       allow list: if false;
       allow create: if isSignedIn() && request.resource.data.advertiserId == request.auth.uid;
-      allow update: if isExistingOwner();
-      allow delete: if isExistingOwner();
+      allow update: if isExistingOwner(resource.data.advertiserId) && resource.data.advertiserId == request.resource.data.advertiserId;
+      allow delete: if isExistingOwner(resource.data.advertiserId);
     }
 
     /**
-     * @description
-     *   - Allows the owner of an ad campaign to create, update, and delete ad creatives within that campaign.
-     *   - Enforces ownership based on the parent ad campaign's `advertiserId` field.
-     *   - Restricts access to ad creatives to the campaign owner.
+     * @description Protects ad creatives within a campaign, ensuring only the campaign owner can manage them.
      * @path /adCampaigns/{campaignId}/creatives/{creativeId}
-     * @allow (create) User with UID 'user123' can create a creative at /adCampaigns/campaign1/creatives/creative1 if they own campaign 'campaign1'.
-     * @allow (update) User with UID 'user123' can update a creative at /adCampaigns/campaign1/creatives/creative1 if they own campaign 'campaign1'.
-     * @allow (delete) User with UID 'user123' can delete a creative at /adCampaigns/campaign1/creatives/creative1 if they own campaign 'campaign1'.
-     * @deny (get) User with UID 'user456' cannot read ad creative 'creative1' at /adCampaigns/campaign1/creatives/creative1.
-     * @deny (create) User with UID 'user456' cannot create an ad creative at /adCampaigns/campaign1/creatives/creative1 if they do not own campaign 'campaign1'.
-     * @deny (update) User with UID 'user456' cannot update ad creative 'creative1' at /adCampaigns/campaign1/creatives/creative1 if they do not own campaign 'campaign1'.
-     * @principle Enforces ownership based on the parent document's ownership.
+     * @allow (create) User 'business123' creates a creative in their campaign at /adCampaigns/campaignXYZ/creatives/creative123.
+     * @allow (get, update, delete) User 'business123' manages their creative at /adCampaigns/campaignXYZ/creatives/creative123.
+     * @deny (create) User 'user456' tries to create a creative in campaign 'campaignXYZ' owned by 'business123'.
+     * @deny (get, update, delete) User 'user456' tries to access creative at /adCampaigns/campaignXYZ/creatives/creative123.
+     * @principle Enforces document ownership for ad creatives, linked to the parent campaign's ownership.
      */
     match /adCampaigns/{campaignId}/creatives/{creativeId} {
-      allow get: if isSignedIn() && get(/databases/$(database)/documents/adCampaigns/$(campaignId)).data.advertiserId == request.auth.uid;
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function getCampaign(campaignId) {
+          return get(/databases/$(database)/documents/adCampaigns/$(campaignId));
+      }
+
+      function isCampaignOwner(campaignId) {
+        return isSignedIn() && getCampaign(campaignId).data.advertiserId == request.auth.uid;
+      }
+
+      function isExistingCampaignOwner(campaignId) {
+        return isCampaignOwner(campaignId) && resource != null;
+      }
+
+      allow get: if isCampaignOwner(campaignId);
       allow list: if false;
-      allow create: if isSignedIn() && get(/databases/$(database)/documents/adCampaigns/$(campaignId)).data.advertiserId == request.auth.uid;
-      allow update: if isSignedIn() && get(/databases/$(database)/documents/adCampaigns/$(campaignId)).data.advertiserId == request.auth.uid;
-      allow delete: if isSignedIn() && get(/databases/$(database)/documents/adCampaigns/$(campaignId)).data.advertiserId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.campaignId == campaignId && isCampaignOwner(campaignId);
+      allow update: if isExistingCampaignOwner(campaignId) && request.resource.data.campaignId == campaignId;
+      allow delete: if isExistingCampaignOwner(campaignId) && request.resource.data.campaignId == campaignId;
     }
   }
 }
