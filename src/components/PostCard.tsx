@@ -429,8 +429,8 @@ function CommentForm({ postId, postAuthorId, parentId, onCommentPosted, isReply 
 
     await addDoc(collection(db, "posts", postId, "comments"), commentData);
     
+    // Only notify if not replying to own comment or own post
     if (postAuthorId !== user.uid) {
-        // Create a notification for the post author
         const notifRef = collection(db, "users", postAuthorId, "notifications");
         await addDoc(notifRef, {
             type: 'comment',
