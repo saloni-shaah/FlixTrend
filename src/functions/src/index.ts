@@ -136,7 +136,8 @@ export const onUserDelete = functions.auth.user().onDelete(async (user) => {
 
 
 /**
- * Sends a push notification to the callee when a new call document is created.
+ * When a call is created, this function sends a push notification to the callee
+ * AND updates their user document with the currentCallId to join them to the call.
  */
 export const onCallCreated = functions.firestore
     .document('calls/{callId}')
@@ -153,17 +154,30 @@ export const onCallCreated = functions.firestore
             logger.log('calleeId is missing');
             return;
         }
-
+        
         const userDocRef = doc(db, 'users', calleeId);
-        const userDoc = await userDocRef.get();
+        const userDoc = await getDoc(userDocRef);
+        
         if (!userDoc.exists()) {
             logger.log('Callee user document not found');
             return;
         }
+        
+        // **CRITICAL STEP**: Update the callee's document with the call ID.
+        try {
+            await updateDoc(userDocRef, { currentCallId: snap.id });
+            logger.info(`Successfully set currentCallId for callee ${calleeId}.`);
+        } catch (error) {
+            logger.error(`Failed to set currentCallId for callee ${calleeId}:`, error);
+            // If we can't update the doc, the call can't proceed.
+            // Optionally, we could delete the call doc here to clean up.
+            return; 
+        }
 
         const fcmToken = userDoc.data()?.fcmToken;
         if (!fcmToken) {
-            logger.log(`FCM token not found for callee ${calleeId}`);
+            logger.log(`FCM token not found for callee ${calleeId}. Cannot send push notification.`);
+            // We still updated their doc, so they will see the call screen if the app is open.
             return;
         }
         

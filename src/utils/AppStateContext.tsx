@@ -1,10 +1,11 @@
 
+
 "use client";
 import React, { createContext, useState, useContext, ReactNode, useEffect, useRef } from 'react';
 import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp, Unsubscribe, updateDoc, collection, addDoc, getDoc, writeBatch, getDocs, deleteField } from 'firebase/firestore';
 import { auth, app } from './firebaseClient';
 import { CallScreen } from '@/components/CallScreen';
-import { requestForToken } from './firebaseMessaging';
+import { requestNotificationPermission } from './firebaseMessaging';
 
 const db = getFirestore(app);
 
@@ -215,18 +216,27 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       const user = auth.currentUser;
       if (!user) return;
       
-      await cleanUpCall(activeCall.id);
+      const callId = activeCall.id;
       
+      // Update local state immediately for responsiveness
+      closeCall(); 
+
+      // Update user docs to remove call ID
       const userDocRef = doc(db, 'users', user.uid);
       await updateDoc(userDocRef, { currentCallId: deleteField() });
       
       const otherUserId = user.uid === activeCall.callerId ? activeCall.calleeId : activeCall.callerId;
       if(otherUserId) {
           const otherUserDocRef = doc(db, 'users', otherUserId);
-          await updateDoc(otherUserDocRef, { currentCallId: deleteField() });
+          // Check if other user doc exists before trying to update
+          const otherUserDocSnap = await getDoc(otherUserDocRef);
+          if (otherUserDocSnap.exists()) {
+              await updateDoc(otherUserDocRef, { currentCallId: deleteField() });
+          }
       }
-      
-      closeCall(); 
+
+      // Clean up the call document and subcollections in the background
+      await cleanUpCall(callId);
   };
   
   useEffect(() => {
