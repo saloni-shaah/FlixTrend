@@ -475,7 +475,7 @@ function timeSince(date: Date) {
     return "just now";
 }
 
-// Custom hook for long press
+// Custom hook for long press - Moved outside the component
 const useLongPress = (callback: () => void, ms = 300) => {
     const timerRef = useRef<NodeJS.Timeout>();
 
@@ -527,6 +527,7 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
     const [selectionMode, setSelectionMode] = useState<'chats' | 'messages' | null>(null);
     const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [newMessage, setNewMessage] = useState("");
     
     useEffect(() => {
         if (selectedChat?.id && drafts[selectedChat.id]) {
@@ -699,7 +700,7 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
-  const [newMessage, setNewMessage] = useState("");
+
   const handleSend = async (e: React.FormEvent, mediaUrl: string | null = null, type: 'text' | 'image' | 'video' | 'audio' = 'text') => {
     e.preventDefault();
     if ((!newMessage.trim() && !mediaUrl) || !firebaseUser || !selectedChat) return;
@@ -1195,7 +1196,7 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
                                               </div>
                                           </>
                                       }
-                                      {isUser && <button onClick={() => setShowDeleteConfirm(true)} className="p-1 rounded-full bg-gray-600 hover:bg-red-500"><Trash2 size={16}/></button>}
+                                      {isUser && <button onClick={() => { setSelectionMode('messages'); setSelectedItems(new Set([msg.id])); setShowDeleteConfirm(true); }} className="p-1 rounded-full bg-gray-600 hover:bg-red-500"><Trash2 size={16}/></button>}
                                       </div>
                                     </div>
                                   </div>
@@ -1206,7 +1207,7 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
                     </div>
 
                     <form onSubmit={handleSend} className="flex items-center gap-2 p-2 border-t border-accent-cyan/10 bg-black/60 shrink-0">
-                         <button type="button" onClick={() to fileInputRef.current?.click()} className="p-3 rounded-full hover:bg-accent-cyan/20 transition-colors">
+                         <button type="button" onClick={() => fileInputRef.current?.click()} className="p-3 rounded-full hover:bg-accent-cyan/20 transition-colors">
                             <Paperclip size={20}/>
                          </button>
                          <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*,video/*,audio/*" />
@@ -1360,4 +1361,3 @@ export default function SignalPageWrapper() {
         </Suspense>
     )
 }
-
