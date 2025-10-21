@@ -17,7 +17,6 @@ import { getFunctions, httpsCallable } from "firebase/functions";
 const functions = getFunctions(app);
 const deleteMessageCallable = httpsCallable(functions, 'deleteMessage');
 
-
 const anonymousNames = ["Ram", "Shyam", "Sita", "Mohan", "Krishna", "Radha", "Anchal", "Anaya", "Advik", "Diya", "Rohan", "Priya", "Arjun", "Saanvi", "Kabir"];
 const generateAnonymousName = (userId: string, chatId: string) => {
     // Simple hash function to get a somewhat consistent but random-looking name
@@ -33,6 +32,27 @@ const generateAnonymousName = (userId: string, chatId: string) => {
     return `${anonymousNames[nameIndex]}${num}`;
 };
 
+// Custom hook for long press - Moved outside the component
+const useLongPress = (callback: () => void, ms = 300) => {
+    const timerRef = useRef<NodeJS.Timeout>();
+
+    const onTouchStart = () => {
+        timerRef.current = setTimeout(callback, ms);
+    };
+    const onTouchEnd = () => {
+        if (timerRef.current) {
+            clearTimeout(timerRef.current);
+        }
+    };
+
+    return {
+        onTouchStart,
+        onTouchEnd,
+        onMouseDown: onTouchStart,
+        onMouseUp: onTouchEnd,
+        onMouseLeave: onTouchEnd,
+    };
+};
 
 function CreateGroupModal({ mutuals, currentUser, onClose, onGroupCreated }: { mutuals: any[], currentUser: any, onClose: () => void, onGroupCreated: (group:any) => void }) {
     const [selectedUids, setSelectedUids] = useState<string[]>([]);
@@ -475,27 +495,115 @@ function timeSince(date: Date) {
     return "just now";
 }
 
-// Custom hook for long press - Moved outside the component
-const useLongPress = (callback: () => void, ms = 300) => {
-    const timerRef = useRef<NodeJS.Timeout>();
+const ChatItem = React.memo(({ chat, selectionMode, isSelected, onLongPress, drafts, onClick }: any) => {
+    const longPressProps = useLongPress(onLongPress);
+    const getInitials = (user: any) => user?.name?.[0] || user?.username?.[0] || "U";
 
-    const onTouchStart = () => {
-        timerRef.current = setTimeout(callback, ms);
-    };
-    const onTouchEnd = () => {
-        if (timerRef.current) {
-            clearTimeout(timerRef.current);
-        }
-    };
+    return (
+        <div 
+            key={chat.id}
+            className={cn("w-full flex items-center gap-4 px-4 py-3 text-left transition-colors duration-200 group relative", isSelected ? "bg-accent-cyan/30" : "hover:bg-accent-cyan/10")} 
+            onClick={onClick}
+            {...longPressProps}
+        >
+            {selectionMode === 'chats' && (
+                <div className="absolute left-2 top-1/2 -translate-y-1/2">
+                    {isSelected ? <CheckSquare className="text-accent-cyan"/> : <Square className="text-gray-500"/>}
+                </div>
+            )}
+            <div className={cn("w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-xl overflow-hidden shrink-0", selectionMode === 'chats' && "ml-8")}>
+                {chat.isGroup ? 
+                    (chat.avatar_url ? <img src={chat.avatar_url} alt={chat.name} className="w-full h-full object-cover"/> : (chat.groupType === 'anonymous' ? <Shield/> : chat.groupType === 'pseudonymous' ? <EyeOff/> : <Users/>)) :
+                    (chat.avatar_url ? <img src={chat.avatar_url} alt="avatar" className="w-full h-full object-cover"/> : getInitials(chat))
+                }
+            </div>
+            <div className="flex-1 overflow-hidden">
+                <span className="font-bold text-white block truncate">{chat.name || chat.username}</span>
+                <span className="text-xs text-gray-400 block truncate italic">
+                    {drafts[chat.id] ? <span className="text-red-400">[Draft] {drafts[chat.id]}</span> : chat.lastMessage?.text || "No messages yet"}
+                </span>
+            </div>
+        </div>
+    )
+});
+ChatItem.displayName = 'ChatItem';
 
-    return {
-        onTouchStart,
-        onTouchEnd,
-        onMouseDown: onTouchStart,
-        onMouseUp: onTouchEnd,
-        onMouseLeave: onTouchEnd,
-    };
-};
+const MessageItem = React.memo(({ msg, isUser, selectedChat, firebaseUser, isSelected, onLongPress, onClick, onReact, onShowEmojiPicker, showEmojiPicker, onShowDeleteConfirm }: any) => {
+    const longPressProps = useLongPress(onLongPress);
+    const senderInfo = selectedChat.isGroup ?
+        (selectedChat.groupType === 'simple' ? selectedChat.memberInfo?.[msg.sender] : null)
+        : selectedChat;
+                            
+    const displayName = selectedChat.groupType === 'anonymous' ? generateAnonymousName(msg.sender, selectedChat.id) : 
+                        selectedChat.groupType === 'pseudonymous' ? selectedChat.pseudonyms?.[msg.sender] || 'Anon' : 
+                        senderInfo?.name || "User";
+    
+    const defaultReactions = ["👍", "❤️", "😂", "😢", "😮", "🙏"];
+
+    return (
+        <div 
+            key={msg.id} 
+            onClick={onClick}
+            {...longPressProps}
+            className={cn("group flex w-full items-end gap-2", isUser ? "justify-end" : msg.sender === 'system' ? 'justify-center' : "justify-start", selectionMode === 'messages' && "cursor-pointer")}
+        >
+        <div className={cn("flex items-end gap-2 max-w-[80%] md:max-w-[70%]", isSelected && "bg-accent-cyan/20 rounded-xl")}>
+            <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
+                <div className={`relative px-4 py-2 rounded-2xl transition-all duration-300 ${isUser ? "bg-accent-cyan text-white rounded-br-none" : msg.sender === 'system' ? "bg-gray-800 text-gray-400 text-xs italic" : "bg-gray-700 text-white rounded-bl-none"}`}>
+                    {!isUser && msg.sender !== 'system' && (
+                        <div className="font-bold text-sm text-accent-pink">{displayName}</div>
+                    )}
+                    {msg.type === 'image' && <img src={msg.mediaUrl} alt={msg.text || "image"} className="rounded-lg max-w-xs" />}
+                    {msg.type === 'video' && <video src={msg.mediaUrl} controls className="rounded-lg max-w-xs" />}
+                    {msg.type === 'audio' && <audio src={msg.mediaUrl} controls />}
+                    {msg.text && <p className="mt-1 break-words">{msg.text}</p>}
+                    
+                    {msg.sender !== 'system' && (
+                    <div className={`text-xs mt-1 flex items-center gap-1 ${isUser ? 'justify-end' : 'justify-start'}`}>
+                        <span>{msg.createdAt?.toDate?.().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || ""}</span>
+                    </div>
+                    )}
+                    {msg.reactions && Object.keys(msg.reactions).length > 0 && (
+                        <div className="absolute -bottom-4 -right-1 flex gap-1">
+                            {Object.entries(msg.reactions).map(([emoji, uids]: [string, any]) => (
+                                <div key={emoji} className="bg-gray-600 px-1.5 py-0.5 rounded-full text-xs flex items-center gap-1">
+                                    <span>{emoji}</span>
+                                    <span className="font-bold text-xs">{Array.isArray(uids) ? uids.length : 0}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+                <div className={`relative hidden group-hover:flex items-center gap-1 mt-1 ${isUser ? "flex-row-reverse" : ""}`}>
+                {msg.sender !== 'system' && 
+                    <>
+                        <div className="relative">
+                        <button onClick={() => onShowEmojiPicker(showEmojiPicker === msg.id ? null : msg.id)} className="p-1 rounded-full bg-gray-600 hover:bg-gray-500"><Smile size={16}/></button>
+                            <AnimatePresence>
+                            {showEmojiPicker === msg.id && (
+                                <motion.div 
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: 10 }}
+                                    className="absolute z-10 -top-10 bg-gray-800 rounded-full p-2 flex gap-1 shadow-lg"
+                                >
+                                    {defaultReactions.map(emoji => (
+                                        <button key={emoji} onClick={() => onReact(msg.id, emoji)} className="text-xl hover:scale-125 transition-transform">{emoji}</button>
+                                    ))}
+                                </motion.div>
+                            )}
+                            </AnimatePresence>
+                        </div>
+                    </>
+                }
+                {isUser && <button onClick={onShowDeleteConfirm} className="p-1 rounded-full bg-gray-600 hover:bg-red-500"><Trash2 size={16}/></button>}
+                </div>
+            </div>
+            </div>
+        </div>
+    );
+});
+MessageItem.displayName = 'MessageItem';
 
 function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any, userProfile: any }) {
     const [chats, setChats] = useState<any[]>([]);
@@ -689,11 +797,13 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
     // When a new chat is selected, clear any active message selection
     setSelectionMode(null);
     setSelectedItems(new Set());
-    const unsub = handleSelectChat(selectedChat);
+    const unsubPromise = handleSelectChat(selectedChat);
     return () => {
-        if (typeof unsub === 'function') {
-            unsub();
-        }
+        unsubPromise.then(unsub => {
+            if (typeof unsub === 'function') {
+                unsub();
+            }
+        });
     };
   }, [selectedChat?.id, firebaseUser.uid]);
 
@@ -968,10 +1078,6 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
       }
   }
   
-  const getInitials = (user: any) => user?.name?.[0] || user?.username?.[0] || "U";
-  
-  const defaultReactions = ["👍", "❤️", "😂", "😢", "😮", "🙏"];
-
   const renderStatus = () => {
         if (!selectedChat) return null;
         if (typingStatus.length > 0) {
@@ -1062,36 +1168,17 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
                 </div>
             </div>
             <div className="flex-1 overflow-y-auto">
-                {filteredChats.map((chat) => {
-                    const longPressProps = useLongPress(() => handleLongPress('chats', chat.id));
-                    const isSelected = selectedItems.has(chat.id);
-                    return (
-                        <div 
-                            key={chat.id}
-                            className={cn("w-full flex items-center gap-4 px-4 py-3 text-left transition-colors duration-200 group relative", isSelected ? "bg-accent-cyan/30" : "hover:bg-accent-cyan/10")} 
-                            onClick={() => selectionMode === 'chats' ? handleItemClick('chats', chat.id) : handleSelectChat(chat)}
-                            {...longPressProps}
-                        >
-                            {selectionMode === 'chats' && (
-                                <div className="absolute left-2 top-1/2 -translate-y-1/2">
-                                    {isSelected ? <CheckSquare className="text-accent-cyan"/> : <Square className="text-gray-500"/>}
-                                </div>
-                            )}
-                            <div className={cn("w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-xl overflow-hidden shrink-0", selectionMode === 'chats' && "ml-8")}>
-                                {chat.isGroup ? 
-                                    (chat.avatar_url ? <img src={chat.avatar_url} alt={chat.name} className="w-full h-full object-cover"/> : (chat.groupType === 'anonymous' ? <Shield/> : chat.groupType === 'pseudonymous' ? <EyeOff/> : <Users/>)) :
-                                    (chat.avatar_url ? <img src={chat.avatar_url} alt="avatar" className="w-full h-full object-cover"/> : getInitials(chat))
-                                }
-                            </div>
-                            <div className="flex-1 overflow-hidden">
-                                <span className="font-bold text-white block truncate">{chat.name || chat.username}</span>
-                                <span className="text-xs text-gray-400 block truncate italic">
-                                    {drafts[chat.id] ? <span className="text-red-400">[Draft] {drafts[chat.id]}</span> : chat.lastMessage?.text || "No messages yet"}
-                                </span>
-                            </div>
-                        </div>
-                    )
-                })}
+                {filteredChats.map((chat) => (
+                    <ChatItem 
+                        key={chat.id}
+                        chat={chat}
+                        selectionMode={selectionMode}
+                        isSelected={selectedItems.has(chat.id)}
+                        drafts={drafts}
+                        onLongPress={() => handleLongPress('chats', chat.id)}
+                        onClick={() => selectionMode === 'chats' ? handleItemClick('chats', chat.id) : handleSelectChat(chat)}
+                    />
+                ))}
             </div>
         </div>
 
@@ -1112,7 +1199,7 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
                             <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-lg overflow-hidden shrink-0">
                             {selectedChat.isGroup ? 
                                     (selectedChat.avatar_url ? <img src={selectedChat.avatar_url} alt={selectedChat.name} className="w-full h-full object-cover"/> : (selectedChat.groupType === 'anonymous' ? <Shield/> : selectedChat.groupType === 'pseudonymous' ? <EyeOff/> : <Users/>)) :
-                                    (selectedChat.avatar_url ? <img src={selectedChat.avatar_url} alt="avatar" className="w-full h-full object-cover"/> : getInitials(selectedChat))
+                                    (selectedChat.avatar_url ? <img src={selectedChat.avatar_url} alt="avatar" className="w-full h-full object-cover"/> : <UserCircle/>)
                             }
                             </div>
                             <button className="flex-1 text-left" disabled={selectedChat.groupType === 'anonymous'} onClick={() => selectedChat.isGroup ? setShowGroupInfo(true) : setShowUserInfo(true)}>
@@ -1129,80 +1216,24 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
                      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-1">
                         {messages.filter(msg => !(msg.deletedFor || []).includes(firebaseUser.uid)).map(msg => {
                             const isUser = msg.sender === firebaseUser.uid;
-                            const longPressProps = useLongPress(() => handleLongPress('messages', msg.id));
-                            const isSelected = selectedItems.has(msg.id);
-                            
-                            const senderInfo = selectedChat.isGroup ?
-                                (selectedChat.groupType === 'simple' ? selectedChat.memberInfo?.[msg.sender] : null)
-                                : selectedChat;
-                            
-                            const displayName = selectedChat.groupType === 'anonymous' ? generateAnonymousName(msg.sender, selectedChat.id) : 
-                                                selectedChat.groupType === 'pseudonymous' ? selectedChat.pseudonyms?.[msg.sender] || 'Anon' : 
-                                                senderInfo?.name || "User";
-                            
                             return (
-                              <div 
-                                key={msg.id} 
+                              <MessageItem
+                                key={msg.id}
+                                msg={msg}
+                                isUser={isUser}
+                                selectedChat={selectedChat}
+                                firebaseUser={firebaseUser}
+                                isSelected={selectedItems.has(msg.id)}
+                                selectionMode={selectionMode}
+                                onLongPress={() => handleLongPress('messages', msg.id)}
                                 onClick={() => selectionMode === 'messages' && handleItemClick('messages', msg.id)}
-                                {...longPressProps}
-                                className={cn("group flex w-full items-end gap-2", isUser ? "justify-end" : msg.sender === 'system' ? 'justify-center' : "justify-start", selectionMode === 'messages' && "cursor-pointer")}
-                              >
-                                <div className={cn("flex items-end gap-2 max-w-[80%] md:max-w-[70%]", isSelected && "bg-accent-cyan/20 rounded-xl")}>
-                                    <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
-                                      <div className={`relative px-4 py-2 rounded-2xl transition-all duration-300 ${isUser ? "bg-accent-cyan text-white rounded-br-none" : msg.sender === 'system' ? "bg-gray-800 text-gray-400 text-xs italic" : "bg-gray-700 text-white rounded-bl-none"}`}>
-                                          {!isUser && msg.sender !== 'system' && (
-                                              <div className="font-bold text-sm text-accent-pink">{displayName}</div>
-                                          )}
-                                          {msg.type === 'image' && <img src={msg.mediaUrl} alt={msg.text || "image"} className="rounded-lg max-w-xs" />}
-                                          {msg.type === 'video' && <video src={msg.mediaUrl} controls className="rounded-lg max-w-xs" />}
-                                          {msg.type === 'audio' && <audio src={msg.mediaUrl} controls />}
-                                          {msg.text && <p className="mt-1 break-words">{msg.text}</p>}
-                                          
-                                          {msg.sender !== 'system' && (
-                                            <div className={`text-xs mt-1 flex items-center gap-1 ${isUser ? 'justify-end' : 'justify-start'}`}>
-                                                <span>{msg.createdAt?.toDate?.().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || ""}</span>
-                                            </div>
-                                          )}
-                                          {msg.reactions && Object.keys(msg.reactions).length > 0 && (
-                                              <div className="absolute -bottom-4 -right-1 flex gap-1">
-                                                  {Object.entries(msg.reactions).map(([emoji, uids]: [string, any]) => (
-                                                      <div key={emoji} className="bg-gray-600 px-1.5 py-0.5 rounded-full text-xs flex items-center gap-1">
-                                                          <span>{emoji}</span>
-                                                          <span className="font-bold text-xs">{Array.isArray(uids) ? uids.length : 0}</span>
-                                                      </div>
-                                                  ))}
-                                              </div>
-                                          )}
-                                      </div>
-                                      <div className={`relative hidden group-hover:flex items-center gap-1 mt-1 ${isUser ? "flex-row-reverse" : ""}`}>
-                                      {msg.sender !== 'system' && 
-                                          <>
-                                              <div className="relative">
-                                              <button onClick={() => setShowEmojiPicker(showEmojiPicker === msg.id ? null : msg.id)} className="p-1 rounded-full bg-gray-600 hover:bg-gray-500"><Smile size={16}/></button>
-                                                  <AnimatePresence>
-                                                  {showEmojiPicker === msg.id && (
-                                                      <motion.div 
-                                                          initial={{ opacity: 0, y: 10 }}
-                                                          animate={{ opacity: 1, y: 0 }}
-                                                          exit={{ opacity: 0, y: 10 }}
-                                                          className="absolute z-10 -top-10 bg-gray-800 rounded-full p-2 flex gap-1 shadow-lg"
-                                                      >
-                                                          {defaultReactions.map(emoji => (
-                                                              <button key={emoji} onClick={() => handleReact(msg.id, emoji)} className="text-xl hover:scale-125 transition-transform">{emoji}</button>
-                                                          ))}
-                                                      </motion.div>
-                                                  )}
-                                                  </AnimatePresence>
-                                              </div>
-                                          </>
-                                      }
-                                      {isUser && <button onClick={() => { setSelectionMode('messages'); setSelectedItems(new Set([msg.id])); setShowDeleteConfirm(true); }} className="p-1 rounded-full bg-gray-600 hover:bg-red-500"><Trash2 size={16}/></button>}
-                                      </div>
-                                    </div>
-                                  </div>
-                              </div>
-                              )
-                          })}
+                                onReact={handleReact}
+                                showEmojiPicker={showEmojiPicker}
+                                onShowEmojiPicker={setShowEmojiPicker}
+                                onShowDeleteConfirm={() => { setSelectionMode('messages'); setSelectedItems(new Set([msg.id])); setShowDeleteConfirm(true); }}
+                              />
+                            )
+                        })}
                          <div ref={messagesEndRef} />
                     </div>
 
