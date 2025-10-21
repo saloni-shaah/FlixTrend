@@ -1,14 +1,14 @@
+
 "use client";
 import React from 'react';
 import { getFirestore, collection, onSnapshot, addDoc, serverTimestamp, deleteDoc, updateDoc, doc as fsDoc, setDoc, runTransaction } from "firebase/firestore";
-import { Repeat2, Star, Share, MessageCircle, Bookmark } from "lucide-react";
+import { Repeat2, Star, Share, MessageCircle, Bookmark, Download } from "lucide-react";
 import { auth, app } from '@/utils/firebaseClient';
-import { motion } from "framer-motion";
 import { ShareModal } from './ShareModal';
 import { SignalShareModal } from './SignalShareModal';
 import { AddToCollectionModal } from './AddToCollectionModal';
 import { savePostForOffline, isPostDownloaded, removeDownloadedPost } from '@/utils/offline-db';
-import { Download } from 'lucide-react';
+import { cn } from "@/lib/utils";
 
 const db = getFirestore(app);
 
