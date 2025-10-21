@@ -15,6 +15,7 @@ import { getFunctions, httpsCallable } from "firebase/functions";
 
 
 const functions = getFunctions(app);
+const db = getFirestore(app);
 const deleteMessageCallable = httpsCallable(functions, 'deleteMessage');
 
 const anonymousNames = ["Ram", "Shyam", "Sita", "Mohan", "Krishna", "Radha", "Anchal", "Anaya", "Advik", "Diya", "Rohan", "Priya", "Arjun", "Saanvi", "Kabir"];
@@ -1239,6 +1240,9 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
 
                     <form onSubmit={handleSend} className="flex items-center gap-2 p-2 border-t border-accent-cyan/10 bg-black/60 shrink-0">
                         <div className="flex-1 bg-gray-700 rounded-full flex items-center border border-gray-600 focus-within:ring-2 focus-within:ring-accent-cyan">
+                            <button type="button" onClick={() => alert("Emoji picker coming soon!")} className="p-2 text-gray-400 hover:text-accent-cyan">
+                                <Smile size={20}/>
+                            </button>
                             <input 
                                 type="text" 
                                 value={newMessage} 
@@ -1246,9 +1250,6 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
                                 placeholder={isRecording ? "Recording..." : "Type a message..."} 
                                 className="flex-1 bg-transparent px-4 py-2 text-white focus:outline-none"
                             />
-                            <button type="button" onClick={() => alert("Emoji picker coming soon!")} className="p-2 text-gray-400 hover:text-accent-cyan">
-                                <Smile size={20}/>
-                            </button>
                             <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2 text-gray-400 hover:text-accent-cyan">
                                 <Paperclip size={20}/>
                             </button>
