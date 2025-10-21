@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils"
 import { InFeedVideoPlayer } from './video/InFeedVideoPlayer';
 import { PostActions } from './PostActions';
 import { StreamViewer } from './StreamViewer';
+import { EditPostModal } from './squad/EditPostModal';
 
 
 // START: Copied DropdownMenu components
@@ -81,7 +82,6 @@ const Watermark = ({ isAnimated = false }: { isAnimated?: boolean }) => (
 export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe?: boolean }) {
   const [showComments, setShowComments] = React.useState(false);
   const [showEdit, setShowEdit] = React.useState(false);
-  const [editContent, setEditContent] = React.useState(post.content || "");
   const [pollVotes, setPollVotes] = React.useState<{ [optionIdx: number]: { count: number, voters: string[] } }>({});
   const [userPollVote, setUserPollVote] = React.useState<number | null>(null);
   const [viewCount, setViewCount] = useState(post.viewCount || 0);
@@ -134,12 +134,6 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
          alert(`Failed to delete post: ${(error as any).message}`);
       }
     }
-  };
-
-  const handleEdit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await updateDoc(fsDoc(db, "posts", post.id), { content: editContent });
-    setShowEdit(false);
   };
 
   const handlePollVote = async (optionIdx: number) => {
@@ -252,23 +246,21 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
   if (isShortVibe) {
     return (
         <div className="absolute inset-0 w-full h-full p-4 pr-8 flex items-end justify-between pointer-events-none bg-gradient-to-t from-black/60 via-black/20 to-transparent">
-            <div className="flex flex-col gap-2 max-w-[calc(100%-80px)] self-end pointer-events-auto mb-4">
-                <div className="flex items-center gap-2">
-                    <Link href={`/squad/${post.userId}`} className="flex items-center gap-2 group cursor-pointer w-fit">
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green flex items-center justify-center font-bold text-lg overflow-hidden border-2 border-accent-green group-hover:scale-105 transition-transform">
-                            {post.avatar_url ? <img src={post.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : <span className="text-white">{post.displayName?.[0] || 'U'}</span>}
-                        </div>
-                        <span className="font-headline text-white text-base group-hover:underline drop-shadow-lg">@{post.username || "user"}</span>
-                    </Link>
-                </div>
-                <p className="text-white text-sm font-body line-clamp-3 drop-shadow-lg">{post.content}</p>
+            <div className="flex-1 flex flex-col gap-2 self-end text-white drop-shadow-lg max-w-[calc(100%-80px)] pointer-events-auto">
+                <Link href={`/squad/${post.userId}`} className="flex items-center gap-2 group cursor-pointer w-fit">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green flex items-center justify-center font-bold text-lg overflow-hidden border-2 border-accent-green group-hover:scale-105 transition-transform">
+                        {post.avatar_url ? <img src={post.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : <span className="text-white">{post.displayName?.[0] || 'U'}</span>}
+                    </div>
+                    <span className="font-headline text-white text-base group-hover:underline">@{post.username || "user"}</span>
+                </Link>
+                <p className="text-white text-sm font-body line-clamp-3">{post.content}</p>
                  {post.song && (
-                    <div className="flex items-center gap-2 text-white text-sm drop-shadow-lg">
+                    <div className="flex items-center gap-2 text-white text-sm">
                         <FaMusic /> <span>{post.song.name} - {post.song.artists.join(", ")}</span>
                     </div>
                  )}
             </div>
-            <div className="flex flex-col gap-4 self-end mb-4 pointer-events-auto">
+            <div className="flex flex-col gap-4 self-end pointer-events-auto">
                 <PostActions post={post} isShortVibe={true} onCommentClick={() => setShowComments(true)} />
             </div>
             {showComments && <CommentModal postId={post.id} postAuthorId={post.userId} onClose={() => setShowComments(false)} post={post} />}
@@ -286,19 +278,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
       )}
 
       {showEdit && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <form onSubmit={handleEdit} className="glass-card p-6 w-full max-w-md relative">
-            <h3 className="text-xl font-headline font-bold mb-2 text-brand-gold">Edit Post</h3>
-            <textarea
-              className="w-full rounded-xl p-3 bg-black/60 text-foreground border-2 border-brand-gold"
-              value={editContent} onChange={e => setEditContent(e.target.value)} rows={4} required
-            />
-            <div className="flex gap-2 justify-end mt-4">
-              <button type="button" className="btn-glass" onClick={() => setShowEdit(false)}>Cancel</button>
-              <button type="submit" className="btn-glass bg-brand-gold text-background">Save</button>
-            </div>
-          </form>
-        </div>
+        <EditPostModal post={post} onClose={() => setShowEdit(false)} />
       )}
 
       {renderPostContent(post)}

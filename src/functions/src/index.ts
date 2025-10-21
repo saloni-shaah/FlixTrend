@@ -110,26 +110,56 @@ export const sendNotification = functions.firestore
 
 
 /**
- * Cloud Function to delete a user's data upon account deletion.
+ * Deletes a user's account and all associated data.
  */
-export const onUserDelete = functions.auth.user().onDelete(async (user) => {
-  logger.info(`User ${user.uid} is being deleted. Cleaning up data.`);
-  const batch = db.batch();
+export const deleteUserAccount = onCall(async (request) => {
+  const uid = request.auth?.uid;
 
-  // Delete user document from 'users' collection
-  const userRef = doc(db, 'users', user.uid);
-  batch.delete(userRef);
-
-  // Here you can add more cleanup logic as your app grows. For example:
-  // - Delete user's posts
-  // - Delete user's comments
-  // - Invalidate sessions
+  if (!uid) {
+    throw new HttpsError("unauthenticated", "Authentication is required to delete an account.");
+  }
 
   try {
+    const bucket = storage.bucket();
+
+    // 1. Delete user's posts and their subcollections
+    const postsQuery = admin.firestore().collection('posts').where('userId', '==', uid);
+    const postsSnap = await postsQuery.get();
+    const batch = admin.firestore().batch();
+    for (const postDoc of postsSnap.docs) {
+      // Also delete associated storage files if any
+      const postData = postDoc.data();
+      if (postData.mediaUrl) {
+          const urls = Array.isArray(postData.mediaUrl) ? postData.mediaUrl : [postData.mediaUrl];
+          for (const url of urls) {
+              try {
+                  const filePath = new URL(url).pathname.split('/').pop()?.split('?')[0];
+                  if (filePath) {
+                      await bucket.file(`user_uploads/${decodeURIComponent(filePath)}`).delete().catch(err => logger.warn(`Could not delete storage file ${filePath}:`, err));
+                  }
+              } catch(e) {
+                  logger.warn(`Could not parse or delete storage URL ${url}:`, e);
+              }
+          }
+      }
+      batch.delete(postDoc.ref);
+    }
+    
+    // 2. Delete user's profile document and other root-level data
+    batch.delete(admin.firestore().collection('users').doc(uid));
+
+    // Commit batched Firestore deletions
     await batch.commit();
-    logger.info(`Successfully cleaned up data for user ${user.uid}.`);
+
+    // 3. Delete from Firebase Authentication
+    await admin.auth().deleteUser(uid);
+    
+    logger.info(`Successfully deleted account and all data for user ${uid}.`);
+    return { success: true, message: 'Account deleted successfully.' };
+
   } catch (error) {
-    logger.error(`Error cleaning up data for user ${user.uid}:`, error);
+    logger.error(`Error deleting user account ${uid}:`, error);
+    throw new HttpsError("internal", "Failed to delete account. Please try again later.");
   }
 });
 
@@ -263,36 +293,45 @@ export const deletePost = onCall(async (request) => {
 });
 
 /**
- * Deletes a user's account and all associated data.
+ * Triggered when a user marks a chat for deletion. If all participants have
+ * deleted it, the entire chat history is purged.
  */
-export const deleteUserAccount = onCall(async (request) => {
-  const uid = request.auth?.uid;
+export const onChatDelete = functions.firestore
+  .document('users/{userId}/deletedChats/{chatId}')
+  .onCreate(async (snap, context) => {
+    const { userId, chatId } = context.params;
+    const chatData = snap.data();
+    const participants = chatData.participants || [];
 
-  if (!uid) {
-    throw new HttpsError("unauthenticated", "Authentication is required to delete an account.");
-  }
+    if (participants.length === 0) {
+      logger.info(`Chat ${chatId} has no participants listed. Skipping cleanup.`);
+      return;
+    }
 
-  try {
-    await admin.firestore().collection('users').doc(uid).delete();
-    
-    const postsQuery = admin.firestore().collection('posts').where('userId', '==', uid);
-    const postsSnap = await postsQuery.get();
-    const batch = admin.firestore().batch();
-    postsSnap.forEach(doc => {
-      batch.delete(doc.ref);
-    });
-    await batch.commit();
+    // Check if all participants have marked this chat as deleted
+    const allDeleted = await Promise.all(
+      participants.map(async (pId: string) => {
+        const deletedDocRef = doc(db, `users/${pId}/deletedChats/${chatId}`);
+        const docSnap = await getDoc(deletedDocRef);
+        return docSnap.exists();
+      })
+    );
 
-    await admin.auth().deleteUser(uid);
-    
-    logger.info(`Successfully deleted account and all data for user ${uid}.`);
-    return { success: true, message: 'Account deleted successfully.' };
+    if (allDeleted.every(Boolean)) {
+      logger.info(`All participants have deleted chat ${chatId}. Purging messages.`);
+      
+      const chatMessagesRef = collection(db, 'chats', chatId, 'messages');
+      const messagesSnap = await getDocs(chatMessagesRef);
 
-  } catch (error) {
-    logger.error(`Error deleting user account ${uid}:`, error);
-    throw new HttpsError("internal", "Failed to delete account. Please try again later.");
-  }
-});
+      const batch = writeBatch(db);
+      messagesSnap.forEach(doc => batch.delete(doc.ref));
+      
+      await batch.commit();
+      logger.info(`Successfully purged messages for chat ${chatId}.`);
+    } else {
+      logger.info(`Chat ${chatId} still active for some participants. Not purging.`);
+    }
+  });
 
 
 /**
