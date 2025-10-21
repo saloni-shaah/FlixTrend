@@ -289,13 +289,16 @@ function HomePageContent() {
         when: "beforeChildren",
         staggerChildren: 0.08,
         duration: 0.4,
-        ease: 'easeOut'
+        ease: 'easeOut',
+        type: "spring",
+        stiffness: 100,
+        damping: 10
       },
     },
   };
 
   const flashItemVariants = {
-    hidden: { opacity: 0, scale: 0.8 },
+    hidden: { opacity: 0, scale: 0.5 },
     visible: { opacity: 1, scale: 1 },
   };
   
@@ -304,15 +307,15 @@ function HomePageContent() {
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.08,
+        staggerChildren: 0.1,
         delayChildren: 0.3,
       },
     },
   };
 
   const categoryItemVariants = {
-    hidden: { opacity: 0, x: -20 },
-    visible: { opacity: 1, x: 0 },
+    hidden: { opacity: 0, x: 50, rotate: -540 },
+    visible: { opacity: 1, x: 0, rotate: 0 },
   };
 
   const bellVariants = {
@@ -384,7 +387,7 @@ function HomePageContent() {
                 <motion.button
                     key={cat.id}
                     variants={categoryItemVariants}
-                    transition={{ duration: 0.5, ease: "easeOut" }}
+                    transition={{ duration: 1.2, ease: "easeOut", type: "spring" }}
                     onClick={() => setActiveCategory(cat.id)}
                     className={`btn-glass text-sm flex items-center gap-2 shrink-0 ${activeCategory === cat.id ? 'bg-accent-cyan text-black' : ''}`}
                 >
