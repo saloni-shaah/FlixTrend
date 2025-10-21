@@ -40,6 +40,7 @@
   --accent-purple: #7D5FFF;
   --brand-gold: #FFB400;
   --accent-cyan: #00F0FF;
+  --brand-saffron: #FF9933; /* Saffron for Tiranga */
 
   --card-background: rgba(242, 242, 242, 0.5);
   --glass-border: rgba(46, 46, 46, 0.1);
@@ -81,8 +82,9 @@
     --accent-purple: #A29BFE;
     --brand-gold: #FFB400;
     --accent-cyan: #00F0FF;
+    --brand-saffron: #FF9933; /* Saffron for Tiranga */
 
-    --card-background: rgba(40, 40, 44, 0.5); /* Increased translucency */
+    --card-background: rgba(40, 40, 44, 0.7); /* Increased translucency */
     --glass-border: rgba(234, 234, 234, 0.15); /* Slightly more visible border */
 }
 
@@ -171,7 +173,7 @@ body {
 
 .btn-glass:hover {
   background: rgba(255, 255, 255, 0.2);
-  box-shadow: 0 0 15px var(--brand-gold), 0 0 5px var(--accent-pink);
+  box-shadow: 0 0 15px var(--brand-saffron), 0 0 5px var(--accent-green);
   transform: scale(1.05);
 }
 
@@ -192,7 +194,7 @@ body {
 
 .btn-glass-icon:hover {
   background: rgba(125, 95, 255, 0.2);
-  box-shadow: 0 0 10px var(--brand-gold);
+  box-shadow: 0 0 10px var(--brand-saffron), 0 0 5px var(--accent-green);
   transform: scale(1.1);
 }
 
@@ -207,8 +209,8 @@ body {
 }
 .input-glass:focus {
   outline: none;
-  border-color: var(--brand-gold);
-  box-shadow: 0 0 10px var(--brand-gold);
+  border-color: var(--brand-saffron);
+  box-shadow: 0 0 10px var(--brand-saffron);
 }
 
 .heptagon-clip {

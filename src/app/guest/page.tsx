@@ -168,7 +168,7 @@ export default function GuestPage() {
             <div className="input-glass w-full flex items-center px-4">
               <button
                   onClick={handleVoiceSearch}
-                  className={`p-1 rounded-full transition-colors text-gray-400 hover:text-brand-gold ${listening ? 'animate-pulse bg-red-500/50' : ''}`}
+                  className={`p-1 rounded-full transition-colors text-gray-400 hover:text-brand-saffron ${listening ? 'animate-pulse bg-red-500/50' : ''}`}
                   aria-label="Voice search"
                   disabled={isClient && !browserSupportsSpeechRecognition}
               >
@@ -183,7 +183,7 @@ export default function GuestPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 autoFocus={false}
               />
-              <button className="p-2 rounded-full text-brand-gold hover:bg-brand-gold/10">
+              <button className="p-2 rounded-full text-brand-saffron hover:bg-brand-saffron/10">
                 <Search />
               </button>
             </div>
@@ -194,7 +194,7 @@ export default function GuestPage() {
           {loading ? (
             <VibeSpaceLoader />
           ) : (
-            <div className="w-full max-w-xl flex flex-col gap-6">
+            <div className="w-full max-w-xl flex flex-col gap-4">
               {filteredPosts.map((post, index) => (
                 <React.Fragment key={post.id}>
                   <GuestPostCard post={post} />

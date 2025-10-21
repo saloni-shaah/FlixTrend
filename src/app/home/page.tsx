@@ -354,7 +354,7 @@ function HomePageContent() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
         >
-            <div className={`input-glass w-full flex items-center px-4 transition-all duration-300 ${isSearchFocused ? 'ring-2 ring-brand-gold' : ''}`}>
+            <div className={`input-glass w-full flex items-center px-4 transition-all duration-300 ${isSearchFocused ? 'ring-2 ring-brand-saffron' : ''}`}>
                   <button
                       onClick={handleVoiceSearch}
                       className={`p-1 rounded-full transition-colors text-gray-400 hover:text-brand-gold ${listening ? 'animate-pulse bg-red-500/50' : ''}`}
