@@ -3,9 +3,10 @@
 "use client";
 import React, { createContext, useState, useContext, ReactNode, useEffect, useRef } from 'react';
 import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp, Unsubscribe, updateDoc, collection, addDoc, getDoc, writeBatch, getDocs, deleteField } from 'firebase/firestore';
-import { auth, app } from './firebaseClient';
+import { auth, app, requestNotificationPermission } from './firebaseClient';
 import { CallScreen } from '@/components/CallScreen';
-import { requestNotificationPermission } from './firebaseMessaging';
+import { onMessage } from 'firebase/messaging';
+import { messaging } from './firebaseClient';
 
 const db = getFirestore(app);
 
@@ -99,18 +100,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     let callDocUnsubscribe: Unsubscribe | null = null;
     let peerConnection: RTCPeerConnection | null = null;
 
-    const handleToken = async (user: any) => {
-        try {
-            const token = await requestForToken();
-            if (token && user) {
-                const userDocRef = doc(db, 'users', user.uid);
-                await setDoc(userDocRef, { fcmToken: token }, { merge: true });
-            }
-        } catch (error) {
-            console.error('Error getting FCM token:', error);
-        }
-    };
-    
     const managePresence = (user: any) => {
         if (!user) return;
         const userDocRef = doc(db, 'users', user.uid);
@@ -141,8 +130,21 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       if (callDocUnsubscribe) callDocUnsubscribe();
       
       if (user) {
-        handleToken(user);
+        requestNotificationPermission(user.uid);
         managePresence(user);
+        
+        // Listen for incoming call notifications via FCM
+        if (messaging) {
+            onMessage(messaging, async (payload) => {
+                console.log('FCM message received in foreground:', payload);
+                const { type, callId } = payload.data || {};
+                if (type === 'incoming_call' && callId) {
+                    const userDocRef = doc(db, 'users', user.uid);
+                    await updateDoc(userDocRef, { currentCallId: callId });
+                    // The onSnapshot listener below will take care of joining the call.
+                }
+            });
+        }
         
         const userDocRef = doc(db, 'users', user.uid);
         callUnsubscribe = onSnapshot(userDocRef, (snap) => {
