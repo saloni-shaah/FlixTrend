@@ -1,7 +1,6 @@
 
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
-import { generateLivekitToken } from '@/ai/flows/generate-livekit-token-flow';
 import { Room } from 'livekit-client';
 import { auth } from '@/utils/firebaseClient';
 import { Volume2, VolumeX, Users } from 'lucide-react';
@@ -25,12 +24,31 @@ export function StreamViewer({ streamPost }: { streamPost: any }) {
     const identity = user.uid;
     const name = user.displayName || user.email || 'Viewer';
 
-    generateLivekitToken({ roomName, identity, name, isStreamer: false })
-      .then(data => setToken(data.token))
-      .catch(err => {
-        console.error("Error getting LiveKit token for viewer:", err);
-        setError("Could not connect to the stream.");
-      });
+    const fetchToken = async () => {
+        try {
+            const response = await fetch('/api/livekit-token', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    roomName: roomName,
+                    identity: identity,
+                    name: name,
+                    isStreamer: false
+                })
+            });
+            const data = await response.json();
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            setToken(data.token);
+        } catch (err: any) {
+            console.error("Error getting LiveKit token for viewer:", err);
+            setError("Could not connect to the stream.");
+        }
+    };
+    
+    fetchToken();
+
   }, [user, streamPost]);
 
   useEffect(() => {
