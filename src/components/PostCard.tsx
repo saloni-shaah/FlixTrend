@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState, useRef } from 'react';
@@ -235,7 +234,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
                         <div className="text-xs text-muted-foreground mb-1 line-clamp-1">{contentPost.song.artists.join(", ")}</div>
                     </div>
                      <Link href={`/create?type=flash&songId=${contentPost.song.id}`} className="p-2 rounded-full bg-accent-pink/20 text-accent-pink hover:bg-accent-pink/40 hover:text-white transition-colors">
-                        <FaMusic /> <span className="ml-2 font-bold text-xs">Use this sound</span>
+                        <Zap size={14}/>
                     </Link>
                 </div>
             )}
