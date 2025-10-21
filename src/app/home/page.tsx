@@ -1,4 +1,3 @@
-
 "use client";
 import "regenerator-runtime/runtime";
 import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
@@ -117,13 +116,15 @@ function HomePageContent() {
             setHasMore(true);
         }
 
-        let postQuery;
         const baseQuery = collection(db, "posts");
         
         let constraints: any[] = [orderBy("publishAt", "desc")];
 
         if (category !== 'for-you') {
-            constraints.unshift(where("category", "==", category));
+            constraints.unshift(or(
+              where("category", "==", category), 
+              where("hashtags", "array-contains", category)
+            ));
         }
 
         if (loadMore && lastVisible) {
@@ -132,7 +133,7 @@ function HomePageContent() {
 
         constraints.push(limit(POSTS_PER_PAGE));
         
-        postQuery = query(baseQuery, ...constraints);
+        const postQuery = query(baseQuery, ...constraints);
 
         const documentSnapshots = await getDocs(postQuery);
         
