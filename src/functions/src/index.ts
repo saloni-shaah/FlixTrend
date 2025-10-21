@@ -53,7 +53,7 @@ export const sendNotification = functions.firestore
       return;
     }
 
-    const { type, fromUsername } = notification;
+    const { type, fromUsername, postContent } = notification;
    
     // Fetch the user's FCM token
     const userRef = db.collection('users').doc(userId);
@@ -80,7 +80,7 @@ export const sendNotification = functions.firestore
             break;
         case 'comment':
             notificationTitle = `New Comment!`;
-            notificationBody = `${fromUsername || 'Someone'} commented: "${notification.postContent}"`;
+            notificationBody = `${fromUsername || 'Someone'} commented: "${postContent}"`;
             break;
         case 'follow':
             notificationTitle = `New Follower!`;
@@ -307,7 +307,7 @@ export const cleanupExpiredFlashes = functions.pubsub.schedule('every 1 hours').
         return null;
     }
 
-    const batch = db.batch();
+    const batch = writeBatch(db);
     const deletePromises: Promise<any>[] = [];
 
     expiredFlashesSnap.forEach(docSnap => {
