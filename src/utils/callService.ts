@@ -7,43 +7,40 @@ import { auth } from './firebaseClient';
 const db = getFirestore(app);
 
 /**
- * Creates a new call document in Firestore and updates user documents to initiate the signaling process.
+ * Creates a new call document in Firestore and updates the caller's user document to initiate the signaling process.
+ * The callee's document will be updated by the onCallCreated Cloud Function.
  * @param caller The user initiating the call.
  * @param callee The user being called.
  * @returns The ID of the newly created call document.
  */
 export async function createCall(caller: any, callee: any): Promise<string | null> {
   const currentUser = auth.currentUser;
-  if (!currentUser) return null;
+  if (!currentUser || !caller || !callee) return null;
 
   try {
-    // Use a batch write to ensure atomicity
-    const batch = writeBatch(db);
-
-    // 1. Create the call document
+    // 1. Create the call document in a `calls` collection
     const callCollection = collection(db, 'calls');
-    const callDocRef = doc(callCollection); // Create a reference with a new ID
-    batch.set(callDocRef, {
+    const callDocRef = await addDoc(callCollection, {
       callerId: caller.uid,
       callerName: caller.displayName || caller.email,
       calleeId: callee.uid,
       calleeName: callee.name || callee.username,
       createdAt: serverTimestamp(),
-      status: 'pending',
+      status: 'pending', // Status: pending, active, ended
     });
 
-    // 2. Update both users' documents with the currentCallId
+    // 2. Update ONLY the caller's user document with the currentCallId
     const callerUserDocRef = doc(db, 'users', caller.uid);
-    batch.update(callerUserDocRef, { currentCallId: callDocRef.id });
+    await updateDoc(callerUserDocRef, { currentCallId: callDocRef.id });
 
-    const calleeUserDocRef = doc(db, 'users', callee.uid);
-    batch.update(calleeUserDocRef, { currentCallId: callDocRef.id });
-
-    await batch.commit();
+    // The `onCallCreated` Cloud Function will now handle notifying the callee
+    // and updating their `currentCallId`.
 
     return callDocRef.id;
   } catch (error) {
     console.error("Error creating call:", error);
+    // If something fails, try to clean up the call document if it was created
+    // (This part is complex and might be better handled by a cleanup function)
     return null;
   }
 }
