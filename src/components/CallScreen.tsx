@@ -39,7 +39,6 @@ export function CallScreen({ call }: { call: any }) {
 
         if (pc) {
           stream.getTracks().forEach((track) => {
-            // Check if the track is already added before adding it
             if (!pc.getSenders().find(s => s.track === track)) {
               pc.addTrack(track, stream);
             }
@@ -49,30 +48,23 @@ export function CallScreen({ call }: { call: any }) {
             event.streams[0].getTracks().forEach((track) => {
               remote.addTrack(track);
             });
-            if (remoteVideoRef.current) {
-              remoteVideoRef.current.play().catch(e => console.error("Error playing remote stream:", e));
-            }
           };
         }
       } catch (error) {
           console.error("Error accessing media devices:", error);
-          // Handle errors (e.g., user denies permission) gracefully
       }
     };
 
     startStreams();
 
-    // Cleanup function to stop tracks when the component unmounts or call ends
     return () => {
       if (localStream) {
         localStream.getTracks().forEach(track => track.stop());
       }
     };
-  // We only want to run this once, pc is now stable from context
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pc]);
 
-  // Simplified toggles
   const toggleMute = () => {
     if (localStream) {
       localStream.getAudioTracks().forEach(track => track.enabled = !track.enabled);
@@ -90,9 +82,17 @@ export function CallScreen({ call }: { call: any }) {
   return (
     <div className="fixed inset-0 z-[100] bg-black flex flex-col text-white">
       <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
+      
+      {/* Show a placeholder until the remote stream is available */}
+      {remoteStream?.getTracks().length === 0 && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900">
+              <div className="w-24 h-24 rounded-full bg-gray-700 animate-pulse"></div>
+              <p className="mt-4 animate-pulse">Connecting to {call.calleeName || 'user'}...</p>
+          </div>
+      )}
+
       <video ref={localVideoRef} autoPlay playsInline muted className="absolute bottom-6 right-6 w-32 h-48 object-cover rounded-lg border-2 border-accent-cyan" />
       
-      {/* Incoming call screen for the person being called */}
       {isCallee && !hasAnswered && (
         <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center gap-6">
             <h2 className="text-3xl font-bold animate-pulse">Incoming Call from {call.callerName}...</h2>
@@ -103,7 +103,6 @@ export function CallScreen({ call }: { call: any }) {
         </div>
       )}
 
-      {/* Call Controls visible to both users during the call */}
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-6 bg-black/50 p-4 rounded-full">
         <button onClick={toggleMute} className={`p-3 rounded-full ${isMuted ? 'bg-red-500' : 'bg-gray-600'}`}>
             {isMuted ? <MicOff size={24} /> : <Mic size={24} />}

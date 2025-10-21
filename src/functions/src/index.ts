@@ -1,5 +1,4 @@
 
-
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore, FieldValue, Timestamp, doc, collection, query, where, getDocs, limit, writeBatch, setDoc, updateDoc, arrayUnion, arrayRemove, deleteField } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
@@ -136,8 +135,8 @@ export const onUserDelete = functions.auth.user().onDelete(async (user) => {
 
 
 /**
- * When a call is created, this function sends a push notification to the callee
- * AND updates their user document with the currentCallId to join them to the call.
+ * When a call is created, this function sends a push notification to the callee.
+ * The notification payload includes the callId, which the client uses to join the call.
  */
 export const onCallCreated = functions.firestore
     .document('calls/{callId}')
@@ -162,34 +161,24 @@ export const onCallCreated = functions.firestore
             logger.log('Callee user document not found');
             return;
         }
-        
-        // **CRITICAL STEP**: Update the callee's document with the call ID.
-        try {
-            await updateDoc(userDocRef, { currentCallId: snap.id });
-            logger.info(`Successfully set currentCallId for callee ${calleeId}.`);
-        } catch (error) {
-            logger.error(`Failed to set currentCallId for callee ${calleeId}:`, error);
-            // If we can't update the doc, the call can't proceed.
-            // Optionally, we could delete the call doc here to clean up.
-            return; 
-        }
 
         const fcmToken = userDoc.data()?.fcmToken;
         if (!fcmToken) {
             logger.log(`FCM token not found for callee ${calleeId}. Cannot send push notification.`);
-            // We still updated their doc, so they will see the call screen if the app is open.
             return;
         }
         
+        // Payload now contains the callId for the client to handle
         const payload = {
             token: fcmToken,
-            notification: {
-                title: 'Incoming Call on FlixTrend',
-                body: `${callerName || 'Someone'} is calling you!`,
-            },
             data: {
                 type: 'incoming_call',
                 callId: snap.id,
+                callerName: callerName || 'Someone',
+            },
+            notification: {
+                title: 'Incoming Call on FlixTrend',
+                body: `${callerName || 'Someone'} is calling you!`,
             },
             apns: {
                 headers: {
@@ -516,5 +505,3 @@ export const toggleAccountStatus = onCall(async (request) => {
         throw new HttpsError("internal", "Failed to update account status.");
     }
 });
-
-    
