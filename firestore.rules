@@ -1,24 +1,3 @@
-/**
- * @fileoverview Firestore Security Rules for Flixtrend Prototype
- *
- * Core Philosophy:
- * This ruleset enforces a strict user-ownership model for user profiles
- * and an advertiser-ownership model for ad campaigns and creatives.
- *
- * Data Structure:
- * - /users/{userId}: Stores user profiles, accessible only to the user themselves.
- * - /adCampaigns/{campaignId}: Stores ad campaigns, accessible only to the campaign's owner (advertiserId).
- * - /adCampaigns/{campaignId}/creatives/{creativeId}: Stores ad creatives, accessible only to the campaign's owner.
- *
- * Key Security Decisions:
- * - Users can only read and write their own profile data.
- * - Ad campaigns and creatives can only be created, updated, and deleted by the advertiser who owns the campaign.
- * - No public listing of users, campaigns, or creatives is allowed.
- *
- * Denormalization for Authorization:
- * - AdCampaigns: Documents must contain an `advertiserId` field matching the owner's UID.
- * - AdCreatives: Documents must contain a `campaignId` field linking them to their parent campaign, and authorization is derived from the parent campaign's `advertiserId`.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
