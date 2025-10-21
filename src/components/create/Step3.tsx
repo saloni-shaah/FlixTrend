@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
@@ -8,11 +7,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { getFirestore, collection, addDoc, serverTimestamp, Timestamp, doc, getDoc } from "firebase/firestore";
 import { auth, app } from '@/utils/firebaseClient';
 import { useRouter } from 'next/navigation';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const db = getFirestore(app);
-const storage = getStorage(app);
-
 
 function PostPreview({ postData }: { postData: any }) {
     if (!postData) return null;
@@ -106,7 +102,7 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
             const userData = userDocSnap.data();
 
             let publishAt;
-            if (isScheduling && scheduleDate) {
+            if (isScheduling && scheduleDate && postData.postType !== 'live') {
                 const [hours, minutes] = scheduleTime.split(':');
                 const finalDate = new Date(scheduleDate);
                 finalDate.setHours(parseInt(hours, 10));
@@ -157,13 +153,13 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
                 ...(postData.postType === 'live' && { 
                     livekitRoom: livekitRoomName, 
                     title: postData.title || "Live Stream", 
-                    status: isScheduling ? 'scheduled' : 'live'
+                    status: (isScheduling && postData.postType !== 'live') ? 'scheduled' : 'live'
                 }),
             };
             
             await addDoc(collection(db, collectionName), dataToSave);
             
-            if (postData.postType === 'live' && livekitRoomName && !isScheduling) {
+            if (postData.postType === 'live' && livekitRoomName) {
                 router.push(`/broadcast/${encodeURIComponent(livekitRoomName)}`);
             } else {
                 router.push('/home');
@@ -177,7 +173,7 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
         }
     };
 
-    const shouldShowScheduling = postData.postType !== 'flash';
+    const shouldShowScheduling = postData.postType !== 'flash' && postData.postType !== 'live';
 
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -252,7 +248,7 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
                     onClick={handleSubmit}
                     disabled={isPublishing}
                 >
-                    {isPublishing ? 'Publishing...' : (isScheduling && scheduleDate) ? 'Schedule Post' : 'Publish Now'} <CheckCircle />
+                    {isPublishing ? 'Publishing...' : (isScheduling && scheduleDate && shouldShowScheduling) ? 'Schedule Post' : 'Publish Now'} <CheckCircle />
                 </button>
             </div>
         </motion.div>
