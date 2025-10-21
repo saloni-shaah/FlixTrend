@@ -62,7 +62,7 @@ export default function RootLayout({
         const accentColor = localStorage.getItem('accentColor');
         if (accentColor) {
             document.documentElement.style.setProperty('--accent-cyan', accentColor);
-            document.documentElement.style.setProperty('--brand-gold', accentColor);
+            document.documentElement.style.setProperty('--brand-saffron', accentColor);
         }
       } catch (e) {
         console.error('Failed to set theme from localStorage', e);
