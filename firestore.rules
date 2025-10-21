@@ -1,96 +1,69 @@
+
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /**
-     * @description Protects user profile data, ensuring only the user can read and write their own profile.
-     * @path /users/{userId}
-     * @allow (create) User with UID 'user123' creates a profile with "uid": "user123".
-     * @allow (get, update, delete) User with UID 'user123' reads/updates/deletes their own profile at /users/user123.
-     * @deny (create) User with UID 'user123' tries to create a profile with "uid": "user456".
-     * @deny (get, update, delete) User with UID 'user456' tries to access profile at /users/user123.
-     * @principle Enforces document ownership for user profiles; only the owner can read/write.
-     */
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isUser(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Users: Can read anyone's public profile, but can only write to their own.
     match /users/{userId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
+      allow read: if true;
+      allow write: if isUser(userId);
 
-      function isOwner(userId) {
-        return isSignedIn() && request.auth.uid == userId;
-      }
-
-      function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
-      }
-
-      allow get: if isOwner(userId);
-      allow list: if false;
-      allow create: if isOwner(userId) && request.resource.data.uid == request.auth.uid;
-      allow update: if isExistingOwner(userId) && request.resource.data.uid == resource.data.uid;
-      allow delete: if isExistingOwner(userId);
+      // Subcollections for users
+      allow read, write: if isUser(userId);
+    }
+    
+    // Notifications: Users can only access their own notifications.
+    match /notifications/{userId}/{document=**} {
+      allow read, write: if isUser(userId);
     }
 
-    /**
-     * @description Protects ad campaigns, ensuring only the campaign owner can manage them.
-     * @path /adCampaigns/{campaignId}
-     * @allow (create) User with UID 'business123' creates a campaign with "advertiserId": "business123".
-     * @allow (get, update, delete) User with UID 'business123' manages their campaign at /adCampaigns/campaignXYZ.
-     * @deny (create) User with UID 'user456' tries to create a campaign with "advertiserId": "business123".
-     * @deny (get, update, delete) User with UID 'user456' tries to access campaign at /adCampaigns/campaignXYZ.
-     * @principle Enforces document ownership for ad campaigns; only the advertiser can manage.
-     */
-    match /adCampaigns/{campaignId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      function isOwner(advertiserId) {
-        return isSignedIn() && request.auth.uid == advertiserId;
-      }
-
-      function isExistingOwner(advertiserId) {
-        return isOwner(advertiserId) && resource != null;
-      }
-
-      allow get: if isOwner(resource.data.advertiserId);
-      allow list: if false;
-      allow create: if isSignedIn() && request.resource.data.advertiserId == request.auth.uid;
-      allow update: if isExistingOwner(resource.data.advertiserId) && resource.data.advertiserId == request.resource.data.advertiserId;
-      allow delete: if isExistingOwner(resource.data.advertiserId);
+    // Posts, Flashes, Songs, Playlists, Collections:
+    // Logged-in users can read all. Users can only create their own.
+    // Users can only update/delete their own posts.
+    match /{path=**}/{docId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
 
-    /**
-     * @description Protects ad creatives within a campaign, ensuring only the campaign owner can manage them.
-     * @path /adCampaigns/{campaignId}/creatives/{creativeId}
-     * @allow (create) User 'business123' creates a creative in their campaign at /adCampaigns/campaignXYZ/creatives/creative123.
-     * @allow (get, update, delete) User 'business123' manages their creative at /adCampaigns/campaignXYZ/creatives/creative123.
-     * @deny (create) User 'user456' tries to create a creative in campaign 'campaignXYZ' owned by 'business123'.
-     * @deny (get, update, delete) User 'user456' tries to access creative at /adCampaigns/campaignXYZ/creatives/creative123.
-     * @principle Enforces document ownership for ad creatives, linked to the parent campaign's ownership.
-     */
-    match /adCampaigns/{campaignId}/creatives/{creativeId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      function getCampaign(campaignId) {
-          return get(/databases/$(database)/documents/adCampaigns/$(campaignId));
-      }
-
-      function isCampaignOwner(campaignId) {
-        return isSignedIn() && getCampaign(campaignId).data.advertiserId == request.auth.uid;
-      }
-
-      function isExistingCampaignOwner(campaignId) {
-        return isCampaignOwner(campaignId) && resource != null;
-      }
-
-      allow get: if isCampaignOwner(campaignId);
-      allow list: if false;
-      allow create: if isSignedIn() && request.resource.data.campaignId == campaignId && isCampaignOwner(campaignId);
-      allow update: if isExistingCampaignOwner(campaignId) && request.resource.data.campaignId == campaignId;
-      allow delete: if isExistingCampaignOwner(campaignId) && request.resource.data.campaignId == campaignId;
+    // Comments, Stars, Relays, Poll Votes (subcollections of posts)
+    // Logged-in users can read/write to any post's subcollections.
+    // Deletes are restricted to the owner of the subcollection item.
+    match /posts/{postId}/{subcollection}/{docId} {
+      allow read, create: if isSignedIn();
+      allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+    
+    // Chats (Groups & DMs)
+    match /groups/{groupId} {
+      // User can read a group's info if they are a member.
+      allow read: if isSignedIn() && resource.data.members[request.auth.uid] != null;
+      // Allow any signed-in user to create a group.
+      allow create: if isSignedIn();
+      // Only admins can update group info.
+      allow update: if isSignedIn() && request.auth.uid in resource.data.admins;
+      // Only the original creator can delete the group.
+      allow delete: if isSignedIn() && resource.data.createdBy == request.auth.uid;
+    }
+    
+    match /chats/{chatId}/messages/{messageId} {
+        // For group chats, check membership. For DMs, check involvement.
+        allow read, create: if isSignedIn() && (
+            (exists(/databases/$(database)/documents/groups/$(chatId)) && get(/databases/$(database)/documents/groups/$(chatId)).data.members[request.auth.uid] != null) ||
+            (request.auth.uid in chatId.split('_'))
+        );
+        // Users can only delete their own messages.
+        allow delete: if isSignedIn() && resource.data.sender == request.auth.uid;
+        allow update: if isSignedIn() && resource.data.sender == request.auth.uid;
     }
   }
 }
