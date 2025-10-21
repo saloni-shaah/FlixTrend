@@ -1,3 +1,4 @@
+
 "use client";
 import "regenerator-runtime/runtime";
 import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
@@ -279,22 +280,25 @@ function HomePageContent() {
 
   const canCreatePost = activeCategory === 'for-you' || (userProfile?.accountType === 'creator' && userProfile?.creatorType === activeCategory);
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
+  const flashesContainerVariants = {
+    hidden: { opacity: 0, y: -20 },
     visible: {
       opacity: 1,
+      y: 0,
       transition: {
         when: "beforeChildren",
-        staggerChildren: 0.1,
+        staggerChildren: 0.08,
+        duration: 0.4,
+        ease: 'easeOut'
       },
     },
   };
 
-  const itemVariants = {
-    hidden: { opacity: 0, y: -20 },
-    visible: { opacity: 1, y: 0 },
+  const flashItemVariants = {
+    hidden: { opacity: 0, scale: 0.8 },
+    visible: { opacity: 1, scale: 1 },
   };
-
+  
   const categoryContainerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -310,6 +314,20 @@ function HomePageContent() {
     hidden: { opacity: 0, x: -20 },
     visible: { opacity: 1, x: 0 },
   };
+
+  const bellVariants = {
+    initial: { rotate: 0 },
+    jiggle: {
+      rotate: [0, -15, 15, -15, 15, 0],
+      transition: {
+        duration: 0.5,
+        ease: "easeInOut",
+        repeat: Infinity,
+        repeatDelay: 3,
+      },
+    },
+  };
+
 
   if (loading && posts.length === 0) {
     return <VibeSpaceLoader />;
@@ -328,7 +346,7 @@ function HomePageContent() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
         >
-            <div className="input-glass w-full flex items-center px-4 focus-within:ring-2 focus-within:ring-brand-gold transition-shadow duration-300">
+            <div className={`input-glass w-full flex items-center px-4 transition-all duration-300 ${isSearchFocused ? 'ring-2 ring-brand-gold' : ''}`}>
                   <button
                       onClick={handleVoiceSearch}
                       className={`p-1 rounded-full transition-colors text-gray-400 hover:text-brand-gold ${listening ? 'animate-pulse bg-red-500/50' : ''}`}
@@ -387,17 +405,17 @@ function HomePageContent() {
         {activeCategory === 'for-you' && (
           <motion.section 
               className="mb-6 glass-card p-4"
-              variants={containerVariants}
+              variants={flashesContainerVariants}
               initial="hidden"
               animate="visible"
           >
               <h2 className="text-lg font-headline bg-gradient-to-r from-accent-pink to-accent-green bg-clip-text text-transparent mb-2">Flashes</h2>
               <motion.div 
                 className="flex gap-3 overflow-x-auto pb-2" 
-                variants={containerVariants}
+                variants={flashesContainerVariants}
               >
                   <motion.button
-                    variants={itemVariants}
+                    variants={flashItemVariants}
                     className="w-20 h-20 shrink-0 rounded-full bg-gradient-to-tr from-gray-800 to-gray-700 border-4 border-dashed border-gray-600 flex flex-col items-center justify-center focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background focus:ring-accent-green"
                     onClick={() => router.push('/create?type=flash')}
                     title="Create a Flash"
@@ -412,7 +430,7 @@ function HomePageContent() {
                   return (
                   <motion.button
                     key={userFlashes.userId}
-                    variants={itemVariants}
+                    variants={flashItemVariants}
                     className={`w-20 h-20 shrink-0 rounded-full bg-gradient-to-tr flex items-center justify-center overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background focus:ring-accent-green
                         ${hasBeenViewed ? 'border-4 border-gray-600' : 'from-accent-pink to-accent-green border-4 border-accent-green/40'}`}
                     onClick={() => setSelectedFlashUser(userFlashes)}
@@ -474,12 +492,14 @@ function HomePageContent() {
       
       <div className="fixed top-4 right-4 z-30 flex flex-col items-center">
         <motion.button
-          className={`relative inline-flex items-center justify-center bg-white/10 dark:bg-black/20 backdrop-blur-md border border-white/10 dark:border-black/20 w-12 h-12 rounded-full text-white hover:bg-gradient-to-tr hover:from-accent-purple hover:to-accent-cyan transition-all ${hasUnreadNotifs ? 'animate-pulse' : ''}`}
+          className="relative inline-flex items-center justify-center bg-white/10 dark:bg-black/20 backdrop-blur-md border border-white/10 dark:border-black/20 w-12 h-12 rounded-full text-white hover:bg-gradient-to-tr hover:from-accent-purple hover:to-accent-cyan transition-all"
           title="Notifications"
           onClick={() => setShowNotifications(true)}
           aria-label="Notifications"
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.95 }}
+          variants={bellVariants}
+          animate={hasUnreadNotifs ? "jiggle" : "initial"}
         >
           <Bell className="text-xl" />
           {hasUnreadNotifs && <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-accent-pink rounded-full"></span>}
