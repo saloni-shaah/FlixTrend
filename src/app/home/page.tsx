@@ -279,14 +279,10 @@ function HomePageContent() {
   const canCreatePost = activeCategory === 'for-you' || (userProfile?.accountType === 'creator' && userProfile?.creatorType === activeCategory);
 
   const containerVariants = {
-    hidden: { opacity: 0, y: -20 },
+    hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-      y: 0,
       transition: {
-        type: "spring",
-        stiffness: 120,
-        damping: 14,
         when: "beforeChildren",
         staggerChildren: 0.1,
       },
@@ -294,8 +290,24 @@ function HomePageContent() {
   };
 
   const itemVariants = {
-    hidden: { opacity: 0, scale: 0.8 },
-    visible: { opacity: 1, scale: 1 },
+    hidden: { opacity: 0, y: -20 },
+    visible: { opacity: 1, y: 0 },
+  };
+
+  const categoryContainerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.08,
+        delayChildren: 0.3,
+      },
+    },
+  };
+
+  const categoryItemVariants = {
+    hidden: { opacity: 0, x: -20 },
+    visible: { opacity: 1, x: 0 },
   };
 
   if (loading && posts.length === 0) {
@@ -309,8 +321,13 @@ function HomePageContent() {
   return (
     <div className="flex flex-col w-full">
       <div className="w-full max-w-2xl mx-auto">
-        <div className="flex justify-center items-center mb-6 w-full">
-            <div className="input-glass w-full flex items-center px-4">
+        <motion.div 
+            className="flex justify-center items-center mb-6 w-full"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+        >
+            <div className="input-glass w-full flex items-center px-4 focus-within:ring-2 focus-within:ring-brand-gold transition-shadow">
                   <button
                       onClick={handleVoiceSearch}
                       className={`p-1 rounded-full transition-colors text-gray-400 hover:text-brand-gold ${listening ? 'animate-pulse bg-red-500/50' : ''}`}
@@ -331,43 +348,58 @@ function HomePageContent() {
                     <Search />
                   </button>
               </div>
-        </div>
+        </motion.div>
 
         {/* Category Filters */}
-        <div className="flex gap-2 overflow-x-auto pb-4 mb-4">
+        <motion.div 
+            className="flex gap-2 overflow-x-auto pb-4 mb-4"
+            variants={categoryContainerVariants}
+            initial="hidden"
+            animate="visible"
+        >
              {visibleCategories.map(cat => (
-                <button
+                <motion.button
                     key={cat.id}
+                    variants={categoryItemVariants}
+                    transition={{ duration: 0.5, ease: "easeOut" }}
                     onClick={() => setActiveCategory(cat.id)}
                     className={`btn-glass text-sm flex items-center gap-2 shrink-0 ${activeCategory === cat.id ? 'bg-accent-cyan text-black' : ''}`}
                 >
                     {cat.icon} {cat.name}
-                </button>
+                </motion.button>
             ))}
             {!showAllCategories && categories.length > 5 && (
-                <button
+                <motion.button
+                    variants={categoryItemVariants}
                     onClick={() => setShowAllCategories(true)}
                     className="btn-glass text-sm flex items-center gap-2 shrink-0 bg-accent-purple/20 text-accent-purple"
                 >
                     More...
-                </button>
+                </motion.button>
             )}
-        </div>
+        </motion.div>
 
         {activeCategory === 'for-you' && (
           <motion.section 
               className="mb-6 glass-card p-4"
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: 'easeOut', delay: 0.2 }}
           >
               <h2 className="text-lg font-headline bg-gradient-to-r from-accent-pink to-accent-green bg-clip-text text-transparent mb-2">Flashes</h2>
-              <motion.div className="flex gap-3 overflow-x-auto pb-2" variants={containerVariants}>
+              <motion.div 
+                className="flex gap-3 overflow-x-auto pb-2" 
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+              >
                   <motion.button
-                    className="w-20 h-20 shrink-0 rounded-full bg-gradient-to-tr from-gray-800 to-gray-700 border-4 border-dashed border-gray-600 flex flex-col items-center justify-center focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background focus:ring-accent-green transition-transform hover:scale-105"
+                    variants={itemVariants}
+                    className="w-20 h-20 shrink-0 rounded-full bg-gradient-to-tr from-gray-800 to-gray-700 border-4 border-dashed border-gray-600 flex flex-col items-center justify-center focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background focus:ring-accent-green"
                     onClick={() => router.push('/create?type=flash')}
                     title="Create a Flash"
-                    variants={itemVariants}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                   >
                     <Plus className="text-gray-400 mb-1" />
                     <span className="text-xs text-gray-400">Add New</span>
@@ -377,11 +409,13 @@ function HomePageContent() {
                   return (
                   <motion.button
                     key={userFlashes.userId}
-                    className={`w-20 h-20 shrink-0 rounded-full bg-gradient-to-tr flex items-center justify-center overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background focus:ring-accent-green transition-transform hover:scale-105
+                    variants={itemVariants}
+                    className={`w-20 h-20 shrink-0 rounded-full bg-gradient-to-tr flex items-center justify-center overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background focus:ring-accent-green
                         ${hasBeenViewed ? 'border-4 border-gray-600' : 'from-accent-pink to-accent-green border-4 border-accent-green/40'}`}
                     onClick={() => setSelectedFlashUser(userFlashes)}
                     title={userFlashes.username || "Flash"}
-                    variants={itemVariants}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                   >
                     {userFlashes.avatar_url ? (
                         <img src={userFlashes.avatar_url} alt="flash" className={`w-full h-full object-cover transition-opacity ${hasBeenViewed ? 'opacity-60' : ''}`} />
@@ -395,7 +429,14 @@ function HomePageContent() {
         )}
 
         <section className="flex-1 flex flex-col items-center mt-4">
-            <h2 className="text-xl font-headline self-start bg-gradient-to-r from-accent-pink to-accent-green bg-clip-text text-transparent mb-4">VibeSpace</h2>
+            <motion.h2 
+                className="text-xl font-headline self-start bg-gradient-to-r from-accent-pink to-accent-green bg-clip-text text-transparent mb-4"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4 }}
+            >
+                VibeSpace
+            </motion.h2>
             {loading && posts.length === 0 ? (
               <VibeSpaceLoader />
             ) : (
