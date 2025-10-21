@@ -8,8 +8,10 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { getFirestore, collection, addDoc, serverTimestamp, Timestamp, doc, getDoc } from "firebase/firestore";
 import { auth, app } from '@/utils/firebaseClient';
 import { useRouter } from 'next/navigation';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 
 function PostPreview({ postData }: { postData: any }) {
@@ -37,17 +39,19 @@ function PostPreview({ postData }: { postData: any }) {
                     </div>
                 )}
 
-                {(postType === 'media' || postType === 'flash') && (
+                {(postType === 'media' || postType === 'flash') && mediaUrl && mediaUrl.length > 0 && (
                     <>
                         <p className="font-bold">{title}</p>
                         <p className="text-sm text-gray-400">{caption}</p>
-                        {mediaUrl && mediaUrl.length > 0 && (
-                            <div className="mt-2 grid grid-cols-3 gap-2">
-                                {mediaUrl.map((url: string, index: number) => (
-                                    <img key={index} src={url} alt="preview" className="w-full h-auto rounded-md aspect-square object-cover" />
-                                ))}
-                            </div>
-                        )}
+                        <div className="mt-2 grid grid-cols-3 gap-2">
+                            {mediaUrl.map((url: string, index: number) => {
+                                const isVideo = url.includes('.mp4') || url.includes('.webm') || url.includes('video');
+                                if (isVideo) {
+                                    return <video key={index} src={url} className="w-full h-auto rounded-md aspect-square object-cover" />;
+                                }
+                                return <img key={index} src={url} alt="preview" className="w-full h-auto rounded-md aspect-square object-cover" />
+                            })}
+                        </div>
                     </>
                 )}
 
@@ -116,8 +120,6 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
             const collectionName = postData.postType === 'flash' ? 'flashes' : 'posts';
             const hashtags = (postData.hashtags || "").split(' ').map((h:string) => h.replace('#', '')).filter(Boolean);
             
-            const finalMediaUrls = postData.mediaUrl || [];
-
             const dataToSave: any = {
                 userId: user.uid,
                 displayName: userData.name || user.displayName,
@@ -134,20 +136,29 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
                 isPortrait: postData.isPortrait || false,
                 videoDuration: postData.videoDuration || 0,
                 isVideo: postData.isVideo || false,
-                viewCount: 0, // Initialize view count
+                viewCount: 0, 
                 ...(postData.postType === 'text' && { 
                     backgroundColor: postData.backgroundColor || null, 
                     backgroundImage: postData.backgroundImage || null, 
                     fontStyle: postData.fontStyle || null 
                 }),
                 ...(postData.postType === 'media' && { 
-                    mediaUrl: finalMediaUrls.length > 0 ? (finalMediaUrls.length > 1 ? finalMediaUrls : finalMediaUrls[0]) : null, 
+                    mediaUrl: postData.mediaUrl && postData.mediaUrl.length > 0 ? (postData.mediaUrl.length > 1 ? postData.mediaUrl : postData.mediaUrl[0]) : null, 
                     title: postData.title || "", 
                     description: postData.description || "", 
                 }),
-                ...(postData.postType === 'flash' && { mediaUrl: finalMediaUrls.length > 0 ? finalMediaUrls[0] : null, song: postData.song || null, expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), caption: postData.caption || "" }),
+                ...(postData.postType === 'flash' && { 
+                    mediaUrl: postData.mediaUrl && postData.mediaUrl.length > 0 ? postData.mediaUrl[0] : null, 
+                    song: postData.song || null, 
+                    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), 
+                    caption: postData.caption || "" 
+                }),
                 ...(postData.postType === 'poll' && { pollOptions: postData.options.map((opt:any) => opt.text) }),
-                ...(postData.postType === 'live' && { livekitRoom: livekitRoomName, title: postData.title || "Live Stream", status: 'scheduled' }),
+                ...(postData.postType === 'live' && { 
+                    livekitRoom: livekitRoomName, 
+                    title: postData.title || "Live Stream", 
+                    status: isScheduling ? 'scheduled' : 'live'
+                }),
             };
             
             await addDoc(collection(db, collectionName), dataToSave);

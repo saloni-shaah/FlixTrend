@@ -20,6 +20,7 @@ import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu"
 import { cn } from "@/lib/utils"
 import { InFeedVideoPlayer } from './video/InFeedVideoPlayer';
 import { PostActions } from './PostActions';
+import { StreamViewer } from './StreamViewer';
 
 
 // START: Copied DropdownMenu components
@@ -163,7 +164,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
                 </Link>
                 <div className="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
                     <span>{contentPost.createdAt?.toDate?.().toLocaleString?.() || "Just now"}</span>
-                    {contentPost.isVideo && (
+                    {(contentPost.isVideo || contentPost.type === 'live') && (
                         <span className="flex items-center gap-1">
                             <Eye size={14} /> {viewCount.toLocaleString()}
                         </span>
@@ -181,6 +182,12 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
                     )}
                 </div>
             </div>
+
+            {contentPost.type === "live" && contentPost.livekitRoom && contentPost.status === 'live' && (
+                <div className="w-full aspect-video rounded-xl overflow-hidden mt-2">
+                    <StreamViewer streamPost={contentPost} />
+                </div>
+            )}
 
             {contentPost.content && (contentPost.type !== 'poll' || (contentPost.type === 'poll' && !contentPost.pollOptions)) && (
                 <div className={`whitespace-pre-line mb-2 px-4 py-3 rounded-xl ${isShortVibe ? 'text-white text-base font-body line-clamp-2 text-left' : 'text-[1.15rem] font-body'}`} style={{ backgroundColor: contentPost.backgroundColor && !isShortVibe ? contentPost.backgroundColor : 'transparent', color: contentPost.backgroundColor && contentPost.backgroundColor !== '#ffffff' && !isShortVibe ? 'hsl(var(--foreground))' : 'inherit', textShadow: isShortVibe ? "0 1px 4px #000" : "none" }}>
