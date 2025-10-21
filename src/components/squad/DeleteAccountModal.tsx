@@ -47,7 +47,10 @@ export function DeleteAccountModal({ profile, onClose }: { profile: any, onClose
             await deleteAccountCallable();
             
             alert("Account deleted successfully.");
-            router.push('/signup'); // Redirect to signup page after deletion
+            // Sign out on the client to clear local state
+            await auth.signOut();
+            // Redirect to a safe page
+            router.push('/signup'); 
 
         } catch (err: any) {
             console.error("Account deletion error:", err);
