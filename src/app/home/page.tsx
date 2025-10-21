@@ -314,8 +314,13 @@ function HomePageContent() {
   };
 
   const categoryItemVariants = {
-    hidden: { opacity: 0, x: 50, rotate: -540 },
-    visible: { opacity: 1, x: 0, rotate: 0 },
+    hidden: { opacity: 0, y: 20, scale: 0.8 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: { type: "spring", stiffness: 100, damping: 12 },
+    },
   };
 
   const bellVariants = {
@@ -368,7 +373,7 @@ function HomePageContent() {
                     onBlur={() => setIsSearchFocused(false)}
                     autoFocus={false}
                   />
-                  <motion.div animate={{ rotate: isSearchFocused ? 10 : 0, scale: isSearchFocused ? 1.1 : 1 }}>
+                  <motion.div whileHover={{ scale: 1.1, rotate: 10 }}>
                     <button className="p-2 rounded-full text-brand-gold hover:bg-brand-gold/10">
                         <Search />
                     </button>
@@ -387,7 +392,8 @@ function HomePageContent() {
                 <motion.button
                     key={cat.id}
                     variants={categoryItemVariants}
-                    transition={{ duration: 1.2, ease: "easeOut", type: "spring" }}
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={() => setActiveCategory(cat.id)}
                     className={`btn-glass text-sm flex items-center gap-2 shrink-0 ${activeCategory === cat.id ? 'bg-accent-cyan text-black' : ''}`}
                 >
@@ -397,6 +403,8 @@ function HomePageContent() {
             {!showAllCategories && categories.length > 5 && (
                 <motion.button
                     variants={categoryItemVariants}
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={() => setShowAllCategories(true)}
                     className="btn-glass text-sm flex items-center gap-2 shrink-0 bg-accent-purple/20 text-accent-purple"
                 >
@@ -454,7 +462,7 @@ function HomePageContent() {
 
         <section className="flex-1 flex flex-col items-center mt-4">
             <motion.h2 
-                className="text-xl font-headline self-start bg-gradient-to-r from-accent-pink to-accent-green bg-clip-text text-transparent mb-4"
+                className="text-xl font-headline self-start bg-gradient-to-r from-accent-pink to-accent-green bg-clip-text text-transparent mb-4 text-glow"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.4 }}
@@ -464,7 +472,7 @@ function HomePageContent() {
             {loading && posts.length === 0 ? (
               <VibeSpaceLoader />
             ) : (
-              <div className="w-full max-w-xl flex flex-col gap-6">
+              <div className="w-full max-w-xl flex flex-col gap-4">
                 {canCreatePost && <CreatePostPrompt onGoLive={handleGoLive} />}
                 {filteredPosts.length > 0 ? filteredPosts.map((post, index) => (
                   <React.Fragment key={post.id}>
