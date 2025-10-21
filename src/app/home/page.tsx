@@ -104,57 +104,62 @@ function HomePageContent() {
     }
   }, [listening, transcript, resetTranscript]);
 
-  const fetchPosts = useCallback(async (loadMore = false) => {
-    if (!auth.currentUser) return;
-    
-    let currentLastVisible = loadMore ? lastVisible : null;
-    
-    if (loadMore) {
-        if (!hasMore) return;
-        setLoadingMore(true);
-    } else {
-        setLoading(true);
-        setPosts([]);
-        currentLastVisible = null;
-    }
-    
-    let postQuery;
-    const baseQuery = collection(db, "posts");
-    let constraints: any[] = [orderBy("publishAt", "desc")];
+    const fetchPosts = useCallback(async (category: string, loadMore = false) => {
+        if (!auth.currentUser) return;
 
-    if (activeCategory !== 'for-you') {
-        constraints.unshift(
-            or(
-                where("creatorType", "==", activeCategory),
-                where("hashtags", "array-contains", activeCategory)
-            )
-        );
-    }
+        if (loadMore) {
+            if (!hasMore) return;
+            setLoadingMore(true);
+        } else {
+            setLoading(true);
+            setPosts([]);
+            setLastVisible(null);
+            setHasMore(true);
+        }
+
+        let postQuery;
+        const baseQuery = collection(db, "posts");
+        
+        let constraints: any[] = [orderBy("publishAt", "desc")];
+
+        if (category !== 'for-you') {
+            constraints.unshift(where("category", "==", category));
+        }
+
+        if (loadMore && lastVisible) {
+            constraints.push(startAfter(lastVisible));
+        }
+
+        constraints.push(limit(POSTS_PER_PAGE));
+        
+        postQuery = query(baseQuery, ...constraints);
+
+        const documentSnapshots = await getDocs(postQuery);
+        
+        const newPosts = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+
+        setPosts(prev => {
+            const existingIds = new Set(prev.map(p => p.id));
+            const uniqueNewPosts = newPosts.filter(p => !existingIds.has(p.id));
+            return loadMore ? [...prev, ...uniqueNewPosts] : newPosts;
+        });
+
+        setLastVisible(lastDoc);
+        setHasMore(documentSnapshots.docs.length === POSTS_PER_PAGE);
+
+        setLoading(false);
+        setLoadingMore(false);
+    }, [hasMore, lastVisible]);
+
+
+    useEffect(() => {
+        fetchPosts(activeCategory);
+    }, [activeCategory]);
     
-    if (currentLastVisible) {
-        constraints.push(startAfter(currentLastVisible));
-    }
-
-    constraints.push(limit(POSTS_PER_PAGE));
-    
-    postQuery = query(baseQuery, ...constraints);
-
-    const documentSnapshots = await getDocs(postQuery);
-    
-    const newPosts = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
-
-    setPosts(prev => loadMore ? [...prev, ...newPosts] : newPosts);
-    setLastVisible(lastDoc);
-    setHasMore(documentSnapshots.docs.length === POSTS_PER_PAGE);
-
-    setLoading(false);
-    setLoadingMore(false);
-  }, [activeCategory, hasMore]); // lastVisible is removed to stabilize the function
-
-  useEffect(() => {
-    fetchPosts();
-  }, [activeCategory]); // fetchPosts is now stable and doesn't need to be a dependency
+    const fetchMorePosts = useCallback(() => {
+        fetchPosts(activeCategory, true);
+    }, [fetchPosts, activeCategory]);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async user => {
@@ -165,7 +170,7 @@ function HomePageContent() {
         const profileData = userProfileSnap.exists() ? userProfileSnap.data() : null;
         setUserProfile(profileData);
         
-        const q = query(collection(db, "notifications", user.uid, "user_notifications"), where("read", "==", false));
+        const q = query(collection(db, "users", user.uid, "notifications"), where("read", "==", false));
         const unsubNotifs = onSnapshot(q, (snapshot) => {
             setHasUnreadNotifs(!snapshot.empty);
         });
@@ -179,11 +184,6 @@ function HomePageContent() {
     return () => unsubscribe();
   }, [router]);
   
-  const fetchMorePosts = useCallback(() => {
-      fetchPosts(true);
-  }, [fetchPosts]);
-
-
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -423,5 +423,3 @@ export default function HomePage() {
         </Suspense>
     )
 }
-
-    
