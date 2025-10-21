@@ -46,10 +46,10 @@ export const onNewUserCreate = functions.auth.user().onCreate(async (user) => {
 export const sendNotification = functions.firestore
   .document('users/{userId}/notifications/{notificationId}')
   .onCreate(async (snapshot, context) => {
-    const { userId } = context.params;
+    const { userId, notificationId } = context.params;
     const notification = snapshot.data();
     if (!notification) {
-      logger.log('No notification data found');
+      logger.log('No notification data found for', notificationId);
       return;
     }
 
@@ -57,9 +57,9 @@ export const sendNotification = functions.firestore
    
     // Fetch the user's FCM token
     const userRef = doc(db, 'users', userId);
-    const userDoc = await userRef.get();
+    const userDoc = await getDoc(userRef);
     if (!userDoc.exists()) {
-      logger.log('User not found');
+      logger.log('User not found:', userId);
       return;
     }
     const fcmToken = userDoc.data()?.fcmToken;

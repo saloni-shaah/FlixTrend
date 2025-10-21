@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -14,7 +13,7 @@ export default function NotificationPanel({ onClose }: { onClose: () => void }) 
   useEffect(() => {
     if (!currentUser) return;
     const q = query(
-      collection(db, "notifications", currentUser.uid, "user_notifications"),
+      collection(db, "users", currentUser.uid, "notifications"),
       orderBy("createdAt", "desc")
     );
     const unsub = onSnapshot(q, (snapshot) => {
@@ -26,9 +25,9 @@ export default function NotificationPanel({ onClose }: { onClose: () => void }) 
   const getNotificationMessage = (notif: any) => {
     switch (notif.type) {
       case 'like':
-        return <><span className="font-bold">{notif.fromUsername}</span> liked your post: "{notif.postContent}"</>;
+        return <><span className="font-bold">{notif.fromUsername}</span> liked your post.</>;
       case 'comment':
-        return <><span className="font-bold">{notif.fromUsername}</span> commented on your post: "{notif.postContent}"</>;
+        return <><span className="font-bold">{notif.fromUsername}</span> commented: "{notif.postContent}"</>;
       case 'follow':
         return <><span className="font-bold">{notif.fromUsername}</span> started following you.</>;
       case 'missed_call':

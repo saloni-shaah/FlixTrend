@@ -1,4 +1,3 @@
-
 "use client";
 import { usePathname, useRouter } from "next/navigation";
 import { useAppState } from "@/utils/AppStateContext";
@@ -180,7 +179,7 @@ export default function AppNavBar() {
         setHasUnreadNotifs(false);
         return;
     }
-    const q = query(collection(db, "notifications", currentUser.uid, "user_notifications"), where("read", "==", false));
+    const q = query(collection(db, "users", currentUser.uid, "notifications"), where("read", "==", false));
     const unsub = onSnapshot(q, (snapshot) => {
         setHasUnreadNotifs(!snapshot.empty);
     });
