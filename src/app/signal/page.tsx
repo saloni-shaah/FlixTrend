@@ -1,14 +1,16 @@
-
 "use client";
 import React, { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp, where, writeBatch, getDocs, updateDoc, deleteDoc, arrayUnion, arrayRemove, deleteField, limit } from "firebase/firestore";
 import { auth, db } from "@/utils/firebaseClient";
-import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, Smile, Trash2, Users, CheckSquare, Square, MoreVertical, UserPlus, UserX, Edit, Shield, EyeOff, LogOut, UploadCloud, UserCircle, Cake, MapPin, AtSign, User, Bot, Search } from "lucide-react";
+import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, Smile, Trash2, Users, CheckSquare, Square, MoreVertical, UserPlus, UserX, Edit, Shield, EyeOff, LogOut, UploadCloud, UserCircle, Cake, MapPin, AtSign, User, Bot, Search, Check } from "lucide-react";
 import { useAppState } from "@/utils/AppStateContext";
 import { createCall } from "@/utils/callService";
 import { motion, AnimatePresence } from "framer-motion";
 import { uploadFileToFirebaseStorage } from '@/app/actions';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
+
 
 const anonymousNames = ["Ram", "Shyam", "Sita", "Mohan", "Krishna", "Radha", "Anchal", "Anaya", "Advik", "Diya", "Rohan", "Priya", "Arjun", "Saanvi", "Kabir"];
 const generateAnonymousName = (userId: string, chatId: string) => {
@@ -494,6 +496,12 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
 
+    // --- SELECTION & DELETION STATE ---
+    const [selectionMode, setSelectionMode] = useState<'chats' | 'messages' | null>(null);
+    const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const longPressTimerRef = useRef<NodeJS.Timeout>();
+
     useEffect(() => {
         if (selectedChat?.id && drafts[selectedChat.id]) {
             setNewMessage(drafts[selectedChat.id]);
@@ -651,6 +659,9 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
   
   useEffect(() => {
     if (!selectedChat) return;
+    // When a new chat is selected, clear any active message selection
+    setSelectionMode(null);
+    setSelectedItems(new Set());
     const unsub = handleSelectChat(selectedChat);
     return () => {
         if (typeof unsub === 'function') {
@@ -682,6 +693,7 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
         type: type,
         readBy: [firebaseUser.uid],
         reactions: {},
+        deletedFor: []
     };
 
     if (mediaUrl) {
@@ -704,14 +716,43 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
     await addDoc(collection(db, "chats", chatId, "messages"), messageData);
   };
   
-  const handleDeleteMessage = async (messageId: string) => {
-    if (!selectedChat || !firebaseUser) return;
-    const chatId = selectedChat.isGroup ? selectedChat.id : getChatId(firebaseUser.uid, selectedChat.uid);
-    const messageRef = doc(db, "chats", chatId, "messages", messageId);
-    if(window.confirm("Are you sure you want to delete this message for everyone? This action is irreversible.")) {
-      await deleteDoc(messageRef);
-    }
-  };
+    const handleDeleteMessages = async (mode: 'me' | 'everyone') => {
+        if (!selectedChat || selectedItems.size === 0) return;
+
+        const chatId = selectedChat.isGroup ? selectedChat.id : getChatId(firebaseUser.uid, selectedChat.uid);
+        const batch = writeBatch(db);
+
+        selectedItems.forEach(messageId => {
+            const messageRef = doc(db, "chats", chatId, "messages", messageId);
+            if (mode === 'me') {
+                batch.update(messageRef, { deletedFor: arrayUnion(firebaseUser.uid) });
+            } else {
+                batch.delete(messageRef);
+            }
+        });
+
+        await batch.commit();
+        setSelectedItems(new Set());
+        setSelectionMode(null);
+    };
+
+    const handleDeleteChats = async () => {
+        if (selectedItems.size === 0) return;
+        const batch = writeBatch(db);
+        selectedItems.forEach(chatId => {
+            const userDeletedChatRef = doc(db, 'users', firebaseUser.uid, 'deletedChats', chatId);
+            batch.set(userDeletedChatRef, {
+                deletedAt: serverTimestamp(),
+                participants: chats.find(c => c.id === chatId)?.members || []
+            });
+        });
+        await batch.commit();
+        // Optimistically remove from UI
+        setChats(prev => prev.filter(c => !selectedItems.has(c.id)));
+        setSelectedItems(new Set());
+        setSelectionMode(null);
+    };
+
 
   const handleReact = async (messageId: string, emoji: string) => {
     if (!selectedChat || !firebaseUser) return;
@@ -925,6 +966,56 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
     chat.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
     chat.username?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+  
+    // --- SELECTION & DELETION LOGIC ---
+    const handleLongPress = (type: 'chats' | 'messages', id: string) => {
+        setSelectionMode(type);
+        setSelectedItems(new Set([id]));
+    };
+
+    const handleItemClick = (type: 'chats' | 'messages', id: string) => {
+        if (selectionMode === type) {
+            const newSelection = new Set(selectedItems);
+            if (newSelection.has(id)) {
+                newSelection.delete(id);
+            } else {
+                newSelection.add(id);
+            }
+            setSelectedItems(newSelection);
+            if (newSelection.size === 0) {
+                setSelectionMode(null);
+            }
+        } else {
+            handleSelectChat(chats.find(c => c.id === id));
+        }
+    };
+    
+    const cancelSelectionMode = () => {
+        setSelectionMode(null);
+        setSelectedItems(new Set());
+    };
+    
+    // Custom hook for long press
+    const useLongPress = (callback: () => void, ms = 300) => {
+        const timerRef = useRef<NodeJS.Timeout>();
+
+        const onTouchStart = () => {
+            timerRef.current = setTimeout(callback, ms);
+        };
+        const onTouchEnd = () => {
+            if (timerRef.current) {
+                clearTimeout(timerRef.current);
+            }
+        };
+
+        return {
+            onTouchStart,
+            onTouchEnd,
+            onMouseDown: onTouchStart,
+            onMouseUp: onTouchEnd,
+            onMouseLeave: onTouchEnd,
+        };
+    };
 
   return (
     <div className="flex h-screen w-full bg-transparent font-body text-white overflow-hidden">
@@ -932,13 +1023,25 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
             setChats(prev => [newGroup, ...prev]);
             setSelectedChat(newGroup);
         }} />}
-        <div className={`w-full md:w-1/3 md:min-w-[350px] border-r border-accent-cyan/10 bg-black/60 flex flex-col ${isMobile && selectedChat ? "hidden" : ""}`}>
-            <div className="p-4 border-b border-accent-cyan/10 flex items-center justify-between shrink-0">
-                <h2 className="text-xl font-headline font-bold text-accent-cyan">Signal</h2>
-                <button className="btn-glass-icon w-10 h-10" title="Create Group" onClick={() => setShowCreateGroup(true)}>
-                    <Users size={20} />
-                </button>
-            </div>
+
+        {/* --- CHAT LIST VIEW --- */}
+        <div className={`w-full md:w-1/3 md:min-w-[350px] border-r border-accent-cyan/10 bg-black/60 flex flex-col ${isMobile && selectedChat && !selectionMode ? "hidden" : ""}`}>
+            {/* --- SELECTION HEADER FOR CHATS --- */}
+            {selectionMode === 'chats' ? (
+                <div className="p-4 border-b border-accent-cyan/10 flex items-center justify-between shrink-0 bg-accent-cyan/10">
+                    <button onClick={cancelSelectionMode}><X size={24} /></button>
+                    <span className="font-bold">{selectedItems.size} selected</span>
+                    <button onClick={() => { if (window.confirm(`Delete ${selectedItems.size} chat(s)?`)) handleDeleteChats(); }}><Trash2 size={24} /></button>
+                </div>
+            ) : (
+                <div className="p-4 border-b border-accent-cyan/10 flex items-center justify-between shrink-0">
+                    <h2 className="text-xl font-headline font-bold text-accent-cyan">Signal</h2>
+                    <button className="btn-glass-icon w-10 h-10" title="Create Group" onClick={() => setShowCreateGroup(true)}>
+                        <Users size={20} />
+                    </button>
+                </div>
+            )}
+            
             <div className="p-2">
                 <div className="relative">
                     <input 
@@ -952,12 +1055,22 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
                 </div>
             </div>
             <div className="flex-1 overflow-y-auto">
-                {filteredChats.length === 0 ? (
-                    <div className="text-gray-400 text-center p-8">No chats found.</div>
-                ) : (
-                    filteredChats.map((chat) => (
-                        <button key={chat.isGroup ? chat.id : `dm-${chat.uid}`} className={`w-full flex items-center gap-4 px-4 py-3 text-left transition-colors duration-200 group relative ${selectedChat?.id === chat.id ? "bg-accent-cyan/20" : ""}`} onClick={() => handleSelectChat(chat)}>
-                            <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-xl overflow-hidden shrink-0">
+                {filteredChats.map((chat) => {
+                    const longPressProps = useLongPress(() => handleLongPress('chats', chat.id));
+                    const isSelected = selectedItems.has(chat.id);
+                    return (
+                        <div 
+                            key={chat.id}
+                            className={cn("w-full flex items-center gap-4 px-4 py-3 text-left transition-colors duration-200 group relative", isSelected ? "bg-accent-cyan/30" : "hover:bg-accent-cyan/10")} 
+                            onClick={() => handleItemClick('chats', chat.id)}
+                            {...longPressProps}
+                        >
+                            {selectionMode === 'chats' && (
+                                <div className="absolute left-2 top-1/2 -translate-y-1/2">
+                                    {isSelected ? <CheckSquare className="text-accent-cyan"/> : <Square className="text-gray-500"/>}
+                                </div>
+                            )}
+                            <div className={cn("w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-xl overflow-hidden shrink-0", selectionMode === 'chats' && "ml-8")}>
                                 {chat.isGroup ? 
                                     (chat.avatar_url ? <img src={chat.avatar_url} alt={chat.name} className="w-full h-full object-cover"/> : (chat.groupType === 'anonymous' ? <Shield/> : chat.groupType === 'pseudonymous' ? <EyeOff/> : <Users/>)) :
                                     (chat.avatar_url ? <img src={chat.avatar_url} alt="avatar" className="w-full h-full object-cover"/> : getInitials(chat))
@@ -969,61 +1082,48 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
                                     {drafts[chat.id] ? <span className="text-red-400">[Draft] {drafts[chat.id]}</span> : chat.lastMessage?.text || "No messages yet"}
                                 </span>
                             </div>
-                            <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-2xl transition-opacity">
-                                💬
-                            </div>
-                            {unreadCounts[chat.id] > 0 && (
-                                <span className="bg-accent-pink text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
-                                    {unreadCounts[chat.id]}
-                                </span>
-                            )}
-                        </button>
-                    ))
-                )}
-                {joinableGroups.length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-accent-cyan/10">
-                         <h3 className="px-4 text-sm font-bold text-gray-400 mb-2">Join Anonymous Groups</h3>
-                         {joinableGroups.map(group => (
-                             <button key={group.id} className="w-full flex items-center gap-4 px-4 py-3 text-left hover:bg-accent-cyan/10 transition-colors" onClick={() => handleJoinAnonymousGroup(group)}>
-                                <div className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center shrink-0"><Shield/></div>
-                                 <div className="flex-1 overflow-hidden">
-                                     <span className="font-bold text-white block truncate">{group.name}</span>
-                                     <span className="text-xs text-green-400 block">{group.members.length} members</span>
-                                 </div>
-                                 <span className="text-sm font-bold text-accent-cyan">Join</span>
-                             </button>
-                         ))}
-                    </div>
-                )}
+                        </div>
+                    )
+                })}
             </div>
         </div>
 
+        {/* --- MESSAGE VIEW --- */}
         <div className={`flex-1 flex flex-col bg-black/40 relative ${!selectedChat && isMobile ? "hidden" : ""}`}>
             {selectedChat ? (
                 <>
-                    <div className="flex items-center gap-3 p-3 border-b border-accent-cyan/10 bg-black/60 shadow-md shrink-0">
-                        {isMobile && <button onClick={() => setSelectedChat(null)} className="p-2 rounded-full hover:bg-accent-cyan/10"><ArrowLeft size={20}/></button>}
-                         <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-lg overflow-hidden shrink-0">
-                           {selectedChat.isGroup ? 
-                                (selectedChat.avatar_url ? <img src={selectedChat.avatar_url} alt={selectedChat.name} className="w-full h-full object-cover"/> : (selectedChat.groupType === 'anonymous' ? <Shield/> : selectedChat.groupType === 'pseudonymous' ? <EyeOff/> : <Users/>)) :
-                                (selectedChat.avatar_url ? <img src={selectedChat.avatar_url} alt="avatar" className="w-full h-full object-cover"/> : getInitials(selectedChat))
-                           }
+                    {/* --- SELECTION HEADER FOR MESSAGES --- */}
+                     {selectionMode === 'messages' ? (
+                        <div className="flex items-center gap-3 p-3 border-b border-accent-cyan/10 bg-accent-cyan/10 shadow-md shrink-0">
+                            <button onClick={cancelSelectionMode}><X size={24} /></button>
+                            <span className="font-bold flex-1">{selectedItems.size} selected</span>
+                            <button onClick={() => setShowDeleteConfirm(true)}><Trash2 size={24} /></button>
                         </div>
-                        <button className="flex-1 text-left" disabled={selectedChat.groupType === 'anonymous'} onClick={() => selectedChat.isGroup ? setShowGroupInfo(true) : setShowUserInfo(true)}>
-                            <h3 className="font-bold text-white">{selectedChat.name || selectedChat.username}</h3>
-                            {renderStatus()}
-                        </button>
-                        <div className="flex items-center gap-2">
-                           {!selectedChat.isGroup && <button onClick={() => handleCall('video')} className="p-2 rounded-full hover:bg-accent-cyan/10"><Video size={20}/></button>}
-                           {!selectedChat.isGroup && <button onClick={() => handleCall('voice')} className="p-2 rounded-full hover:bg-accent-cyan/10"><Phone size={20}/></button>}
+                     ) : (
+                        <div className="flex items-center gap-3 p-3 border-b border-accent-cyan/10 bg-black/60 shadow-md shrink-0">
+                            {isMobile && <button onClick={() => { setSelectedChat(null); cancelSelectionMode(); }} className="p-2 rounded-full hover:bg-accent-cyan/10"><ArrowLeft size={20}/></button>}
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-lg overflow-hidden shrink-0">
+                            {selectedChat.isGroup ? 
+                                    (selectedChat.avatar_url ? <img src={selectedChat.avatar_url} alt={selectedChat.name} className="w-full h-full object-cover"/> : (selectedChat.groupType === 'anonymous' ? <Shield/> : selectedChat.groupType === 'pseudonymous' ? <EyeOff/> : <Users/>)) :
+                                    (selectedChat.avatar_url ? <img src={selectedChat.avatar_url} alt="avatar" className="w-full h-full object-cover"/> : getInitials(selectedChat))
+                            }
+                            </div>
+                            <button className="flex-1 text-left" disabled={selectedChat.groupType === 'anonymous'} onClick={() => selectedChat.isGroup ? setShowGroupInfo(true) : setShowUserInfo(true)}>
+                                <h3 className="font-bold text-white">{selectedChat.name || selectedChat.username}</h3>
+                                {renderStatus()}
+                            </button>
+                            <div className="flex items-center gap-2">
+                            {!selectedChat.isGroup && <button onClick={() => handleCall('video')} className="p-2 rounded-full hover:bg-accent-cyan/10"><Video size={20}/></button>}
+                            {!selectedChat.isGroup && <button onClick={() => handleCall('voice')} className="p-2 rounded-full hover:bg-accent-cyan/10"><Phone size={20}/></button>}
+                            </div>
                         </div>
-                    </div>
+                     )}
                     
                      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-1">
-                        <AnimatePresence initial={false}>
-                        {messages.map(msg => {
+                        {messages.filter(msg => !(msg.deletedFor || []).includes(firebaseUser.uid)).map(msg => {
                             const isUser = msg.sender === firebaseUser.uid;
-                            const isReadByAll = selectedChat.isGroup ? msg.readBy.length === selectedChat.members.length : msg.readBy.includes(selectedChat.id);
+                            const longPressProps = useLongPress(() => handleLongPress('messages', msg.id));
+                            const isSelected = selectedItems.has(msg.id);
                             
                             const senderInfo = selectedChat.isGroup ?
                                 (selectedChat.groupType === 'simple' ? selectedChat.memberInfo?.[msg.sender] : null)
@@ -1034,14 +1134,15 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
                                                 senderInfo?.name || "User";
                             
                             return (
-                              <motion.div 
-                                layout
-                                initial={{ opacity: 0, y: 10, scale: 0.9 }}
-                                animate={{ opacity: 1, y: 0, scale: 1 }}
-                                key={msg.id} className={`group flex w-full items-end gap-2 ${isUser ? "justify-end" : msg.sender === 'system' ? 'justify-center' : "justify-start"}`}>
-                                <div className={`flex items-end gap-2 max-w-[80%] md:max-w-[70%]`}>
+                              <div 
+                                key={msg.id} 
+                                onClick={() => selectionMode === 'messages' && handleItemClick('messages', msg.id)}
+                                {...longPressProps}
+                                className={cn("group flex w-full items-end gap-2", isUser ? "justify-end" : msg.sender === 'system' ? 'justify-center' : "justify-start", selectionMode === 'messages' && "cursor-pointer")}
+                              >
+                                <div className={cn("flex items-end gap-2 max-w-[80%] md:max-w-[70%]", isSelected && "bg-accent-cyan/20 rounded-xl")}>
                                     <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
-                                      <div className={`relative px-4 py-2 rounded-2xl transition-all duration-300 ${isUser ? "bg-accent-cyan text-white rounded-br-none" : msg.sender === 'system' ? "bg-gray-800 text-gray-400 text-xs italic" : "bg-gray-700 text-white rounded-bl-none"} ${isUser && isReadByAll ? 'shadow-glow' : ''}`}>
+                                      <div className={`relative px-4 py-2 rounded-2xl transition-all duration-300 ${isUser ? "bg-accent-cyan text-white rounded-br-none" : msg.sender === 'system' ? "bg-gray-800 text-gray-400 text-xs italic" : "bg-gray-700 text-white rounded-bl-none"}`}>
                                           {!isUser && msg.sender !== 'system' && (
                                               <div className="font-bold text-sm text-accent-pink">{displayName}</div>
                                           )}
@@ -1088,14 +1189,13 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
                                               </div>
                                           </>
                                       }
-                                      {isUser && <button onClick={() => handleDeleteMessage(msg.id)} className="p-1 rounded-full bg-gray-600 hover:bg-red-500"><Trash2 size={16}/></button>}
+                                      {isUser && <button onClick={() => handleDeleteMessages('everyone')} className="p-1 rounded-full bg-gray-600 hover:bg-red-500"><Trash2 size={16}/></button>}
                                       </div>
                                     </div>
                                   </div>
-                              </motion.div>
+                              </div>
                               )
                           })}
-                        </AnimatePresence>
                          <div ref={messagesEndRef} />
                     </div>
 
@@ -1162,6 +1262,24 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
                 </div>
             )}
         </div>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Message(s)?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This will permanently delete {selectedItems.size} message(s).
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="grid grid-cols-1 md:flex">
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction className="bg-red-800 hover:bg-red-700" onClick={() => handleDeleteMessages('me')}>Delete for Me</AlertDialogAction>
+                    <AlertDialogAction className="bg-red-600 hover:bg-red-500" onClick={() => handleDeleteMessages('everyone')}>Delete for Everyone</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
     </div>
   );
 }

@@ -299,7 +299,7 @@ export const deletePost = onCall(async (request) => {
 export const onChatDelete = functions.firestore
   .document('users/{userId}/deletedChats/{chatId}')
   .onCreate(async (snap, context) => {
-    const { userId, chatId } = context.params;
+    const { chatId } = context.params;
     const chatData = snap.data();
     const participants = chatData.participants || [];
 
@@ -309,15 +309,15 @@ export const onChatDelete = functions.firestore
     }
 
     // Check if all participants have marked this chat as deleted
-    const allDeleted = await Promise.all(
-      participants.map(async (pId: string) => {
+    const allDeletedChecks = participants.map(async (pId: string) => {
         const deletedDocRef = doc(db, `users/${pId}/deletedChats/${chatId}`);
         const docSnap = await getDoc(deletedDocRef);
         return docSnap.exists();
-      })
-    );
+    });
 
-    if (allDeleted.every(Boolean)) {
+    const allDeletedResults = await Promise.all(allDeletedChecks);
+
+    if (allDeletedResults.every(Boolean)) {
       logger.info(`All participants have deleted chat ${chatId}. Purging messages.`);
       
       const chatMessagesRef = collection(db, 'chats', chatId, 'messages');
@@ -510,7 +510,6 @@ export const updateAccolades = functions.pubsub.schedule('every 1 hours').onRun(
 
 /**
  * Toggles a user's account between enabled and disabled.
- * This is a callable function that requires admin privileges.
  */
 export const toggleAccountStatus = onCall(async (request) => {
     const callingUid = request.auth?.uid;
@@ -542,5 +541,48 @@ export const toggleAccountStatus = onCall(async (request) => {
     } catch (error) {
         logger.error(`Error toggling account status for ${uid}:`, error);
         throw new HttpsError("internal", "Failed to update account status.");
+    }
+});
+
+/**
+ * Deletes a chat message, either for everyone or just for the calling user.
+ */
+export const deleteMessage = onCall(async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid) {
+        throw new HttpsError("unauthenticated", "You must be logged in.");
+    }
+
+    const { chatId, messageId, mode } = request.data;
+    if (!chatId || !messageId || !mode) {
+        throw new HttpsError("invalid-argument", "Missing required parameters.");
+    }
+
+    const messageRef = doc(db, `chats/${chatId}/messages/${messageId}`);
+
+    try {
+        if (mode === 'everyone') {
+            // Check if user is the sender to allow "delete for everyone"
+            const messageSnap = await getDoc(messageRef);
+            if (messageSnap.exists() && messageSnap.data().sender === uid) {
+                await deleteDoc(messageRef);
+                return { success: true, message: 'Message deleted for everyone.' };
+            } else {
+                throw new HttpsError("permission-denied", "You can only delete your own messages for everyone.");
+            }
+        } else if (mode === 'me') {
+            await updateDoc(messageRef, {
+                deletedFor: arrayUnion(uid)
+            });
+            return { success: true, message: 'Message deleted for you.' };
+        } else {
+            throw new HttpsError("invalid-argument", "Invalid deletion mode specified.");
+        }
+    } catch(error) {
+        logger.error("Error deleting message:", error);
+        if (error instanceof HttpsError) {
+            throw error;
+        }
+        throw new HttpsError("internal", "Could not delete message.");
     }
 });
