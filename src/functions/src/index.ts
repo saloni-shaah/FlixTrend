@@ -56,9 +56,9 @@ export const sendNotification = functions.firestore
     const { type, fromUsername, postContent } = notification;
    
     // Fetch the user's FCM token
-    const userRef = db.collection('users').doc(userId);
+    const userRef = doc(db, 'users', userId);
     const userDoc = await userRef.get();
-    if (!userDoc.exists) {
+    if (!userDoc.exists()) {
       logger.log('User not found');
       return;
     }
@@ -118,7 +118,7 @@ export const onUserDelete = functions.auth.user().onDelete(async (user) => {
   const batch = db.batch();
 
   // Delete user document from 'users' collection
-  const userRef = db.collection('users').doc(user.uid);
+  const userRef = doc(db, 'users', user.uid);
   batch.delete(userRef);
 
   // Here you can add more cleanup logic as your app grows. For example:
@@ -154,9 +154,9 @@ export const onCallCreated = functions.firestore
             return;
         }
 
-        const userDocRef = db.collection('users').doc(calleeId);
+        const userDocRef = doc(db, 'users', calleeId);
         const userDoc = await userDocRef.get();
-        if (!userDoc.exists) {
+        if (!userDoc.exists()) {
             logger.log('Callee user document not found');
             return;
         }
@@ -502,3 +502,5 @@ export const toggleAccountStatus = onCall(async (request) => {
         throw new HttpsError("internal", "Failed to update account status.");
     }
 });
+
+    
