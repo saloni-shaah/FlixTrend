@@ -1,6 +1,4 @@
-
 "use client";
-import "regenerator-runtime/runtime";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { getFirestore, collection, query, orderBy, onSnapshot, limit, startAfter, getDocs } from "firebase/firestore";
 import { app } from "@/utils/firebaseClient";
@@ -11,7 +9,6 @@ import Link from "next/link";
 import { FlixTrendLogo } from "@/components/FlixTrendLogo";
 import { Search, Bot, Mic } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
-import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 
 
 const db = getFirestore(app);
@@ -26,26 +23,6 @@ export default function GuestPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const feedEndRef = useRef<HTMLDivElement>(null);
   const observer = useRef<IntersectionObserver>();
-  const [isClient, setIsClient] = useState(false);
-
-  const {
-    transcript,
-    listening,
-    resetTranscript,
-    browserSupportsSpeechRecognition
-  } = useSpeechRecognition();
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  useEffect(() => {
-    if (!listening && transcript) {
-      setSearchTerm(transcript);
-      resetTranscript();
-    }
-  }, [listening, transcript, resetTranscript]);
-
 
   const fetchMorePosts = useCallback(async () => {
       if (!lastVisible || !hasMore || loadingMore) return;
@@ -118,12 +95,8 @@ export default function GuestPage() {
   }, [loading, hasMore, loadingMore, searchTerm, fetchMorePosts]);
   
   const handleVoiceSearch = () => {
-    if (listening) {
-      SpeechRecognition.stopListening();
-    } else {
-      resetTranscript();
-      SpeechRecognition.startListening();
-    }
+    // Voice search functionality removed to prevent errors
+    alert("Voice search is temporarily unavailable.");
   };
 
 
@@ -136,10 +109,6 @@ export default function GuestPage() {
           (post.hashtags && post.hashtags.some((h: string) => h.toLowerCase().includes(searchTerm.toLowerCase())))
       )
     : posts;
-
-  if (!browserSupportsSpeechRecognition && isClient) {
-      console.log("Browser doesn't support speech recognition.");
-  }
 
 
   return (
@@ -168,9 +137,8 @@ export default function GuestPage() {
             <div className="input-glass w-full flex items-center px-4">
               <button
                   onClick={handleVoiceSearch}
-                  className={`p-1 rounded-full transition-colors text-gray-400 hover:text-brand-saffron ${listening ? 'animate-pulse bg-red-500/50' : ''}`}
+                  className={`p-1 rounded-full transition-colors text-gray-400 hover:text-brand-saffron`}
                   aria-label="Voice search"
-                  disabled={isClient && !browserSupportsSpeechRecognition}
               >
                   <Mic size={20} />
               </button>
@@ -178,7 +146,7 @@ export default function GuestPage() {
                <input
                 type="text"
                 className="flex-1 bg-transparent py-3 text-lg font-body focus:outline-none"
-                placeholder={listening ? "Listening..." : "Search posts..."}
+                placeholder={"Search posts..."}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 autoFocus={false}
