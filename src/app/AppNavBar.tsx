@@ -1,3 +1,4 @@
+
 "use client";
 import { usePathname, useRouter } from "next/navigation";
 import { useAppState } from "@/utils/AppStateContext";
@@ -76,10 +77,13 @@ function NavButton({ href, icon: Icon, label, hasNotification }: { href: string;
 export default function AppNavBar() {
   const pathname = usePathname();
   const { activeCall, selectedChat, setSelectedChat, isScopeVideoPlaying } = useAppState();
+  const [hasMounted, setHasMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
 
   useEffect(() => {
+    setHasMounted(true);
+
     const checkIsMobile = () => setIsMobile(window.innerWidth < 768);
     checkIsMobile();
     window.addEventListener('resize', checkIsMobile);
@@ -90,7 +94,6 @@ export default function AppNavBar() {
     window.addEventListener('online', goOnline);
     window.addEventListener('offline', goOffline);
 
-    // Set initial state
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
         goOffline();
     }
@@ -193,7 +196,7 @@ export default function AppNavBar() {
   const hideForScopeVideo = pathname.startsWith('/scope') && isScopeVideoPlaying;
 
 
-  if (hideNav || hideForScopeVideo) return null;
+  if (!hasMounted || hideNav || hideForScopeVideo) return null;
 
   const isSignalChatView = isMobile && pathname === '/signal' && selectedChat;
 
