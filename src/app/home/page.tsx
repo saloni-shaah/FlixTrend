@@ -91,12 +91,17 @@ function HomePageContent() {
   useEffect(() => {
     if (hasMounted && searchParams.get('new') === 'true') {
         setShowWelcomeAnimation(true);
+        // Clean the URL
+        router.replace('/home', { scroll: false });
     }
+  }, [searchParams, hasMounted, router]);
+
+  useEffect(() => {
     const storedViewed = localStorage.getItem('viewedFlashes');
     if (storedViewed) {
         setViewedFlashes(JSON.parse(storedViewed));
     }
-  }, [searchParams, hasMounted]);
+  }, []);
 
   const handleFlashModalClose = (viewedUserId?: string) => {
     if (viewedUserId && !viewedFlashes.includes(viewedUserId)) {
@@ -506,5 +511,9 @@ function HomePageContent() {
 }
 
 export default function HomePage() {
-    return <HomePageContent />;
+  return (
+    <Suspense fallback={<VibeSpaceLoader />}>
+      <HomePageContent />
+    </Suspense>
+  );
 }
