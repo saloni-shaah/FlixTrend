@@ -117,10 +117,10 @@ function HomePageContent() {
         if (!auth.currentUser) return;
 
         if (loadMore) {
-            if (!hasMore) return;
+            if (!hasMore || loadingMore) return;
             setLoadingMore(true);
         } else {
-            setLoading(true); // Show loader for new category, but don't clear posts yet
+            setLoading(true);
         }
 
         const baseQuery = collection(db, "posts");
@@ -155,7 +155,7 @@ function HomePageContent() {
                     return [...prev, ...uniqueNewPosts];
                 });
             } else {
-                setPosts(newPosts); // Replace posts for a new category
+                setPosts(newPosts);
             }
 
 
@@ -164,17 +164,20 @@ function HomePageContent() {
         } catch (error) {
             console.error("Error fetching posts: ", error);
         } finally {
-            setLoading(false);
-            setLoadingMore(false);
+             if (loadMore) {
+                setLoadingMore(false);
+            } else {
+                setLoading(false);
+            }
         }
-    }, [hasMore, lastVisible]);
+    }, [hasMore, lastVisible, loadingMore]);
 
 
     useEffect(() => {
         if(currentUser) { // Only fetch posts if user is authenticated
             fetchPosts(activeCategory);
         }
-    }, [activeCategory, currentUser, fetchPosts]);
+    }, [activeCategory, currentUser]); // Removed fetchPosts from deps to prevent re-fetch on every render
     
     const fetchMorePosts = useCallback(() => {
         fetchPosts(activeCategory, true);
@@ -193,8 +196,6 @@ function HomePageContent() {
         const unsubNotifs = onSnapshot(q, (snapshot) => {
             setHasUnreadNotifs(!snapshot.empty);
         });
-
-        // setLoading(false) is now handled within fetchPosts
         
         return () => unsubNotifs();
 
@@ -523,12 +524,9 @@ function HomePageContent() {
 }
 
 export default function HomePage() {
-  // Use a Suspense boundary for client components that use server-only features like useSearchParams
   return (
     <Suspense fallback={<VibeSpaceLoader />}>
       <HomePageContent />
     </Suspense>
   );
 }
-
-    
