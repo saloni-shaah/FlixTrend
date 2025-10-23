@@ -1,6 +1,5 @@
 
 "use client";
-import "regenerator-runtime/runtime";
 import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import dynamic from 'next/dynamic';
 import { getFirestore, collection, query, orderBy, getDoc, doc, limit, startAfter, getDocs, where, Timestamp, onSnapshot, or } from "firebase/firestore";
@@ -14,7 +13,6 @@ import { VibeSpaceLoader } from "@/components/VibeSpaceLoader";
 import AdBanner from "@/components/AdBanner";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import { CreatePostPrompt } from "@/components/CreatePostPrompt";
 import { WelcomeAnimation } from "@/components/WelcomeAnimation";
 
@@ -86,21 +84,15 @@ function HomePageContent() {
   const [viewedFlashes, setViewedFlashes] = useState<string[]>([]);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   
-  const {
-    transcript,
-    listening,
-    resetTranscript,
-    browserSupportsSpeechRecognition
-  } = useSpeechRecognition();
-
   useEffect(() => {
-      const storedViewed = localStorage.getItem('viewedFlashes');
-      if (storedViewed) {
-          setViewedFlashes(JSON.parse(storedViewed));
-      }
-      if (searchParams.get('new') === 'true') {
-          setShowWelcomeAnimation(true);
-      }
+    const hasMounted = true; // Simplified for now to avoid flicker
+    if (hasMounted && searchParams.get('new') === 'true') {
+        setShowWelcomeAnimation(true);
+    }
+    const storedViewed = localStorage.getItem('viewedFlashes');
+    if (storedViewed) {
+        setViewedFlashes(JSON.parse(storedViewed));
+    }
   }, [searchParams]);
 
   const handleFlashModalClose = (viewedUserId?: string) => {
@@ -111,13 +103,6 @@ function HomePageContent() {
     }
     setSelectedFlashUser(null);
   };
-
-  useEffect(() => {
-    if (!listening && transcript) {
-        setSearchTerm(transcript);
-        resetTranscript();
-    }
-  }, [listening, transcript, resetTranscript]);
 
     const fetchPosts = useCallback(async (category: string, loadMore = false) => {
         if (!auth.currentUser) return;
@@ -242,15 +227,6 @@ function HomePageContent() {
       router.push(`/broadcast/${encodeURIComponent(roomName)}`);
   }
 
-  const handleVoiceSearch = () => {
-    if (listening) {
-      SpeechRecognition.stopListening();
-    } else {
-      resetTranscript();
-      SpeechRecognition.startListening();
-    }
-  };
-
   // Group flashes by user
   const groupedFlashes = flashes.reduce((acc: any, flash) => {
     if (!acc[flash.userId]) {
@@ -356,9 +332,9 @@ function HomePageContent() {
         >
             <div className={`input-glass w-full flex items-center px-4 transition-all duration-300 ${isSearchFocused ? 'ring-2 ring-brand-saffron' : ''}`}>
                   <button
-                      onClick={handleVoiceSearch}
-                      className={`p-1 rounded-full transition-colors text-gray-400 hover:text-brand-gold ${listening ? 'animate-pulse bg-red-500/50' : ''}`}
+                      className={`p-1 rounded-full transition-colors text-gray-400 hover:text-brand-gold`}
                       aria-label="Voice search"
+                      disabled={true}
                   >
                       <Mic size={20} />
                   </button>
@@ -366,7 +342,7 @@ function HomePageContent() {
                   <input
                     type="text"
                     className="flex-1 bg-transparent py-3 text-lg font-body focus:outline-none"
-                    placeholder={listening ? "Listening..." : "Search posts..."}
+                    placeholder={"Search posts..."}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     onFocus={() => setIsSearchFocused(true)}
