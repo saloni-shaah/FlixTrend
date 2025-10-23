@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import dynamic from 'next/dynamic';
@@ -119,7 +120,7 @@ function HomePageContent() {
             if (!hasMore) return;
             setLoadingMore(true);
         } else {
-            setLoading(true);
+            // setLoading(true); // This can cause re-renders if called multiple times
             setPosts([]);
             setLastVisible(null);
             setHasMore(true);
@@ -144,28 +145,34 @@ function HomePageContent() {
         
         const postQuery = query(baseQuery, ...constraints);
 
-        const documentSnapshots = await getDocs(postQuery);
-        
-        const newPosts = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+        try {
+            const documentSnapshots = await getDocs(postQuery);
+            
+            const newPosts = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
 
-        setPosts(prev => {
-            const existingIds = new Set(prev.map(p => p.id));
-            const uniqueNewPosts = newPosts.filter(p => !existingIds.has(p.id));
-            return loadMore ? [...prev, ...uniqueNewPosts] : newPosts;
-        });
+            setPosts(prev => {
+                const existingIds = new Set(prev.map(p => p.id));
+                const uniqueNewPosts = newPosts.filter(p => !existingIds.has(p.id));
+                return loadMore ? [...prev, ...uniqueNewPosts] : uniqueNewPosts;
+            });
 
-        setLastVisible(lastDoc);
-        setHasMore(documentSnapshots.docs.length === POSTS_PER_PAGE);
-
-        setLoading(false);
-        setLoadingMore(false);
+            setLastVisible(lastDoc);
+            setHasMore(documentSnapshots.docs.length === POSTS_PER_PAGE);
+        } catch (error) {
+            console.error("Error fetching posts: ", error);
+        } finally {
+            setLoading(false);
+            setLoadingMore(false);
+        }
     }, [hasMore, lastVisible]);
 
 
     useEffect(() => {
-        fetchPosts(activeCategory);
-    }, [activeCategory, fetchPosts]);
+        if(currentUser) { // Only fetch posts if user is authenticated
+            fetchPosts(activeCategory);
+        }
+    }, [activeCategory, currentUser, fetchPosts]);
     
     const fetchMorePosts = useCallback(() => {
         fetchPosts(activeCategory, true);
@@ -184,6 +191,10 @@ function HomePageContent() {
         const unsubNotifs = onSnapshot(q, (snapshot) => {
             setHasUnreadNotifs(!snapshot.empty);
         });
+
+        // Set initial loading to false here, after we know we have a user.
+        // fetchPosts will handle its own loading states.
+        setLoading(false);
         
         return () => unsubNotifs();
 
@@ -195,9 +206,10 @@ function HomePageContent() {
   }, [router]);
   
   useEffect(() => {
+    if (loading) return; // Don't setup observer while initially loading
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loading && !loadingMore) {
+        if (entries[0].isIntersecting && hasMore && !loadingMore) {
           fetchMorePosts();
         }
       },
@@ -511,9 +523,12 @@ function HomePageContent() {
 }
 
 export default function HomePage() {
+  // Use a Suspense boundary for client components that use server-only features like useSearchParams
   return (
     <Suspense fallback={<VibeSpaceLoader />}>
       <HomePageContent />
     </Suspense>
   );
 }
+
+    
