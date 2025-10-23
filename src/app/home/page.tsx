@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import dynamic from 'next/dynamic';
@@ -83,9 +82,13 @@ function HomePageContent() {
   const [hasUnreadNotifs, setHasUnreadNotifs] = useState(false);
   const [viewedFlashes, setViewedFlashes] = useState<string[]>([]);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [hasMounted, setHasMounted] = useState(false);
   
   useEffect(() => {
-    const hasMounted = true; // Simplified for now to avoid flicker
+    setHasMounted(true);
+  }, []);
+
+  useEffect(() => {
     if (hasMounted && searchParams.get('new') === 'true') {
         setShowWelcomeAnimation(true);
     }
@@ -93,7 +96,7 @@ function HomePageContent() {
     if (storedViewed) {
         setViewedFlashes(JSON.parse(storedViewed));
     }
-  }, [searchParams]);
+  }, [searchParams, hasMounted]);
 
   const handleFlashModalClose = (viewedUserId?: string) => {
     if (viewedUserId && !viewedFlashes.includes(viewedUserId)) {
@@ -157,7 +160,7 @@ function HomePageContent() {
 
     useEffect(() => {
         fetchPosts(activeCategory);
-    }, [activeCategory]);
+    }, [activeCategory, fetchPosts]);
     
     const fetchMorePosts = useCallback(() => {
         fetchPosts(activeCategory, true);
@@ -503,9 +506,5 @@ function HomePageContent() {
 }
 
 export default function HomePage() {
-    return (
-        <Suspense fallback={<VibeSpaceLoader />}>
-            <HomePageContent />
-        </Suspense>
-    )
+    return <HomePageContent />;
 }
