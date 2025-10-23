@@ -120,10 +120,7 @@ function HomePageContent() {
             if (!hasMore) return;
             setLoadingMore(true);
         } else {
-            // setLoading(true); // This can cause re-renders if called multiple times
-            setPosts([]);
-            setLastVisible(null);
-            setHasMore(true);
+            setLoading(true); // Show loader for new category, but don't clear posts yet
         }
 
         const baseQuery = collection(db, "posts");
@@ -151,11 +148,16 @@ function HomePageContent() {
             const newPosts = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
 
-            setPosts(prev => {
-                const existingIds = new Set(prev.map(p => p.id));
-                const uniqueNewPosts = newPosts.filter(p => !existingIds.has(p.id));
-                return loadMore ? [...prev, ...uniqueNewPosts] : uniqueNewPosts;
-            });
+            if (loadMore) {
+                 setPosts(prev => {
+                    const existingIds = new Set(prev.map(p => p.id));
+                    const uniqueNewPosts = newPosts.filter(p => !existingIds.has(p.id));
+                    return [...prev, ...uniqueNewPosts];
+                });
+            } else {
+                setPosts(newPosts); // Replace posts for a new category
+            }
+
 
             setLastVisible(lastDoc);
             setHasMore(documentSnapshots.docs.length === POSTS_PER_PAGE);
@@ -192,9 +194,7 @@ function HomePageContent() {
             setHasUnreadNotifs(!snapshot.empty);
         });
 
-        // Set initial loading to false here, after we know we have a user.
-        // fetchPosts will handle its own loading states.
-        setLoading(false);
+        // setLoading(false) is now handled within fetchPosts
         
         return () => unsubNotifs();
 
@@ -465,7 +465,7 @@ function HomePageContent() {
             >
                 VibeSpace
             </motion.h2>
-            {loading && posts.length === 0 ? (
+            {loading ? (
               <VibeSpaceLoader />
             ) : (
               <div className="w-full max-w-xl flex flex-col gap-4">
