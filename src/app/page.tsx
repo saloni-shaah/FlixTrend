@@ -201,7 +201,9 @@ export default function LandingPage() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.8, delay: 0.2 }}
-                    className="text-4xl md:text-5xl font-headline font-bold max-w-2xl text-glow" style={{ color: 'white' }}>
+                    className="text-4xl md:text-5xl font-headline font-bold max-w-2xl bg-gradient-to-r from-accentPink to-accentCyan text-transparent bg-clip-text animate-shimmer"
+                    style={{ backgroundSize: '200% auto' }}
+                >
                     FlixTrend – The Future of Social, Built for Gen-Z. Secure. Creative. Connected.
                 </motion.h1>
 
@@ -266,8 +268,7 @@ export default function LandingPage() {
         <section className="py-12 px-4 text-center">
              <h2 className="text-4xl font-headline font-bold text-center mb-8 text-glow" style={{ color: 'var(--accent-purple)'}}>Join Our World</h2>
             <div className="flex justify-center gap-4 flex-wrap">
-                 <Link href="/about" className="text-lg font-semibold hover:text-accent-pink transition-colors">Our Dev Story</Link>
-                 <span className="text-gray-600">|</span>
+                 <Link href="/about" className="text-lg font-semibold hover:text-accent-pink transition-colors">Our Dev Story</Link>                 <span className="text-gray-600">|</span>
                  <Link href="/ad-studio" className="text-lg font-semibold hover:text-accent-pink transition-colors">Ad Studio</Link>
                  <span className="text-gray-600">|</span>
                  <Link href="/hiring" className="text-lg font-semibold hover:text-accent-pink transition-colors">We're Hiring</Link>

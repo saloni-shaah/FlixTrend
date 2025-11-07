@@ -78,6 +78,10 @@ module.exports = {
           'from': { width: '0' },
           'to': { width: '100%' },
         },
+        'shimmer': {
+          '0%, 100%': { backgroundPosition: '0% 50%' },
+          '50%': { backgroundPosition: '100% 50%' },
+        },
       },
       animation: {
         'fade-in': 'fade-in 0.5s ease-out forwards',
@@ -91,6 +95,7 @@ module.exports = {
         'slide-in-right': 'slide-in-right 0.5s ease-out both',
         'ripple': 'ripple 0.6s linear',
         'typing': 'typing 2s steps(40, end) 1s 1 normal both',
+        'shimmer': 'shimmer 10s ease-in-out infinite',
       },
     },
   },
