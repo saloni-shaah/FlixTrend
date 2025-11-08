@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
@@ -10,6 +9,7 @@ import { Music, ShieldCheck, Video, MessageSquare, Flame } from "lucide-react";
 import { FaInstagram, FaYoutube, FaFacebook } from "react-icons/fa6";
 import { FaXTwitter } from 'react-icons/fa6';
 import Head from 'next/head';
+import '@fontsource/cinzel';
 
 
 export default function LandingPage() {
@@ -169,7 +169,16 @@ export default function LandingPage() {
             box-shadow: 0 0 20px var(--glow-color, #fff), 0 0 40px var(--glow-color, #fff), 0 0 60px var(--glow-color, #fff);
         }
         .text-glow {
-            text-shadow: 0 0 8px currentColor;
+            text-shadow: 0 0 8px currentColor, 0 0 20px #fff;
+        }
+        .font-calligraphy {
+            font-family: 'Great Vibes', cursive;
+        }
+        .font-tagline {
+            font-family: 'Cinzel', serif;
+        }
+        .text-glow-variant {
+            text-shadow: 0 0 8px currentColor, 0 0 20px #BF00FF;
         }
       `}</style>
       <div className="min-h-screen font-body relative">
@@ -201,11 +210,19 @@ export default function LandingPage() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.8, delay: 0.2 }}
-                    className="text-4xl md:text-5xl font-headline font-bold max-w-2xl bg-gradient-to-r from-accentPink to-accentCyan text-transparent bg-clip-text animate-shimmer"
-                    style={{ backgroundSize: '200% auto' }}
+                    className="font-tagline text-4xl md:text-5xl font-bold max-w-2xl text-glow"
+                    style={{ color: '#FF3CAC' }}
                 >
-                    FlixTrend – The Future of Social, Built for Gen-Z. Secure. Creative. Connected.
+                    where trend finds you first
                 </motion.h1>
+                <motion.p 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8, delay: 0.3 }}
+                    className="font-calligraphy text-2xl md:text-3xl text-accent-cyan text-glow-variant"
+                >
+                    India's own and its first secure social media
+                </motion.p>
 
                 <motion.div 
                     initial={{ opacity: 0, y: 20 }}
@@ -214,7 +231,6 @@ export default function LandingPage() {
                     className="flex flex-col md:flex-row gap-4 mt-4">
                      <Link href="/signup" className="btn-glow px-8 py-3 rounded-full bg-accent-pink text-white font-bold text-lg hover:scale-105 transition-transform" style={{'--glow-color': '#FF3CAC'} as React.CSSProperties}>Sign Up</Link>
                     <Link href="/login" className="btn-glow px-8 py-3 rounded-full bg-accent-purple text-white font-bold text-lg hover:scale-105 transition-transform" style={{'--glow-color': '#BF00FF'} as React.CSSProperties}>Log In</Link>
-                     <Link href="/guest" className="btn-glow px-8 py-3 rounded-full border-2 border-accent-cyan text-white font-bold text-lg hover:bg-accent-cyan hover:text-black transition-all" style={{'--glow-color': '#00F0FF'} as React.CSSProperties}>Continue as Guest</Link>
                 </motion.div>
                  <motion.p 
                     initial={{ opacity: 0, y: 20 }}
@@ -258,7 +274,7 @@ export default function LandingPage() {
                 initial={{ opacity: 0, scale: 0.8 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true, amount: 0.5 }}
-                className="flex items-center justify-center gap-2 font-bold text-accent-cyan text-glow">
+                className="flex items-center justify-center gap-2 font-bold text-accent-cyan text-glow-variant">
                 <ShieldCheck size={40} />
                 <span className="text-xl">Powered by Voltix Security</span>
             </motion.div>
@@ -268,16 +284,15 @@ export default function LandingPage() {
         <section className="py-12 px-4 text-center">
              <h2 className="text-4xl font-headline font-bold text-center mb-8 text-glow" style={{ color: 'var(--accent-purple)'}}>Join Our World</h2>
             <div className="flex justify-center gap-4 flex-wrap">
-                 <Link href="/about" className="text-lg font-semibold hover:text-accent-pink transition-colors">Our Dev Story</Link>                 <span className="text-gray-600">|</span>
-                 <Link href="/ad-studio" className="text-lg font-semibold hover:text-accent-pink transition-colors">Ad Studio</Link>
+                 <Link href="/about" className="text-lg font-semibold hover:text-accent-pink transition-colors">Our Dev Story</Link>
                  <span className="text-gray-600">|</span>
-                 <Link href="/hiring" className="text-lg font-semibold hover:text-accent-pink transition-colors">We're Hiring</Link>
+                 <Link href="/ad-studio" className="text-lg font-semibold hover:text-accent-pink transition-colors">Ad Studio</Link>
             </div>
         </section>
 
         {/* Footer */}
         <footer className="w-full py-12 bg-black/30 text-center flex flex-col gap-8 items-center mt-8 border-t border-accent-cyan/10">
-            <h2 className="font-calligraphy text-7xl md:text-8xl font-bold bg-gradient-to-r from-accent-pink to-accent-cyan bg-clip-text text-transparent text-glow opacity-70">
+            <h2 className="font-calligraphy text-7xl md:text-8xl font-bold text-white text-glow-variant">
               FlixTrend
             </h2>
             <div className="flex gap-8">

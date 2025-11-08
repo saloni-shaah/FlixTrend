@@ -78,9 +78,9 @@ module.exports = {
           'from': { width: '0' },
           'to': { width: '100%' },
         },
-        'shimmer': {
-          '0%, 100%': { backgroundPosition: '0% 50%' },
-          '50%': { backgroundPosition: '100% 50%' },
+        shimmer: {
+          '0%, 100%': { 'background-position': '0% 50%' },
+          '50%': { 'background-position': '100% 50%' },
         },
       },
       animation: {
@@ -95,7 +95,7 @@ module.exports = {
         'slide-in-right': 'slide-in-right 0.5s ease-out both',
         'ripple': 'ripple 0.6s linear',
         'typing': 'typing 2s steps(40, end) 1s 1 normal both',
-        'shimmer': 'shimmer 10s ease-in-out infinite',
+        'gradient-shimmer': 'shimmer 4s linear infinite',
       },
     },
   },

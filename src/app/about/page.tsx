@@ -16,7 +16,6 @@ export default function AboutPage() {
           <span className="font-headline text-2xl text-accent-cyan font-bold tracking-wide">FlixTrend</span>
         </Link>
         <div className="flex gap-6 items-center">
-          <Link href="/guest" className="px-5 py-2 rounded-full bg-accent-pink text-white font-bold shadow-fab-glow hover:scale-105 transition-all">Guest Feed</Link>
           <Link href="/login" className="px-5 py-2 rounded-full border-2 border-accent-cyan text-accent-cyan font-bold bg-black/30 hover:bg-accent-cyan hover:text-primary transition-all">Log In</Link>
         </div>
       </nav>
