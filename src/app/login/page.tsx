@@ -1,11 +1,13 @@
 
 "use client";
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
+import { useSearchParams } from 'next/navigation';
 import Link from "next/link";
 import { auth } from "@/utils/firebaseClient";
-import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
+import { signInWithEmailAndPassword, sendPasswordResetEmail, sendSignInLinkToEmail } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import LoginWithEmail from "./LoginWithEmail"; // Import the new component
 
 function ForgotPasswordModal({ onClose }: { onClose: () => void }) {
   const [email, setEmail] = useState("");
@@ -25,12 +27,9 @@ function ForgotPasswordModal({ onClose }: { onClose: () => void }) {
 
     setLoading(true);
     try {
-      // Firebase handles the link generation and sending via its backend.
-      // The user will receive an email with a link to reset their password.
       await sendPasswordResetEmail(auth, email);
       setSuccess("Password reset email sent! Please check your inbox (and spam folder).");
     } catch (err: any) {
-      // Provide more user-friendly error messages
       if (err.code === 'auth/user-not-found') {
         setError("No account found with that email address.");
       } else {
@@ -78,12 +77,14 @@ function ForgotPasswordModal({ onClose }: { onClose: () => void }) {
   )
 }
 
-export default function LoginPage() {
+function LoginPageContent() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [passwordlessLoading, setPasswordlessLoading] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -97,6 +98,27 @@ export default function LoginPage() {
       setError(err.message);
     }
     setLoading(false);
+  };
+
+  const handlePasswordlessLogin = async () => {
+    if (!email) {
+      setError("Please enter your email to receive a sign-in link.");
+      return;
+    }
+    setError("");
+    setPasswordlessLoading(true);
+    const actionCodeSettings = {
+      url: `${window.location.origin}/login?finish=true`,
+      handleCodeInApp: true,
+    };
+    try {
+      await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+      window.localStorage.setItem('emailForSignIn', email);
+      alert('A sign-in link has been sent to your email address.');
+    } catch (err: any) {
+      setError(err.message);
+    }
+    setPasswordlessLoading(false);
   };
 
   return (
@@ -119,14 +141,22 @@ export default function LoginPage() {
             onChange={e => setEmail(e.target.value)}
             required
           />
-          <input
-            type="password"
-            placeholder="Password"
-            className="input-glass w-full"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            required
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Password"
+              className="input-glass w-full"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-white"
+            >
+              {showPassword ? "Hide" : "Show"}
+            </button>
+          </div>
         </div>
         <div className="text-right -mt-2">
             <button 
@@ -147,6 +177,21 @@ export default function LoginPage() {
         >
           {loading ? "Logging in..." : "Login"}
         </motion.button>
+        <div className="relative flex py-2 items-center">
+            <div className="flex-grow border-t border-gray-600"></div>
+            <span className="flex-shrink mx-4 text-gray-400">Or</span>
+            <div className="flex-grow border-t border-gray-600"></div>
+        </div>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          type="button"
+          onClick={handlePasswordlessLogin}
+          className="btn-glass bg-accent-cyan/80 text-black"
+          disabled={passwordlessLoading}
+        >
+          {passwordlessLoading ? "Sending link..." : "Login with Email Link"}
+        </motion.button>
         <div className="text-center mt-2">
           <span className="text-gray-400">Don't have an account? </span>
           <Link href="/signup" className="text-accent-cyan hover:underline">Sign up</Link>
@@ -154,5 +199,16 @@ export default function LoginPage() {
       </motion.form>
       {showForgotPassword && <ForgotPasswordModal onClose={() => setShowForgotPassword(false)} />}
     </div>
+  );
+}
+
+export default function LoginPage() {
+  const searchParams = useSearchParams();
+  const finish = searchParams.get('finish');
+
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      {finish ? <LoginWithEmail /> : <LoginPageContent />}
+    </Suspense>
   );
 }

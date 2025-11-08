@@ -1,69 +1,77 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
     function isSignedIn() {
       return request.auth != null;
     }
-    function isUser(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
 
-    // Users: Can read anyone's public profile, but can only write to their own.
-    match /users/{userId} {
-      allow read: if true;
-      allow write: if isUser(userId);
-
-      // Subcollections for users
-      allow read, write: if isUser(userId);
-    }
-    
-    // Notifications: Users can only access their own notifications.
-    match /notifications/{userId}/{document=**} {
-      allow read, write: if isUser(userId);
-    }
-
-    // Posts, Flashes, Songs, Playlists, Collections:
-    // Logged-in users can read all. Users can only create their own.
-    // Users can only update/delete their own posts.
-    match /{path=**}/{docId} {
+    // Users: Read any profile, write to your own.
+    match /users/{userId}/{documents=**} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow write: if request.auth.uid == userId;
     }
 
-    // Comments, Stars, Relays, Poll Votes (subcollections of posts)
-    // Logged-in users can read/write to any post's subcollections.
-    // Deletes are restricted to the owner of the subcollection item.
-    match /posts/{postId}/{subcollection}/{docId} {
+    // Posts: main document
+    match /posts/{postId} {
       allow read, create: if isSignedIn();
-      allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+      // Allow update if user is the owner OR if they are just incrementing the view count.
+      allow update: if isSignedIn() && (
+        (request.auth.uid == resource.data.userId) || 
+        (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewCount']) &&
+          request.resource.data.viewCount == resource.data.viewCount + 1
+        )
+      );
+      allow delete: if isSignedIn() && request.auth.uid == resource.data.userId;
+    }
+
+    // Posts: subcollections (comments, likes, etc.)
+    match /posts/{postId}/{subcollection}/{docId} {
+        allow read, create: if isSignedIn();
+        allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // Flashes: main document
+    match /flashes/{flashId} {
+      allow read, create: if isSignedIn();
+      // Allow update if user is the owner OR if they are just incrementing the view count.
+      allow update: if isSignedIn() && (
+        (request.auth.uid == resource.data.userId) || 
+        (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewCount']) &&
+          request.resource.data.viewCount == resource.data.viewCount + 1
+        )
+      );
+      allow delete: if isSignedIn() && request.auth.uid == resource.data.userId;
     }
     
-    // Chats (Groups & DMs)
+    // Groups: Allow members to read, admins to update.
     match /groups/{groupId} {
-      // User can read a group's info if they are a member.
-      allow read: if isSignedIn() && resource.data.members[request.auth.uid] != null;
-      // Allow any signed-in user to create a group.
-      allow create: if isSignedIn();
-      // Only admins can update group info.
+      allow read, create: if isSignedIn();
       allow update: if isSignedIn() && request.auth.uid in resource.data.admins;
-      // Only the original creator can delete the group.
       allow delete: if isSignedIn() && resource.data.createdBy == request.auth.uid;
     }
-    
+
+    // Chat Messages
     match /chats/{chatId}/messages/{messageId} {
-        // For group chats, check membership. For DMs, check involvement.
-        allow read, create: if isSignedIn() && (
-            (exists(/databases/$(database)/documents/groups/$(chatId)) && get(/databases/$(database)/documents/groups/$(chatId)).data.members[request.auth.uid] != null) ||
-            (request.auth.uid in chatId.split('_'))
-        );
-        // Users can only delete their own messages.
-        allow delete: if isSignedIn() && resource.data.sender == request.auth.uid;
-        allow update: if isSignedIn() && resource.data.sender == request.auth.uid;
+      function isParticipant() {
+        let isDmParticipant = request.auth.uid in chatId.split('_');
+        let isGroupParticipant = exists(/databases/$(database)/documents/groups/$(chatId)) && 
+                                 request.auth.uid in get(/databases/$(database)/documents/groups/$(chatId)).data.members;
+        return isDmParticipant || isGroupParticipant;
+      }
+
+      allow read, create: if isSignedIn() && isParticipant();
+      allow update: if isSignedIn() && isParticipant();
+      allow delete: if isSignedIn() && resource.data.sender == request.auth.uid;
+    }
+
+    // Songs: Read-only.
+    match /songs/{songId} {
+        allow read: if isSignedIn();
+        allow write: if false;
     }
   }
 }
