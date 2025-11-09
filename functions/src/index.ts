@@ -47,7 +47,7 @@ export const onNewUserCreate = functions.auth.user().onCreate(async (user) => {
 
         // --- Handle Referral Logic ---
         // This part requires the client to set the 'referredBy' field on the user doc during signup.
-        const newUserDocSnap = await getDoc(userRef); // Re-fetch to see data from client-side write if any
+        const newUserDocSnap = await userRef.get(); // Re-fetch to see data from client-side write if any
         const newUserData = newUserDocSnap.data();
 
         if (newUserData?.referredBy) {
@@ -271,8 +271,7 @@ export const onCallCreated = functions.firestore
 
 
 /**
- * Deletes a post and all its associated subcollections (comments, stars, relays).
- * This ensures data integrity when a post is removed.
+ * [UPGRADED & FIXED] Deletes a post, its subcollections, and associated media from Storage.
  * This is an HTTPS Callable function.
  */
 export const deletePost = onCall(async (request) => {
@@ -293,16 +292,34 @@ export const deletePost = onCall(async (request) => {
     const postData = postDoc.data();
     const isOwner = postData?.userId === uid;
 
-    // Fetch the admin user's document to check their role
     const adminUserDoc = await admin.firestore().collection('users').doc(uid).get();
-    const adminUserData = adminUserDoc.data();
-    const isAdmin = adminUserData?.role?.includes('founder') || adminUserData?.role?.includes('developer');
+    const isAdmin = adminUserDoc.data()?.role?.includes('founder');
 
     if (!isOwner && !isAdmin) {
         throw new HttpsError("permission-denied", "You do not have permission to delete this post.");
     }
 
     try {
+        // ---- CORRECTED: Delete associated media from Firebase Storage ----
+        if (postData?.mediaUrl && Array.isArray(postData.mediaUrl) && postData.mediaUrl.length > 0) {
+            const bucket = storage.bucket();
+            for (const url of postData.mediaUrl) {
+                try {
+                    // Decode the URL and extract the path after the bucket name
+                    const decodedUrl = decodeURIComponent(url);
+                    const filePath = decodedUrl.substring(decodedUrl.indexOf('/o/') + 3, decodedUrl.indexOf('?alt=media'));
+                    
+                    if (filePath) {
+                         await bucket.file(filePath).delete();
+                         logger.info(`Successfully deleted media file: ${filePath}`);
+                    }
+                } catch (storageError) {
+                    logger.error(`Failed to delete media file ${url} for post ${postId}:`, storageError);
+                }
+            }
+        }
+
+        // ---- Existing Logic to delete subcollections ----
         const deleteSubcollection = async (collectionRef: admin.firestore.CollectionReference) => {
              const snapshot = await collectionRef.limit(500).get();
              if (snapshot.empty) return;
@@ -318,12 +335,60 @@ export const deletePost = onCall(async (request) => {
         
         await postRef.delete();
         
-        return { success: true, message: `Post ${postId} deleted successfully.` };
+        return { success: true, message: `Post ${postId} and associated media deleted successfully.` };
     } catch (error) {
-        logger.error("Error deleting post and subcollections:", error);
-        throw new HttpsError("internal", "An error occurred while deleting the post.");
+        logger.error("Error deleting post:", error);
+        throw new HttpsError("internal", "An error occurred while deleting the post. Please check the logs.");
     }
 });
+
+/**
+ * [FIXED] Updates a post's data in Firestore.
+ * This is an HTTPS Callable function.
+ */
+export const updatePost = onCall(async (request) => {
+    const { postId, newData } = request.data;
+    const uid = request.auth?.uid;
+
+    if (!uid) {
+        throw new HttpsError("unauthenticated", "You must be logged in to update a post.");
+    }
+
+    if (!postId || !newData) {
+        throw new HttpsError("invalid-argument", "The function must be called with 'postId' and 'newData'.");
+    }
+
+    const postRef = admin.firestore().collection("posts").doc(postId);
+    const postDoc = await postRef.get();
+
+    if (!postDoc.exists) {
+        throw new HttpsError("not-found", "Post not found.");
+    }
+
+    if (postDoc.data()?.userId !== uid) {
+        throw new HttpsError("permission-denied", "You do not have permission to update this post.");
+    }
+
+    try {
+        // Added 'content' to the list of allowed fields
+        const allowedFields = ['title', 'caption', 'content', 'hashtags', 'mentions', 'description', 'mood', 'location'];
+        const sanitizedData: { [key: string]: any } = {};
+        for (const key of allowedFields) {
+            if (newData[key] !== undefined) {
+                sanitizedData[key] = newData[key];
+            }
+        }
+        sanitizedData.updatedAt = FieldValue.serverTimestamp();
+
+        await postRef.update(sanitizedData);
+        
+        return { success: true, message: `Post ${postId} updated successfully.` };
+    } catch (error) {
+        logger.error("Error updating post:", error);
+        throw new HttpsError("internal", "An error occurred while updating the post.");
+    }
+});
+
 
 /**
  * Deletes a user's account and all associated data.
@@ -386,8 +451,8 @@ export const cleanupExpiredFlashes = functions.pubsub.schedule('every 1 hours').
         if (flashData.mediaUrl) {
             try {
                 // Extract file path from the full URL
-                const fileUrl = new URL(flashData.mediaUrl);
-                const filePath = decodeURIComponent(fileUrl.pathname.split('/').pop() || '');
+                const decodedUrl = decodeURIComponent(flashData.mediaUrl);
+                const filePath = decodedUrl.substring(decodedUrl.indexOf('/o/') + 3, decodedUrl.indexOf('?alt=media'));
                 if (filePath) {
                     const fileRef = storage.bucket().file(filePath);
                     deletePromises.push(fileRef.delete().catch(err => {
@@ -440,7 +505,7 @@ export const sendScheduledPostNotifications = functions.pubsub.schedule('every 1
         const creatorUsername = post.username;
 
         // 1. Send reminder notification to the creator
-        const creatorDoc = await getDoc(doc(db, 'users', creatorId));
+        const creatorDoc = await doc(db, 'users', creatorId).get();
         if (creatorDoc.exists() && creatorDoc.data()?.fcmToken) {
             const payload = {
                 notification: {
@@ -458,7 +523,7 @@ export const sendScheduledPostNotifications = functions.pubsub.schedule('every 1
         
         const followerTokens: string[] = [];
         for(const followerDoc of followersSnap.docs) {
-            const followerUserDoc = await getDoc(doc(db, 'users', followerDoc.id));
+            const followerUserDoc = await doc(db, 'users', followerDoc.id).get();
             if(followerUserDoc.exists() && followerUserDoc.data()?.fcmToken) {
                 followerTokens.push(followerUserDoc.data()!.fcmToken);
             }

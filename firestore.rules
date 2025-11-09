@@ -13,6 +13,12 @@ service cloud.firestore {
       allow write: if request.auth.uid == userId;
     }
 
+    // Ad Campaigns & Creatives: Public read-only
+    match /adCampaigns/{campaignId}/{documents=**} {
+        allow get, list: if true;
+        allow write: if false; // Or more specific admin rules
+    }
+
     // Posts: main document
     match /posts/{postId} {
       allow read, create: if isSignedIn();
