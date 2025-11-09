@@ -24,8 +24,9 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
         setUploadingFiles(prev => ({ ...prev, [previewUrl]: { progress: 0 } }));
 
         try {
-            const fileName = `${user.uid}-${Date.now()}-${file.name}`;
-            const fileRef = storageRef(storage, `user_uploads/${fileName}`);
+            // CORRECTED FILE PATH LOGIC
+            const fileName = `${Date.now()}-${file.name}`;
+            const fileRef = storageRef(storage, `user_uploads/${user.uid}/${fileName}`);
             
             const snapshot = await uploadBytes(fileRef, file);
             const downloadURL = await getDownloadURL(snapshot.ref);

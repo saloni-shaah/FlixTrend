@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils"
 import { InFeedVideoPlayer } from './video/InFeedVideoPlayer';
 import { PostActions } from './PostActions';
 import { StreamViewer } from './StreamViewer';
-// import { EditPostModal } from './squad/EditPostModal'; // Corrected Path
+import { EditPostModal } from './squad/EditPostModal'; // Corrected Path
 
 
 // START: Copied DropdownMenu components
@@ -283,9 +283,9 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
           </div>
       )}
 
-      {/* {showEdit && (
+      {showEdit && (
         <EditPostModal post={post} onClose={() => setShowEdit(false)} />
-      )} */}
+      )}
 
       {renderPostContent(post)}
       <PostActions post={post} onCommentClick={() => setShowComments(true)} />
