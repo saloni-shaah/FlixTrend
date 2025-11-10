@@ -5,6 +5,7 @@ import { Camera, X } from 'lucide-react';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { getFirestore, doc, updateDoc } from "firebase/firestore";
 import { auth, app } from '@/utils/firebaseClient';
+import { updateProfile } from 'firebase/auth';
 
 const db = getFirestore(app);
 const storage = getStorage(app);
@@ -73,6 +74,12 @@ export function EditProfileModal({ profile, onClose }: { profile: any; onClose: 
 
             const docRef = doc(db, "users", user.uid);
             await updateDoc(docRef, dataToUpdate);
+
+            // Also update the Firebase Auth profile
+            await updateProfile(user, {
+                displayName: dataToUpdate.name || user.displayName,
+                photoURL: dataToUpdate.avatar_url || user.photoURL,
+            });
             
             onClose();
 

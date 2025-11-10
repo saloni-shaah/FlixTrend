@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import { getFirestore, collection, onSnapshot, addDoc, serverTimestamp, deleteDoc, updateDoc, doc, setDoc, runTransaction } from "firebase/firestore";
+import { getFirestore, collection, onSnapshot, addDoc, serverTimestamp, deleteDoc, updateDoc, doc, setDoc, runTransaction, deleteField } from "firebase/firestore";
 import { Repeat2, Star, Share, MessageCircle, Bookmark, Download } from "lucide-react";
 import { auth, app } from '@/utils/firebaseClient';
 import { ShareModal } from './ShareModal';
@@ -24,53 +24,63 @@ export function PostActions({ post, onCommentClick, isShortVibe = false }: { pos
     const currentUser = auth.currentUser;
 
     React.useEffect(() => {
-        if (post.id) {
-            const unsubLikes = onSnapshot(collection(db, "posts", post.id, "stars"), (snap) => {
-                setLikes(snap.size);
-                if (currentUser) {
-                    setUserHasLiked(snap.docs.some(doc => doc.id === currentUser.uid));
-                }
-            });
-            const unsubRelays = onSnapshot(collection(db, "posts", post.id, "relays"), (snap) => setRelays(snap.size));
-            const unsubComments = onSnapshot(collection(db, "posts", post.id, "comments"), (snap) => setCommentsCount(snap.size));
-            
-            isPostDownloaded(post.id).then(setIsDownloaded);
+        if (!post.id) return;
 
-            return () => {
-                unsubLikes();
-                unsubRelays();
-                unsubComments();
-            };
-        }
+        // Listener for the main post document to get likes
+        const postRef = doc(db, "posts", post.id);
+        const unsubPost = onSnapshot(postRef, (doc) => {
+            const data = doc.data();
+            if (data && data.likes) {
+                const likesMap = data.likes;
+                // Count only keys with a true value
+                setLikes(Object.values(likesMap).filter(v => v === true).length);
+                if (currentUser) {
+                    setUserHasLiked(!!likesMap[currentUser.uid]);
+                }
+            } else {
+                setLikes(0);
+                setUserHasLiked(false);
+            }
+        });
+
+        // Keep existing listeners for relays and comments subcollections
+        const unsubRelays = onSnapshot(collection(db, "posts", post.id, "relays"), (snap) => setRelays(snap.size));
+        const unsubComments = onSnapshot(collection(db, "posts", post.id, "comments"), (snap) => setCommentsCount(snap.size));
+        
+        isPostDownloaded(post.id).then(setIsDownloaded);
+
+        return () => {
+            unsubPost();
+            unsubRelays();
+            unsubComments();
+        };
     }, [post.id, currentUser]);
 
     const handleLike = async (e: React.MouseEvent) => {
         e.stopPropagation();
         if (!currentUser) return;
-        const likeRef = doc(db, "posts", post.id, "stars", currentUser.uid);
-        if (userHasLiked) {
-            await deleteDoc(likeRef);
-        } else {
-            await setDoc(likeRef, {
-                userId: currentUser.uid,
-                username: currentUser.displayName,
-                createdAt: serverTimestamp(),
-            });
+        
+        const postRef = doc(db, "posts", post.id);
+        const userId = currentUser.uid;
 
-            // Send notification if not the post owner
-            if (post.userId !== currentUser.uid) {
-                const notifRef = collection(db, "users", post.userId, "notifications");
-                await addDoc(notifRef, {
-                    type: 'like',
-                    fromUserId: currentUser.uid,
-                    fromUsername: currentUser.displayName,
-                    fromAvatarUrl: currentUser.photoURL,
-                    postId: post.id,
-                    postContent: post.content?.substring(0, 50) || 'your post',
-                    createdAt: serverTimestamp(),
-                    read: false,
-                });
-            }
+        // Update the 'likes' map on the post document directly
+        await updateDoc(postRef, {
+            [`likes.${userId}`]: userHasLiked ? deleteField() : true
+        });
+
+        // Send notification if liking (not unliking) and not the post owner
+        if (!userHasLiked && post.userId !== currentUser.uid) {
+            const notifRef = collection(db, "users", post.userId, "notifications");
+            await addDoc(notifRef, {
+                type: 'like',
+                fromUserId: currentUser.uid,
+                fromUsername: currentUser.displayName,
+                fromAvatarUrl: currentUser.photoURL,
+                postId: post.id,
+                postContent: post.content?.substring(0, 50) || 'your post',
+                createdAt: serverTimestamp(),
+                read: false,
+            });
         }
     };
     
