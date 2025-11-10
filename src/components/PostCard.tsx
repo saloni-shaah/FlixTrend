@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { getFirestore, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, deleteDoc, updateDoc, doc as fsDoc, setDoc, getDoc, runTransaction } from "firebase/firestore";
 import { FaPlay, FaRegComment, FaExclamationTriangle, FaVolumeMute, FaUserSlash, FaLink, FaMusic } from "react-icons/fa";
-import { Repeat2, Star, Share, MessageCircle, Bookmark, MapPin, Smile, Download, X, MoreVertical, Check, ChevronRight, Circle, ThumbsUp, ThumbsDown, Edit, Trash, Eye } from "lucide-react";
+import { Repeat2, Star, Share, MessageCircle, Bookmark, MapPin, Smile, Download, X, MoreVertical, Check, ChevronRight, Circle, ThumbsUp, ThumbsDown, Edit, Trash, Eye, AlertCircle } from "lucide-react";
 import { auth, app } from '@/utils/firebaseClient';
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -20,8 +20,7 @@ import { cn } from "@/lib/utils"
 import { InFeedVideoPlayer } from './video/InFeedVideoPlayer';
 import { PostActions } from './PostActions';
 import { StreamViewer } from './StreamViewer';
-import { EditPostModal } from './squad/EditPostModal'; // Corrected Path
-
+import { EditPostModal } from './squad/EditPostModal';
 
 // START: Copied DropdownMenu components
 const DropdownMenu = DropdownMenuPrimitive.Root
@@ -263,7 +262,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
             <div className="flex flex-col gap-4 self-end pointer-events-auto">
                 <PostActions post={post} isShortVibe={true} onCommentClick={() => setShowComments(true)} />
             </div>
-            {/* {showComments && <CommentModal postId={post.id} postAuthorId={post.userId} onClose={() => setShowComments(false)} post={post} />} */}
+            {showComments && <CommentModal postId={post.id} postAuthorId={post.userId} onClose={() => setShowComments(false)} post={post} />}
         </div>
     );
   }
@@ -290,11 +289,146 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
       {renderPostContent(post)}
       <PostActions post={post} onCommentClick={() => setShowComments(true)} />
       
-      {/* {showComments && <CommentModal postId={post.id} postAuthorId={post.userId} onClose={() => setShowComments(false)} post={post} />} */}
+      {showComments && <CommentModal postId={post.id} postAuthorId={post.userId} onClose={() => setShowComments(false)} post={post} />}
 
     </motion.div>
     </>
   );
 }
 
-// ... (rest of the file remains the same, omitting for brevity)
+function CommentModal({ postId, postAuthorId, onClose, post }: { postId: string; postAuthorId: string; onClose: () => void; post: any }) {
+  const [comments, setComments] = React.useState<any[]>([]);
+
+  React.useEffect(() => {
+    const q = query(collection(db, "posts", postId, "comments"), orderBy("createdAt", "asc"));
+    const unsub = onSnapshot(q, (snapshot) => {
+      setComments(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+    });
+    return () => unsub();
+  }, [postId]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="glass-card p-6 w-full max-w-md relative flex flex-col">
+        <button onClick={onClose} className="absolute top-2 right-2 text-accent-pink text-2xl">&times;</button>
+        <h3 className="text-xl font-headline font-bold mb-4 text-brand-gold">Comments</h3>
+        <div className="flex flex-col gap-3 max-h-60 overflow-y-auto mb-4 p-2">
+          {comments.length === 0 ? (
+            <div className="text-muted-foreground text-center">No comments yet. Be the first!</div>
+          ) : (
+            comments.map((comment) => (
+              <Comment key={comment.id} comment={comment} />
+            ))
+          )}
+        </div>
+        <CommentForm postId={postId} postAuthorId={postAuthorId} onCommentPosted={() => {}} post={post} />
+      </div>
+    </div>
+  );
+}
+
+function Comment({ comment }: { comment: any; }) {
+  const [userData, setUserData] = React.useState<any>(null);
+
+  React.useEffect(() => {
+    async function fetchUserData() {
+      if (comment.username && comment.avatar_url) {
+        setUserData({ username: comment.username, avatar_url: comment.avatar_url, displayName: comment.displayName });
+      } else if (comment.userId) {
+        const userDoc = await getDoc(fsDoc(db, "users", comment.userId));
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          setUserData({
+            username: data.username,
+            avatar_url: data.avatar_url,
+            displayName: data.name,
+          });
+        }
+      }
+    }
+    fetchUserData();
+  }, [comment.userId, comment.username, comment.avatar_url, comment.displayName]);
+
+  const initials = userData?.displayName?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || userData?.username?.slice(0, 2).toUpperCase() || "U";
+  
+  return (
+    <div className="flex gap-3">
+      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green flex items-center justify-center font-bold text-sm overflow-hidden shrink-0">
+          {userData?.avatar_url ? <img src={userData.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : <span className="text-white">{initials}</span>}
+      </div>
+      <div className="flex-1">
+        <div className="rounded-xl px-3 py-2 font-body">
+          <div className="flex items-center gap-2">
+            <Link href={`/squad/${comment.userId}`} className="font-bold text-brand-gold text-sm hover:underline">@{userData?.username || 'user'}</Link>
+            <span className="text-xs text-muted-foreground">{comment.createdAt?.toDate?.().toLocaleString?.() || ""}</span>
+          </div>
+          <p className="text-base">{comment.text}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CommentForm({ postId, postAuthorId, onCommentPosted, post }: { postId: string; postAuthorId: string; onCommentPosted: () => void; post: any; }) {
+  const [newComment, setNewComment] = React.useState("");
+  const [loading, setLoading] = React.useState(false);
+  const user = auth.currentUser;
+
+  const handleAddComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newComment.trim() || !user) return;
+    setLoading(true);
+
+    const userDoc = await getDoc(fsDoc(db, "users", user.uid));
+    const userData = userDoc.data() || { name: user.displayName, username: user.displayName, avatar_url: user.photoURL };
+
+    const commentData: any = {
+      text: newComment,
+      userId: user.uid,
+      displayName: userData.name || user.displayName,
+      username: userData.username || user.displayName,
+      avatar_url: userData.avatar_url || user.photoURL,
+      createdAt: serverTimestamp(),
+    };
+
+    await addDoc(collection(db, "posts", postId, "comments"), commentData);
+    
+    if (postAuthorId !== user.uid) {
+        const notifRef = collection(db, "users", postAuthorId, "notifications");
+        await addDoc(notifRef, {
+            type: 'comment',
+            fromUserId: user.uid,
+            fromUsername: userData.username || user.displayName,
+            fromAvatarUrl: userData.avatar_url || user.photoURL,
+            postId: postId,
+            postContent: newComment.substring(0, 50),
+            createdAt: serverTimestamp(),
+            read: false,
+        });
+    }
+
+    setNewComment("");
+    setLoading(false);
+    onCommentPosted();
+  };
+  
+  return (
+    <form onSubmit={handleAddComment} className="flex gap-2">
+      <input
+        type="text"
+        className="input-glass flex-1"
+        placeholder="Add a comment..."
+        value={newComment}
+        onChange={e => setNewComment(e.target.value)}
+        disabled={loading}
+      />
+      <button
+        type="submit"
+        className="btn-glass px-4"
+        disabled={loading || !newComment.trim()}
+      >
+        Post
+      </button>
+    </form>
+  )
+}

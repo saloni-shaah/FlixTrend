@@ -22,9 +22,10 @@ service cloud.firestore {
     // Posts: main document
     match /posts/{postId} {
       allow read, create: if isSignedIn();
-      // Allow update if user is the owner OR if they are just incrementing the view count.
+      // Allow update if user is the owner OR if they are just liking/unliking or incrementing view count.
       allow update: if isSignedIn() && (
         (request.auth.uid == resource.data.userId) || 
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes'])) ||
         (
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewCount']) &&
           request.resource.data.viewCount == resource.data.viewCount + 1
