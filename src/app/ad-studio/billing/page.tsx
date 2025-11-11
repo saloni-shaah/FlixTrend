@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -128,8 +129,7 @@ export default function BillingPage() {
                 </div>
 
                 <div className="mt-8 flex justify-center">
-                    {/* This div will be populated by the Google Pay button script */}
-                    {/* The data-amount attribute is read by the script to set the transaction total */}
+                   
                     <div id="gpay-container" data-amount={amount}></div>
                 </div>
 

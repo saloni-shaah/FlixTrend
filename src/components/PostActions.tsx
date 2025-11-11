@@ -8,6 +8,8 @@ import { SignalShareModal } from './SignalShareModal';
 import { AddToCollectionModal } from './AddToCollectionModal';
 import { savePostForOffline, isPostDownloaded, removeDownloadedPost } from '@/utils/offline-db';
 import { cn } from "@/lib/utils";
+import { FirestorePermissionError } from '@/firebase/errors';
+import { errorEmitter } from '@/firebase/error-emitter';
 
 const db = getFirestore(app);
 
@@ -26,13 +28,11 @@ export function PostActions({ post, onCommentClick, isShortVibe = false }: { pos
     React.useEffect(() => {
         if (!post.id) return;
 
-        // Listener for the main post document to get likes
         const postRef = doc(db, "posts", post.id);
         const unsubPost = onSnapshot(postRef, (doc) => {
             const data = doc.data();
             if (data && data.likes) {
                 const likesMap = data.likes;
-                // Count only keys with a true value
                 setLikes(Object.values(likesMap).filter(v => v === true).length);
                 if (currentUser) {
                     setUserHasLiked(!!likesMap[currentUser.uid]);
@@ -43,7 +43,6 @@ export function PostActions({ post, onCommentClick, isShortVibe = false }: { pos
             }
         });
 
-        // Keep existing listeners for relays and comments subcollections
         const unsubRelays = onSnapshot(collection(db, "posts", post.id, "relays"), (snap) => setRelays(snap.size));
         const unsubComments = onSnapshot(collection(db, "posts", post.id, "comments"), (snap) => setCommentsCount(snap.size));
         
@@ -63,16 +62,24 @@ export function PostActions({ post, onCommentClick, isShortVibe = false }: { pos
         const postRef = doc(db, "posts", post.id);
         const userId = currentUser.uid;
 
-        // Use dot notation to update a specific field within the map.
-        // This is crucial for security rules that check for changes to specific fields.
-        await updateDoc(postRef, {
+        const dataToUpdate = {
             [`likes.${userId}`]: !userHasLiked
-        });
+        };
 
-        // Send notification if liking (not unliking) and not the post owner
+        updateDoc(postRef, dataToUpdate)
+          .catch(async (serverError) => {
+            const permissionError = new FirestorePermissionError({
+              path: postRef.path,
+              operation: 'update',
+              requestResourceData: dataToUpdate,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+          });
+
+
         if (!userHasLiked && post.userId !== currentUser.uid) {
             const notifRef = collection(db, "users", post.userId, "notifications");
-            await addDoc(notifRef, {
+            addDoc(notifRef, {
                 type: 'like',
                 fromUserId: currentUser.uid,
                 fromUsername: currentUser.displayName,
@@ -81,7 +88,7 @@ export function PostActions({ post, onCommentClick, isShortVibe = false }: { pos
                 postContent: post.content?.substring(0, 50) || 'your post',
                 createdAt: serverTimestamp(),
                 read: false,
-            });
+            }).catch(e => console.error("Error sending notification:", e));
         }
     };
     
@@ -89,22 +96,20 @@ export function PostActions({ post, onCommentClick, isShortVibe = false }: { pos
         e.stopPropagation();
         if (!currentUser) return;
         
-        await runTransaction(db, async (transaction) => {
+        runTransaction(db, async (transaction) => {
             const userRelayRef = doc(db, 'users', currentUser.uid, 'relayedPosts', post.id);
             const postRelayRef = doc(db, 'posts', post.id, 'relays', currentUser.uid);
             
             const userRelayDoc = await transaction.get(userRelayRef);
 
             if (userRelayDoc.exists()) {
-                // To un-relay, just delete the records. We won't support un-relaying for now.
                 return;
             }
 
-            // 1. Create a new "relay" post
             const newRelayPost = {
                 type: 'relay',
                 originalPostId: post.id,
-                originalPost: post, // embed original post data
+                originalPost: post, 
                 userId: currentUser.uid,
                 username: currentUser.displayName,
                 avatar_url: currentUser.photoURL,
@@ -113,16 +118,21 @@ export function PostActions({ post, onCommentClick, isShortVibe = false }: { pos
             };
             transaction.set(doc(collection(db, 'posts')), newRelayPost);
             
-            // 2. Mark that user has relayed this post
             transaction.set(userRelayRef, { relayedAt: serverTimestamp() });
             
-            // 3. Increment relay count on original post
             transaction.set(postRelayRef, {
                 userId: currentUser.uid,
                 username: currentUser.displayName,
                 createdAt: serverTimestamp(),
             });
-        });
+        }).catch(async (serverError) => {
+            const permissionError = new FirestorePermissionError({
+              path: post.id,
+              operation: 'write',
+              requestResourceData: { relay: true },
+            });
+            errorEmitter.emit('permission-error', permissionError);
+          });
     };
 
     const handleDownload = async (e: React.MouseEvent) => {
