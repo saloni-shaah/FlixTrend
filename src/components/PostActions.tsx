@@ -63,9 +63,10 @@ export function PostActions({ post, onCommentClick, isShortVibe = false }: { pos
         const postRef = doc(db, "posts", post.id);
         const userId = currentUser.uid;
 
-        // Update the 'likes' map on the post document directly
+        // Use dot notation to update a specific field within the map.
+        // This is crucial for security rules that check for changes to specific fields.
         await updateDoc(postRef, {
-            [`likes.${userId}`]: userHasLiked ? deleteField() : true
+            [`likes.${userId}`]: !userHasLiked
         });
 
         // Send notification if liking (not unliking) and not the post owner
