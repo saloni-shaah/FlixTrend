@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect } from 'react';
@@ -24,7 +23,7 @@ export function FirebaseErrorListener() {
         variant: "destructive",
         title: "Firestore Security Rule Denied",
         description: (
-          <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
+          <pre className="mt-2 w-full rounded-md bg-slate-950 p-4">
             <code className="text-white whitespace-pre-wrap">{error.message}</code>
           </pre>
         ),

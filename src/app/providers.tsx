@@ -15,7 +15,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <main className="pb-20 pt-6 px-4">{children}</main>
           <GlobalMusicPlayer />
           <AppNavBar />
-          <Script src="/payment.js" strategy="lazyOnload" />
+          
         </AppStateProvider>
     )
 }
