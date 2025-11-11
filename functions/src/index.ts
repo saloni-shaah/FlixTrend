@@ -152,7 +152,6 @@ export const deleteComment = onCall(async (request: any) => {
         throw new HttpsError("not-found", "Comment not found.");
     }
 
-    const postData = postDoc.data()!;
     const commentData = commentDoc.data()!;
 
     // **SECURITY FIX**: Now, only the comment author can delete.

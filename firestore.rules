@@ -13,17 +13,17 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if request.auth.uid == userId;
 
-      // Notifications: Allow any signed-in user to create a notification for another user.
-      // Users can only read their own notifications.
-      match /notifications/{notificationId} {
-        allow read: if request.auth.uid == userId;
-        allow create: if isSignedIn();
-        allow update, delete: if false; // Users shouldn't edit/delete notifications
-      }
-      
-      // Other subcollections can be defined here
+      // This rule manages all subcollections under a user document.
       match /{subcollection}/{docId} {
-        allow read, write: if request.auth.uid == userId;
+        // A user can only read documents from their own subcollections.
+        allow read: if request.auth.uid == userId;
+
+        // Allow write access to a user's own subcollections.
+        // Also, allow any signed-in user to CREATE a notification for another user,
+        // provided they correctly identify themselves in the 'fromUserId' field.
+        allow write: if (request.auth.uid == userId) ||
+                     (subcollection == 'notifications' && request.method == 'create' && 
+                      request.resource.data.fromUserId == request.auth.uid);
       }
     }
 
@@ -36,17 +36,30 @@ service cloud.firestore {
     // Posts: main document
     match /posts/{postId} {
       allow read, create: if isSignedIn();
-      // Allow update if user is the owner OR if they are just liking/unliking or incrementing view count.
+
+      // Allow update for owner, or for specific, controlled actions like liking or view counts.
       allow update: if isSignedIn() && (
-        (request.auth.uid == resource.data.userId) || 
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly([`likes.${request.auth.uid}`])) ||
+        // Case 1: The user is the owner of the post.
+        (request.auth.uid == resource.data.userId) ||
+
+        // Case 2: The user is liking or unliking the post.
+        // This is secure because it checks that ONLY the 'likes' map is changing,
+        // and within that map, ONLY the user's own like status is changing.
+        (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes']) &&
+          request.resource.data.likes.diff(resource.data.get('likes', {})).affectedKeys().hasOnly([request.auth.uid])
+        ) ||
+
+        // Case 3: A view is being incremented.
         (
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewCount']) &&
           request.resource.data.viewCount == resource.data.viewCount + 1
         )
       );
+
       allow delete: if isSignedIn() && request.auth.uid == resource.data.userId;
     }
+
 
     // Posts: subcollections (comments, likes, etc.)
     match /posts/{postId}/{subcollection}/{docId} {

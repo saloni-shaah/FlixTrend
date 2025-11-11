@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteUserAccount = exports.updatePost = exports.deletePost = exports.cleanupExpiredFlashes = exports.onUserDelete = exports.sendNotification = exports.onNewUserCreate = void 0;
+exports.updateComment = exports.deleteComment = exports.deleteUserAccount = exports.updatePost = exports.deletePost = exports.cleanupExpiredFlashes = exports.onUserDelete = exports.sendNotification = exports.onNewUserCreate = void 0;
 const app_1 = require("firebase-admin/app");
 const firestore_1 = require("firebase-admin/firestore");
 const messaging_1 = require("firebase-admin/messaging");
@@ -125,5 +125,53 @@ exports.deleteUserAccount = (0, https_1.onCall)(async (request) => {
     await admin.auth().deleteUser(uid);
     await db.collection('users').doc(uid).delete();
     return { success: true };
+});
+exports.deleteComment = (0, https_1.onCall)(async (request) => {
+    var _a;
+    const uid = (_a = request.auth) === null || _a === void 0 ? void 0 : _a.uid;
+    const { postId, commentId } = request.data;
+    if (!uid) {
+        throw new https_1.HttpsError("unauthenticated", "You must be logged in to delete a comment.");
+    }
+    const postRef = db.collection("posts").doc(postId);
+    const commentRef = postRef.collection("comments").doc(commentId);
+    const postDoc = await postRef.get();
+    const commentDoc = await commentRef.get();
+    if (!postDoc.exists) {
+        throw new https_1.HttpsError("not-found", "Post not found.");
+    }
+    if (!commentDoc.exists) {
+        throw new https_1.HttpsError("not-found", "Comment not found.");
+    }
+    const commentData = commentDoc.data();
+    // **SECURITY FIX**: Now, only the comment author can delete.
+    if (uid !== commentData.userId) {
+        throw new https_1.HttpsError("permission-denied", "You do not have permission to delete this comment.");
+    }
+    await commentRef.delete();
+    await postRef.update({ commentCount: firestore_1.FieldValue.increment(-1) });
+    return { success: true, message: "Comment deleted successfully." };
+});
+exports.updateComment = (0, https_1.onCall)(async (request) => {
+    var _a;
+    const uid = (_a = request.auth) === null || _a === void 0 ? void 0 : _a.uid;
+    const { postId, commentId, newText } = request.data;
+    if (!uid) {
+        throw new https_1.HttpsError("unauthenticated", "You must be logged in to edit a comment.");
+    }
+    if (!newText || typeof newText !== 'string' || newText.trim().length === 0) {
+        throw new https_1.HttpsError("invalid-argument", "The comment text cannot be empty.");
+    }
+    const commentRef = db.collection("posts").doc(postId).collection("comments").doc(commentId);
+    const commentDoc = await commentRef.get();
+    if (!commentDoc.exists) {
+        throw new https_1.HttpsError("not-found", "Comment not found.");
+    }
+    const commentData = commentDoc.data();
+    if (commentData.userId !== uid) {
+        throw new https_1.HttpsError("permission-denied", "You do not have permission to edit this comment.");
+    }
+    await commentRef.update({ text: newText.trim() });
+    return { success: true, message: "Comment updated successfully." };
 });
 //# sourceMappingURL=index.js.map
