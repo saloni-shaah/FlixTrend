@@ -14,7 +14,6 @@ service cloud.firestore {
       allow write: if request.auth.uid == userId;
 
       // Notifications: Allow any signed-in user to create a notification for another user.
-      // This is for likes, comments, follows, etc.
       match /notifications/{notificationId} {
         allow read: if request.auth.uid == userId;
         allow create: if isSignedIn();
