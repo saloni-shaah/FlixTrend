@@ -193,7 +193,7 @@ function LoginPageContent() {
           {passwordlessLoading ? "Sending link..." : "Login with Email Link"}
         </motion.button>
         <div className="text-center mt-2">
-          <span className="text-gray-400">Don't have an account? </span>
+          <span className="text-gray-400">Don\'t have an account? </span>
           <Link href="/signup" className="text-accent-cyan hover:underline">Sign up</Link>
         </div>
       </motion.form>
@@ -202,13 +202,22 @@ function LoginPageContent() {
   );
 }
 
-export default function LoginPage() {
-  const searchParams = useSearchParams();
-  const finish = searchParams.get('finish');
+// This new component contains the logic that must be suspended.
+function LoginHandler() {
+    const searchParams = useSearchParams();
+    const finish = searchParams.get('finish');
 
+    if (finish) {
+        return <LoginWithEmail />;
+    }
+    return <LoginPageContent />;
+}
+
+// The main page component now simply wraps the handler in Suspense.
+export default function LoginPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-      {finish ? <LoginWithEmail /> : <LoginPageContent />}
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <LoginHandler />
     </Suspense>
   );
 }
