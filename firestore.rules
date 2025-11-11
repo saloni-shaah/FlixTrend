@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -38,7 +39,7 @@ service cloud.firestore {
       // Allow update if user is the owner OR if they are just liking/unliking or incrementing view count.
       allow update: if isSignedIn() && (
         (request.auth.uid == resource.data.userId) || 
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', `likes.${request.auth.uid}`])) ||
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly([`likes.${request.auth.uid}`])) ||
         (
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewCount']) &&
           request.resource.data.viewCount == resource.data.viewCount + 1
