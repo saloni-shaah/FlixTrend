@@ -8,9 +8,22 @@ service cloud.firestore {
     }
 
     // Users: Read any profile, write to your own.
-    match /users/{userId}/{documents=**} {
+    match /users/{userId} {
       allow read: if isSignedIn();
       allow write: if request.auth.uid == userId;
+
+      // Notifications: Allow any signed-in user to create a notification for another user.
+      // This is for likes, comments, follows, etc.
+      match /notifications/{notificationId} {
+        allow read: if request.auth.uid == userId;
+        allow create: if isSignedIn();
+        allow update, delete: if false; // Users shouldn't edit/delete notifications
+      }
+      
+      // Other subcollections can be defined here
+      match /{subcollection}/{docId} {
+        allow read, write: if request.auth.uid == userId;
+      }
     }
 
     // Ad Campaigns & Creatives: Public read-only
@@ -25,7 +38,7 @@ service cloud.firestore {
       // Allow update if user is the owner OR if they are just liking/unliking or incrementing view count.
       allow update: if isSignedIn() && (
         (request.auth.uid == resource.data.userId) || 
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes'])) ||
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', `likes.${request.auth.uid}`])) ||
         (
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewCount']) &&
           request.resource.data.viewCount == resource.data.viewCount + 1

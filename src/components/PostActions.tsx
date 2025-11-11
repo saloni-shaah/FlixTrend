@@ -66,8 +66,15 @@ export function PostActions({ post, onCommentClick, isShortVibe = false }: { pos
             [`likes.${userId}`]: !userHasLiked
         };
 
+        // Optimistically update the UI
+        setUserHasLiked(!userHasLiked);
+        setLikes(l => userHasLiked ? l - 1 : l + 1);
+
         updateDoc(postRef, dataToUpdate)
           .catch(async (serverError) => {
+            // Revert optimistic update on error
+            setUserHasLiked(userHasLiked);
+            setLikes(l => userHasLiked ? l + 1 : l - 1);
             const permissionError = new FirestorePermissionError({
               path: postRef.path,
               operation: 'update',
@@ -79,7 +86,7 @@ export function PostActions({ post, onCommentClick, isShortVibe = false }: { pos
 
         if (!userHasLiked && post.userId !== currentUser.uid) {
             const notifRef = collection(db, "users", post.userId, "notifications");
-            addDoc(notifRef, {
+            const notifData = {
                 type: 'like',
                 fromUserId: currentUser.uid,
                 fromUsername: currentUser.displayName,
@@ -88,7 +95,16 @@ export function PostActions({ post, onCommentClick, isShortVibe = false }: { pos
                 postContent: post.content?.substring(0, 50) || 'your post',
                 createdAt: serverTimestamp(),
                 read: false,
-            }).catch(e => console.error("Error sending notification:", e));
+            };
+            addDoc(notifRef, notifData).catch(e => {
+                console.error("Error sending notification:", e);
+                const permissionError = new FirestorePermissionError({
+                    path: notifRef.path,
+                    operation: 'create',
+                    requestResourceData: notifData,
+                });
+                errorEmitter.emit('permission-error', permissionError);
+            });
         }
     };
     
