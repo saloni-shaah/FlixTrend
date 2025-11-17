@@ -194,3 +194,5 @@ export const updateComment = onCall(async (request: any) => {
 
     return { success: true, message: "Comment updated successfully." };
 });
+
+export * from "./migration";

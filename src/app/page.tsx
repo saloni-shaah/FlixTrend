@@ -152,7 +152,7 @@ export default function LandingPage() {
         }
         .shape1 { width: 300px; height: 300px; background: rgba(0, 240, 255, 0.2); animation: float 15s infinite alternate; top: 10%; left: 10%; }
         .shape2 { width: 400px; height: 400px; background: rgba(255, 60, 172, 0.25); animation: float 20s infinite alternate-reverse; bottom: 5%; right: 5%; }
-        .shape3 { width: 250px; height: 250px; background: rgba(191, 0, 255, 0.2); animation: float 18s infinite alternate; top: 50%; right: 20%; }
+        .shape3 { width: 250px; height: 250px; background: rgba(191, 0, 255,.2); animation: float 18s infinite alternate; top: 50%; right: 20%; }
         .shape4 { width: 200px; height: 200px; background: rgba(57, 255, 20, 0.15); animation: float 22s infinite alternate; bottom: 20%; left: 15%; }
 
 

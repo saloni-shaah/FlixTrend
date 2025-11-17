@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { auth, app } from "@/utils/firebaseClient";
 import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } from "firebase/auth";
-import { getFirestore, doc, setDoc, collection, query, where, getDocs, serverTimestamp } from "firebase/firestore";
+import { getFirestore, doc, setDoc, collection, query, where, getDocs, serverTimestamp, getDoc } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -15,9 +15,9 @@ const storage = getStorage(app);
 
 // Helper to check for username uniqueness
 async function isUsernameUnique(username: string): Promise<boolean> {
-    const q = query(collection(db, "users"), where("username", "==", username.toLowerCase()));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.empty;
+    const usernameDocRef = doc(db, "usernames", username.toLowerCase());
+    const docSnap = await getDoc(usernameDocRef);
+    return !docSnap.exists();
 }
 
 const creatorCategories = [
@@ -187,6 +187,11 @@ export default function SignupPage() {
                 profileComplete: !!(form.dob && form.gender && form.location),
                 referredBy: form.referredBy || null,
                 referralCode: referralCode,
+            });
+
+            // Reserve the username in the public collection
+            await setDoc(doc(db, "usernames", form.username.toLowerCase()), {
+                uid: userCredential.user.uid
             });
 
             await sendEmailVerification(userCredential.user);
