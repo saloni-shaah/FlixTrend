@@ -61,7 +61,7 @@ export const sendNotification = functions.firestore
       return;
     }
 
-    const { type, fromUsername, postContent } = notification;
+    const { type, fromUsername, postContent, fromAvatarUrl } = notification;
    
     // Fetch the user's FCM token
     const userRef = doc(db, 'users', userId);
@@ -73,7 +73,7 @@ export const sendNotification = functions.firestore
     const fcmToken = userDoc.data()?.fcmToken;
 
     if (!fcmToken) {
-      logger.log('FCM token not found for user', userId);
+      logger.log(`FCM token not found for user ${userId}. Cannot send push notification.`);
       return;
     }
 
@@ -104,7 +104,7 @@ export const sendNotification = functions.firestore
       notification: {
         title: notificationTitle,
         body: notificationBody,
-        icon: '/icon-192x192.png',
+        icon: fromAvatarUrl || '/icon-192x192.png',
         click_action: 'https://flixtrend.in/home', 
       },
     };
@@ -689,3 +689,6 @@ export const updateComment = onCall(async (request: any) => {
 
 export * from "./migration";
 
+
+
+    
