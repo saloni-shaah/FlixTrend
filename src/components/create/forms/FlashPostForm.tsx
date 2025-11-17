@@ -82,7 +82,7 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
 
         try {
             const fileName = `${user.uid}-${Date.now()}-${file.name}`;
-            const fileRef = storageRef(storage, `user_uploads/flashes/${fileName}`);
+            const fileRef = storageRef(storage, `user_uploads/${user.uid}/${fileName}`);
             
             const snapshot = await uploadBytes(fileRef, file);
             const downloadURL = await getDownloadURL(snapshot.ref);

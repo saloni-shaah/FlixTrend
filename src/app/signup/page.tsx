@@ -147,18 +147,18 @@ export default function SignupPage() {
             let avatarUrl = `https://api.dicebear.com/8.x/bottts-neutral/svg?seed=${form.username}`;
             let bannerUrl = "";
 
-            const uploadFile = async (file: File) => {
+            const uploadFile = async (file: File, path: string) => {
                 const fileName = `${userCredential.user.uid}-${Date.now()}-${file.name}`;
-                const storageRef = ref(storage, `user_uploads/${fileName}`);
+                const storageRef = ref(storage, `${path}/${fileName}`);
                 const snapshot = await uploadBytes(storageRef, file);
                 return await getDownloadURL(snapshot.ref);
             };
 
             if (profilePictureFile) {
-                avatarUrl = await uploadFile(profilePictureFile);
+                avatarUrl = await uploadFile(profilePictureFile, `user_uploads/${userCredential.user.uid}`);
             }
             if (bannerFile) {
-                bannerUrl = await uploadFile(bannerFile);
+                bannerUrl = await uploadFile(bannerFile, `user_uploads/${userCredential.user.uid}`);
             }
 
             // Step 3: Update Auth Profile
