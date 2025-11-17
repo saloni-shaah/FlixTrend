@@ -27,11 +27,20 @@ export const onNewUserCreate = functions.auth.user().onCreate(async (user) => {
             accolades.push('vibe_starter');
         }
 
+        const premiumUntil = new Date();
+        premiumUntil.setMonth(premiumUntil.getMonth() + 1);
+
         await setDoc(userRef, {
             createdAt: FieldValue.serverTimestamp(),
             profileComplete: false,
-            accolades: accolades
+            accolades: accolades,
+            isPremium: true,
+            premiumUntil: Timestamp.fromDate(premiumUntil)
         }, { merge: true });
+        
+        const appStatusRef = doc(db, 'app_status', 'user_stats');
+        await setDoc(appStatusRef, { totalUsers: FieldValue.increment(1) }, { merge: true });
+
         logger.info(`User document created for ${user.uid}`);
     } catch (error) {
         logger.error(`Error processing new user ${user.uid}:`, error);
@@ -96,7 +105,7 @@ export const sendNotification = functions.firestore
         title: notificationTitle,
         body: notificationBody,
         icon: '/icon-192x192.png',
-        click_action: 'https://flixtrend-v2.web.app/home', 
+        click_action: 'https://flixtrend.in/home', 
       },
     };
 
@@ -586,3 +595,97 @@ export const deleteMessage = onCall(async (request) => {
         throw new HttpsError("internal", "Could not delete message.");
     }
 });
+
+
+export const updatePost = onCall(async (request: any) => {
+    const uid = request.auth?.uid;
+    const { postId, newData } = request.data;
+    if (!uid) throw new HttpsError("unauthenticated", "Authentication required.");
+
+    const postRef = doc(db, "posts", postId);
+    const postDoc = await getDoc(postRef);
+    if (!postDoc.exists || postDoc.data()?.userId !== uid) {
+        throw new HttpsError("permission-denied", "You cannot edit this post.");
+    }
+
+    const allowedFields = ['title', 'caption', 'content', 'hashtags', 'mentions', 'description', 'mood', 'location'];
+    const sanitizedData: { [key: string]: any } = {};
+    allowedFields.forEach(field => {
+        if (newData[field] !== undefined) sanitizedData[field] = newData[field];
+    });
+
+    if (Object.keys(sanitizedData).length > 0) {
+        sanitizedData.updatedAt = FieldValue.serverTimestamp();
+        await updateDoc(postRef, sanitizedData);
+    }
+    return { success: true };
+});
+
+export const deleteComment = onCall(async (request: any) => {
+    const uid = request.auth?.uid;
+    const { postId, commentId } = request.data;
+
+    if (!uid) {
+        throw new HttpsError("unauthenticated", "You must be logged in to delete a comment.");
+    }
+
+    const postRef = doc(db, "posts", postId);
+    const commentRef = doc(postRef, "comments", commentId);
+
+    const postDoc = await getDoc(postRef);
+    const commentDoc = await getDoc(commentRef);
+
+    if (!postDoc.exists()) {
+        throw new HttpsError("not-found", "Post not found.");
+    }
+
+    if (!commentDoc.exists()) {
+        throw new HttpsError("not-found", "Comment not found.");
+    }
+
+    const commentData = commentDoc.data()!;
+
+    // **SECURITY FIX**: Now, only the comment author can delete.
+    if (uid !== commentData.userId) {
+        throw new HttpsError("permission-denied", "You do not have permission to delete this comment.");
+    }
+
+    await deleteDoc(commentRef);
+    await updateDoc(postRef, { commentCount: FieldValue.increment(-1) });
+
+    return { success: true, message: "Comment deleted successfully." };
+});
+
+export const updateComment = onCall(async (request: any) => {
+    const uid = request.auth?.uid;
+    const { postId, commentId, newText } = request.data;
+
+    if (!uid) {
+        throw new HttpsError("unauthenticated", "You must be logged in to edit a comment.");
+    }
+
+    if (!newText || typeof newText !== 'string' || newText.trim().length === 0) {
+        throw new HttpsError("invalid-argument", "The comment text cannot be empty.");
+    }
+
+    const commentRef = doc(db, "posts", postId, "comments", commentId);
+    const commentDoc = await getDoc(commentRef);
+
+    if (!commentDoc.exists()) {
+        throw new HttpsError("not-found", "Comment not found.");
+    }
+
+    const commentData = commentDoc.data()!;
+
+    if (commentData.userId !== uid) {
+        throw new HttpsError("permission-denied", "You do not have permission to edit this comment.");
+    }
+
+    await updateDoc(commentRef, { text: newText.trim() });
+
+    return { success: true, message: "Comment updated successfully." };
+});
+
+
+export * from "./migration";
+

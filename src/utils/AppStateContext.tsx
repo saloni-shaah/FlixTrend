@@ -1,12 +1,10 @@
 
-
 "use client";
 import React, { createContext, useState, useContext, ReactNode, useEffect, useRef } from 'react';
 import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp, Unsubscribe, updateDoc, collection, addDoc, getDoc, writeBatch, getDocs, deleteField } from 'firebase/firestore';
-import { auth, app, requestNotificationPermission } from './firebaseClient';
+import { auth, app } from './firebaseClient';
 import { CallScreen } from '@/components/CallScreen';
-import { onMessage } from 'firebase/messaging';
-import { messaging } from './firebaseClient';
+// Removed direct import of 'onMessage' and 'messaging'
 
 const db = getFirestore(app);
 
@@ -99,6 +97,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     let callUnsubscribe: Unsubscribe | null = null;
     let callDocUnsubscribe: Unsubscribe | null = null;
     let peerConnection: RTCPeerConnection | null = null;
+    let messageUnsubscribe: Unsubscribe | undefined;
 
     const managePresence = (user: any) => {
         if (!user) return;
@@ -128,23 +127,24 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     const authUnsubscribe = auth.onAuthStateChanged(user => {
       if (callUnsubscribe) callUnsubscribe();
       if (callDocUnsubscribe) callDocUnsubscribe();
+      if (messageUnsubscribe) messageUnsubscribe();
       
       if (user) {
-        requestNotificationPermission(user.uid);
-        managePresence(user);
-        
-        // Listen for incoming call notifications via FCM
-        if (messaging) {
-            onMessage(messaging, async (payload) => {
+        // -- DYNAMICALLY IMPORT MESSAGING --
+        import('./firebaseMessaging').then(messagingModule => {
+            messagingModule.requestNotificationPermission(user.uid);
+            messageUnsubscribe = messagingModule.onForegroundMessage(async (payload) => {
                 console.log('FCM message received in foreground:', payload);
                 const { type, callId } = payload.data || {};
                 if (type === 'incoming_call' && callId) {
                     const userDocRef = doc(db, 'users', user.uid);
                     await updateDoc(userDocRef, { currentCallId: callId });
-                    // The onSnapshot listener below will take care of joining the call.
                 }
             });
-        }
+        }).catch(err => console.error("Failed to load messaging module", err));
+        // -- END DYNAMIC IMPORT --
+        
+        managePresence(user);
         
         const userDocRef = doc(db, 'users', user.uid);
         callUnsubscribe = onSnapshot(userDocRef, (snap) => {
@@ -163,7 +163,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
               if (callSnap.exists()) {
                 setActiveCall({ id: callSnap.id, ...callSnap.data() });
               } else {
-                closeCall(); // Use the state function to properly close down
+                closeCall();
               }
             });
           } else {
@@ -179,6 +179,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         authUnsubscribe();
         if (callUnsubscribe) callUnsubscribe();
         if (callDocUnsubscribe) callDocUnsubscribe();
+        if (messageUnsubscribe) messageUnsubscribe();
         if(pc) pc.close();
     };
   }, []);
@@ -220,24 +221,20 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       
       const callId = activeCall.id;
       
-      // Update local state immediately for responsiveness
       closeCall(); 
 
-      // Update user docs to remove call ID
       const userDocRef = doc(db, 'users', user.uid);
       await updateDoc(userDocRef, { currentCallId: deleteField() });
       
       const otherUserId = user.uid === activeCall.callerId ? activeCall.calleeId : activeCall.callerId;
       if(otherUserId) {
           const otherUserDocRef = doc(db, 'users', otherUserId);
-          // Check if other user doc exists before trying to update
           const otherUserDocSnap = await getDoc(otherUserDocRef);
           if (otherUserDocSnap.exists()) {
               await updateDoc(otherUserDocRef, { currentCallId: deleteField() });
           }
       }
 
-      // Clean up the call document and subcollections in the background
       await cleanUpCall(callId);
   };
   

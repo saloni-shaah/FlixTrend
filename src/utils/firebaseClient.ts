@@ -1,64 +1,25 @@
+
 // src/utils/firebaseClient.ts
-import { initializeApp, getApps } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore, doc, updateDoc } from "firebase/firestore";
-import { getMessaging, getToken } from "firebase/messaging";
+import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
+import { getAuth, type Auth } from "firebase/auth";
+import { getFirestore, type Firestore } from "firebase/firestore";
+import { getStorage, type Storage } from "firebase/storage";
+import { getFunctions, type Functions } from "firebase/functions";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBAFigbMPTmbQzIWFlTNkZxrNo3ym51Tto",
-  authDomain: "direct-hope-473110-r0.firebaseapp.com",
-  projectId: "direct-hope-473110-r0",
-  storageBucket: "direct-hope-473110-r0.firebasestorage.app",
-  messagingSenderId: "1074226225704",
-  appId: "1:1074226225704:web:b2a20d917eb2901b1acb1d",
-  measurementId: "G-W34EF2WGHS"
+  apiKey: "AIzaSyBP1VyEIjPzt43DJokCj9WhPbTrZXbEVb8",
+  authDomain: "flixtrend-24072025.firebaseapp.com",
+  projectId: "flixtrend-24072025",
+  storageBucket: "flixtrend-24072025.firebasestorage.app",
+  messagingSenderId: "200803738308",
+  appId: "1:200803738308:web:ed7942db23395b0d101f91",
+  measurementId: "G-H48LZPV9QZ"
 };
 
-const firebaseApp = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
-export const app = firebaseApp;
-export const auth = getAuth(firebaseApp);
-export const db = getFirestore(app);
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const storage = getStorage(app);
+const functions = getFunctions(app);
 
-// Initialize Firebase Cloud Messaging and get a reference to the service
-export const messaging = (typeof window !== 'undefined') ? getMessaging(firebaseApp) : null;
-
-/**
- * Requests permission for notifications and saves the FCM token to Firestore.
- * This function should be called after a user logs in.
- * 
- * @param {string} userId The ID of the currently logged-in user.
- */
-export const requestNotificationPermission = async (userId: string) => {
-  if (!messaging || typeof window === 'undefined' || !('serviceWorker' in navigator)) {
-    console.log("Firebase Messaging is not supported in this browser or environment.");
-    return;
-  }
-
-  try {
-    // 1. Request permission from the user
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') {
-      console.log('Notification permission was not granted.');
-      return;
-    }
-
-    // 2. Get the FCM token, which registers our service worker
-    const fcmToken = await getToken(messaging, {
-      // !! IMPORTANT !!
-      // Replace this with your actual VAPID key from the Firebase Console
-      vapidKey: 'BDzXeTQuuf5a_znsOPHUZlegNYRO4JpXd1Zua5tsN3ucWs3MnGD_x62aaKt7AFdyR4u3CCuZemkPilt-HdTSZpk',
-    });
-
-    if (fcmToken) {
-      console.log('FCM Token retrieved:', fcmToken);
-      // 3. Save the FCM token to the user's document in Firestore
-      const userDocRef = doc(db, 'users', userId);
-      await updateDoc(userDocRef, { fcmToken: fcmToken });
-      console.log('Successfully saved FCM token for user:', userId);
-    } else {
-      console.log('Could not retrieve FCM token. User may need to grant permission again.');
-    }
-  } catch (error) {
-    console.error('An error occurred while requesting notification permission:', error);
-  }
-};
+export { app, auth, db, storage, functions };

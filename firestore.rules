@@ -27,6 +27,23 @@ service cloud.firestore {
       }
     }
 
+    // Usernames: Enforce uniqueness and allow checking for signup.
+    match /usernames/{username} {
+      // Allow any client to query (list) or get the collection.
+      // This is required for the isUsernameUnique function on the signup page.
+      allow get, list: if true;
+
+      // Allow a user to CREATE a username document, but only if it maps
+      // the username to their own user ID (uid). This prevents spoofing.
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+
+      // Do not allow users to change who owns a username.
+      allow update: if false;
+
+      // Allow a user to delete their own username mapping if they change their name.
+      allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+    }
+
     // Ad Campaigns & Creatives: Public read-only
     match /adCampaigns/{campaignId}/{documents=**} {
         allow get, list: if true;

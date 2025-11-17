@@ -6,7 +6,7 @@ import { MessageSquare, ArrowLeft, Flame } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { getFirestore, collection, query, where, onSnapshot, getDocs } from "firebase/firestore";
-import { auth, app, requestNotificationPermission } from "@/utils/firebaseClient";
+import { auth, app } from "@/utils/firebaseClient";
 import { getDownloadedPosts } from "@/utils/offline-db";
 
 const db = getFirestore(app);
@@ -111,7 +111,12 @@ export default function AppNavBar() {
   
   useEffect(() => {
     if (currentUser) {
-      requestNotificationPermission(currentUser.uid);
+      // Dynamically import and call the function only on the client-side
+      import('@/utils/firebaseMessaging').then(messagingModule => {
+        messagingModule.requestNotificationPermission(currentUser.uid);
+      }).catch(err => {
+          console.error("Failed to load firebaseMessaging", err);
+      });
     }
   }, [currentUser]);
 
@@ -217,7 +222,7 @@ export default function AppNavBar() {
           <>
             <NavButton href="/home" icon={VibeSpaceIcon} label="VibeSpace" />
             <NavButton href="/scope" icon={ScopeIcon} label="Scope" />
-            <NavButton href="/squad" icon={SquadIcon} label="Squad" />
+            <NavButton href="/squad" icon={SquadIcon} label="Squad" hasNotification={hasUnreadNotifs} />
             <NavButton href="/signal" icon={MessageSquare} label="Signal" hasNotification={hasUnreadMessages} />
           </>
         )}

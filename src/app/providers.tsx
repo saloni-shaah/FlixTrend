@@ -1,11 +1,16 @@
 "use client";
 
 import AppNavBar from "./AppNavBar";
-import { AppStateProvider } from "@/utils/AppStateContext";
 import { GlobalMusicPlayer } from "@/components/GlobalMusicPlayer";
-import Script from "next/script";
 import { FirebaseErrorListener } from "@/components/FirebaseErrorListener";
 import { Toaster } from "@/components/ui/toaster";
+import dynamic from 'next/dynamic';
+
+// Dynamically import AppStateProvider with SSR disabled
+const AppStateProvider = dynamic(
+  () => import('@/utils/AppStateContext').then((mod) => mod.AppStateProvider),
+  { ssr: false }
+);
 
 export function Providers({ children }: { children: React.ReactNode }) {
     return (
@@ -15,7 +20,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <main className="pb-20 pt-6 px-4">{children}</main>
           <GlobalMusicPlayer />
           <AppNavBar />
-          
         </AppStateProvider>
     )
 }
