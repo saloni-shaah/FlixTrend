@@ -1,31 +1,15 @@
-
 rules_version = '2';
 
 service firebase.storage {
-  match /b/{bucket}/o {
+  match /b/flixtrend-24072025.appspot.com/o {
 
     // Allow public read access to all files under user_uploads.
     // This is generally safe for profile pictures, post images, etc.
     match /user_uploads/{allPaths=**} {
       allow read;
-    }
-
-    // Allow any authenticated user to write to the user_uploads directory.
-    // The client-side logic should ensure that users are uploading to
-    // appropriate paths (e.g., their own folder), but this rule provides
-    // general write access for creating posts, flashes, etc.
-    // We will still validate file size and type.
-    match /user_uploads/{allPaths=**} {
-        allow write: if request.auth != null &&
-                      request.resource.size < 25 * 1024 * 1024 && // 25MB limit
-                      request.resource.contentType.matches('image/.*|video/.*|audio/.*');
-    }
-
-    // More specific rules for user-specific folders if needed in the future.
-    // For now, the rule above is sufficient.
-    match /user_uploads/{userId}/{fileName} {
-      allow write: if request.auth != null && 
-                    request.auth.uid == userId;
+      allow write: if request.auth != null &&
+                    request.resource.size < 25 * 1024 * 1024 && // 25MB limit
+                    request.resource.contentType.matches('image/.*|video/.*|audio/.*');
     }
   }
 }
