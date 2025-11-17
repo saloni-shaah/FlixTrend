@@ -52,7 +52,8 @@ service cloud.firestore {
 
     // Posts: main document
     match /posts/{postId} {
-      allow read, create: if isSignedIn();
+      allow read: if isSignedIn();
+      allow create: if request.auth.uid == request.resource.data.userId;
 
       // Allow update for owner, or for specific, controlled actions like liking or view counts.
       allow update: if isSignedIn() && (
@@ -86,7 +87,8 @@ service cloud.firestore {
 
     // Flashes: main document
     match /flashes/{flashId} {
-      allow read, create: if isSignedIn();
+      allow read: if isSignedIn();
+      allow create: if request.auth.uid == request.resource.data.userId;
       // Allow update if user is the owner OR if they are just incrementing the view count.
       allow update: if isSignedIn() && (
         (request.auth.uid == resource.data.userId) || 

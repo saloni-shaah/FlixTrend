@@ -1,16 +1,18 @@
+
 rules_version = '2';
-
 service firebase.storage {
-  match /b/flixtrend-24072025.appspot.com/o {
-
-    // Allow public read access to all files under user_uploads.
-    // This is generally safe for profile pictures, post images, etc.
-    // This rule allows any authenticated user to write to the user_uploads folder.
-    match /user_uploads/{allPaths=**} {
+  match /b/{bucket}/o {
+    // This rule allows public read access to all user-uploaded content.
+    // This is suitable for profile pictures, post media, etc. that are meant to be public.
+    match /user_uploads/{userId}/{allPaths=**} {
       allow read;
-      allow write: if request.auth != null &&
-                    request.resource.size < 25 * 1024 * 1024 && // 25MB limit
-                    request.resource.contentType.matches('image/.*|video/.*|audio/.*');
+
+      // Write access is restricted. Only the authenticated user corresponding to the {userId}
+      // can upload files to their own folder.
+      // This rule also enforces a size limit and content type validation.
+      allow write: if request.auth.uid == userId &&
+                   request.resource.size < 25 * 1024 * 1024 && // 25MB limit
+                   request.resource.contentType.matches('image/.*|video/.*|audio/.*');
     }
   }
 }
