@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect, useState, useRef } from 'react';
@@ -332,9 +333,7 @@ function Comment({ comment }: { comment: any; }) {
 
   React.useEffect(() => {
     async function fetchUserData() {
-      if (comment.username && comment.avatar_url) {
-        setUserData({ username: comment.username, avatar_url: comment.avatar_url, displayName: comment.displayName });
-      } else if (comment.userId) {
+      if (comment.userId) {
         const userDoc = await getDoc(fsDoc(db, "users", comment.userId));
         if (userDoc.exists()) {
           const data = userDoc.data();
@@ -343,11 +342,18 @@ function Comment({ comment }: { comment: any; }) {
             avatar_url: data.avatar_url,
             displayName: data.name,
           });
+        } else {
+          // Fallback for a user that might have been deleted
+          setUserData({ 
+            username: 'deleted_user',
+            displayName: 'Deleted User',
+            avatar_url: null 
+          });
         }
       }
     }
     fetchUserData();
-  }, [comment.userId, comment.username, comment.avatar_url, comment.displayName]);
+  }, [comment.userId]); // Depend only on comment.userId
 
   const initials = userData?.displayName?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || userData?.username?.slice(0, 2).toUpperCase() || "U";
   
@@ -380,15 +386,19 @@ function CommentForm({ postId, postAuthorId, onCommentPosted, post }: { postId: 
     setLoading(true);
 
     const userDoc = await getDoc(fsDoc(db, "users", user.uid));
-    const userData = userDoc.data() || { name: user.displayName, username: user.displayName, avatar_url: user.photoURL };
+    const userData = userDoc.exists() ? userDoc.data() : {};
 
-    const commentData: any = {
-      text: newComment,
-      userId: user.uid,
-      displayName: userData.name || user.displayName,
-      username: userData.username || user.displayName,
-      avatar_url: userData.avatar_url || user.photoURL,
-      createdAt: serverTimestamp(),
+    const displayName = userData.name || user.displayName || 'Anonymous';
+    const username = userData.username || user.displayName || 'anonymous';
+    const avatarUrl = userData.avatar_url || user.photoURL || null;
+
+    const commentData = {
+        text: newComment,
+        userId: user.uid,
+        displayName: displayName,
+        username: username,
+        avatar_url: avatarUrl,
+        createdAt: serverTimestamp(),
     };
 
     await addDoc(collection(db, "posts", postId, "comments"), commentData);
@@ -398,8 +408,8 @@ function CommentForm({ postId, postAuthorId, onCommentPosted, post }: { postId: 
         await addDoc(notifRef, {
             type: 'comment',
             fromUserId: user.uid,
-            fromUsername: userData.username || user.displayName,
-            fromAvatarUrl: userData.avatar_url || user.photoURL,
+            fromUsername: username,
+            fromAvatarUrl: avatarUrl,
             postId: postId,
             postContent: newComment.substring(0, 50),
             createdAt: serverTimestamp(),
