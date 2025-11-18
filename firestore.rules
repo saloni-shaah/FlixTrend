@@ -10,37 +10,31 @@ service cloud.firestore {
 
     // Users: Read any profile, write to your own.
     match /users/{userId} {
-      allow read: if isSignedIn();
+      // Allow signed-in users to get and list user profiles.
+      allow get, list: if isSignedIn();
       allow write: if request.auth.uid == userId;
 
       // This rule manages all subcollections under a user document.
       match /{subcollection}/{docId} {
-        // A user can only read documents from their own subcollections.
-        allow read: if request.auth.uid == userId;
+        // A user can read their own subcollections.
+        // Any signed-in user can read public subcollections like followers/following.
+        allow read: if (request.auth.uid == userId) || 
+                    (isSignedIn() && (subcollection == 'followers' || subcollection == 'following'));
 
         // Allow write access to a user's own subcollections.
-        // Also, allow any signed-in user to CREATE a notification for another user,
-        // provided they correctly identify themselves in the 'fromUserId' field.
+        // Also, allow a user to add/remove themselves from another user's followers list.
+        // Also, allow creation of notifications.
         allow write: if (request.auth.uid == userId) ||
-                     (subcollection == 'notifications' && request.method == 'create' && 
-                      request.resource.data.fromUserId == request.auth.uid);
+                     (subcollection == 'followers' && docId == request.auth.uid && (request.method == 'create' || request.method == 'delete')) ||
+                     (subcollection == 'notifications' && request.method == 'create' && request.resource.data.fromUserId == request.auth.uid);
       }
     }
 
     // Usernames: Enforce uniqueness and allow checking for signup.
     match /usernames/{username} {
-      // Allow any client to query (list) or get the collection.
-      // This is required for the isUsernameUnique function on the signup page.
       allow get, list: if true;
-
-      // Allow a user to CREATE a username document, but only if it maps
-      // the username to their own user ID (uid). This prevents spoofing.
       allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
-
-      // Do not allow users to change who owns a username.
       allow update: if false;
-
-      // Allow a user to delete their own username mapping if they change their name.
       allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
     }
 
@@ -57,18 +51,11 @@ service cloud.firestore {
 
       // Allow update for owner, or for specific, controlled actions like liking or view counts.
       allow update: if isSignedIn() && (
-        // Case 1: The user is the owner of the post.
         (request.auth.uid == resource.data.userId) ||
-
-        // Case 2: The user is liking or unliking the post.
-        // This is secure because it checks that ONLY the 'likes' map is changing,
-        // and within that map, ONLY the user's own like status is changing.
         (
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes']) &&
           request.resource.data.likes.diff(resource.data.get('likes', {})).affectedKeys().hasOnly([request.auth.uid])
         ) ||
-
-        // Case 3: A view is being incremented.
         (
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewCount']) &&
           request.resource.data.viewCount == resource.data.viewCount + 1

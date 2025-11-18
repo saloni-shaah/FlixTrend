@@ -2,10 +2,82 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { getFirestore, collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { getFirestore, collection, query, orderBy, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { auth, app } from '@/utils/firebaseClient';
+import Link from 'next/link';
 
 const db = getFirestore(app);
+
+// This new sub-component handles fetching and rendering for each notification
+function NotificationItem({ notification }: { notification: any }) {
+  const [fromUser, setFromUser] = useState<any>(null);
+
+  useEffect(() => {
+    // Fetch the user data for the user who triggered the notification
+    const fetchUserData = async () => {
+      if (notification.fromUserId) {
+        const userRef = doc(db, "users", notification.fromUserId);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          setFromUser(userSnap.data());
+        }
+      }
+    };
+
+    fetchUserData();
+  }, [notification.fromUserId]);
+
+  const getNotificationDetails = (notif: any) => {
+    // Use the fresh username, fall back to the one stored in the notification
+    const username = fromUser?.username || notif.fromUsername;
+    let message: React.ReactNode;
+    let linkPath = '/'; // Default link
+
+    switch (notif.type) {
+      case 'like':
+        message = <><span className="font-bold">{username}</span> liked your post.</>;
+        if(notif.postId) linkPath = `/post/${notif.postId}`;
+        break;
+      case 'comment':
+        message = <><span className="font-bold">{username}</span> commented: "{notif.postContent}"</>;
+        if(notif.postId) linkPath = `/post/${notif.postId}`;
+        break;
+      case 'follow':
+        message = <><span className="font-bold">{username}</span> started following you.</>;
+        if(notif.fromUserId) linkPath = `/squad/${notif.fromUserId}`;
+        break;
+      case 'missed_call':
+        message = <><span className="font-bold">{username}</span> tried to call you.</>;
+        if(notif.fromUserId) linkPath = `/squad/${notif.fromUserId}`;
+        break;
+      default:
+        message = 'New notification';
+        break;
+    }
+    return { message, linkPath };
+  };
+
+  const { message, linkPath } = getNotificationDetails(notification);
+  // Always use the fresh avatar URL from the fetched user profile
+  const avatarUrl = fromUser?.avatar_url;
+  const initials = fromUser?.name?.charAt(0) || fromUser?.username?.charAt(0) || '?';
+
+  return (
+    <Link href={linkPath} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all cursor-pointer">
+        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green overflow-hidden flex-shrink-0 flex items-center justify-center">
+        {avatarUrl ? (
+            <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+        ) : (
+            <span className="font-bold text-white">{initials.toUpperCase()}</span>
+        )}
+        </div>
+        <div className="flex-1 text-sm">
+        {message}
+        <div className="text-xs text-muted-foreground mt-1">{notification.createdAt?.toDate().toLocaleString()}</div>
+        </div>
+    </Link>
+  );
+}
 
 export default function NotificationPanel({ onClose }: { onClose: () => void }) {
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -23,21 +95,6 @@ export default function NotificationPanel({ onClose }: { onClose: () => void }) 
     return () => unsub();
   }, [currentUser]);
 
-  const getNotificationMessage = (notif: any) => {
-    switch (notif.type) {
-      case 'like':
-        return <><span className="font-bold">{notif.fromUsername}</span> liked your post.</>;
-      case 'comment':
-        return <><span className="font-bold">{notif.fromUsername}</span> commented: "{notif.postContent}"</>;
-      case 'follow':
-        return <><span className="font-bold">{notif.fromUsername}</span> started following you.</>;
-      case 'missed_call':
-        return <><span className="font-bold">{notif.fromUsername}</span> tried to call you.</>;
-      default:
-        return 'New notification';
-    }
-  };
-
   return (
     <div className="fixed inset-y-0 right-0 z-50 w-full max-w-sm glass-card animate-slide-in-right">
       <div className="flex items-center justify-between p-4 border-b border-glass-border">
@@ -49,20 +106,10 @@ export default function NotificationPanel({ onClose }: { onClose: () => void }) 
           <div className="text-muted-foreground text-center mt-16">No new notifications.</div>
         ) : (
           notifications.map(notif => (
-            <div key={notif.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all cursor-pointer">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green overflow-hidden">
-                {notif.fromAvatarUrl && <img src={notif.fromAvatarUrl} alt="avatar" className="w-full h-full object-cover"/>}
-              </div>
-              <div className="flex-1 text-sm">
-                {getNotificationMessage(notif)}
-                <div className="text-xs text-muted-foreground mt-1">{notif.createdAt?.toDate().toLocaleString()}</div>
-              </div>
-            </div>
+            <NotificationItem key={notif.id} notification={notif} />
           ))
         )}
       </div>
     </div>
-  )
+  );
 }
-
-    
