@@ -23,7 +23,7 @@
   --muted-foreground: 0 0 45%;
 
   --accent: 174.5 62.6% 49.6%; /* Teal for Almighty */
-  --accent-foreground: 0 0 10%;
+  --accent-foreground: 0-0 10%;
 
   --destructive: 0 72.2% 50.6%; /* Soft Red for Almighty */
   --destructive-foreground: 0 0 98%;
@@ -88,6 +88,20 @@
     --glass-border: rgba(234, 234, 234, 0.15); /* Slightly more visible border */
 }
 
+/* Simple Mode Themes */
+.simple:not(.dark) {
+  --background: 0 0% 98%; /* Off-white */
+  --foreground: 0 0% 3.9%; /* Almost black */
+  --card-background: rgba(255, 255, 255, 1);
+  --glass-border: rgba(0, 0, 0, 0.1);
+}
+
+.simple.dark {
+    --background: 0 0% 3.9%; /* Almost black */
+    --foreground: 0 0% 98%; /* Off-white */
+    --card-background: rgba(10, 10, 10, 1);
+    --glass-border: rgba(255, 255, 255, 0.1);
+}
 
 body {
   background-color: hsl(var(--background));
@@ -100,6 +114,10 @@ body {
   color: hsl(var(--foreground));
   font-family: 'Inter', 'Space Grotesk', Arial, Helvetica, sans-serif;
   animation: fadeIn 1s ease-in;
+}
+
+.simple body {
+    background-image: none;
 }
 
 @keyframes fadeIn {
