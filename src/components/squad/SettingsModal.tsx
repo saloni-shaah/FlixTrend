@@ -17,6 +17,7 @@ const functions = getFunctions(app);
 export function SettingsModal({ profile, firebaseUser, onClose }: { profile: any; firebaseUser: any; onClose: () => void }) {
   const [settings, setSettings] = useState({
     darkMode: false,
+    simpleMode: false,
     accentColor: '#00F0FF',
     dmPrivacy: 'everyone',
     tagPrivacy: 'everyone',
@@ -31,9 +32,10 @@ export function SettingsModal({ profile, firebaseUser, onClose }: { profile: any
   const toggleAccountStatusCallable = httpsCallable(functions, 'toggleAccountStatus');
 
   useEffect(() => {
-    // Load initial settings from profile
+    // Load initial settings from profile and localStorage
     setSettings({
         darkMode: localStorage.getItem('theme') === 'dark',
+        simpleMode: localStorage.getItem('simpleMode') === 'true',
         accentColor: profile.settings?.accentColor || '#00F0FF',
         dmPrivacy: profile.settings?.dmPrivacy || 'everyone',
         tagPrivacy: profile.settings?.tagPrivacy || 'everyone',
@@ -50,6 +52,10 @@ export function SettingsModal({ profile, firebaseUser, onClose }: { profile: any
     if (key === 'darkMode') {
       document.documentElement.classList.toggle('dark', value);
       localStorage.setItem('theme', value ? 'dark' : 'light');
+    }
+    if (key === 'simpleMode') {
+      document.documentElement.classList.toggle('simple', value);
+      localStorage.setItem('simpleMode', String(value));
     }
     if (key === 'accentColor') {
       localStorage.setItem('accentColor', value);
@@ -137,6 +143,13 @@ export function SettingsModal({ profile, firebaseUser, onClose }: { profile: any
                   <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-accent-cyan peer-checked:after:translate-x-full after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-cyan"></div>
                 </label>
               </div>
+               <div className="flex items-center justify-between py-2">
+                <span>Simple Mode (B&W)</span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" checked={settings.simpleMode} onChange={(e) => handleSettingChange('simpleMode', e.target.checked)} className="sr-only peer" />
+                  <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-accent-cyan peer-checked:after:translate-x-full after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-cyan"></div>
+                </label>
+              </div>
               <div className="flex items-center justify-between py-2">
                   <span>Accent Color</span>
                   <input type="color" value={settings.accentColor} onChange={(e) => handleSettingChange('accentColor', e.target.value)} className="w-10 h-10 bg-transparent border-none rounded-full cursor-pointer"/>
@@ -209,5 +222,3 @@ export function SettingsModal({ profile, firebaseUser, onClose }: { profile: any
     </>
   );
 }
-
-    

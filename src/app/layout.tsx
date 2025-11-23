@@ -59,6 +59,12 @@ export default function RootLayout({
         } else if (theme === 'light') {
           document.documentElement.classList.remove('dark');
         }
+
+        const simpleMode = localStorage.getItem('simpleMode');
+        if (simpleMode === 'true') {
+          document.documentElement.classList.add('simple');
+        }
+
         const accentColor = localStorage.getItem('accentColor');
         if (accentColor) {
             document.documentElement.style.setProperty('--accent-cyan', accentColor);
