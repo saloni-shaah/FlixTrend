@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
@@ -208,3 +209,5 @@ export function SettingsModal({ profile, firebaseUser, onClose }: { profile: any
     </>
   );
 }
+
+    

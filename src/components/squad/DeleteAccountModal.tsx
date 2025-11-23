@@ -1,10 +1,14 @@
+
 'use client';
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Trash2, AlertTriangle } from 'lucide-react';
-import { auth } from '@/utils/firebaseClient';
-import { EmailAuthProvider, reauthenticateWithCredential, deleteUser } from "firebase/auth";
+import { auth, functions } from '@/utils/firebaseClient';
+import { EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 import { useRouter } from 'next/navigation';
+import { httpsCallable } from 'firebase/functions';
+
+const deleteUserAccountCallable = httpsCallable(functions, 'deleteUserAccount');
 
 export function DeleteAccountModal({ profile, onClose }: { profile: any, onClose: () => void }) {
     const [password, setPassword] = useState('');
@@ -26,15 +30,15 @@ export function DeleteAccountModal({ profile, onClose }: { profile: any, onClose
         }
 
         try {
-            // Step 1: Re-authenticate the user
+            // Step 1: Re-authenticate the user for security
             const credential = EmailAuthProvider.credential(user.email, password);
             await reauthenticateWithCredential(user, credential);
 
-            // Step 2: If re-authentication is successful, delete the user
-            await deleteUser(user);
+            // Step 2: If re-authentication is successful, call the Cloud Function to delete the user data and account
+            await deleteUserAccountCallable();
             
             alert('Your account has been permanently deleted.');
-            // Redirect to a safe, logged-out page
+            // The user will be signed out automatically after deletion, redirect them.
             router.push('/signup'); 
 
         } catch (err: any) {
@@ -123,3 +127,5 @@ export function DeleteAccountModal({ profile, onClose }: { profile: any, onClose
         </div>
     )
 }
+
+    
