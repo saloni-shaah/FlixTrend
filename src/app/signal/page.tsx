@@ -2,7 +2,7 @@
 "use client";
 import React, { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp, where, writeBatch, getDocs, updateDoc, deleteField } from "firebase/firestore";
+import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp, where, writeBatch, getDocs, updateDoc, deleteField, limit } from "firebase/firestore";
 import { auth, app } from "@/utils/firebaseClient";
 import { Users, Bot, Search, CheckSquare, Square, Trash2, X } from "lucide-react";
 import { useAppState } from "@/utils/AppStateContext";
