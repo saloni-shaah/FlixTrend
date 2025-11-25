@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef, Suspense } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp, where, writeBatch, getDocs, updateDoc, deleteDoc, arrayUnion, arrayRemove, deleteField, Unsubscribe, limit } from "firebase/firestore";
 import { auth, app } from "@/utils/firebaseClient";
-import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, Smile, Trash2, Users, CheckSquare, Square, MoreVertical, UserPlus, UserX, Edit, Shield, EyeOff, LogOut, UploadCloud, UserCircle, Cake, MapPin, AtSign, User, Bot, Search, Check } from "lucide-react";
+import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, Smile, Trash2, Users, CheckSquare, Square, MoreVertical, UserPlus, UserX, Edit, Shield, EyeOff, LogOut, UploadCloud, UserCircle, Cake, MapPin, AtSign, User, Bot, Search, Check, Camera } from "lucide-react";
 import { useAppState } from "@/utils/AppStateContext";
 import { createCall } from "@/utils/callService";
 import { motion, AnimatePresence } from "framer-motion";
@@ -73,7 +73,7 @@ const MessageItem = React.memo(({ msg, isUser, selectedChat, firebaseUser, isSel
                     {!isUser && msg.sender !== 'system' && (
                         <div className="font-bold text-sm text-accent-pink">{displayName}</div>
                     )}
-                    {msg.type === 'image' && <img src={msg.mediaUrl} alt={msg.text || "image"} className="rounded-lg max-w-xs" />}
+                    {msg.type === 'image' && <img src={msg.mediaUrl} alt={msg.text || "image"} className="rounded-lg max-w-xs mt-1" />}
                     {msg.type === 'video' && <video src={msg.mediaUrl} controls className="rounded-lg max-w-xs" />}
                     {msg.type === 'audio' && <audio src={msg.mediaUrl} controls />}
                     {msg.text && <p className="mt-1 break-words">{msg.text}</p>}
@@ -135,15 +135,17 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isRecording, setIsRecording] = useState(false);
-    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-    const audioChunksRef = useRef<Blob[]>([]);
     const [selectionMode, setSelectionMode] = useState<'messages' | null>(null);
     const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
-    const [typingStatus, setTypingStatus] = useState<string[]>([]);
-    const [onlineStatus, setOnlineStatus] = useState<any>(null);
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
+    const [showCameraView, setShowCameraView] = useState(false);
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
 
     useEffect(() => {
         if (drafts[chatId]) {
@@ -175,7 +177,6 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
     useEffect(() => {
         if (!chatId || !firebaseUser) return;
     
-        // Determine if it's a group or 1-on-1 chat
         const isGroupChat = !chatId.includes('_');
         let unsub: Unsubscribe;
     
@@ -199,28 +200,6 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
             setMessages(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
         });
     
-        // Mark messages as read
-        const markAsRead = async () => {
-            const unreadQuery = query(
-                collection(db, "chats", chatId, "messages"), 
-                where("readBy", "array-contains", firebaseUser.uid)
-            );
-            const querySnapshot = await getDocs(unreadQuery);
-            const batch = writeBatch(db);
-            let hasUnread = false;
-            querySnapshot.forEach(doc => {
-                const data = doc.data();
-                if (!data.readBy.includes(firebaseUser.uid)) {
-                    hasUnread = true;
-                    batch.update(doc.ref, { readBy: arrayUnion(firebaseUser.uid) });
-                }
-            });
-            if (hasUnread) {
-                await batch.commit();
-            }
-        };
-        markAsRead();
-    
         return () => {
             unsub();
             unsubMessages();
@@ -231,6 +210,36 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
+
+     const startCamera = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+            setCameraStream(stream);
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream;
+            }
+        } catch (err) {
+            console.error("Camera error:", err);
+            alert("Camera access denied. Please enable it in your browser settings.");
+            setShowCameraView(false);
+        }
+    };
+    
+    const stopCamera = () => {
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+            setCameraStream(null);
+        }
+    };
+
+    useEffect(() => {
+        if (showCameraView) {
+            startCamera();
+        } else {
+            stopCamera();
+        }
+        return stopCamera;
+    }, [showCameraView]);
     
     const handleSend = async (e: React.FormEvent, mediaUrl: string | null = null, type: 'text' | 'image' | 'video' | 'audio' = 'text') => {
         e.preventDefault();
@@ -252,7 +261,7 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
     
         if (mediaUrl) {
             messageData.mediaUrl = mediaUrl;
-            messageData.text = textToSend; // Caption
+            if (textToSend) messageData.text = textToSend; 
         } else {
             messageData.text = textToSend;
         }
@@ -278,12 +287,11 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
     
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      setShowAttachmentMenu(false);
       const file = e.target.files?.[0];
       if (!file) return;
   
-      let type: 'image' | 'video' | 'audio' = 'image';
-      if (file.type.startsWith('video/')) type = 'video';
-      if (file.type.startsWith('audio/')) type = 'audio';
+      let type: 'image' | 'video' = file.type.startsWith('video/') ? 'video' : 'image';
       
       try {
           const formData = new FormData();
@@ -302,6 +310,44 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
   
       if (e.target) e.target.value = '';
     };
+
+     const handleCapture = () => {
+        if (videoRef.current && canvasRef.current) {
+            const video = videoRef.current;
+            const canvas = canvasRef.current;
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const context = canvas.getContext('2d');
+            context?.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+            
+            canvas.toBlob(async (blob) => {
+                if (blob) {
+                    const file = new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
+                    setShowCameraView(false);
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('userId', firebaseUser.uid);
+                    const result = await uploadFileToFirebaseStorage(formData);
+                    if (result.success?.url) {
+                      handleSend(new Event('submit') as any, result.success.url, 'image');
+                    }
+                }
+            }, 'image/jpeg');
+        }
+    };
+
+     if (showCameraView) {
+        return (
+            <div className="absolute inset-0 z-20 bg-black flex flex-col items-center justify-center">
+                <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover"/>
+                <canvas ref={canvasRef} className="hidden"></canvas>
+                <div className="absolute bottom-4 flex items-center gap-4">
+                     <button onClick={() => setShowCameraView(false)} className="p-3 bg-gray-800/70 rounded-full text-white"><X/></button>
+                     <button onClick={handleCapture} className="w-20 h-20 rounded-full bg-white border-4 border-gray-400"></button>
+                </div>
+            </div>
+        )
+    }
 
     if (!selectedChat) {
         return <div className="flex h-screen w-full items-center justify-center text-accent-cyan">Loading Chat...</div>
@@ -326,7 +372,6 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
                     </div>
                     <div className="flex-1 text-left">
                         <h3 className="font-bold text-white">{selectedChat.name || selectedChat.username}</h3>
-                        {/* Status would be implemented here */}
                     </div>
                     <div className="flex items-center gap-2">
                     {!selectedChat.isGroup && <button className="p-2 rounded-full hover:bg-accent-cyan/10"><Video size={20}/></button>}
@@ -375,48 +420,61 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
                 <div ref={messagesEndRef} />
             </div>
 
-            <form onSubmit={handleSend} className="flex items-center gap-2 p-2 border-t border-accent-cyan/10 bg-black/60 shrink-0">
-                 <div className="flex items-center gap-1">
-                     <button type="button" onClick={() => alert("Emoji picker coming soon!")} className="p-2 text-gray-400 hover:text-accent-cyan shrink-0">
-                        <Smile size={20}/>
-                    </button>
-                    <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2 text-gray-400 hover:text-accent-cyan shrink-0">
-                        <Paperclip size={20}/>
-                    </button>
-                 </div>
-                 <input 
-                    type="text" 
-                    value={newMessage} 
-                    onChange={handleInputChange} 
-                    placeholder={isRecording ? "Recording..." : "Type a message..."} 
-                    className="flex-1 bg-gray-700 rounded-full px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-accent-cyan w-full"
-                 />
-                 <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*,video/*,audio/*" />
-                <AnimatePresence mode="wait">
-                {newMessage.trim() === "" ? (
-                        <motion.button 
-                        key="mic"
-                        initial={{ scale: 0.5, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0.5, opacity: 0 }}
-                        type="button" 
-                        className={`p-3 rounded-full transition-colors shrink-0 ${isRecording ? 'bg-red-500 animate-pulse' : 'bg-accent-pink text-white'}`}
-                        >
-                        <Mic size={20}/>
-                        </motion.button>
-                ) : (
-                        <motion.button 
-                        key="send"
-                        initial={{ scale: 0.5, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0.5, opacity: 0 }}
-                        type="submit" 
-                        className="p-3 rounded-full bg-accent-cyan text-white shrink-0"
-                        >
-                        <Send size={20}/>
-                        </motion.button>
+            <form onSubmit={handleSend} className="shrink-0 p-2 border-t border-accent-cyan/10 bg-black/60 relative">
+                 <AnimatePresence>
+                 {showAttachmentMenu && (
+                    <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        className="absolute bottom-full left-2 w-48 bg-gray-800 rounded-lg shadow-lg p-2 flex flex-col gap-1"
+                    >
+                        <button type="button" onClick={() => { setShowAttachmentMenu(false); setShowCameraView(true); }} className="btn-glass text-sm justify-start gap-2 text-white"><Camera/> Take Photo</button>
+                        <button type="button" onClick={() => fileInputRef.current?.click()} className="btn-glass text-sm justify-start gap-2 text-white"><ImageIcon/> Upload Image</button>
+                    </motion.div>
                 )}
                 </AnimatePresence>
+                <div className="flex items-center gap-1">
+                    <button type="button" onClick={() => setShowAttachmentMenu(v => !v)} className="p-2 text-gray-400 hover:text-accent-cyan shrink-0">
+                        <Paperclip size={20}/>
+                    </button>
+                     <button type="button" onClick={() => alert("Emoji picker coming soon!")} className="p-2 text-gray-400 hover:text-accent-cyan shrink-0 hidden sm:block">
+                        <Smile size={20}/>
+                    </button>
+                    <input 
+                        type="text" 
+                        value={newMessage} 
+                        onChange={handleInputChange} 
+                        placeholder={isRecording ? "Recording..." : "Type a message..."} 
+                        className="flex-1 bg-gray-700 rounded-full px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-accent-cyan w-full"
+                    />
+                    <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*,video/*" />
+                    <AnimatePresence mode="wait">
+                    {newMessage.trim() === "" ? (
+                            <motion.button 
+                                key="mic"
+                                initial={{ scale: 0.5, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.5, opacity: 0 }}
+                                type="button" 
+                                className={`p-3 rounded-full transition-colors shrink-0 ${isRecording ? 'bg-red-500 animate-pulse' : 'bg-accent-pink text-white'}`}
+                            >
+                                <Mic size={20}/>
+                            </motion.button>
+                    ) : (
+                            <motion.button 
+                                key="send"
+                                initial={{ scale: 0.5, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.5, opacity: 0 }}
+                                type="submit" 
+                                className="p-3 rounded-full bg-accent-cyan text-white shrink-0"
+                            >
+                                <Send size={20}/>
+                            </motion.button>
+                    )}
+                    </AnimatePresence>
+                </div>
             </form>
              <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
                 <AlertDialogContent>
