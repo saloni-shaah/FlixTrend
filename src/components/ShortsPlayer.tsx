@@ -127,10 +127,11 @@ export function ShortsPlayer({ post, onNext, onPrev, onView }: { post: any, onNe
         if (tapTimeout.current) {
             clearTimeout(tapTimeout.current);
             tapTimeout.current = null;
-            tapStateRef.current = 'idle'; // Reset state on double tap
+            // This is a double tap
             handleDoubleTap();
         } else {
             tapTimeout.current = setTimeout(() => {
+                // This is a single tap
                 handleSingleTap();
                 tapTimeout.current = null;
             }, 250);
@@ -159,6 +160,7 @@ export function ShortsPlayer({ post, onNext, onPrev, onView }: { post: any, onNe
             <AnimatePresence>
             {showHeart && (
                 <motion.div
+                    key="heart"
                     initial={{ scale: 0.5, opacity: 0 }}
                     animate={{ scale: 1.2, opacity: 1 }}
                     exit={{ scale: 2, opacity: 0 }}
@@ -170,6 +172,7 @@ export function ShortsPlayer({ post, onNext, onPrev, onView }: { post: any, onNe
             )}
              {!isPlaying && (
                  <motion.div
+                    key="play-icon"
                     initial={{ scale: 0.5, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0.5, opacity: 0 }}
@@ -214,4 +217,3 @@ export function ShortsPlayer({ post, onNext, onPrev, onView }: { post: any, onNe
         </div>
     );
 }
-
