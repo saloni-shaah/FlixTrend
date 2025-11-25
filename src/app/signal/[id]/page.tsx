@@ -1,10 +1,9 @@
-
-"use client";
+'use client';
 import React, { useEffect, useState, useRef, Suspense } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp, where, writeBatch, getDocs, updateDoc, deleteDoc, arrayUnion, arrayRemove, deleteField, Unsubscribe, limit } from "firebase/firestore";
 import { auth, app } from "@/utils/firebaseClient";
-import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, Smile, Trash2, Users, CheckSquare, Square, MoreVertical, UserPlus, UserX, Edit, Shield, EyeOff, LogOut, UploadCloud, UserCircle, Cake, MapPin, AtSign, User, Bot, Search, Check, Camera, Loader, Lock } from "lucide-react";
+import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, Smile, Trash2, Users, CheckSquare, Square, MoreVertical, UserPlus, UserX, Edit, Shield, EyeOff, LogOut, UploadCloud, UserCircle, Cake, MapPin, AtSign, User, Bot, Search, Check, Camera, Loader, Lock, Eye } from "lucide-react";
 import { useAppState } from "@/utils/AppStateContext";
 import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -39,27 +38,28 @@ const useLongPress = (callback: () => void, ms = 300) => {
     return { onTouchStart, onTouchEnd, onMouseDown: onTouchStart, onMouseUp: onTouchEnd, onMouseLeave: onTouchEnd };
 };
 
-function timeSince(date: Date) {
-    if (!date) return "";
-    const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
-    let interval = seconds / 31536000;
-    if (interval > 1) return Math.floor(interval) + " years ago";
-    interval = seconds / 2592000;
-    if (interval > 1) return Math.floor(interval) + " months ago";
-    interval = seconds / 86400;
-    if (interval > 1) return Math.floor(interval) + " days ago";
-    interval = seconds / 3600;
-    if (interval > 1) return Math.floor(interval) + " hours ago";
-    interval = seconds / 60;
-    if (interval > 1) return Math.floor(interval) + " minutes ago";
-    return "just now";
-}
 
 const MessageItem = React.memo(({ msg, isUser, selectedChat, firebaseUser, isSelected, onLongPress, onClick, onReact, onShowEmojiPicker, showEmojiPicker, onShowDeleteConfirm, selectionMode }: any) => {
     const longPressProps = useLongPress(onLongPress);
     const senderInfo = selectedChat.isGroup ? (selectedChat.groupType === 'simple' ? selectedChat.memberInfo?.[msg.sender] : null) : selectedChat;
     const displayName = selectedChat.groupType === 'anonymous' ? generateAnonymousName(msg.sender, selectedChat.id) : selectedChat.groupType === 'pseudonymous' ? selectedChat.pseudonyms?.[msg.sender] || 'Anon' : senderInfo?.name || "User";
     const defaultReactions = ["👍", "❤️", "😂", "😢", "😮", "🙏"];
+
+    const getSeenStatus = () => {
+        if (!isUser || msg.sender === 'system') return 'none';
+        const otherParticipantIds = selectedChat.isGroup
+            ? selectedChat.members.filter((id: string) => id !== firebaseUser.uid)
+            : [selectedChat.id];
+        
+        const readers = msg.readBy || [];
+        const allOthersHaveRead = otherParticipantIds.every((id: string) => readers.includes(id));
+        
+        if (allOthersHaveRead) return 'all_seen';
+        if (readers.length > 1) return 'delivered'; // Delivered to at least one other person
+        return 'sent'; // Only sent by user
+    };
+
+    const seenStatus = getSeenStatus();
 
     return (
         <div 
@@ -79,11 +79,15 @@ const MessageItem = React.memo(({ msg, isUser, selectedChat, firebaseUser, isSel
                     {msg.type === 'audio' && <audio src={msg.mediaUrl} controls />}
                     {msg.text && <p className="mt-1 break-words">{msg.text}</p>}
                     
-                    {msg.sender !== 'system' && (
                     <div className={`text-xs mt-1 flex items-center gap-1 ${isUser ? 'justify-end' : 'justify-start'}`}>
                         <span>{msg.createdAt?.toDate?.().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || ""}</span>
+                         {seenStatus !== 'none' && (
+                             <span className="relative flex items-center">
+                                <Eye size={14} className={cn('transition-colors', seenStatus === 'all_seen' ? 'text-blue-400' : 'text-gray-500')} />
+                                {seenStatus === 'all_seen' && <Eye size={14} className="absolute -right-1 text-blue-400" />}
+                             </span>
+                         )}
                     </div>
-                    )}
                     {msg.reactions && Object.keys(msg.reactions).length > 0 && (
                         <div className="absolute -bottom-4 -right-1 flex gap-1">
                             {Object.entries(msg.reactions).map(([emoji, uids]: [string, any]) => (
@@ -126,6 +130,19 @@ const MessageItem = React.memo(({ msg, isUser, selectedChat, firebaseUser, isSel
 });
 MessageItem.displayName = 'MessageItem';
 
+function formatDateSeparator(date: Date) {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const targetDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+  if (targetDate.getTime() === today.getTime()) return 'Today';
+  if (targetDate.getTime() === yesterday.getTime()) return 'Yesterday';
+  
+  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
 
 function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, userProfile: any, chatId: string }) {
     const router = useRouter();
@@ -137,7 +154,6 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
     const fileInputRef = useRef<HTMLInputElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     
-    // Voice Recording State
     const [isRecording, setIsRecording] = useState(false);
     const [isRecordingLocked, setIsRecordingLocked] = useState(false);
     const [recordingTime, setRecordingTime] = useState(0);
@@ -212,7 +228,21 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
     
         const q = query(collection(db, "chats", chatId, "messages"), orderBy("createdAt", "asc"));
         const unsubMessages = onSnapshot(q, (snap) => {
-            setMessages(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+             const newMessages = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+             const unreadMessages = newMessages.filter(msg => {
+                return msg.sender !== firebaseUser.uid && !(msg.readBy || []).includes(firebaseUser.uid);
+             });
+
+             if (unreadMessages.length > 0) {
+                 const batch = writeBatch(db);
+                 unreadMessages.forEach(msg => {
+                     const msgRef = doc(db, "chats", chatId, "messages", msg.id);
+                     batch.update(msgRef, { readBy: arrayUnion(firebaseUser.uid) });
+                 });
+                 batch.commit().catch(e => console.error("Error marking messages as read:", e));
+             }
+
+            setMessages(newMessages);
         });
     
         return () => {
@@ -369,7 +399,6 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
         }
     };
     
-    // --- Voice Recording Logic ---
     const startRecording = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -409,7 +438,6 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
     
     const cancelRecording = () => {
         if (mediaRecorderRef.current && isRecording) {
-            // Stop without triggering onstop's upload logic
             mediaRecorderRef.current.onstop = () => {
                  mediaRecorderRef.current?.stream.getTracks().forEach(track => track.stop());
             };
@@ -445,6 +473,64 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
         if (!isRecordingLocked) {
             stopRecording();
         }
+    };
+    
+    const renderMessagesWithSeparators = () => {
+        let lastDate: string | null = null;
+        const messageElements = [];
+
+        messages
+            .filter(msg => !(msg.deletedFor || []).includes(firebaseUser.uid))
+            .forEach(msg => {
+                const msgDate = msg.createdAt?.toDate();
+                if (msgDate) {
+                    const dateString = msgDate.toDateString();
+                    if (dateString !== lastDate) {
+                        messageElements.push(
+                            <div key={dateString} className="text-center my-4">
+                                <span className="bg-gray-800 text-gray-400 text-xs font-bold px-3 py-1 rounded-full">{formatDateSeparator(msgDate)}</span>
+                            </div>
+                        );
+                        lastDate = dateString;
+                    }
+                }
+                
+                const isUser = msg.sender === firebaseUser.uid;
+                messageElements.push(
+                    <MessageItem
+                      key={msg.id}
+                      msg={msg}
+                      isUser={isUser}
+                      selectedChat={selectedChat}
+                      firebaseUser={firebaseUser}
+                      isSelected={selectedItems.has(msg.id)}
+                      selectionMode={selectionMode}
+                      onLongPress={() => { setSelectionMode('messages'); setSelectedItems(new Set([msg.id])); }}
+                      onClick={() => {
+                        if (selectionMode === 'messages') {
+                            const newSelection = new Set(selectedItems);
+                            if (newSelection.has(msg.id)) {
+                                newSelection.delete(msg.id);
+                            } else {
+                                newSelection.add(msg.id);
+                            }
+                            setSelectedItems(newSelection);
+                            if (newSelection.size === 0) {
+                                setSelectionMode(null);
+                            }
+                        }
+                      }}
+                      onReact={()=>{}}
+                      showEmojiPicker={null}
+                      onShowEmojiPicker={()=>{}}
+                      onShowDeleteConfirm={() => {
+                        setSelectedItems(new Set([msg.id]));
+                        setShowDeleteConfirm(true);
+                      }}
+                    />
+                );
+            });
+            return messageElements;
     };
 
 
@@ -493,42 +579,7 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
             )}
             
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-1">
-                {messages.filter(msg => !(msg.deletedFor || []).includes(firebaseUser.uid)).map(msg => {
-                    const isUser = msg.sender === firebaseUser.uid;
-                    return (
-                        <MessageItem
-                          key={msg.id}
-                          msg={msg}
-                          isUser={isUser}
-                          selectedChat={selectedChat}
-                          firebaseUser={firebaseUser}
-                          isSelected={selectedItems.has(msg.id)}
-                          selectionMode={selectionMode}
-                          onLongPress={() => { setSelectionMode('messages'); setSelectedItems(new Set([msg.id])); }}
-                          onClick={() => {
-                            if (selectionMode === 'messages') {
-                                const newSelection = new Set(selectedItems);
-                                if (newSelection.has(msg.id)) {
-                                    newSelection.delete(msg.id);
-                                } else {
-                                    newSelection.add(msg.id);
-                                }
-                                setSelectedItems(newSelection);
-                                if (newSelection.size === 0) {
-                                    setSelectionMode(null);
-                                }
-                            }
-                          }}
-                          onReact={()=>{}}
-                          showEmojiPicker={null}
-                          onShowEmojiPicker={()=>{}}
-                          onShowDeleteConfirm={() => {
-                            setSelectedItems(new Set([msg.id]));
-                            setShowDeleteConfirm(true);
-                          }}
-                        />
-                    )
-                })}
+                {renderMessagesWithSeparators()}
                 <div ref={messagesEndRef} />
             </div>
 
@@ -548,9 +599,14 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
                 </AnimatePresence>
                  <div className="flex items-center gap-2">
                     {!isRecordingLocked && (
-                        <button type="button" onClick={() => setShowAttachmentMenu(v => !v)} className="p-2 text-gray-400 hover:text-accent-cyan shrink-0">
-                             <Paperclip size={20}/>
-                        </button>
+                         <div className="flex items-center">
+                            <button type="button" onClick={() => setShowAttachmentMenu(v => !v)} className="p-2 text-gray-400 hover:text-accent-cyan shrink-0">
+                                <Paperclip size={20}/>
+                            </button>
+                            <button type="button" className="p-2 text-gray-400 hover:text-accent-cyan shrink-0" onClick={() => inputRef.current?.focus()}>
+                                <Smile size={20}/>
+                            </button>
+                        </div>
                     )}
                     
                     {isRecordingLocked ? (
@@ -568,9 +624,6 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
                                 placeholder={isRecording ? "Recording..." : "Type a message..."} 
                                 className="flex-1 bg-gray-700 rounded-full px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-accent-cyan w-full pr-10"
                             />
-                            <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-accent-cyan" onClick={() => inputRef.current?.focus()}>
-                                <Smile size={20}/>
-                            </button>
                         </div>
                     )}
 
