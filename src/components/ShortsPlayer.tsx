@@ -2,7 +2,7 @@
 "use client";
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { OptimizedVideo } from './OptimizedVideo';
-import { Play, Pause, Volume2, VolumeX, Heart, ChevronUp, ChevronDown } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Maximize, PictureInPicture2, Youtube, Heart, ChevronUp, ChevronDown } from 'lucide-react';
 import { useAppState } from '@/utils/AppStateContext';
 import { doc, updateDoc, increment, getFirestore } from 'firebase/firestore';
 import { app } from '@/utils/firebaseClient';
@@ -22,8 +22,10 @@ export function ShortsPlayer({ post, onNext, onPrev, onView }: { post: any, onNe
     const [showComments, setShowComments] = useState(false);
     const [showHeart, setShowHeart] = useState(false);
     const viewCountedRef = useRef(false);
+    
+    // Tap state management
+    const tapStateRef = useRef<'idle' | 'muted'>('idle');
     const tapTimeout = useRef<NodeJS.Timeout | null>(null);
-    const lastTap = useRef(0);
 
     const incrementViewCount = useCallback(() => {
         if (viewCountedRef.current || !post.id) return;
@@ -48,7 +50,8 @@ export function ShortsPlayer({ post, onNext, onPrev, onView }: { post: any, onNe
                     incrementViewCount();
                 } else {
                     video.pause();
-                    video.currentTime = 0;
+                    if(video) video.currentTime = 0;
+                    tapStateRef.current = 'idle'; // Reset tap state when out of view
                 }
             },
             { threshold: 0.7 }
@@ -93,21 +96,30 @@ export function ShortsPlayer({ post, onNext, onPrev, onView }: { post: any, onNe
         onTouchEnd: handleLongPressEnd,
     };
 
-    const handleSingleTap = () => {
-        const video = videoRef.current;
-        if (video) {
-            if(video.paused) video.play();
-            else video.pause();
-        }
-    };
-
     const handleDoubleTap = () => {
         setShowHeart(true);
         setTimeout(() => setShowHeart(false), 800);
-        // Find the like button inside PostActions and click it programmatically
+        // Find the like button and click it
         const likeButton = containerRef.current?.querySelector('[data-like-button="true"]');
         if (likeButton instanceof HTMLElement) {
             likeButton.click();
+        }
+    };
+    
+    const handleSingleTap = () => {
+        const video = videoRef.current;
+        if (!video) return;
+
+        if (tapStateRef.current === 'idle') {
+            // First tap: Mute/Unmute
+            video.muted = !video.muted;
+            setIsMuted(video.muted);
+            tapStateRef.current = 'muted';
+        } else {
+            // Second tap: Play/Pause
+            if(video.paused) video.play();
+            else video.pause();
+            tapStateRef.current = 'idle';
         }
     }
     
@@ -115,21 +127,13 @@ export function ShortsPlayer({ post, onNext, onPrev, onView }: { post: any, onNe
         if (tapTimeout.current) {
             clearTimeout(tapTimeout.current);
             tapTimeout.current = null;
+            tapStateRef.current = 'idle'; // Reset state on double tap
             handleDoubleTap();
         } else {
             tapTimeout.current = setTimeout(() => {
                 handleSingleTap();
                 tapTimeout.current = null;
-            }, 250); // A 250ms delay to distinguish single from double tap
-        }
-    };
-    
-    const toggleMute = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        const video = videoRef.current;
-        if (video) {
-            video.muted = !video.muted;
-            setIsMuted(video.muted);
+            }, 250);
         }
     };
 
@@ -147,7 +151,7 @@ export function ShortsPlayer({ post, onNext, onPrev, onView }: { post: any, onNe
                 className="w-full h-full object-contain"
                 loop
                 playsInline
-                muted={isMuted}
+                muted={isMuted} // Controlled by state now
                 preload="metadata"
                 {...longPressEvents}
             />
@@ -163,6 +167,16 @@ export function ShortsPlayer({ post, onNext, onPrev, onView }: { post: any, onNe
                 >
                     <Heart fill="red" stroke="white" strokeWidth={2} size={100} />
                 </motion.div>
+            )}
+             {!isPlaying && (
+                 <motion.div
+                    initial={{ scale: 0.5, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.5, opacity: 0 }}
+                    className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                 >
+                    <Play size={80} className="text-white/70 drop-shadow-lg" />
+                 </motion.div>
             )}
             </AnimatePresence>
             
@@ -185,15 +199,12 @@ export function ShortsPlayer({ post, onNext, onPrev, onView }: { post: any, onNe
 
                  {/* Right side actions */}
                 <div className="flex flex-col gap-4 self-end pointer-events-auto">
-                    <button onClick={toggleMute} className="p-2 bg-black/50 rounded-full text-white">
-                        {isMuted ? <VolumeX /> : <Volume2 />}
-                    </button>
                     <PostActions post={post} isShortVibe={true} onCommentClick={() => setShowComments(true)} />
                 </div>
             </div>
             
-             <div className="hidden md:flex flex-col gap-4 absolute top-1/2 -translate-y-1/2 right-4">
-                <button onClick={(e) => { e.stopPropagation(); onPrev(); }} className="p-3 bg-black/40 rounded-full text-white hover:bg-black/70">
+            <div className="flex flex-col gap-4 absolute top-1/2 -translate-y-1/2 right-4">
+                 <button onClick={(e) => { e.stopPropagation(); onPrev(); }} className="p-3 bg-black/40 rounded-full text-white hover:bg-black/70">
                     <ChevronUp />
                 </button>
                 <button onClick={(e) => { e.stopPropagation(); onNext(); }} className="p-3 bg-black/40 rounded-full text-white hover:bg-black/70">
@@ -203,3 +214,4 @@ export function ShortsPlayer({ post, onNext, onPrev, onView }: { post: any, onNe
         </div>
     );
 }
+
