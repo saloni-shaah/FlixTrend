@@ -12,9 +12,12 @@ import { uploadFileToFirebaseStorage } from '@/app/actions';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { getFunctions, httpsCallable } from "firebase/functions";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+
 
 const functions = getFunctions(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 const deleteMessageCallable = httpsCallable(functions, 'deleteMessage');
 
 const anonymousNames = ["Ram", "Shyam", "Sita", "Mohan", "Krishna", "Radha", "Anchal", "Anaya", "Advik", "Diya", "Rohan", "Priya", "Arjun", "Saanvi", "Kabir"];
@@ -285,29 +288,33 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
         }
     };
     
+    const handleFileUpload = async (file: File) => {
+        if (!file || !firebaseUser) return;
+    
+        let type: 'image' | 'video' = file.type.startsWith('video/') ? 'video' : 'image';
+      
+        try {
+            const fileName = `${firebaseUser.uid}-${Date.now()}-${file.name}`;
+            const fileRef = storageRef(storage, `user_uploads/${firebaseUser.uid}/${fileName}`);
+            
+            const snapshot = await uploadBytes(fileRef, file);
+            const downloadURL = await getDownloadURL(snapshot.ref);
 
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+            handleSend(new Event('submit') as any, downloadURL, type);
+
+        } catch (error) {
+            console.error("Upload failed:", error);
+            alert("Sorry, the file upload failed. Please check your permissions.");
+        }
+    };
+
+
+     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       setShowAttachmentMenu(false);
       const file = e.target.files?.[0];
-      if (!file) return;
-  
-      let type: 'image' | 'video' = file.type.startsWith('video/') ? 'video' : 'image';
-      
-      try {
-          const formData = new FormData();
-          formData.append('file', file);
-          formData.append('userId', firebaseUser.uid);
-          const result = await uploadFileToFirebaseStorage(formData);
-          if (result.success?.url) {
-              handleSend(new Event('submit') as any, result.success.url, type);
-          } else {
-            throw new Error(result.failure || "Upload failed");
-          }
-      } catch (error) {
-          console.error("Upload failed:", error);
-          alert("Sorry, the file upload failed.");
+      if (file) {
+          handleFileUpload(file);
       }
-  
       if (e.target) e.target.value = '';
     };
 
@@ -324,13 +331,7 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
                 if (blob) {
                     const file = new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
                     setShowCameraView(false);
-                    const formData = new FormData();
-                    formData.append('file', file);
-                    formData.append('userId', firebaseUser.uid);
-                    const result = await uploadFileToFirebaseStorage(formData);
-                    if (result.success?.url) {
-                      handleSend(new Event('submit') as any, result.success.url, 'image');
-                    }
+                    await handleFileUpload(file);
                 }
             }, 'image/jpeg');
         }
@@ -434,7 +435,7 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
                     </motion.div>
                 )}
                 </AnimatePresence>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 sm:gap-2">
                     <button type="button" onClick={() => setShowAttachmentMenu(v => !v)} className="p-2 text-gray-400 hover:text-accent-cyan shrink-0">
                         <Paperclip size={20}/>
                     </button>
@@ -546,3 +547,5 @@ export default function SignalChatPage() {
         </Suspense>
     )
 }
+
+    
