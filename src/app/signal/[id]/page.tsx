@@ -260,7 +260,23 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
         await addDoc(collection(db, "chats", chatId, "messages"), messageData);
     };
 
-    // ... other handlers (handleFileChange, handleMic, handleDeleteMessages, etc.) would go here
+    const handleDeleteMessages = async (mode: 'me' | 'everyone') => {
+        if (selectedItems.size === 0) return;
+        
+        try {
+            for (const messageId of selectedItems) {
+                await deleteMessageCallable({ chatId, messageId, mode });
+            }
+        } catch (error) {
+            console.error("Error deleting messages:", error);
+            alert("Could not delete messages.");
+        } finally {
+            setSelectionMode(null);
+            setSelectedItems(new Set());
+        }
+    };
+    
+
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
@@ -293,23 +309,31 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
 
     return (
         <div className="flex-1 flex flex-col bg-black/40 relative">
-            <div className="flex items-center gap-3 p-3 border-b border-accent-cyan/10 bg-black/60 shadow-md shrink-0">
-                <button onClick={() => router.push('/signal')} className="p-2 rounded-full hover:bg-accent-cyan/10"><ArrowLeft size={20}/></button>
-                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-lg overflow-hidden shrink-0">
-                {selectedChat.isGroup ? 
-                        (selectedChat.avatar_url ? <img src={selectedChat.avatar_url} alt={selectedChat.name} className="w-full h-full object-cover"/> : <Users/>) :
-                        (selectedChat.avatar_url ? <img src={selectedChat.avatar_url} alt="avatar" className="w-full h-full object-cover"/> : <UserCircle/>)
-                }
+            {selectionMode === 'messages' ? (
+                 <div className="p-3 border-b border-accent-cyan/10 flex items-center justify-between shrink-0 bg-accent-cyan/10">
+                    <button onClick={() => { setSelectionMode(null); setSelectedItems(new Set()); }}><X size={24} /></button>
+                    <span className="font-bold">{selectedItems.size} selected</span>
+                    <button onClick={() => setShowDeleteConfirm(true)}><Trash2 size={24} /></button>
                 </div>
-                <div className="flex-1 text-left">
-                    <h3 className="font-bold text-white">{selectedChat.name || selectedChat.username}</h3>
-                    {/* Status would be implemented here */}
+            ) : (
+                <div className="flex items-center gap-3 p-3 border-b border-accent-cyan/10 bg-black/60 shadow-md shrink-0">
+                    <button onClick={() => router.push('/signal')} className="p-2 rounded-full hover:bg-accent-cyan/10"><ArrowLeft size={20}/></button>
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-lg overflow-hidden shrink-0">
+                    {selectedChat.isGroup ? 
+                            (selectedChat.avatar_url ? <img src={selectedChat.avatar_url} alt={selectedChat.name} className="w-full h-full object-cover"/> : <Users/>) :
+                            (selectedChat.avatar_url ? <img src={selectedChat.avatar_url} alt="avatar" className="w-full h-full object-cover"/> : <UserCircle/>)
+                    }
+                    </div>
+                    <div className="flex-1 text-left">
+                        <h3 className="font-bold text-white">{selectedChat.name || selectedChat.username}</h3>
+                        {/* Status would be implemented here */}
+                    </div>
+                    <div className="flex items-center gap-2">
+                    {!selectedChat.isGroup && <button className="p-2 rounded-full hover:bg-accent-cyan/10"><Video size={20}/></button>}
+                    {!selectedChat.isGroup && <button className="p-2 rounded-full hover:bg-accent-cyan/10"><Phone size={20}/></button>}
+                    </div>
                 </div>
-                <div className="flex items-center gap-2">
-                {!selectedChat.isGroup && <button className="p-2 rounded-full hover:bg-accent-cyan/10"><Video size={20}/></button>}
-                {!selectedChat.isGroup && <button className="p-2 rounded-full hover:bg-accent-cyan/10"><Phone size={20}/></button>}
-                </div>
-            </div>
+            )}
             
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-1">
                 {messages.filter(msg => !(msg.deletedFor || []).includes(firebaseUser.uid)).map(msg => {
@@ -321,14 +345,30 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
                           isUser={isUser}
                           selectedChat={selectedChat}
                           firebaseUser={firebaseUser}
-                          isSelected={false}
-                          selectionMode={null}
-                          onLongPress={() => {}}
-                          onClick={() => {}}
+                          isSelected={selectedItems.has(msg.id)}
+                          selectionMode={selectionMode}
+                          onLongPress={() => { setSelectionMode('messages'); setSelectedItems(new Set([msg.id])); }}
+                          onClick={() => {
+                            if (selectionMode === 'messages') {
+                                const newSelection = new Set(selectedItems);
+                                if (newSelection.has(msg.id)) {
+                                    newSelection.delete(msg.id);
+                                } else {
+                                    newSelection.add(msg.id);
+                                }
+                                setSelectedItems(newSelection);
+                                if (newSelection.size === 0) {
+                                    setSelectionMode(null);
+                                }
+                            }
+                          }}
                           onReact={()=>{}}
                           showEmojiPicker={null}
                           onShowEmojiPicker={()=>{}}
-                          onShowDeleteConfirm={() => {}}
+                          onShowDeleteConfirm={() => {
+                            setSelectedItems(new Set([msg.id]));
+                            setShowDeleteConfirm(true);
+                          }}
                         />
                     )
                 })}
@@ -336,22 +376,22 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
             </div>
 
             <form onSubmit={handleSend} className="flex items-center gap-2 p-2 border-t border-accent-cyan/10 bg-black/60 shrink-0">
-                 <div className="flex-1 bg-gray-700 rounded-full flex items-center border border-gray-600 focus-within:ring-2 focus-within:ring-accent-cyan">
-                    <button type="button" onClick={() => alert("Emoji picker coming soon!")} className="p-2 text-gray-400 hover:text-accent-cyan shrink-0">
+                 <div className="flex items-center gap-1">
+                     <button type="button" onClick={() => alert("Emoji picker coming soon!")} className="p-2 text-gray-400 hover:text-accent-cyan shrink-0">
                         <Smile size={20}/>
                     </button>
-                    <input 
-                        type="text" 
-                        value={newMessage} 
-                        onChange={handleInputChange} 
-                        placeholder={isRecording ? "Recording..." : "Type a message..."} 
-                        className="flex-1 bg-transparent px-2 py-2 text-white focus:outline-none w-full min-w-0"
-                    />
                     <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2 text-gray-400 hover:text-accent-cyan shrink-0">
                         <Paperclip size={20}/>
                     </button>
-                    <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*,video/*,audio/*" />
-                </div>
+                 </div>
+                 <input 
+                    type="text" 
+                    value={newMessage} 
+                    onChange={handleInputChange} 
+                    placeholder={isRecording ? "Recording..." : "Type a message..."} 
+                    className="flex-1 bg-gray-700 rounded-full px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-accent-cyan w-full"
+                 />
+                 <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*,video/*,audio/*" />
                 <AnimatePresence mode="wait">
                 {newMessage.trim() === "" ? (
                         <motion.button 
@@ -378,6 +418,31 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
                 )}
                 </AnimatePresence>
             </form>
+             <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Message(s)?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                         <AlertDialogAction
+                            onClick={() => handleDeleteMessages('me')}
+                            className="bg-yellow-600 hover:bg-yellow-700"
+                        >
+                            Delete for Me
+                        </AlertDialogAction>
+                        <AlertDialogAction
+                             onClick={() => handleDeleteMessages('everyone')}
+                             className="bg-red-600 hover:bg-red-700"
+                        >
+                            Delete for Everyone
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     )
 }
