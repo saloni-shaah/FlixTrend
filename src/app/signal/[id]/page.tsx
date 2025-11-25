@@ -336,6 +336,22 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
             </div>
 
             <form onSubmit={handleSend} className="flex items-center gap-2 p-2 border-t border-accent-cyan/10 bg-black/60 shrink-0">
+                 <div className="flex-1 bg-gray-700 rounded-full flex items-center border border-gray-600 focus-within:ring-2 focus-within:ring-accent-cyan">
+                    <button type="button" onClick={() => alert("Emoji picker coming soon!")} className="p-2 text-gray-400 hover:text-accent-cyan shrink-0">
+                        <Smile size={20}/>
+                    </button>
+                    <input 
+                        type="text" 
+                        value={newMessage} 
+                        onChange={handleInputChange} 
+                        placeholder={isRecording ? "Recording..." : "Type a message..."} 
+                        className="flex-1 bg-transparent px-2 py-2 text-white focus:outline-none w-full min-w-0"
+                    />
+                    <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2 text-gray-400 hover:text-accent-cyan shrink-0">
+                        <Paperclip size={20}/>
+                    </button>
+                    <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*,video/*,audio/*" />
+                </div>
                 <AnimatePresence mode="wait">
                 {newMessage.trim() === "" ? (
                         <motion.button 
@@ -344,7 +360,7 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
                         animate={{ scale: 1, opacity: 1 }}
                         exit={{ scale: 0.5, opacity: 0 }}
                         type="button" 
-                        className={`p-3 rounded-full transition-colors ${isRecording ? 'bg-red-500 animate-pulse' : 'bg-accent-pink text-white'}`}
+                        className={`p-3 rounded-full transition-colors shrink-0 ${isRecording ? 'bg-red-500 animate-pulse' : 'bg-accent-pink text-white'}`}
                         >
                         <Mic size={20}/>
                         </motion.button>
@@ -355,28 +371,12 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
                         animate={{ scale: 1, opacity: 1 }}
                         exit={{ scale: 0.5, opacity: 0 }}
                         type="submit" 
-                        className="p-3 rounded-full bg-accent-cyan text-white"
+                        className="p-3 rounded-full bg-accent-cyan text-white shrink-0"
                         >
                         <Send size={20}/>
                         </motion.button>
                 )}
                 </AnimatePresence>
-                <div className="flex-1 bg-gray-700 rounded-full flex items-center border border-gray-600 focus-within:ring-2 focus-within:ring-accent-cyan">
-                    <button type="button" onClick={() => alert("Emoji picker coming soon!")} className="p-2 text-gray-400 hover:text-accent-cyan">
-                        <Smile size={20}/>
-                    </button>
-                    <input 
-                        type="text" 
-                        value={newMessage} 
-                        onChange={handleInputChange} 
-                        placeholder={isRecording ? "Recording..." : "Type a message..."} 
-                        className="flex-1 bg-transparent px-4 py-2 text-white focus:outline-none"
-                    />
-                    <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2 text-gray-400 hover:text-accent-cyan">
-                        <Paperclip size={20}/>
-                    </button>
-                    <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*,video/*,audio/*" />
-                </div>
             </form>
         </div>
     )
