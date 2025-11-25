@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { OptimizedVideo } from './OptimizedVideo';
@@ -17,7 +18,7 @@ export function ShortsPlayer({ post, onNext, onPrev, onView }: { post: any, onNe
     const containerRef = useRef<HTMLDivElement>(null);
     const { setIsScopeVideoPlaying } = useAppState();
     const [isPlaying, setIsPlaying] = useState(false);
-    const [isMuted, setIsMuted] = useState(true); 
+    const [isMuted, setIsMuted] = useState(false); 
     const [showComments, setShowComments] = useState(false);
     const [showHeart, setShowHeart] = useState(false);
     const viewCountedRef = useRef(false);
@@ -41,6 +42,7 @@ export function ShortsPlayer({ post, onNext, onPrev, onView }: { post: any, onNe
             ([entry]) => {
                 if (entry.isIntersecting) {
                     video.play().catch(error => {
+                        // Autoplay with sound might fail, so we mute and try again.
                         if (error.name === "NotAllowedError") {
                             setIsMuted(true);
                             video.muted = true;
@@ -98,35 +100,46 @@ export function ShortsPlayer({ post, onNext, onPrev, onView }: { post: any, onNe
     const handleSingleTap = () => {
         const video = videoRef.current;
         if (video) {
-            if (video.paused) {
-                video.play();
-            } else {
-                video.pause();
-            }
+            video.muted = !video.muted;
         }
     };
 
     const handleDoubleTap = () => {
+        handleSingleTap(); // First tap mutes
+        setTimeout(() => { // Second tap pauses
+            if(videoRef.current) {
+                if(videoRef.current.paused) videoRef.current.play();
+                else videoRef.current.pause();
+            }
+        }, 150);
+    };
+
+    const handleTripleTap = () => {
         setShowHeart(true);
         setTimeout(() => setShowHeart(false), 800);
-        // Here you would also trigger the "like/star" action
-        // For example, find the like button and click it programmatically
         const likeButton = containerRef.current?.querySelector('[data-like-button]');
         if (likeButton instanceof HTMLElement) {
             likeButton.click();
         }
-    };
+    }
     
     const handleContainerClick = () => {
         if (tapTimeout.current) {
             clearTimeout(tapTimeout.current);
+            // This is a double or triple tap
+            const now = Date.now();
+            if (lastTap.current && now - lastTap.current < 400) {
+                 handleTripleTap();
+            } else {
+                 handleDoubleTap();
+            }
+            lastTap.current = now;
             tapTimeout.current = null;
-            handleDoubleTap();
         } else {
             tapTimeout.current = setTimeout(() => {
                 handleSingleTap();
                 tapTimeout.current = null;
-            }, 250);
+            }, 300);
         }
     };
     
@@ -139,6 +152,8 @@ export function ShortsPlayer({ post, onNext, onPrev, onView }: { post: any, onNe
         }
     };
     
+    const lastTap = useRef(0);
+
     const videoUrl = Array.isArray(post.mediaUrl) ? post.mediaUrl.find(url => /\.(mp4|webm|ogg)$/i.test(url)) : post.mediaUrl;
 
     return (
@@ -198,13 +213,14 @@ export function ShortsPlayer({ post, onNext, onPrev, onView }: { post: any, onNe
                 </div>
             </div>
             
-             {/* Desktop Navigation */}
-            <button onClick={(e) => { e.stopPropagation(); onPrev(); }} className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-black/40 rounded-full text-white hover:bg-black/70">
-                <ChevronUp />
-            </button>
-            <button onClick={(e) => { e.stopPropagation(); onNext(); }} className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-black/40 rounded-full text-white hover:bg-black/70">
-                <ChevronDown />
-            </button>
+            <div className="hidden md:flex flex-col gap-4 absolute right-4 top-1/2 -translate-y-1/2">
+                <button onClick={(e) => { e.stopPropagation(); onPrev(); }} className="p-3 bg-black/40 rounded-full text-white hover:bg-black/70">
+                    <ChevronUp />
+                </button>
+                <button onClick={(e) => { e.stopPropagation(); onNext(); }} className="p-3 bg-black/40 rounded-full text-white hover:bg-black/70">
+                    <ChevronDown />
+                </button>
+            </div>
         </div>
     );
 }
