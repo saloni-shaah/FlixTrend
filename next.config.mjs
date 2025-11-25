@@ -28,9 +28,6 @@ const withPWA = createNextPwa({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -54,6 +51,7 @@ const nextConfig = {
       },
     ];
   },
+  turbopack: {},
 };
 
 export default withPWA(nextConfig);
