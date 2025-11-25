@@ -1,26 +1,27 @@
-
 "use client";
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { OptimizedVideo } from './OptimizedVideo';
-import { Play, Pause, Volume2, VolumeX } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Heart, ChevronUp, ChevronDown } from 'lucide-react';
 import { useAppState } from '@/utils/AppStateContext';
 import { doc, updateDoc, increment, getFirestore } from 'firebase/firestore';
 import { app } from '@/utils/firebaseClient';
 import { PostActions } from './PostActions';
 import Link from 'next/link';
 import { FaMusic } from 'react-icons/fa';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const db = getFirestore(app);
 
-export function ShortsPlayer({ post, onView }: { post: any, onView: () => void }) {
+export function ShortsPlayer({ post, onNext, onPrev, onView }: { post: any, onNext: () => void, onPrev: () => void, onView: () => void }) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const { setIsScopeVideoPlaying } = useAppState();
     const [isPlaying, setIsPlaying] = useState(false);
     const [isMuted, setIsMuted] = useState(true); 
     const [showComments, setShowComments] = useState(false);
+    const [showHeart, setShowHeart] = useState(false);
     const viewCountedRef = useRef(false);
-    const lastTap = useRef(0);
+    const tapTimeout = useRef<NodeJS.Timeout | null>(null);
 
     const incrementViewCount = useCallback(() => {
         if (viewCountedRef.current || !post.id) return;
@@ -31,7 +32,7 @@ export function ShortsPlayer({ post, onView }: { post: any, onView: () => void }
         }).catch(error => console.error("Error incrementing view count:", error));
         onView();
     }, [post.id, onView]);
-
+    
     useEffect(() => {
         const video = videoRef.current;
         if (!video) return;
@@ -41,7 +42,6 @@ export function ShortsPlayer({ post, onView }: { post: any, onView: () => void }
                 if (entry.isIntersecting) {
                     video.play().catch(error => {
                         if (error.name === "NotAllowedError") {
-                            console.log("Autoplay with sound was prevented. Muting to play.");
                             setIsMuted(true);
                             video.muted = true;
                             video.play();
@@ -60,11 +60,10 @@ export function ShortsPlayer({ post, onView }: { post: any, onView: () => void }
         
         const handlePlay = () => setIsPlaying(true);
         const handlePause = () => setIsPlaying(false);
+        const handleVolumeChange = () => setIsMuted(video.muted);
         
         video.addEventListener('play', handlePlay);
         video.addEventListener('pause', handlePause);
-
-        const handleVolumeChange = () => setIsMuted(video.muted);
         video.addEventListener('volumechange', handleVolumeChange);
 
         return () => {
@@ -77,35 +76,60 @@ export function ShortsPlayer({ post, onView }: { post: any, onView: () => void }
             setIsScopeVideoPlaying(false);
         };
     }, [setIsScopeVideoPlaying, incrementViewCount]);
-    
+
     useEffect(() => {
-        if(isPlaying){
-            setIsScopeVideoPlaying(true);
-        } else {
-            setIsScopeVideoPlaying(false);
-        }
+        setIsScopeVideoPlaying(isPlaying);
     }, [isPlaying, setIsScopeVideoPlaying]);
-
-
-    const handleVideoClick = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        const now = Date.now();
-        const DOUBLE_TAP_DELAY = 300;
-        if (now - lastTap.current < DOUBLE_TAP_DELAY) {
-            // This is a double tap, handled by parent onDoubleClick
-        } else {
-           const video = videoRef.current;
-            if (video) {
-                if (video.paused) {
-                    video.play();
-                } else {
-                    video.pause();
-                }
-            }
-        }
-        lastTap.current = now;
+    
+    const handleLongPressStart = () => {
+        if (videoRef.current) videoRef.current.playbackRate = 2.0;
+    };
+    const handleLongPressEnd = () => {
+        if (videoRef.current) videoRef.current.playbackRate = 1.0;
     };
 
+    const longPressEvents = {
+        onMouseDown: handleLongPressStart,
+        onMouseUp: handleLongPressEnd,
+        onTouchStart: handleLongPressStart,
+        onTouchEnd: handleLongPressEnd,
+    };
+
+    const handleSingleTap = () => {
+        const video = videoRef.current;
+        if (video) {
+            if (video.paused) {
+                video.play();
+            } else {
+                video.pause();
+            }
+        }
+    };
+
+    const handleDoubleTap = () => {
+        setShowHeart(true);
+        setTimeout(() => setShowHeart(false), 800);
+        // Here you would also trigger the "like/star" action
+        // For example, find the like button and click it programmatically
+        const likeButton = containerRef.current?.querySelector('[data-like-button]');
+        if (likeButton instanceof HTMLElement) {
+            likeButton.click();
+        }
+    };
+    
+    const handleContainerClick = () => {
+        if (tapTimeout.current) {
+            clearTimeout(tapTimeout.current);
+            tapTimeout.current = null;
+            handleDoubleTap();
+        } else {
+            tapTimeout.current = setTimeout(() => {
+                handleSingleTap();
+                tapTimeout.current = null;
+            }, 250);
+        }
+    };
+    
     const toggleMute = (e: React.MouseEvent) => {
         e.stopPropagation();
         const video = videoRef.current;
@@ -118,7 +142,11 @@ export function ShortsPlayer({ post, onView }: { post: any, onView: () => void }
     const videoUrl = Array.isArray(post.mediaUrl) ? post.mediaUrl.find(url => /\.(mp4|webm|ogg)$/i.test(url)) : post.mediaUrl;
 
     return (
-        <div ref={containerRef} className="relative w-full h-full bg-black flex items-center justify-center" onClick={handleVideoClick}>
+        <div 
+            ref={containerRef} 
+            className="relative w-full h-full bg-black flex items-center justify-center cursor-pointer" 
+            onClick={handleContainerClick}
+        >
             <OptimizedVideo
                 ref={videoRef}
                 src={videoUrl}
@@ -127,9 +155,25 @@ export function ShortsPlayer({ post, onView }: { post: any, onView: () => void }
                 playsInline
                 muted={isMuted}
                 preload="metadata"
+                {...longPressEvents}
             />
             
+            <AnimatePresence>
+            {showHeart && (
+                <motion.div
+                    initial={{ scale: 0.5, opacity: 0 }}
+                    animate={{ scale: 1.2, opacity: 1 }}
+                    exit={{ scale: 2, opacity: 0 }}
+                    transition={{ duration: 0.4, ease: "easeOut" }}
+                    className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                >
+                    <Heart fill="red" stroke="white" strokeWidth={2} size={100} />
+                </motion.div>
+            )}
+            </AnimatePresence>
+            
             <div className="absolute inset-0 w-full h-full p-4 pr-8 flex items-end justify-between pointer-events-none bg-gradient-to-t from-black/60 via-black/20 to-transparent">
+                 {/* Left side info */}
                 <div className="flex-1 flex flex-col gap-2 self-end text-white drop-shadow-lg max-w-[calc(100%-80px)] pointer-events-auto">
                     <Link href={`/squad/${post.userId}`} className="flex items-center gap-2 group cursor-pointer w-fit">
                         <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green flex items-center justify-center font-bold text-lg overflow-hidden border-2 border-accent-green group-hover:scale-105 transition-transform">
@@ -142,9 +186,10 @@ export function ShortsPlayer({ post, onView }: { post: any, onView: () => void }
                         <div className="flex items-center gap-2 text-white text-sm">
                             <FaMusic /> <span>{post.song.name} - {post.song.artists.join(", ")}</span>
                         </div>
-                    )}
+                     )}
                 </div>
 
+                 {/* Right side actions */}
                 <div className="flex flex-col gap-4 self-end pointer-events-auto">
                     <button onClick={toggleMute} className="p-2 bg-black/50 rounded-full text-white">
                         {isMuted ? <VolumeX /> : <Volume2 />}
@@ -152,12 +197,14 @@ export function ShortsPlayer({ post, onView }: { post: any, onView: () => void }
                     <PostActions post={post} isShortVibe={true} onCommentClick={() => setShowComments(true)} />
                 </div>
             </div>
-
-            {!isPlaying && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
-                    <Play size={64} className="text-white/70 drop-shadow-lg" />
-                </div>
-            )}
+            
+             {/* Desktop Navigation */}
+            <button onClick={(e) => { e.stopPropagation(); onPrev(); }} className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-black/40 rounded-full text-white hover:bg-black/70">
+                <ChevronUp />
+            </button>
+            <button onClick={(e) => { e.stopPropagation(); onNext(); }} className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-black/40 rounded-full text-white hover:bg-black/70">
+                <ChevronDown />
+            </button>
         </div>
     );
 }

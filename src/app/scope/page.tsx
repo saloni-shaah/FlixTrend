@@ -9,7 +9,7 @@ import { useAppState } from "@/utils/AppStateContext";
 import { useAuthState } from "react-firebase-hooks/auth";
 
 const db = getFirestore(app);
-const POSTS_PER_PAGE = 3; // Fetch in batches of 3 for a good balance of pre-loading.
+const POSTS_PER_PAGE = 3; 
 
 export default function ScopePage() {
     const [posts, setPosts] = useState<any[]>([]);
@@ -19,8 +19,8 @@ export default function ScopePage() {
     const [lastVisible, setLastVisible] = useState<any>(null);
     const [hasMore, setHasMore] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
-    const observer = useRef<IntersectionObserver>();
-    const prefetchTriggerRef = useRef<HTMLDivElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [currentIndex, setCurrentIndex] = useState(0);
 
     const fetchMorePosts = useCallback(async () => {
       if (!hasMore || loadingMore) return;
@@ -52,7 +52,6 @@ export default function ScopePage() {
       }
     }, [hasMore, loadingMore, lastVisible]);
     
-    // Initial fetch trigger
     useEffect(() => {
         if (user && posts.length === 0) {
             fetchMorePosts();
@@ -61,35 +60,38 @@ export default function ScopePage() {
         }
     }, [user, posts.length, fetchMorePosts]);
 
-    // Intersection Observer for infinite scroll
+    // Pre-fetch when approaching the end
     useEffect(() => {
-        if (observer.current) observer.current.disconnect();
-
-        observer.current = new IntersectionObserver(
-            (entries) => {
-                if (entries[0].isIntersecting && hasMore && !loadingMore && !loading) {
-                    fetchMorePosts();
-                }
-            },
-            { threshold: 0.8 } // Start fetching when the trigger is 80% visible
-        );
-
-        const currentPrefetchTrigger = prefetchTriggerRef.current;
-        if (currentPrefetchTrigger) {
-            observer.current.observe(currentPrefetchTrigger);
+        if(currentIndex > posts.length - 3 && hasMore && !loadingMore) {
+            fetchMorePosts();
         }
+    }, [currentIndex, posts.length, hasMore, loadingMore, fetchMorePosts]);
 
-        return () => {
-            if (currentPrefetchTrigger) {
-                observer.current?.unobserve(currentPrefetchTrigger);
-            }
-        };
-    }, [fetchMorePosts, hasMore, loading, loadingMore, posts]); // Re-attach observer when posts change
-    
     useEffect(() => {
        setIsScopeVideoPlaying(false);
     }, [setIsScopeVideoPlaying]);
 
+    const scrollToPost = (index: number) => {
+        const container = containerRef.current;
+        if (container) {
+            const postElement = container.children[index] as HTMLElement;
+            if (postElement) {
+                postElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+    };
+    
+    const handleNext = () => {
+        const nextIndex = Math.min(currentIndex + 1, posts.length - 1);
+        setCurrentIndex(nextIndex);
+        scrollToPost(nextIndex);
+    };
+
+    const handlePrev = () => {
+        const prevIndex = Math.max(currentIndex - 1, 0);
+        setCurrentIndex(prevIndex);
+        scrollToPost(prevIndex);
+    };
 
     if (loading && posts.length === 0) {
         return <VibeSpaceLoader />;
@@ -106,17 +108,28 @@ export default function ScopePage() {
                 }
              `}</style>
 
-             <div className="absolute inset-0 w-full h-full snap-y snap-mandatory overflow-y-scroll overflow-x-hidden scroll-smooth">
+             <div 
+                ref={containerRef}
+                className="absolute inset-0 w-full h-full snap-y snap-mandatory overflow-y-scroll overflow-x-hidden scroll-smooth"
+                onScroll={(e) => {
+                    const { scrollTop, clientHeight } = e.currentTarget;
+                    const newIndex = Math.round(scrollTop / clientHeight);
+                    if (newIndex !== currentIndex) {
+                        setCurrentIndex(newIndex);
+                    }
+                }}
+            >
                 {posts.length > 0 ? (
                     <>
-                        {posts.map((post, index) => (
+                        {posts.map((post) => (
                             <div
                                 key={post.id}
-                                ref={index === posts.length - 2 ? prefetchTriggerRef : null} // Attach ref to the second to last item
                                 className="h-screen w-screen snap-start flex items-center justify-center"
                             >
                                 <ShortsPlayer 
                                     post={post} 
+                                    onNext={handleNext}
+                                    onPrev={handlePrev}
                                     onView={() => {}}
                                 />
                             </div>
