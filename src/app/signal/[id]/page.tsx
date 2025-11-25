@@ -4,11 +4,10 @@ import React, { useEffect, useState, useRef, Suspense } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp, where, writeBatch, getDocs, updateDoc, deleteDoc, arrayUnion, arrayRemove, deleteField, Unsubscribe, limit } from "firebase/firestore";
 import { auth, app } from "@/utils/firebaseClient";
-import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, Smile, Trash2, Users, CheckSquare, Square, MoreVertical, UserPlus, UserX, Edit, Shield, EyeOff, LogOut, UploadCloud, UserCircle, Cake, MapPin, AtSign, User, Bot, Search, Check, Camera } from "lucide-react";
+import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, Smile, Trash2, Users, CheckSquare, Square, MoreVertical, UserPlus, UserX, Edit, Shield, EyeOff, LogOut, UploadCloud, UserCircle, Cake, MapPin, AtSign, User, Bot, Search, Check, Camera, Loader } from "lucide-react";
 import { useAppState } from "@/utils/AppStateContext";
 import { createCall } from "@/utils/callService";
 import { motion, AnimatePresence } from "framer-motion";
-import { uploadFileToFirebaseStorage } from '@/app/actions';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { getFunctions, httpsCallable } from "firebase/functions";
@@ -149,11 +148,14 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const [uploadError, setUploadError] = useState<string | null>(null);
+    const [mediaPreview, setMediaPreview] = useState<string | null>(null);
 
     useEffect(() => {
         const draftForThisChat = drafts[chatId] || '';
         setNewMessage(draftForThisChat);
-    }, [chatId]); // No drafts dependency
+    }, [chatId, drafts]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newText = e.target.value;
@@ -288,23 +290,36 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
     };
     
     const handleFileUpload = async (file: File) => {
-        if (!file || !firebaseUser) return;
-    
-        let type: 'image' | 'video' = file.type.startsWith('video/') ? 'video' : 'image';
-      
+        const user = auth.currentUser;
+        if (!user) {
+            setUploadError("You must be logged in to upload files.");
+            return;
+        }
+
+        setIsUploading(true);
+        setUploadError('');
+        const previewUrl = URL.createObjectURL(file);
+        setMediaPreview(previewUrl); // Show local preview immediately
+
         try {
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('userId', firebaseUser.uid);
-            const result = await uploadFileToFirebaseStorage(formData);
-            if (result.success?.url) {
-              handleSend(new Event('submit') as any, result.success.url, type);
-          } else {
-            throw new Error(result.failure || "Upload failed");
-          }
-        } catch (error) {
+            const fileName = `${user.uid}-${Date.now()}-${file.name}`;
+            const fileRef = storageRef(storage, `user_uploads/${user.uid}/${fileName}`);
+            
+            const snapshot = await uploadBytes(fileRef, file);
+            const downloadURL = await getDownloadURL(snapshot.ref);
+
+            let type: 'image' | 'video' = file.type.startsWith('video/') ? 'video' : 'image';
+            
+            // Pass the URL to handleSend
+            handleSend(new Event('submit') as any, downloadURL, type);
+
+        } catch (error: any) {
             console.error("Upload failed:", error);
-            alert("Sorry, the file upload failed. Please check your permissions.");
+            setUploadError(error.message);
+            setMediaPreview(null); // Clear preview on error
+        } finally {
+            setIsUploading(false);
+            URL.revokeObjectURL(previewUrl); // Clean up object URL
         }
     };
 
@@ -435,7 +450,7 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
                     </motion.div>
                 )}
                 </AnimatePresence>
-                <div className="flex items-center gap-2">
+                 <div className="flex items-center gap-2">
                     <button type="button" onClick={() => setShowAttachmentMenu(v => !v)} className="p-2 text-gray-400 hover:text-accent-cyan shrink-0">
                         <Paperclip size={20}/>
                     </button>
@@ -534,7 +549,7 @@ function ChatPageWrapper() {
     }, [router]);
     
     if (loading || !firebaseUser || !userProfile) {
-      return <div className="flex h-screen items-center justify-center text-accent-cyan">Loading Chat...</div>;
+      return <div className="flex h-screen items-center justify-center text-accent-cyan"><Loader className="animate-spin" /> Loading Chat...</div>;
     }
     
     return <ChatPage firebaseUser={firebaseUser} userProfile={userProfile} chatId={chatId} />;
@@ -542,10 +557,12 @@ function ChatPageWrapper() {
 
 export default function SignalChatPage() {
     return (
-        <Suspense fallback={<div className="flex h-screen items-center justify-center text-accent-cyan">Loading Chat...</div>}>
+        <Suspense fallback={<div className="flex h-screen items-center justify-center text-accent-cyan"><Loader className="animate-spin" /> Loading Chat...</div>}>
             <ChatPageWrapper />
         </Suspense>
     )
 }
+
+    
 
     
