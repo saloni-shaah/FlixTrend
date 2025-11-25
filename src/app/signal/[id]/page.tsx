@@ -151,17 +151,16 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
     const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
 
     useEffect(() => {
-        if (drafts[chatId]) {
-            setNewMessage(drafts[chatId]);
-        } else {
-            setNewMessage('');
-        }
-    }, [chatId, drafts]);
+        const draftForThisChat = drafts[chatId] || '';
+        setNewMessage(draftForThisChat);
+    }, [chatId]); // No drafts dependency
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setNewMessage(e.target.value);
+        const newText = e.target.value;
+        setNewMessage(newText);
+        setDraft(chatId, newText);
+
         if(!selectedChat) return;
-        setDraft(chatId, e.target.value);
 
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
         
@@ -294,14 +293,15 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
         let type: 'image' | 'video' = file.type.startsWith('video/') ? 'video' : 'image';
       
         try {
-            const fileName = `${firebaseUser.uid}-${Date.now()}-${file.name}`;
-            const fileRef = storageRef(storage, `user_uploads/${firebaseUser.uid}/${fileName}`);
-            
-            const snapshot = await uploadBytes(fileRef, file);
-            const downloadURL = await getDownloadURL(snapshot.ref);
-
-            handleSend(new Event('submit') as any, downloadURL, type);
-
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('userId', firebaseUser.uid);
+            const result = await uploadFileToFirebaseStorage(formData);
+            if (result.success?.url) {
+              handleSend(new Event('submit') as any, result.success.url, type);
+          } else {
+            throw new Error(result.failure || "Upload failed");
+          }
         } catch (error) {
             console.error("Upload failed:", error);
             alert("Sorry, the file upload failed. Please check your permissions.");
@@ -435,7 +435,7 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
                     </motion.div>
                 )}
                 </AnimatePresence>
-                <div className="flex items-center gap-1 sm:gap-2">
+                <div className="flex items-center gap-2">
                     <button type="button" onClick={() => setShowAttachmentMenu(v => !v)} className="p-2 text-gray-400 hover:text-accent-cyan shrink-0">
                         <Paperclip size={20}/>
                     </button>
