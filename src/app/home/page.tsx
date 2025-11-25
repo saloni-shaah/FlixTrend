@@ -513,6 +513,17 @@ function HomePageContent() {
           {hasUnreadNotifs && <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-accent-pink rounded-full"></span>}
         </motion.button>
       </div>
+      
+      <Link href="/flix">
+        <motion.button 
+            className="fixed bottom-24 left-4 z-30 btn-glass-icon w-16 h-16 bg-gradient-to-tr from-accent-cyan to-accent-pink"
+            aria-label="Flix Features"
+            whileHover={{ scale: 1.1, rotate: 15 }}
+            whileTap={{ scale: 0.9 }}
+        >
+            <Compass size={32} />
+        </motion.button>
+      </Link>
 
       <AnimatePresence>
         {showMusicModal && <MusicDiscovery onClose={() => setShowMusicModal(false)} />}
