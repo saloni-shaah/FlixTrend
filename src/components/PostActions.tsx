@@ -1,3 +1,4 @@
+
 "use client";
 import React from 'react';
 import { getFirestore, collection, onSnapshot, addDoc, serverTimestamp, deleteDoc, updateDoc, doc, setDoc, runTransaction, deleteField } from "firebase/firestore";
@@ -180,7 +181,7 @@ export function PostActions({ post, onCommentClick, isShortVibe = false }: { pos
                         <Repeat2 size={20} />
                         {!isShortVibe && <span>{relays}</span>}
                     </button>
-                    <button className={cn('flex items-center gap-1.5 font-bold transition-all text-lg', userHasLiked ? 'text-yellow-400' : textClass, 'hover:text-yellow-400')} onClick={handleLike}>
+                    <button data-like-button="true" className={cn('flex items-center gap-1.5 font-bold transition-all text-lg', userHasLiked ? 'text-yellow-400' : textClass, 'hover:text-yellow-400')} onClick={handleLike}>
                         <Star size={20} fill={userHasLiked ? "currentColor" : "none"} />
                          {!isShortVibe && <span>{likes}</span>}
                     </button>

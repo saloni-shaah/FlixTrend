@@ -18,11 +18,12 @@ export function ShortsPlayer({ post, onNext, onPrev, onView }: { post: any, onNe
     const containerRef = useRef<HTMLDivElement>(null);
     const { setIsScopeVideoPlaying } = useAppState();
     const [isPlaying, setIsPlaying] = useState(false);
-    const [isMuted, setIsMuted] = useState(false); 
+    const [isMuted, setIsMuted] = useState(false);
     const [showComments, setShowComments] = useState(false);
     const [showHeart, setShowHeart] = useState(false);
     const viewCountedRef = useRef(false);
     const tapTimeout = useRef<NodeJS.Timeout | null>(null);
+    const lastTap = useRef(0);
 
     const incrementViewCount = useCallback(() => {
         if (viewCountedRef.current || !post.id) return;
@@ -42,12 +43,7 @@ export function ShortsPlayer({ post, onNext, onPrev, onView }: { post: any, onNe
             ([entry]) => {
                 if (entry.isIntersecting) {
                     video.play().catch(error => {
-                        // Autoplay with sound might fail, so we mute and try again.
-                        if (error.name === "NotAllowedError") {
-                            setIsMuted(true);
-                            video.muted = true;
-                            video.play();
-                        }
+                        console.error("Autoplay failed:", error);
                     });
                     incrementViewCount();
                 } else {
@@ -100,24 +96,16 @@ export function ShortsPlayer({ post, onNext, onPrev, onView }: { post: any, onNe
     const handleSingleTap = () => {
         const video = videoRef.current;
         if (video) {
-            video.muted = !video.muted;
+            if(video.paused) video.play();
+            else video.pause();
         }
     };
 
     const handleDoubleTap = () => {
-        handleSingleTap(); // First tap mutes
-        setTimeout(() => { // Second tap pauses
-            if(videoRef.current) {
-                if(videoRef.current.paused) videoRef.current.play();
-                else videoRef.current.pause();
-            }
-        }, 150);
-    };
-
-    const handleTripleTap = () => {
         setShowHeart(true);
         setTimeout(() => setShowHeart(false), 800);
-        const likeButton = containerRef.current?.querySelector('[data-like-button]');
+        // Find the like button inside PostActions and click it programmatically
+        const likeButton = containerRef.current?.querySelector('[data-like-button="true"]');
         if (likeButton instanceof HTMLElement) {
             likeButton.click();
         }
@@ -126,20 +114,13 @@ export function ShortsPlayer({ post, onNext, onPrev, onView }: { post: any, onNe
     const handleContainerClick = () => {
         if (tapTimeout.current) {
             clearTimeout(tapTimeout.current);
-            // This is a double or triple tap
-            const now = Date.now();
-            if (lastTap.current && now - lastTap.current < 400) {
-                 handleTripleTap();
-            } else {
-                 handleDoubleTap();
-            }
-            lastTap.current = now;
             tapTimeout.current = null;
+            handleDoubleTap();
         } else {
             tapTimeout.current = setTimeout(() => {
                 handleSingleTap();
                 tapTimeout.current = null;
-            }, 300);
+            }, 250); // A 250ms delay to distinguish single from double tap
         }
     };
     
@@ -151,8 +132,6 @@ export function ShortsPlayer({ post, onNext, onPrev, onView }: { post: any, onNe
             setIsMuted(video.muted);
         }
     };
-    
-    const lastTap = useRef(0);
 
     const videoUrl = Array.isArray(post.mediaUrl) ? post.mediaUrl.find(url => /\.(mp4|webm|ogg)$/i.test(url)) : post.mediaUrl;
 
@@ -213,7 +192,7 @@ export function ShortsPlayer({ post, onNext, onPrev, onView }: { post: any, onNe
                 </div>
             </div>
             
-            <div className="hidden md:flex flex-col gap-4 absolute right-4 top-1/2 -translate-y-1/2">
+             <div className="hidden md:flex flex-col gap-4 absolute top-1/2 -translate-y-1/2 right-4">
                 <button onClick={(e) => { e.stopPropagation(); onPrev(); }} className="p-3 bg-black/40 rounded-full text-white hover:bg-black/70">
                     <ChevronUp />
                 </button>
