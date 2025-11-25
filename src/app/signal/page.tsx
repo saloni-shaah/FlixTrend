@@ -6,17 +6,31 @@ import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setD
 import { auth, app } from "@/utils/firebaseClient";
 import { Users, Bot, Search, CheckSquare, Square, Trash2, X } from "lucide-react";
 import { useAppState } from "@/utils/AppStateContext";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 const db = getFirestore(app);
 
+const useLongPress = (callback = () => {}, ms = 300) => {
+    const timerRef = useRef<NodeJS.Timeout>();
+    const onTouchStart = () => { timerRef.current = setTimeout(callback, ms); };
+    const onTouchEnd = () => { if (timerRef.current) clearTimeout(timerRef.current); };
+    return { 
+        onTouchStart, 
+        onTouchEnd, 
+        onMouseDown: onTouchStart, 
+        onMouseUp: onTouchEnd, 
+        onMouseLeave: onTouchEnd 
+    };
+};
+
 const ChatItem = React.memo(({ chat, selectionMode, isSelected, onLongPress, onClick, drafts }: any) => {
     const getInitials = (user: any) => user?.name?.[0] || user?.username?.[0] || "U";
+    const longPressProps = useLongPress(onLongPress);
 
     return (
         <div 
-            key={chat.id}
+            {...longPressProps}
             className={cn("w-full flex items-center gap-4 px-4 py-3 text-left transition-colors duration-200 group relative", isSelected ? "bg-accent-cyan/30" : "hover:bg-accent-cyan/10", "cursor-pointer")} 
             onClick={onClick}
         >
@@ -187,6 +201,7 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
                         isSelected={selectedItems.has(chat.id)}
                         drafts={drafts}
                         onClick={() => handleSelectChat(chat)}
+                        onLongPress={() => setSelectionMode('chats')}
                     />
                 ))}
             </div>
