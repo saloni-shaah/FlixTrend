@@ -4,10 +4,9 @@ import React, { useEffect, useState, useRef, Suspense } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp, where, writeBatch, getDocs, updateDoc, deleteDoc, arrayUnion, arrayRemove, deleteField, Unsubscribe, limit } from "firebase/firestore";
 import { auth, app } from "@/utils/firebaseClient";
-import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, Smile, Trash2, Users, CheckSquare, Square, MoreVertical, UserPlus, UserX, Edit, Shield, EyeOff, LogOut, UploadCloud, UserCircle, Cake, MapPin, AtSign, User, Bot, Search, Check, Camera, Loader } from "lucide-react";
+import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, Smile, Trash2, Users, CheckSquare, Square, MoreVertical, UserPlus, UserX, Edit, Shield, EyeOff, LogOut, UploadCloud, UserCircle, Cake, MapPin, AtSign, User, Bot, Search, Check, Camera, Loader, Lock } from "lucide-react";
 import { useAppState } from "@/utils/AppStateContext";
-import { createCall } from "@/utils/callService";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { getFunctions, httpsCallable } from "firebase/functions";
@@ -136,7 +135,18 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
     const [newMessage, setNewMessage] = useState("");
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    
+    // Voice Recording State
     const [isRecording, setIsRecording] = useState(false);
+    const [isRecordingLocked, setIsRecordingLocked] = useState(false);
+    const [recordingTime, setRecordingTime] = useState(0);
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const audioChunksRef = useRef<Blob[]>([]);
+    const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const micButtonRef = useRef<HTMLButtonElement>(null);
+    const lockIconControls = useAnimation();
+
+
     const [selectionMode, setSelectionMode] = useState<'messages' | null>(null);
     const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -245,8 +255,8 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
         return stopCamera;
     }, [showCameraView]);
     
-    const handleSend = async (e: React.FormEvent, mediaUrl: string | null = null, type: 'text' | 'image' | 'video' | 'audio' = 'text') => {
-        e.preventDefault();
+    const handleSend = async (e?: React.FormEvent, mediaUrl: string | null = null, type: 'text' | 'image' | 'video' | 'audio' = 'text') => {
+        e?.preventDefault();
         if ((!newMessage.trim() && !mediaUrl) || !firebaseUser || !selectedChat) return;
         
         const textToSend = newMessage;
@@ -289,7 +299,7 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
         }
     };
     
-    const handleFileUpload = async (file: File) => {
+    const handleFileUpload = async (file: File, typeOverride?: 'audio') => {
         const user = auth.currentUser;
         if (!user) {
             setUploadError("You must be logged in to upload files.");
@@ -298,28 +308,34 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
 
         setIsUploading(true);
         setUploadError('');
-        const previewUrl = URL.createObjectURL(file);
-        setMediaPreview(previewUrl); // Show local preview immediately
+        
+        let previewUrl: string | null = null;
+        if (!typeOverride) {
+            previewUrl = URL.createObjectURL(file);
+            setMediaPreview(previewUrl);
+        }
 
         try {
-            const fileName = `${user.uid}-${Date.now()}-${file.name}`;
-            const fileRef = storageRef(storage, `user_uploads/${user.uid}/${fileName}`);
+            const path = typeOverride === 'audio' ? `voice_messages/${user.uid}` : `user_uploads/${user.uid}`;
+            const fileName = `${Date.now()}-${file.name}`;
+            const fileRef = storageRef(storage, `${path}/${fileName}`);
             
             const snapshot = await uploadBytes(fileRef, file);
             const downloadURL = await getDownloadURL(snapshot.ref);
 
-            let type: 'image' | 'video' = file.type.startsWith('video/') ? 'video' : 'image';
+            let type: 'image' | 'video' | 'audio' = typeOverride || (file.type.startsWith('video/') ? 'video' : 'image');
             
-            // Pass the URL to handleSend
-            handleSend(new Event('submit') as any, downloadURL, type);
+            await handleSend(undefined, downloadURL, type);
 
         } catch (error: any) {
             console.error("Upload failed:", error);
             setUploadError(error.message);
-            setMediaPreview(null); // Clear preview on error
         } finally {
             setIsUploading(false);
-            URL.revokeObjectURL(previewUrl); // Clean up object URL
+            if(previewUrl) {
+                URL.revokeObjectURL(previewUrl); 
+                setMediaPreview(null);
+            }
         }
     };
 
@@ -351,6 +367,85 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
             }, 'image/jpeg');
         }
     };
+    
+    // --- Voice Recording Logic ---
+    const startRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorderRef.current = new MediaRecorder(stream);
+            audioChunksRef.current = [];
+
+            mediaRecorderRef.current.ondataavailable = (event) => {
+                audioChunksRef.current.push(event.data);
+            };
+
+            mediaRecorderRef.current.onstop = async () => {
+                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                await handleFileUpload(audioBlob, 'audio');
+                stream.getTracks().forEach(track => track.stop());
+            };
+
+            mediaRecorderRef.current.start();
+            setIsRecording(true);
+            setRecordingTime(0);
+            recordingTimerRef.current = setInterval(() => {
+                setRecordingTime(prev => prev + 1);
+            }, 1000);
+        } catch (err) {
+            console.error("Audio recording failed:", err);
+            setUploadError("Microphone access denied.");
+        }
+    };
+
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && isRecording) {
+            mediaRecorderRef.current.stop();
+        }
+        if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+        setIsRecording(false);
+        setIsRecordingLocked(false);
+    };
+    
+    const cancelRecording = () => {
+        if (mediaRecorderRef.current && isRecording) {
+            // Stop without triggering onstop's upload logic
+            mediaRecorderRef.current.onstop = () => {
+                 mediaRecorderRef.current?.stream.getTracks().forEach(track => track.stop());
+            };
+            mediaRecorderRef.current.stop();
+        }
+        if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+        setIsRecording(false);
+        setIsRecordingLocked(false);
+    };
+
+    const handleMicButtonTouchStart = (e: React.TouchEvent) => {
+        e.preventDefault();
+        lockIconControls.start({ y: 0, opacity: 1 });
+        startRecording();
+    };
+
+    const handleMicButtonTouchMove = (e: React.TouchEvent) => {
+        const touch = e.touches[0];
+        const lockElement = document.getElementById('lock-icon');
+        if (lockElement) {
+            const { top, right, bottom, left } = lockElement.getBoundingClientRect();
+            if (touch.clientX > left && touch.clientX < right && touch.clientY > top && touch.clientY < bottom) {
+                setIsRecordingLocked(true);
+                 if (mediaRecorderRef.current && isRecording) {
+                    lockIconControls.start({ y: -100, opacity: 0 });
+                 }
+            }
+        }
+    };
+
+    const handleMicButtonTouchEnd = () => {
+        lockIconControls.start({ y: -100, opacity: 0 });
+        if (!isRecordingLocked) {
+            stopRecording();
+        }
+    };
+
 
      if (showCameraView) {
         return (
@@ -451,32 +546,48 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
                 )}
                 </AnimatePresence>
                  <div className="flex items-center gap-2">
-                    <button type="button" onClick={() => setShowAttachmentMenu(v => !v)} className="p-2 text-gray-400 hover:text-accent-cyan shrink-0">
-                        <Paperclip size={20}/>
-                    </button>
-                     <button type="button" onClick={() => alert("Emoji picker coming soon!")} className="p-2 text-gray-400 hover:text-accent-cyan shrink-0 hidden sm:block">
-                        <Smile size={20}/>
-                    </button>
-                    <input 
-                        type="text" 
-                        value={newMessage} 
-                        onChange={handleInputChange} 
-                        placeholder={isRecording ? "Recording..." : "Type a message..."} 
-                        className="flex-1 bg-gray-700 rounded-full px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-accent-cyan w-full"
-                    />
+                    {!isRecordingLocked && <button type="button" onClick={() => setShowAttachmentMenu(v => !v)} className="p-2 text-gray-400 hover:text-accent-cyan shrink-0"> <Paperclip size={20}/> </button>}
+                    
+                    {isRecordingLocked ? (
+                        <div className="flex-1 flex items-center gap-3 bg-gray-700 rounded-full px-4 py-2">
+                            <button type="button" onClick={cancelRecording} className="text-red-400">Cancel</button>
+                            <div className="flex-1 text-center text-red-400 animate-pulse font-mono">{Math.floor(recordingTime / 60).toString().padStart(2, '0')}:{ (recordingTime % 60).toString().padStart(2, '0')}</div>
+                        </div>
+                    ) : (
+                        <input 
+                            type="text" 
+                            value={newMessage} 
+                            onChange={handleInputChange} 
+                            placeholder={isRecording ? "Recording..." : "Type a message..."} 
+                            className="flex-1 bg-gray-700 rounded-full px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-accent-cyan w-full"
+                        />
+                    )}
+
                     <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*,video/*" />
                     <AnimatePresence mode="wait">
                     {newMessage.trim() === "" ? (
+                        <div className="relative">
+                            <motion.div 
+                                id="lock-icon"
+                                className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 p-2 bg-gray-800 rounded-full pointer-events-none"
+                                animate={lockIconControls}
+                                initial={{ y: -100, opacity: 0 }}
+                            >
+                                <Lock size={20} />
+                            </motion.div>
                             <motion.button 
                                 key="mic"
-                                initial={{ scale: 0.5, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                exit={{ scale: 0.5, opacity: 0 }}
+                                ref={micButtonRef}
+                                onTouchStart={handleMicButtonTouchStart}
+                                onTouchEnd={handleMicButtonTouchEnd}
+                                onTouchMove={handleMicButtonTouchMove}
+                                animate={{ scale: isRecording ? 1.2 : 1 }}
                                 type="button" 
                                 className={`p-3 rounded-full transition-colors shrink-0 ${isRecording ? 'bg-red-500 animate-pulse' : 'bg-accent-pink text-white'}`}
                             >
                                 <Mic size={20}/>
                             </motion.button>
+                        </div>
                     ) : (
                             <motion.button 
                                 key="send"
@@ -562,7 +673,3 @@ export default function SignalChatPage() {
         </Suspense>
     )
 }
-
-    
-
-    
