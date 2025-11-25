@@ -135,6 +135,7 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
     const [newMessage, setNewMessage] = useState("");
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
     
     // Voice Recording State
     const [isRecording, setIsRecording] = useState(false);
@@ -170,22 +171,22 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newText = e.target.value;
         setNewMessage(newText);
-        setDraft(chatId, newText);
+        if (selectedChat) {
+            setDraft(chatId, newText);
 
-        if(!selectedChat) return;
-
-        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-        
-        const updateRef = doc(db, selectedChat.isGroup ? "groups" : "users", selectedChat.id);
-        updateDoc(updateRef, {
-            typing: arrayUnion(firebaseUser.uid)
-        }).catch(() => {});
-
-        typingTimeoutRef.current = setTimeout(() => {
+            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+            
+            const updateRef = doc(db, selectedChat.isGroup ? "groups" : "users", selectedChat.id);
             updateDoc(updateRef, {
-                typing: arrayRemove(firebaseUser.uid)
+                typing: arrayUnion(firebaseUser.uid)
             }).catch(() => {});
-        }, 3000);
+
+            typingTimeoutRef.current = setTimeout(() => {
+                updateDoc(updateRef, {
+                    typing: arrayRemove(firebaseUser.uid)
+                }).catch(() => {});
+            }, 3000);
+        }
     };
 
     useEffect(() => {
@@ -546,7 +547,11 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
                 )}
                 </AnimatePresence>
                  <div className="flex items-center gap-2">
-                    {!isRecordingLocked && <button type="button" onClick={() => setShowAttachmentMenu(v => !v)} className="p-2 text-gray-400 hover:text-accent-cyan shrink-0"> <Paperclip size={20}/> </button>}
+                    {!isRecordingLocked && (
+                        <button type="button" onClick={() => setShowAttachmentMenu(v => !v)} className="p-2 text-gray-400 hover:text-accent-cyan shrink-0">
+                             <Paperclip size={20}/>
+                        </button>
+                    )}
                     
                     {isRecordingLocked ? (
                         <div className="flex-1 flex items-center gap-3 bg-gray-700 rounded-full px-4 py-2">
@@ -554,18 +559,24 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
                             <div className="flex-1 text-center text-red-400 animate-pulse font-mono">{Math.floor(recordingTime / 60).toString().padStart(2, '0')}:{ (recordingTime % 60).toString().padStart(2, '0')}</div>
                         </div>
                     ) : (
-                        <input 
-                            type="text" 
-                            value={newMessage} 
-                            onChange={handleInputChange} 
-                            placeholder={isRecording ? "Recording..." : "Type a message..."} 
-                            className="flex-1 bg-gray-700 rounded-full px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-accent-cyan w-full"
-                        />
+                        <div className="flex-1 relative flex items-center">
+                            <input 
+                                ref={inputRef}
+                                type="text" 
+                                value={newMessage} 
+                                onChange={handleInputChange} 
+                                placeholder={isRecording ? "Recording..." : "Type a message..."} 
+                                className="flex-1 bg-gray-700 rounded-full px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-accent-cyan w-full pr-10"
+                            />
+                            <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-accent-cyan" onClick={() => inputRef.current?.focus()}>
+                                <Smile size={20}/>
+                            </button>
+                        </div>
                     )}
 
                     <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*,video/*" />
                     <AnimatePresence mode="wait">
-                    {newMessage.trim() === "" ? (
+                    {newMessage.trim() === "" && !isRecordingLocked ? (
                         <div className="relative">
                             <motion.div 
                                 id="lock-icon"
@@ -596,6 +607,7 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
                                 exit={{ scale: 0.5, opacity: 0 }}
                                 type="submit" 
                                 className="p-3 rounded-full bg-accent-cyan text-white shrink-0"
+                                onClick={isRecordingLocked ? stopRecording : handleSend}
                             >
                                 <Send size={20}/>
                             </motion.button>
