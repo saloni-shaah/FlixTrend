@@ -45,7 +45,7 @@ const ChatItem = React.memo(({ chat, selectionMode, isSelected, onLongPress, onC
                     (chat.avatar_url ? <img src={chat.avatar_url} alt="avatar" className="w-full h-full object-cover"/> : getInitials(chat))
                 }
                  {chat.unreadCount > 0 && (
-                    <div className="absolute bottom-0 right-0 w-5 h-5 bg-accent-pink rounded-full flex items-center justify-center text-white text-xs font-bold border-2 border-background">
+                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-accent-pink rounded-full flex items-center justify-center text-white text-[10px] font-bold border-2 border-background">
                         {chat.unreadCount > 9 ? '9+' : chat.unreadCount}
                     </div>
                 )}
@@ -186,7 +186,7 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
     );
 
   return (
-    <div className="flex h-screen w-full bg-transparent font-body text-white overflow-hidden">
+    <div className="flex h-screen w-full bg-transparent font-body text-white overflow-hidden relative">
         <div className="w-full md:w-1/3 md:min-w-[350px] border-r border-accent-cyan/10 bg-black/60 flex flex-col relative">
             <AnimatePresence>
             {selectionMode === 'chats' ? (
@@ -203,7 +203,6 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
             ) : (
                 <div className="p-4 border-b border-accent-cyan/10 flex items-center justify-between shrink-0">
                     <h2 className="text-xl font-headline font-bold text-accent-cyan">Signal</h2>
-                    <button className="btn-glass text-xs p-2">Create Group</button>
                 </div>
             )}
             </AnimatePresence>
@@ -235,6 +234,12 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
             </div>
 
         </div>
+        <button
+            onClick={() => { /* Logic to create new chat or group */ }}
+            className="absolute bottom-24 right-6 z-20 btn-glass bg-accent-pink text-white w-14 h-14 flex items-center justify-center shadow-fab-glow"
+        >
+            <PlusCircle size={28} />
+        </button>
     </div>
   );
 }
@@ -277,5 +282,3 @@ export default function SignalPageWrapper() {
         </Suspense>
     )
 }
-
-    
