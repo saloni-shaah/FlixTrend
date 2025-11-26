@@ -413,9 +413,8 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
                             }
                         }
                       }}
-                      onReact={()=>{}}
-                      showEmojiPicker={null}
-                      onShowEmojiPicker={()=>{}}
+                      onShowEmojiPicker={setShowEmojiPicker}
+                      showEmojiPicker={showEmojiPicker}
                       onShowDeleteConfirm={() => {
                         setSelectedItems(new Set([msg.id]));
                         setShowDeleteConfirm(true);
