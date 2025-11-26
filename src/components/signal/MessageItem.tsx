@@ -4,6 +4,11 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, Smile, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getFirestore, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { app } from '@/utils/firebaseClient';
+
+const db = getFirestore(app);
+
 
 // --- HELPER FUNCTIONS ---
 
@@ -30,11 +35,60 @@ const useLongPress = (callback: () => void, ms = 300) => {
 
 // --- COMPONENT DEFINITION ---
 
-export const MessageItem = React.memo(({ msg, isUser, selectedChat, firebaseUser, isSelected, onLongPress, onClick, onReact, onShowEmojiPicker, showEmojiPicker, onShowDeleteConfirm, selectionMode }: any) => {
-    const longPressProps = useLongPress(onLongPress);
+export const MessageItem = React.memo(({ msg, isUser, selectedChat, firebaseUser, isSelected, onLongPress, onClick, onShowEmojiPicker, showEmojiPicker, onShowDeleteConfirm, selectionMode }: any) => {
+    const longPressProps = useLongPress(() => {
+        if (selectionMode) {
+            onClick();
+        } else {
+            onLongPress();
+        }
+    });
+
     const senderInfo = selectedChat.isGroup ? (selectedChat.groupType === 'simple' ? selectedChat.memberInfo?.[msg.sender] : null) : selectedChat;
     const displayName = selectedChat.groupType === 'anonymous' ? generateAnonymousName(msg.sender, selectedChat.id) : selectedChat.groupType === 'pseudonymous' ? selectedChat.pseudonyms?.[msg.sender] || 'Anon' : senderInfo?.name || "User";
     const defaultReactions = ["👍", "❤️", "😂", "😢", "😮", "🙏"];
+
+    const handleReact = async (emoji: string) => {
+        if (!firebaseUser) return;
+        const messageRef = doc(db, 'chats', selectedChat.id, 'messages', msg.id);
+        const currentReactions = msg.reactions || {};
+        let newReactions = { ...currentReactions };
+        let userHasReacted = false;
+        let previousEmoji = '';
+
+        // Check if user has already reacted and with which emoji
+        for (const [e, uids] of Object.entries(newReactions)) {
+            if (Array.isArray(uids) && uids.includes(firebaseUser.uid)) {
+                userHasReacted = true;
+                previousEmoji = e;
+                break;
+            }
+        }
+
+        // If user is re-reacting with the same emoji, remove it
+        if (userHasReacted && previousEmoji === emoji) {
+            newReactions[previousEmoji] = newReactions[previousEmoji].filter((uid: string) => uid !== firebaseUser.uid);
+            if (newReactions[previousEmoji].length === 0) {
+                delete newReactions[previousEmoji];
+            }
+        } else {
+            // If user had a previous reaction, remove it
+            if (userHasReacted) {
+                newReactions[previousEmoji] = newReactions[previousEmoji].filter((uid: string) => uid !== firebaseUser.uid);
+                 if (newReactions[previousEmoji].length === 0) {
+                    delete newReactions[previousEmoji];
+                }
+            }
+            // Add new reaction
+            if (!newReactions[emoji]) {
+                newReactions[emoji] = [];
+            }
+            newReactions[emoji].push(firebaseUser.uid);
+        }
+
+        await updateDoc(messageRef, { reactions: newReactions });
+        onShowEmojiPicker(null);
+    };
 
     const getSeenStatus = () => {
         if (!isUser || msg.sender === 'system') return 'none';
@@ -104,7 +158,7 @@ export const MessageItem = React.memo(({ msg, isUser, selectedChat, firebaseUser
                                     className="absolute z-10 -top-10 bg-gray-800 rounded-full p-2 flex gap-1 shadow-lg"
                                 >
                                     {defaultReactions.map(emoji => (
-                                        <button key={emoji} onClick={() => onReact(msg.id, emoji)} className="text-xl hover:scale-125 transition-transform">{emoji}</button>
+                                        <button key={emoji} onClick={() => handleReact(emoji)} className="text-xl hover:scale-125 transition-transform">{emoji}</button>
                                     ))}
                                 </motion.div>
                             )}
