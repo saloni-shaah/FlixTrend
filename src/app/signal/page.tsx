@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import Link from 'next/link';
 import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp, where, writeBatch, getDocs, updateDoc, deleteField, limit } from "firebase/firestore";
 import { auth, app } from "@/utils/firebaseClient";
 import { Users, Bot, Search, CheckSquare, Square, Trash2, X, PlusCircle } from "lucide-react";
@@ -202,9 +203,6 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
             ) : (
                 <div className="p-4 border-b border-accent-cyan/10 flex items-center justify-between shrink-0">
                     <h2 className="text-xl font-headline font-bold text-accent-cyan">Signal</h2>
-                     <button onClick={() => { /* Logic to create new chat or group */ }} className="btn-glass-icon w-8 h-8">
-                        <PlusCircle size={20} />
-                    </button>
                 </div>
             )}
             </AnimatePresence>
@@ -234,6 +232,17 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
                     />
                 ))}
             </div>
+
+             <Link href="/signal/create-group">
+                <motion.button 
+                    className="fixed bottom-24 right-4 z-30 btn-glass-icon w-16 h-16 bg-gradient-to-tr from-accent-cyan to-accent-pink"
+                    aria-label="New Chat"
+                    whileHover={{ scale: 1.1, rotate: 15 }}
+                    whileTap={{ scale: 0.9 }}
+                >
+                    <PlusCircle size={32} />
+                </motion.button>
+            </Link>
 
         </div>
     </div>
