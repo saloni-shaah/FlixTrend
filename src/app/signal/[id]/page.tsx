@@ -58,6 +58,7 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
     const [showCameraView, setShowCameraView] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [uploadError, setUploadError] = useState<string | null>(null);
     const [mediaPreview, setMediaPreview] = useState<string | null>(null);
