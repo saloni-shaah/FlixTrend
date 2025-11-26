@@ -444,7 +444,7 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
     }
 
     return (
-        <div className="flex-1 flex flex-col bg-black/40 relative">
+        <div className="flex-1 flex flex-col bg-black/40 h-full">
             {selectionMode === 'messages' ? (
                  <div className="p-3 border-b border-accent-cyan/10 flex items-center justify-between shrink-0 bg-accent-cyan/10">
                     <button onClick={() => { setSelectionMode(null); setSelectedItems(new Set()); }}><X size={24} /></button>
@@ -475,7 +475,7 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
                 <div ref={messagesEndRef} />
             </div>
 
-            <form onSubmit={handleSend} className="shrink-0 p-2 border-t border-accent-cyan/10 bg-black/60 relative">
+            <div className="shrink-0 p-2 border-t border-accent-cyan/10 bg-black/60 relative">
                  <AnimatePresence>
                  {showAttachmentMenu && (
                     <motion.div 
@@ -489,7 +489,7 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
                     </motion.div>
                 )}
                 </AnimatePresence>
-                 <div className="flex items-center gap-2">
+                <form onSubmit={handleSend} className="flex items-center gap-2">
                     {!isRecordingLocked && (
                         <div className="flex items-center">
                             <button type="button" onClick={() => setShowAttachmentMenu(v => !v)} className="p-2 text-gray-400 hover:text-accent-cyan shrink-0">
@@ -569,8 +569,8 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
                             </motion.button>
                     )}
                     </AnimatePresence>
-                </div>
-            </form>
+                </form>
+            </div>
              <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
