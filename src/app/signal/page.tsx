@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -204,9 +205,13 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
                 <div className="p-4 border-b border-accent-cyan/10 flex items-center justify-between shrink-0">
                     <h2 className="text-xl font-headline font-bold text-accent-cyan">Signal</h2>
                     <Link href="/signal/create-group">
-                        <button className="p-2 rounded-full hover:bg-white/10" aria-label="Create new group">
-                            <PlusCircle size={24} />
-                        </button>
+                        <motion.button 
+                            className="btn-glass text-sm"
+                            whileHover={{ scale: 1.05, y: -2 }}
+                            whileTap={{ scale: 0.95 }}
+                        >
+                            Create Group
+                        </motion.button>
                     </Link>
                 </div>
             )}
