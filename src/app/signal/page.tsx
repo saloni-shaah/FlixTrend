@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp, where, writeBatch, getDocs, updateDoc, deleteField, limit } from "firebase/firestore";
 import { auth, app } from "@/utils/firebaseClient";
-import { Users, Bot, Search, CheckSquare, Square, Trash2, X } from "lucide-react";
+import { Users, Bot, Search, CheckSquare, Square, Trash2, X, PlusCircle } from "lucide-react";
 import { useAppState } from "@/utils/AppStateContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -39,7 +39,7 @@ const ChatItem = React.memo(({ chat, selectionMode, isSelected, onLongPress, onC
                     {isSelected ? <CheckSquare className="text-accent-cyan"/> : <Square className="text-gray-500"/>}
                 </div>
             )}
-            <div className={cn("w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-xl overflow-hidden shrink-0", selectionMode === 'chats' && "ml-8")}>
+            <div className={cn("relative w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-xl overflow-hidden shrink-0", selectionMode === 'chats' && "ml-8")}>
                 {chat.isGroup ? 
                     (chat.avatar_url ? <img src={chat.avatar_url} alt={chat.name} className="w-full h-full object-cover"/> : <Users/>) :
                     (chat.avatar_url ? <img src={chat.avatar_url} alt="avatar" className="w-full h-full object-cover"/> : getInitials(chat))
@@ -51,6 +51,11 @@ const ChatItem = React.memo(({ chat, selectionMode, isSelected, onLongPress, onC
                     {drafts[chat.id] ? <span className="text-red-400">[Draft] {drafts[chat.id]}</span> : chat.lastMessage?.text || "No messages yet"}
                 </span>
             </div>
+            {chat.unreadCount > 0 && (
+                <div className="w-6 h-6 bg-accent-pink rounded-full flex items-center justify-center text-white text-xs font-bold">
+                    {chat.unreadCount > 9 ? '9+' : chat.unreadCount}
+                </div>
+            )}
         </div>
     )
 });
@@ -69,18 +74,42 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
     useEffect(() => {
         if (!firebaseUser) return;
 
-        // Fetch user's chats (groups and DMs)
+        // Fetch user's groups
         const qGroups = query(collection(db, "groups"), where("members", "array-contains", firebaseUser.uid));
         const unsubGroups = onSnapshot(qGroups, async (groupsSnap) => {
-            const groupChats = await Promise.all(groupsSnap.docs.map(async (d) => {
-                const groupData = { id: d.id, ...d.data(), isGroup: true };
-                const lastMsgQuery = query(collection(db, "chats", d.id, "messages"), orderBy("createdAt", "desc"), limit(1));
-                const lastMsgSnap = await getDocs(lastMsgQuery);
-                const lastMessage = lastMsgSnap.empty ? null : lastMsgSnap.docs[0].data();
-                return { ...groupData, lastMessage };
-            }));
+            const groupChatsPromises = groupsSnap.docs.map(d => processChatData(d, true));
+            Promise.all(groupChatsPromises).then(groupChats => {
+                setChats(prev => {
+                    const existingIds = new Set(prev.filter(p => !p.isGroup).map(p => p.id));
+                    const newChats = groupChats.filter(p => !existingIds.has(p.id));
+                    return [...prev.filter(p => !p.isGroup), ...newChats].sort((a,b) => (b.lastMessage?.createdAt?.toDate() || 0) - (a.lastMessage?.createdAt?.toDate() || 0));
+                });
+            });
+        });
 
-            const followingRef = collection(db, "users", firebaseUser.uid, "following");
+        const processChatData = async (chatDoc: any, isGroup: boolean) => {
+            const chatData = { id: chatDoc.id, ...chatDoc.data(), isGroup };
+            const chatId = isGroup ? chatDoc.id : [firebaseUser.uid, chatDoc.id].sort().join('_');
+            
+            const lastMsgQuery = query(collection(db, "chats", chatId, "messages"), orderBy("createdAt", "desc"), limit(1));
+            const lastMsgSnap = await getDocs(lastMsgQuery);
+            const lastMessage = lastMsgSnap.empty ? null : lastMsgSnap.docs[0].data();
+
+            const unreadQuery = query(
+                collection(db, "chats", chatId, "messages"), 
+                where("sender", "!=", firebaseUser.uid),
+            );
+
+            // This is still inefficient but works for a small number of chats.
+            // A cloud function would be better to maintain a count.
+            const unreadSnap = await getDocs(unreadQuery);
+            const unreadCount = unreadSnap.docs.filter(doc => !(doc.data().readBy || []).includes(firebaseUser.uid)).length;
+
+            return { ...chatData, lastMessage, unreadCount };
+        }
+
+        const fetchConnections = async () => {
+             const followingRef = collection(db, "users", firebaseUser.uid, "following");
             const followersRef = collection(db, "users", firebaseUser.uid, "followers");
             const [followingSnap, followersSnap] = await Promise.all([getDocs(followingRef), getDocs(followersRef)]);
             
@@ -88,27 +117,21 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
             const followerIds = followersSnap.docs.map(doc => doc.id);
             const allConnections = Array.from(new Set([...followingIds, ...followerIds]));
             
-            const userProfiles = await Promise.all(
-              allConnections.map(async (uid) => {
+            const userProfilesPromises = allConnections.map(async (uid) => {
                 const userDoc = await getDoc(doc(db, "users", uid));
                 if (!userDoc.exists()) return null;
-                
-                const chatId = [firebaseUser.uid, uid].sort().join('_');
-                const lastMsgQuery = query(collection(db, "chats", chatId, "messages"), orderBy("createdAt", "desc"), limit(1));
-                const lastMsgSnap = await getDocs(lastMsgQuery);
-                const lastMessage = lastMsgSnap.empty ? null : lastMsgSnap.docs[0].data();
+                return processChatData(userDoc, false);
+            });
+            Promise.all(userProfilesPromises).then(userChats => {
+                setChats(prev => {
+                     const existingGroupIds = new Set(prev.filter(p => p.isGroup).map(p => p.id));
+                     const newChats = userChats.filter(Boolean).filter(p => !existingGroupIds.has(p.id));
+                     return [...prev.filter(p => p.isGroup), ...newChats].sort((a,b) => (b.lastMessage?.createdAt?.toDate() || 0) - (a.lastMessage?.createdAt?.toDate() || 0));
+                });
+            });
+        };
 
-                return { uid, ...userDoc.data(), isGroup: false, id: uid, lastMessage };
-              })
-            );
-            
-            const oneOnOneChats = userProfiles.filter(Boolean) as any[];
-            const allUserChats = [...groupChats, ...oneOnOneChats].filter((v,i,a)=>a.findIndex(t=>(t.id === v.id))===i);
-            
-            allUserChats.sort((a,b) => (b.lastMessage?.createdAt?.toDate() || 0) - (a.lastMessage?.createdAt?.toDate() || 0));
-
-            setChats(allUserChats);
-        });
+        fetchConnections();
 
         return () => {
             unsubGroups();
@@ -164,21 +187,25 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
 
   return (
     <div className="flex h-screen w-full bg-transparent font-body text-white overflow-hidden">
-        <div className="w-full md:w-1/3 md:min-w-[350px] border-r border-accent-cyan/10 bg-black/60 flex flex-col">
+        <div className="w-full md:w-1/3 md:min-w-[350px] border-r border-accent-cyan/10 bg-black/60 flex flex-col relative">
+            <AnimatePresence>
             {selectionMode === 'chats' ? (
-                <div className="p-4 border-b border-accent-cyan/10 flex items-center justify-between shrink-0 bg-accent-cyan/10">
+                <motion.div 
+                    initial={{ y: -50, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: -50, opacity: 0 }}
+                    className="p-4 border-b border-accent-cyan/10 flex items-center justify-between shrink-0 bg-accent-cyan/10 absolute top-0 left-0 w-full z-10"
+                >
                     <button onClick={cancelSelectionMode}><X size={24} /></button>
                     <span className="font-bold">{selectedItems.size} selected</span>
                     <button onClick={() => { if (window.confirm(`Hide ${selectedItems.size} chat(s) from your list?`)) handleDeleteChats(); }}><Trash2 size={24} /></button>
-                </div>
+                </motion.div>
             ) : (
                 <div className="p-4 border-b border-accent-cyan/10 flex items-center justify-between shrink-0">
                     <h2 className="text-xl font-headline font-bold text-accent-cyan">Signal</h2>
-                    <button className="btn-glass-icon w-10 h-10" title="Create Group">
-                        <Users size={20} />
-                    </button>
                 </div>
             )}
+            </AnimatePresence>
             
             <div className="p-2">
                 <div className="relative">
@@ -201,10 +228,19 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
                         isSelected={selectedItems.has(chat.id)}
                         drafts={drafts}
                         onClick={() => handleSelectChat(chat)}
-                        onLongPress={() => setSelectionMode('chats')}
+                        onLongPress={() => {setSelectionMode('chats'); setSelectedItems(new Set([chat.id]))}}
                     />
                 ))}
             </div>
+
+            <motion.button 
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                className="absolute bottom-6 right-6 btn-glass-icon w-14 h-14 bg-accent-pink"
+                title="New Chat"
+            >
+                <PlusCircle size={28} />
+            </motion.button>
         </div>
     </div>
   );
@@ -248,3 +284,5 @@ export default function SignalPageWrapper() {
         </Suspense>
     )
 }
+
+    
