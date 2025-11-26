@@ -1,20 +1,17 @@
 'use client';
 import React, { useEffect, useState, useRef, Suspense } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp, where, writeBatch, getDocs, updateDoc, deleteDoc, arrayUnion, arrayRemove, deleteField, Unsubscribe } from "firebase/firestore";
+import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp, where, writeBatch, getDocs, updateDoc, deleteDoc, arrayUnion, arrayRemove, deleteField, Unsubscribe, limit } from "firebase/firestore";
 import { auth, app } from "@/utils/firebaseClient";
 import { Phone, Video, Paperclip, Mic, Send, ArrowLeft, Image as ImageIcon, X, Smile, Trash2, Users, UserPlus, UserX, Edit, Shield, EyeOff, LogOut, UploadCloud, UserCircle, Cake, MapPin, AtSign, User, Bot, Search, Check, Camera, Loader, Lock, Eye } from "lucide-react";
 import { useAppState } from "@/utils/AppStateContext";
 import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { getFunctions, httpsCallable } from "firebase/functions";
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { MessageItem } from '@/components/signal/MessageItem';
 
-const functions = getFunctions(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
-const deleteMessageCallable = httpsCallable(functions, 'deleteMessage');
 
 
 function formatDateSeparator(date: Date) {
@@ -61,7 +58,6 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
     const [showCameraView, setShowCameraView] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [uploadError, setUploadError] = useState<string | null>(null);
     const [mediaPreview, setMediaPreview] = useState<string | null>(null);
@@ -204,10 +200,18 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
     const handleDeleteMessages = async (mode: 'me' | 'everyone') => {
         if (selectedItems.size === 0) return;
         
-        try {
-            for (const messageId of selectedItems) {
-                await deleteMessageCallable({ chatId, messageId, mode });
+        const batch = writeBatch(db);
+        selectedItems.forEach(messageId => {
+            const msgRef = doc(db, 'chats', chatId, 'messages', messageId);
+            if (mode === 'me') {
+                batch.update(msgRef, { deletedFor: arrayUnion(firebaseUser.uid) });
+            } else {
+                batch.delete(msgRef); // Firestore rules should prevent unauthorized deletion
             }
+        });
+
+        try {
+            await batch.commit();
         } catch (error) {
             console.error("Error deleting messages:", error);
             alert("Could not delete messages.");
@@ -298,7 +302,8 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
 
             mediaRecorderRef.current.onstop = async () => {
                 const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-                await handleFileUpload(audioBlob, 'audio');
+                const audioFile = new File([audioBlob], `voice-message-${Date.now()}.webm`, { type: 'audio/webm' });
+                await handleFileUpload(audioFile, 'audio');
                 stream.getTracks().forEach(track => track.stop());
             };
 
@@ -493,12 +498,7 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
                             <button type="button" className="p-2 text-gray-400 hover:text-accent-cyan shrink-0" onClick={() => {
                                 const input = inputRef.current;
                                 if (input) {
-                                    // This is a common trick, but browser support can be inconsistent.
-                                    // It may not work on all mobile browsers as a security measure.
                                     try {
-                                        input.focus();
-                                        const event = new Event('click', { bubbles: true });
-                                        // A more modern way would be to check if `input.showPicker` exists
                                         if('showPicker' in HTMLInputElement.prototype) {
                                             (input as any).showPicker();
                                         }
@@ -561,9 +561,9 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
                                 initial={{ scale: 0.5, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
                                 exit={{ scale: 0.5, opacity: 0 }}
-                                type="submit" 
-                                className="p-3 rounded-full bg-accent-cyan text-white shrink-0"
-                                onClick={isRecordingLocked ? stopRecording : handleSend}
+                                type="button" 
+                                className="p-3 rounded-full bg-accent-cyan text-black shrink-0"
+                                onClick={isRecordingLocked ? stopRecording : (e) => handleSend(e)}
                             >
                                 <Send size={20}/>
                             </motion.button>
@@ -613,16 +613,19 @@ function ChatPageWrapper() {
         if (user) {
           setFirebaseUser(user);
           const userDocRef = doc(db, "users", user.uid);
-          const userDocSnap = await getDoc(userDocRef);
-          if (userDocSnap.exists()) {
-            setUserProfile({ ...user, ...userDocSnap.data() });
-          } else {
-            setUserProfile(user);
-          }
+          const unsubProfile = onSnapshot(userDocRef, (userDocSnap) => {
+            if (userDocSnap.exists()) {
+              setUserProfile({ ...user, ...userDocSnap.data() });
+            } else {
+              setUserProfile(user);
+            }
+            setLoading(false);
+          });
+          return () => unsubProfile();
         } else {
           router.push('/login');
+          setLoading(false);
         }
-        setLoading(false);
       });
       return () => unsub();
     }, [router]);
