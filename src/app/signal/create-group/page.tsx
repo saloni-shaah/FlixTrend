@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getFirestore, collection, query, where, getDocs, doc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, collection, query, where, getDocs, doc, addDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { auth, app } from '@/utils/firebaseClient';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { VibeSpaceLoader } from '@/components/VibeSpaceLoader';
@@ -38,7 +38,7 @@ export default function CreateGroupPage() {
                     return userDoc.exists() ? { id: userDoc.id, ...userDoc.data() } : null;
                 });
                 const userProfiles = (await Promise.all(userProfilesPromises)).filter(Boolean);
-                setConnections(userProfiles);
+                setConnections(userProfiles as any[]);
             }
         };
 
