@@ -212,7 +212,7 @@ export default function AppNavBar() {
           <>
             <NavButton href="/home" icon={VibeSpaceIcon} label="VibeSpace" />
             <NavButton href="/scope" icon={ScopeIcon} label="Scope" />
-            <NavButton href="/squad" icon={SquadIcon} label="Squad" notificationCount={hasUnreadNotifs ? 1 : 0} />
+            <NavButton href="/squad" icon={SquadIcon} label="Squad" />
             <NavButton href="/signal" icon={MessageSquare} label="Signal" notificationCount={totalUnreadMessages} />
           </>
         )}
