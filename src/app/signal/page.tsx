@@ -44,6 +44,11 @@ const ChatItem = React.memo(({ chat, selectionMode, isSelected, onLongPress, onC
                     (chat.avatar_url ? <img src={chat.avatar_url} alt={chat.name} className="w-full h-full object-cover"/> : <Users/>) :
                     (chat.avatar_url ? <img src={chat.avatar_url} alt="avatar" className="w-full h-full object-cover"/> : getInitials(chat))
                 }
+                 {chat.unreadCount > 0 && (
+                    <div className="absolute bottom-0 right-0 w-5 h-5 bg-accent-pink rounded-full flex items-center justify-center text-white text-xs font-bold border-2 border-background">
+                        {chat.unreadCount > 9 ? '9+' : chat.unreadCount}
+                    </div>
+                )}
             </div>
             <div className="flex-1 overflow-hidden">
                 <span className="font-bold text-white block truncate">{chat.name || chat.username}</span>
@@ -51,11 +56,6 @@ const ChatItem = React.memo(({ chat, selectionMode, isSelected, onLongPress, onC
                     {drafts[chat.id] ? <span className="text-red-400">[Draft] {drafts[chat.id]}</span> : chat.lastMessage?.text || "No messages yet"}
                 </span>
             </div>
-            {chat.unreadCount > 0 && (
-                <div className="w-6 h-6 bg-accent-pink rounded-full flex items-center justify-center text-white text-xs font-bold">
-                    {chat.unreadCount > 9 ? '9+' : chat.unreadCount}
-                </div>
-            )}
         </div>
     )
 });
@@ -203,6 +203,7 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
             ) : (
                 <div className="p-4 border-b border-accent-cyan/10 flex items-center justify-between shrink-0">
                     <h2 className="text-xl font-headline font-bold text-accent-cyan">Signal</h2>
+                    <button className="btn-glass text-xs p-2">Create Group</button>
                 </div>
             )}
             </AnimatePresence>
@@ -233,14 +234,6 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
                 ))}
             </div>
 
-            <motion.button 
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                className="absolute bottom-6 right-6 btn-glass-icon w-14 h-14 bg-accent-pink"
-                title="New Chat"
-            >
-                <PlusCircle size={28} />
-            </motion.button>
         </div>
     </div>
   );
