@@ -9,6 +9,7 @@ import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { MessageItem } from '@/components/signal/MessageItem';
+import { Textarea } from "@/components/ui/textarea";
 
 const db = getFirestore(app);
 const storage = getStorage(app);
@@ -36,7 +37,7 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
     const [newMessage, setNewMessage] = useState("");
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const inputRef = useRef<HTMLInputElement>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
     
     const [isRecording, setIsRecording] = useState(false);
     const [isRecordingLocked, setIsRecordingLocked] = useState(false);
@@ -58,19 +59,25 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
     const [showCameraView, setShowCameraView] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [uploadError, setUploadError] = useState<string | null>(null);
     const [mediaPreview, setMediaPreview] = useState<string | null>(null);
+    const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
 
     useEffect(() => {
         const draftForThisChat = drafts[chatId] || '';
         setNewMessage(draftForThisChat);
     }, [chatId, drafts]);
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const newText = e.target.value;
         setNewMessage(newText);
+        // Auto-resize textarea
+        if(textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+            textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+        }
+
         if (selectedChat) {
             setDraft(chatId, newText);
 
@@ -172,11 +179,14 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
     
     const handleSend = async (e?: React.FormEvent, mediaUrl: string | null = null, type: 'text' | 'image' | 'video' | 'audio' = 'text') => {
         e?.preventDefault();
-        if ((!newMessage.trim() && !mediaUrl) || !firebaseUser || !selectedChat) return;
+        const textToSend = newMessage.trim();
+        if ((!textToSend && !mediaUrl) || !firebaseUser || !selectedChat) return;
         
-        const textToSend = newMessage;
-        setNewMessage("");
-        setDraft(selectedChat.id, '');
+        setNewMessage(""); // Clear input immediately
+        setDraft(chatId, '');
+        if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto'; // Reset height
+        }
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     
         const messageData: any = {
@@ -217,11 +227,15 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
             console.error("Error deleting messages:", error);
             alert("Could not delete messages.");
         } finally {
-            setSelectionMode(null);
-            setSelectedItems(new Set());
+            cancelSelectionMode();
         }
     };
     
+    const cancelSelectionMode = () => {
+        setSelectionMode(null);
+        setSelectedItems(new Set());
+    };
+
     const handleFileUpload = async (file: File, typeOverride?: 'audio') => {
         const user = auth.currentUser;
         if (!user) {
@@ -409,7 +423,7 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
                             }
                             setSelectedItems(newSelection);
                             if (newSelection.size === 0) {
-                                setSelectionMode(null);
+                                cancelSelectionMode();
                             }
                         }
                       }}
@@ -440,12 +454,12 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
     }
 
     if (!selectedChat) {
-        return <div className="flex h-screen w-full items-center justify-center text-accent-cyan">Loading Chat...</div>
+        return <div className="flex h-full w-full items-center justify-center text-accent-cyan"><Loader className="animate-spin" /> Loading Chat...</div>
     }
 
     return (
         <div className="flex-1 flex flex-col bg-black/40 h-full">
-            <div className="flex items-center gap-3 p-3 border-b border-accent-cyan/10 bg-black/60 shadow-md shrink-0">
+            <header className="flex items-center gap-3 p-3 border-b border-accent-cyan/10 bg-black/60 shadow-md shrink-0">
                 <button onClick={() => router.push('/signal')} className="p-2 rounded-full hover:bg-accent-cyan/10"><ArrowLeft size={20}/></button>
                 <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-lg overflow-hidden shrink-0">
                 {selectedChat.isGroup ? 
@@ -460,7 +474,7 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
                 {!selectedChat.isGroup && <button className="p-2 rounded-full hover:bg-accent-cyan/10"><Video size={20}/></button>}
                 {!selectedChat.isGroup && <button className="p-2 rounded-full hover:bg-accent-cyan/10"><Phone size={20}/></button>}
                 </div>
-            </div>
+            </header>
             
             <AnimatePresence>
                 {selectionMode === 'messages' && (
@@ -468,9 +482,9 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
-                        className="p-3 border-b border-accent-cyan/10 flex items-center justify-between shrink-0 bg-accent-cyan/10"
+                        className="p-3 border-b border-accent-cyan/10 flex items-center justify-between shrink-0 bg-accent-cyan/10 fixed top-[65px] left-0 w-full md:w-2/3 md:left-1/3 z-10"
                     >
-                        <button onClick={() => { setSelectionMode(null); setSelectedItems(new Set()); }}><X size={24} /></button>
+                        <button onClick={cancelSelectionMode}><X size={24} /></button>
                         <span className="font-bold">{selectedItems.size} selected</span>
                         <button onClick={() => setShowDeleteConfirm(true)}><Trash2 size={24} /></button>
                     </motion.div>
@@ -482,7 +496,7 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
                 <div ref={messagesEndRef} />
             </div>
 
-            <div className="shrink-0 p-2 border-t border-accent-cyan/10 bg-black/60 relative">
+            <footer className="shrink-0 p-2 border-t border-accent-cyan/10 bg-black/60 relative">
                  <AnimatePresence>
                  {showAttachmentMenu && (
                     <motion.div 
@@ -496,23 +510,19 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
                     </motion.div>
                 )}
                 </AnimatePresence>
-                <form onSubmit={handleSend} className="flex items-center gap-2">
+                <form onSubmit={handleSend} className="flex items-end gap-2">
                     {!isRecordingLocked && (
                         <div className="flex items-center">
                             <button type="button" onClick={() => setShowAttachmentMenu(v => !v)} className="p-2 text-gray-400 hover:text-accent-cyan shrink-0">
                                 <Paperclip size={20}/>
                             </button>
                             <button type="button" className="p-2 text-gray-400 hover:text-accent-cyan shrink-0" onClick={() => {
-                                const input = inputRef.current;
-                                if (input) {
-                                    try {
-                                        if('showPicker' in HTMLInputElement.prototype) {
-                                            (input as any).showPicker();
-                                        }
-                                    } catch(e) {
-                                        console.warn("Could not programmatically open emoji keyboard.");
+                                textareaRef.current?.focus();
+                                try {
+                                    if(textareaRef.current && 'showPicker' in HTMLInputElement.prototype) {
+                                        (textareaRef.current as any).showPicker();
                                     }
-                                }
+                                } catch(e) { console.warn("Could not programmatically open emoji keyboard."); }
                             }}>
                                 <Smile size={20}/>
                             </button>
@@ -526,13 +536,14 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
                         </div>
                     ) : (
                         <div className="flex-1 relative flex items-center">
-                            <input 
-                                ref={inputRef}
-                                type="text" 
+                            <Textarea 
+                                ref={textareaRef}
                                 value={newMessage} 
                                 onChange={handleInputChange} 
+                                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { handleSend(e as any); } }}
                                 placeholder={isRecording ? "Recording..." : "Type a message..."} 
-                                className="flex-1 bg-gray-700 rounded-full px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-accent-cyan w-full pr-10"
+                                className="flex-1 bg-gray-700 rounded-xl px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-accent-cyan w-full pr-10 resize-none max-h-32"
+                                rows={1}
                             />
                         </div>
                     )}
@@ -577,7 +588,7 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
                     )}
                     </AnimatePresence>
                 </form>
-            </div>
+            </footer>
              <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
@@ -638,7 +649,7 @@ function ChatPageWrapper() {
     }, [router]);
     
     if (loading || !firebaseUser || !userProfile) {
-      return <div className="flex h-screen items-center justify-center text-accent-cyan"><Loader className="animate-spin" /> Loading Chat...</div>;
+      return <div className="flex h-full items-center justify-center text-accent-cyan"><Loader className="animate-spin" /> Loading Chat...</div>;
     }
     
     return <ChatPage firebaseUser={firebaseUser} userProfile={userProfile} chatId={chatId} />;
@@ -646,8 +657,10 @@ function ChatPageWrapper() {
 
 export default function SignalChatPage() {
     return (
-        <Suspense fallback={<div className="flex h-screen items-center justify-center text-accent-cyan"><Loader className="animate-spin" /> Loading Chat...</div>}>
-            <ChatPageWrapper />
-        </Suspense>
+        <div className="h-full w-full">
+            <Suspense fallback={<div className="flex h-full items-center justify-center text-accent-cyan"><Loader className="animate-spin" /> Loading Chat...</div>}>
+                <ChatPageWrapper />
+            </Suspense>
+        </div>
     )
 }
