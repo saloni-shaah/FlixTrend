@@ -9,6 +9,7 @@ import { Users, Bot, Search, CheckSquare, Square, Trash2, X, PlusCircle } from "
 import { useAppState } from "@/utils/AppStateContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { ChatLobby } from "@/components/signal/ChatLobby";
 
 const db = getFirestore(app);
 
@@ -242,7 +243,9 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
                     />
                 ))}
             </div>
-
+        </div>
+        <div className="hidden md:flex flex-1 items-center justify-center bg-black/40">
+            <ChatLobby />
         </div>
     </div>
   );
