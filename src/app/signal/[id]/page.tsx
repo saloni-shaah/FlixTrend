@@ -445,31 +445,38 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
 
     return (
         <div className="flex-1 flex flex-col bg-black/40 h-full">
-            {selectionMode === 'messages' ? (
-                 <div className="p-3 border-b border-accent-cyan/10 flex items-center justify-between shrink-0 bg-accent-cyan/10">
-                    <button onClick={() => { setSelectionMode(null); setSelectedItems(new Set()); }}><X size={24} /></button>
-                    <span className="font-bold">{selectedItems.size} selected</span>
-                    <button onClick={() => setShowDeleteConfirm(true)}><Trash2 size={24} /></button>
+            <div className="flex items-center gap-3 p-3 border-b border-accent-cyan/10 bg-black/60 shadow-md shrink-0">
+                <button onClick={() => router.push('/signal')} className="p-2 rounded-full hover:bg-accent-cyan/10"><ArrowLeft size={20}/></button>
+                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-lg overflow-hidden shrink-0">
+                {selectedChat.isGroup ? 
+                        (selectedChat.avatar_url ? <img src={selectedChat.avatar_url} alt={selectedChat.name} className="w-full h-full object-cover"/> : <Users/>) :
+                        (selectedChat.avatar_url ? <img src={selectedChat.avatar_url} alt="avatar" className="w-full h-full object-cover"/> : <UserCircle/>)
+                }
                 </div>
-            ) : (
-                <div className="flex items-center gap-3 p-3 border-b border-accent-cyan/10 bg-black/60 shadow-md shrink-0">
-                    <button onClick={() => router.push('/signal')} className="p-2 rounded-full hover:bg-accent-cyan/10"><ArrowLeft size={20}/></button>
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-lg overflow-hidden shrink-0">
-                    {selectedChat.isGroup ? 
-                            (selectedChat.avatar_url ? <img src={selectedChat.avatar_url} alt={selectedChat.name} className="w-full h-full object-cover"/> : <Users/>) :
-                            (selectedChat.avatar_url ? <img src={selectedChat.avatar_url} alt="avatar" className="w-full h-full object-cover"/> : <UserCircle/>)
-                    }
-                    </div>
-                    <div className="flex-1 text-left">
-                        <h3 className="font-bold text-white">{selectedChat.name || selectedChat.username}</h3>
-                    </div>
-                    <div className="flex items-center gap-2">
-                    {!selectedChat.isGroup && <button className="p-2 rounded-full hover:bg-accent-cyan/10"><Video size={20}/></button>}
-                    {!selectedChat.isGroup && <button className="p-2 rounded-full hover:bg-accent-cyan/10"><Phone size={20}/></button>}
-                    </div>
+                <div className="flex-1 text-left">
+                    <h3 className="font-bold text-white">{selectedChat.name || selectedChat.username}</h3>
                 </div>
-            )}
+                <div className="flex items-center gap-2">
+                {!selectedChat.isGroup && <button className="p-2 rounded-full hover:bg-accent-cyan/10"><Video size={20}/></button>}
+                {!selectedChat.isGroup && <button className="p-2 rounded-full hover:bg-accent-cyan/10"><Phone size={20}/></button>}
+                </div>
+            </div>
             
+            <AnimatePresence>
+                {selectionMode === 'messages' && (
+                    <motion.div 
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        className="p-3 border-b border-accent-cyan/10 flex items-center justify-between shrink-0 bg-accent-cyan/10"
+                    >
+                        <button onClick={() => { setSelectionMode(null); setSelectedItems(new Set()); }}><X size={24} /></button>
+                        <span className="font-bold">{selectedItems.size} selected</span>
+                        <button onClick={() => setShowDeleteConfirm(true)}><Trash2 size={24} /></button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-1">
                 {renderMessagesWithSeparators()}
                 <div ref={messagesEndRef} />
