@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -194,7 +193,7 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
                     initial={{ y: -50, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     exit={{ y: -50, opacity: 0 }}
-                    className="p-4 border-b border-accent-cyan/10 flex items-center justify-between shrink-0 bg-accent-cyan/10 absolute top-0 left-0 w-full z-10"
+                    className="p-4 border-b border-accent-cyan/10 flex items-center justify-between shrink-0 bg-accent-cyan/10"
                 >
                     <button onClick={cancelSelectionMode}><X size={24} /></button>
                     <span className="font-bold">{selectedItems.size} selected</span>
@@ -203,6 +202,9 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
             ) : (
                 <div className="p-4 border-b border-accent-cyan/10 flex items-center justify-between shrink-0">
                     <h2 className="text-xl font-headline font-bold text-accent-cyan">Signal</h2>
+                     <button onClick={() => { /* Logic to create new chat or group */ }} className="btn-glass-icon w-8 h-8">
+                        <PlusCircle size={20} />
+                    </button>
                 </div>
             )}
             </AnimatePresence>
@@ -234,12 +236,6 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
             </div>
 
         </div>
-        <button
-            onClick={() => { /* Logic to create new chat or group */ }}
-            className="absolute bottom-24 right-6 z-20 btn-glass bg-accent-pink text-white w-14 h-14 flex items-center justify-center shadow-fab-glow"
-        >
-            <PlusCircle size={28} />
-        </button>
     </div>
   );
 }
