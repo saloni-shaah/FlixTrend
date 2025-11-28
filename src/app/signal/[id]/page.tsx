@@ -182,6 +182,7 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
         const textToSend = newMessage.trim();
         if ((!textToSend && !mediaUrl) || !firebaseUser || !selectedChat) return;
         
+        const capturedText = newMessage.trim();
         setNewMessage(""); // Clear input immediately
         setDraft(chatId, '');
         if (textareaRef.current) {
@@ -200,9 +201,9 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
     
         if (mediaUrl) {
             messageData.mediaUrl = mediaUrl;
-            if (textToSend) messageData.text = textToSend; 
+            if (capturedText) messageData.text = capturedText; 
         } else {
-            messageData.text = textToSend;
+            messageData.text = capturedText;
         }
     
         await addDoc(collection(db, "chats", chatId, "messages"), messageData);
@@ -479,10 +480,10 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
             <AnimatePresence>
                 {selectionMode === 'messages' && (
                     <motion.div 
-                        initial={{ opacity: 0, y: -20 }}
+                        initial={{ opacity: 0, y: -50 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        className="p-3 border-b border-accent-cyan/10 flex items-center justify-between shrink-0 bg-accent-cyan/10 fixed top-[65px] left-0 w-full md:w-2/3 md:left-1/3 z-10"
+                        exit={{ opacity: 0, y: -50 }}
+                        className="p-3 border-b border-accent-cyan/10 flex items-center justify-between shrink-0 bg-accent-cyan/10 fixed top-[65px] left-0 right-0 z-10 md:left-1/3"
                     >
                         <button onClick={cancelSelectionMode}><X size={24} /></button>
                         <span className="font-bold">{selectedItems.size} selected</span>
@@ -510,7 +511,7 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
                     </motion.div>
                 )}
                 </AnimatePresence>
-                <form onSubmit={handleSend} className="flex items-end gap-2">
+                <form onSubmit={(e) => handleSend(e)} className="flex items-end gap-2">
                     {!isRecordingLocked && (
                         <div className="flex items-center">
                             <button type="button" onClick={() => setShowAttachmentMenu(v => !v)} className="p-2 text-gray-400 hover:text-accent-cyan shrink-0">
@@ -579,9 +580,8 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
                                 initial={{ scale: 0.5, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
                                 exit={{ scale: 0.5, opacity: 0 }}
-                                type="button" 
+                                type="submit"
                                 className="p-3 rounded-full bg-accent-cyan text-black shrink-0"
-                                onClick={isRecordingLocked ? stopRecording : (e) => handleSend(e)}
                             >
                                 <Send size={20}/>
                             </motion.button>
