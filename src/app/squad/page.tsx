@@ -11,7 +11,6 @@ import { PostCard } from "@/components/PostCard";
 import { FollowListModal } from "@/components/FollowListModal";
 import { CompleteProfileModal } from "@/components/squad/CompleteProfileModal";
 import { EditProfileModal } from "@/components/squad/EditProfileModal";
-import { SettingsModal } from "@/components/squad/SettingsModal";
 import { UserPlaylists } from "@/components/squad/UserPlaylists";
 import { UserCollections } from "@/components/squad/UserCollections";
 import { UserDownloads } from "@/components/squad/UserDownloads";
@@ -29,7 +28,6 @@ function SquadPageContent() {
   const [followers, setFollowers] = useState(0);
   const [following, setFollowing] = useState(0);
   const [friends, setFriends] = useState(0);
-  const [showSettings, setShowSettings] = useState(false);
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'posts');
   const [postTypeFilter, setPostTypeFilter] = useState('all');
@@ -140,16 +138,19 @@ function SquadPageContent() {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col w-full pb-24">
         {showFollowList && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" onClick={() => setShowFollowList(null)} />}
-        <motion.button
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="fixed top-6 right-6 z-50 btn-glass-icon"
-          onClick={() => setShowSettings(true)}
-          aria-label="Settings"
-        >
-          <Cog />
-        </motion.button>
+        <Link href="/settings">
+            <motion.button
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.5 }}
+              className="fixed bottom-24 right-4 z-30 btn-glass-icon"
+              aria-label="Settings"
+              whileHover={{ scale: 1.1, rotate: 15 }}
+              whileTap={{ scale: 0.9 }}
+            >
+              <Cog />
+            </motion.button>
+        </Link>
       {/* Banner */}
       <motion.div 
         initial={{ y: -20, opacity: 0 }}
@@ -308,9 +309,6 @@ function SquadPageContent() {
        )}
       {showEdit && (
         <EditProfileModal profile={profile} onClose={() => setShowEdit(false)} />
-      )}
-      {showSettings && profile && firebaseUser && (
-        <SettingsModal profile={profile} firebaseUser={firebaseUser} onClose={() => setShowSettings(false)} />
       )}
       {showFollowList && firebaseUser && (
         <FollowListModal 
