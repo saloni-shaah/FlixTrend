@@ -14,5 +14,12 @@ service firebase.storage {
                    request.resource.size < 25 * 1024 * 1024 && // 25MB limit
                    request.resource.contentType.matches('image/.*|video/.*|audio/.*');
     }
+
+    // New rule for voice messages
+    match /voice_messages/{userId}/{fileName} {
+      allow read, write: if request.auth.uid == userId &&
+                          request.resource.size < 5 * 1024 * 1024 && // 5MB limit for audio
+                          request.resource.contentType.matches('audio/.*');
+    }
   }
 }
