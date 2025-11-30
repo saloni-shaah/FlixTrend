@@ -15,8 +15,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { CreatePostPrompt } from "@/components/CreatePostPrompt";
 import { WelcomeAnimation } from "@/components/WelcomeAnimation";
-import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import "regenerator-runtime/runtime";
+import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 
 
 const MusicDiscovery = dynamic(() => import('@/components/MusicDiscovery').then(mod => mod.MusicDiscovery), { ssr: false });
