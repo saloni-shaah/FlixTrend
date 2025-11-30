@@ -15,6 +15,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { CreatePostPrompt } from "@/components/CreatePostPrompt";
 import { WelcomeAnimation } from "@/components/WelcomeAnimation";
+import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
+import "regenerator-runtime/runtime";
 
 
 const MusicDiscovery = dynamic(() => import('@/components/MusicDiscovery').then(mod => mod.MusicDiscovery), { ssr: false });
@@ -84,10 +86,34 @@ function HomePageContent() {
   const [viewedFlashes, setViewedFlashes] = useState<string[]>([]);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
+  const {
+    transcript,
+    listening,
+    browserSupportsSpeechRecognition
+  } = useSpeechRecognition();
   
   useEffect(() => {
     setHasMounted(true);
   }, []);
+
+    useEffect(() => {
+        if (transcript) {
+            setSearchTerm(transcript);
+        }
+    }, [transcript]);
+
+    const handleMicClick = () => {
+        if (!browserSupportsSpeechRecognition) {
+            alert("Your browser doesn't support voice search.");
+            return;
+        }
+        if (listening) {
+            SpeechRecognition.stopListening();
+        } else {
+            SpeechRecognition.startListening({ continuous: true });
+        }
+    };
+
 
   useEffect(() => {
     if (hasMounted && searchParams.get('new') === 'true') {
@@ -351,11 +377,11 @@ function HomePageContent() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
         >
-            <div className={`input-glass w-full flex items-center px-4 transition-all duration-300 ${isSearchFocused ? 'ring-2 ring-brand-saffron' : ''}`}>
+            <div className={`input-glass w-full flex items-center px-4 transition-all duration-300 ${isSearchFocused ? 'ring-2 ring-brand-saffron' : ''} ${listening ? 'ring-2 ring-red-500' : ''}`}>
                   <button
-                      className={`p-1 rounded-full transition-colors text-gray-400 hover:text-brand-gold`}
+                      className={`p-1 rounded-full transition-colors text-gray-400 hover:text-brand-gold ${listening ? 'text-red-500 animate-pulse' : ''}`}
                       aria-label="Voice search"
-                      disabled={true}
+                      onClick={handleMicClick}
                   >
                       <Mic size={20} />
                   </button>
@@ -363,7 +389,7 @@ function HomePageContent() {
                   <input
                     type="text"
                     className="flex-1 bg-transparent py-3 text-lg font-body focus:outline-none"
-                    placeholder={"Search posts..."}
+                    placeholder={listening ? "Listening..." : "Search posts..."}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     onFocus={() => setIsSearchFocused(true)}
