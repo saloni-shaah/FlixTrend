@@ -7,7 +7,7 @@ const pwaConfig = {
   register: true,
   skipWaiting: true,
   disable: process.env.NODE_ENV === "development",
-  pwaExcludes: [/^\/app-chunks\/.*(?<!\.js)$/, /firebase-messaging-sw\.js$/],
+  pwaExcludes: [/^firebase-.*\.js$/],
   runtimeCaching: [
     {
       urlPattern: ({ request }) => request.mode === 'navigate',
