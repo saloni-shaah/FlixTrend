@@ -17,7 +17,18 @@ const textVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
 };
 
-const glitchWords = ["FLIX", "VIBE", "CONNECT", "SECURE", "TREND"];
+const glitchVariants = {
+  hidden: { opacity: 0, filter: 'blur(5px)', skewX: '15deg' },
+  visible: {
+    opacity: 1,
+    filter: 'blur(0px)',
+    skewX: '0deg',
+    transition: { duration: 0.05 },
+  },
+  exit: { opacity: 0, filter: 'blur(5px)', skewX: '-15deg' },
+};
+
+const glitchWords = ["VIBE", "CONNECT", "SECURE"];
 const landmarks = [
     { name: "Paris", src: "https://picsum.photos/seed/paris/800/600", hint: "eiffel tower" },
     { name: "Agra", src: "https://picsum.photos/seed/agra/800/600", hint: "taj mahal" },
@@ -32,10 +43,11 @@ function WorldTourAnimation() {
     useEffect(() => {
         const wordInterval = setInterval(() => {
             setWordIndex(prev => (prev + 1) % glitchWords.length);
-        }, 150); // Fast glitch effect
+        }, 100); // Fast-paced glitch effect
+
         const landmarkInterval = setInterval(() => {
             setLandmarkIndex(prev => (prev + 1) % landmarks.length);
-        }, 800); // Slower landmark transition
+        }, 800);
 
         return () => {
             clearInterval(wordInterval);
@@ -52,7 +64,6 @@ function WorldTourAnimation() {
             variants={containerVariants}
             className="absolute inset-0 flex flex-col items-center justify-center gap-6 overflow-hidden"
         >
-             {/* Background Image Slideshow */}
             <AnimatePresence>
                 <motion.div
                     key={landmarkIndex}
@@ -62,7 +73,7 @@ function WorldTourAnimation() {
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.8 }}
                 >
-                    <Image 
+                    <Image
                         src={landmarks[landmarkIndex].src}
                         alt={landmarks[landmarkIndex].name}
                         fill
@@ -73,33 +84,38 @@ function WorldTourAnimation() {
                 </motion.div>
             </AnimatePresence>
 
-             {/* Digital Overlay */}
-             <div className="absolute inset-0 z-10 bg-black/60 backdrop-blur-sm"></div>
+             <div className="absolute inset-0 z-10 bg-black/70 backdrop-blur-md"></div>
+             <div 
+                className="absolute inset-0 z-10"
+                style={{
+                    backgroundImage: 'repeating-linear-gradient(0deg, rgba(255,255,255,0.05), rgba(255,255,255,0.05) 1px, transparent 1px, transparent 4px)',
+                    backgroundSize: '100% 4px',
+                    animation: 'scanline 10s linear infinite'
+                }}
+             ></div>
 
 
             <div className="relative z-20 flex flex-col items-center gap-4 text-center">
                  <motion.div variants={textVariants}>
                     <FlixTrendLogo size={100} />
                 </motion.div>
-                 {/* Glitching Text */}
                 <div className="h-20 w-80 text-center">
                     <AnimatePresence mode="wait">
                         <motion.h1
                             key={wordIndex}
+                            variants={glitchVariants}
+                            initial="hidden"
+                            animate="visible"
+                            exit="exit"
                             className="text-6xl font-headline font-bold text-accent-cyan text-glow"
-                            initial={{ opacity: 0, filter: 'blur(5px)' }}
-                            animate={{ opacity: 1, filter: 'blur(0px)' }}
-                            exit={{ opacity: 0, filter: 'blur(5px)' }}
-                            transition={{ duration: 0.05 }}
                         >
                             {glitchWords[wordIndex]}
                         </motion.h1>
                     </AnimatePresence>
                 </div>
-                 {/* Location Text */}
                  <div className="h-8">
                     <AnimatePresence mode="wait">
-                        <motion.p 
+                        <motion.p
                             key={landmarkIndex}
                             className="text-lg text-white font-semibold tracking-widest"
                             initial={{ opacity: 0, y: 10 }}
@@ -135,7 +151,7 @@ function FinalWelcomeAnimation() {
         variants={textVariants}
       >
         <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent-pink to-accent-cyan">
-          Welcome to Your VibeSpace
+          Welcome to the FlixTrend Universe
         </span>
       </motion.h1>
       <motion.p
@@ -143,7 +159,7 @@ function FinalWelcomeAnimation() {
         variants={textVariants}
         transition={{ delay: 0.2 }}
       >
-        The journey begins now.
+        Your journey begins now.
       </motion.p>
     </motion.div>
   );
@@ -151,18 +167,15 @@ function FinalWelcomeAnimation() {
 
 
 export function WelcomeAnimation({ onComplete }: { onComplete: () => void }) {
-  const [stage, setStage] = useState<'tour' | 'final'>('tour');
+  const [stage, setStage] = useState<'intro' | 'tour' | 'final'>('intro');
 
   useEffect(() => {
-    const tourTimer = setTimeout(() => {
-      setStage('final');
-    }, 4000); // Show world tour for 4 seconds
-
-    const finalTimer = setTimeout(() => {
-      onComplete();
-    }, 6500); // End animation after 6.5 seconds total
+    const introTimer = setTimeout(() => setStage('tour'), 1000); // FlixTrend Logo
+    const tourTimer = setTimeout(() => setStage('final'), 5000); // Glitch + World Tour
+    const finalTimer = setTimeout(() => onComplete(), 7500); // Final Welcome
 
     return () => {
+      clearTimeout(introTimer);
       clearTimeout(tourTimer);
       clearTimeout(finalTimer);
     };
@@ -170,7 +183,24 @@ export function WelcomeAnimation({ onComplete }: { onComplete: () => void }) {
 
   return (
     <div className="fixed inset-0 z-[999] bg-black">
+        <style>{`
+            @keyframes scanline {
+                0% { background-position: 0 0; }
+                100% { background-position: 0 -100vh; }
+            }
+        `}</style>
       <AnimatePresence mode="wait">
+        {stage === 'intro' && (
+             <motion.div
+                key="intro"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 flex items-center justify-center"
+             >
+                <FlixTrendLogo size={120} />
+             </motion.div>
+        )}
         {stage === 'tour' && <WorldTourAnimation />}
         {stage === 'final' && <FinalWelcomeAnimation />}
       </AnimatePresence>

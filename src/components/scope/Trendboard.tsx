@@ -96,24 +96,10 @@ export function Trendboard({ currentPost }: { currentPost: any }) {
                 const userSnapPosts = await getDocs(userQueryPosts);
                 setTopPosters(userSnapPosts.docs.map(doc => ({ id: doc.id, ...doc.data() })));
 
-                // Top 3 Liked Users (by finding users with the most liked posts)
-                const likedPostsQuery = query(collection(db, "posts"), orderBy("starCount", "desc"), limit(10));
-                const likedPostsSnap = await getDocs(likedPostsQuery);
-                const userLikes: Record<string, any> = {};
-                likedPostsSnap.docs.forEach(doc => {
-                    const post = doc.data();
-                    if (post.userId && !userLikes[post.userId]) {
-                         userLikes[post.userId] = {
-                            id: post.userId,
-                            name: post.displayName,
-                            username: post.username,
-                            avatar_url: post.avatar_url,
-                            starCount: post.starCount
-                        };
-                    }
-                });
-                const sortedLikedUsers = Object.values(userLikes).sort((a,b) => b.starCount - a.starCount).slice(0,3);
-                setTopLikedUsers(sortedLikedUsers);
+                // Top 3 Liked Users by starCount
+                const userQueryLikes = query(collection(db, "users"), orderBy("starCount", "desc"), limit(3));
+                const userSnapLikes = await getDocs(userQueryLikes);
+                setTopLikedUsers(userSnapLikes.docs.map(doc => ({ id: doc.id, ...doc.data() })));
 
             } catch (error) {
                 console.error("Error fetching trendboard data:", error);
