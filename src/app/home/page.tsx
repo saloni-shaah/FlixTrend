@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import dynamic from 'next/dynamic';
@@ -586,4 +585,3 @@ export default function HomePage() {
     </Suspense>
   );
 }
-
