@@ -686,9 +686,49 @@ export const updateComment = onCall(async (request: any) => {
     return { success: true, message: "Comment updated successfully." };
 });
 
+/**
+ * Periodically calculates and updates user statistics like follower count,
+ * post count, and total star count.
+ */
+export const updateUserStats = functions.pubsub.schedule('every 10 minutes').onRun(async (context) => {
+    logger.info("Running scheduled job to update user stats.");
+    const usersRef = collection(db, 'users');
+    const usersSnap = await getDocs(usersRef);
+
+    for (const userDoc of usersSnap.docs) {
+        const userId = userDoc.id;
+
+        // Calculate follower count
+        const followersSnap = await getDocs(collection(db, 'users', userId, 'followers'));
+        const followerCount = followersSnap.size;
+
+        // Calculate post count
+        const postsSnap = await getDocs(query(collection(db, 'posts'), where('userId', '==', userId)));
+        const postCount = postsSnap.size;
+
+        // Calculate total stars (likes) received
+        let totalStarCount = 0;
+        for (const postDoc of postsSnap.docs) {
+            const postData = postDoc.data();
+            if (postData.likes) {
+                totalStarCount += Object.values(postData.likes).filter(v => v === true).length;
+            }
+        }
+
+        // Update the user document
+        const userRef = doc(db, 'users', userId);
+        await updateDoc(userRef, {
+            followerCount: followerCount,
+            postCount: postCount,
+            starCount: totalStarCount,
+        });
+        
+        logger.info(`Updated stats for user ${userId}: ${followerCount} followers, ${postCount} posts, ${totalStarCount} stars.`);
+    }
+
+    logger.info("Finished updating user stats for all users.");
+    return null;
+});
+
 
 export * from "./migration";
-
-
-
-    

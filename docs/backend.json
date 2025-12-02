@@ -117,6 +117,18 @@
                     "items": { "type": "string" }
                 }
             }
+        },
+        "followerCount": {
+          "type": "number",
+          "description": "The total number of followers the user has."
+        },
+        "postCount": {
+            "type": "number",
+            "description": "The total number of posts the user has created."
+        },
+        "starCount": {
+            "type": "number",
+            "description": "The total number of stars (likes) the user has received across all their posts."
         }
       },
       "required": ["uid", "email", "username", "name", "createdAt"]
