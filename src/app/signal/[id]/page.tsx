@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useEffect, useState, useRef, Suspense } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -244,6 +245,19 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
             return;
         }
 
+        // Enforce file type and size limits for chat
+        const isImage = file.type.startsWith('image/');
+        const maxSize = 5 * 1024 * 1024; // 5MB
+
+        if (!isImage) {
+            setUploadError("Only images can be sent in chat.");
+            return;
+        }
+        if (file.size > maxSize) {
+            setUploadError("Image size cannot exceed 5MB.");
+            return;
+        }
+
         setIsUploading(true);
         setUploadError('');
         
@@ -254,7 +268,7 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
         }
 
         try {
-            const path = typeOverride === 'audio' ? `voice_messages/${user.uid}` : `user_uploads/${user.uid}`;
+            const path = typeOverride === 'audio' ? `voice_messages/${user.uid}` : `chat_media/${user.uid}`;
             const fileName = `${Date.now()}-${file.name}`;
             const fileRef = storageRef(storage, `${path}/${fileName}`);
             
@@ -318,6 +332,11 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
 
             mediaRecorderRef.current.onstop = async () => {
                 const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                if (audioBlob.size > 5 * 1024 * 1024) { // 5MB limit
+                    setUploadError("Voice message is too large (max 5MB).");
+                    stream.getTracks().forEach(track => track.stop());
+                    return;
+                }
                 const audioFile = new File([audioBlob], `voice-message-${Date.now()}.webm`, { type: 'audio/webm' });
                 await handleFileUpload(audioFile, 'audio');
                 stream.getTracks().forEach(track => track.stop());
@@ -549,7 +568,7 @@ function ChatPage({ firebaseUser, userProfile, chatId }: { firebaseUser: any, us
                         </div>
                     )}
 
-                    <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*,video/*" />
+                    <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
                     <AnimatePresence mode="wait">
                     {newMessage.trim() === "" && !isRecordingLocked ? (
                         <div className="relative">

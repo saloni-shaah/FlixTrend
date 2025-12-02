@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useState, useRef, useCallback } from 'react';
 import { UploadCloud, X, MapPin, Smile, Hash, AtSign, Locate, Loader } from 'lucide-react';
@@ -20,20 +21,24 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
         const user = auth.currentUser;
         if (!user) return; 
 
+        // Enforce 200MB limit
+        if (file.size > 200 * 1024 * 1024) {
+            setUploadError(`File ${file.name} is too large (max 200MB).`);
+            return;
+        }
+
         const previewUrl = URL.createObjectURL(file);
         setUploadingFiles(prev => ({ ...prev, [previewUrl]: { progress: 0 } }));
 
         try {
-            // CORRECTED FILE PATH LOGIC
-            const fileName = `${Date.now()}-${file.name}`;
-            const fileRef = storageRef(storage, `user_uploads/${user.uid}/${fileName}`);
+            const fileName = `${user.uid}-${Date.now()}-${file.name}`;
+            const fileRef = storageRef(storage, `posts/${user.uid}/${fileName}`);
             
             const snapshot = await uploadBytes(fileRef, file);
             const downloadURL = await getDownloadURL(snapshot.ref);
             
             const newUrls = [...(data.mediaUrl || []), downloadURL];
 
-            // Check if it's a video and update the data accordingly
             const isVideo = file.type.startsWith('video/');
             const updateData: any = { mediaUrl: newUrls, isVideo };
 
