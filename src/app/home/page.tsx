@@ -91,6 +91,7 @@ function HomePageContent() {
   const {
     transcript,
     listening,
+    finalTranscript,
     browserSupportsSpeechRecognition
   } = useSpeechRecognition();
   
@@ -99,10 +100,10 @@ function HomePageContent() {
   }, []);
 
     useEffect(() => {
-        if (transcript) {
-            setSearchTerm(transcript);
+        if (finalTranscript) {
+            setSearchTerm(finalTranscript);
         }
-    }, [transcript]);
+    }, [finalTranscript]);
 
     const handleMicClick = () => {
         if (!browserSupportsSpeechRecognition) {
@@ -112,7 +113,7 @@ function HomePageContent() {
         if (listening) {
             SpeechRecognition.stopListening();
         } else {
-            SpeechRecognition.startListening({ continuous: true });
+            SpeechRecognition.startListening();
         }
     };
 
@@ -408,7 +409,7 @@ function HomePageContent() {
                     type="text"
                     className="flex-1 bg-transparent py-3 text-lg font-body focus:outline-none"
                     placeholder={listening ? "Listening..." : "Search posts..."}
-                    value={searchTerm}
+                    value={listening ? transcript : searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     onFocus={() => setIsSearchFocused(true)}
                     onBlur={() => setIsSearchFocused(false)}
@@ -585,3 +586,4 @@ export default function HomePage() {
     </Suspense>
   );
 }
+
