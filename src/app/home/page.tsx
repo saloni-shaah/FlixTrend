@@ -17,6 +17,8 @@ import { CreatePostPrompt } from "@/components/CreatePostPrompt";
 import { WelcomeAnimation } from "@/components/WelcomeAnimation";
 import "regenerator-runtime/runtime";
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
+import { errorEmitter } from "@/firebase/error-emitter";
+import { FirestorePermissionError } from "@/firebase/errors";
 
 
 const MusicDiscovery = dynamic(() => import('@/components/MusicDiscovery').then(mod => mod.MusicDiscovery), { ssr: false });
@@ -147,10 +149,10 @@ function HomePageContent() {
             setLoadingMore(true);
         } else {
             setLoading(true);
+            setPosts([]); // Clear posts on new category fetch
         }
 
         const baseQuery = collection(db, "posts");
-        
         let constraints: any[] = [orderBy("publishAt", "desc")];
 
         if (category !== 'for-you') {
@@ -184,10 +186,14 @@ function HomePageContent() {
                 setPosts(newPosts);
             }
 
-
             setLastVisible(lastDoc);
             setHasMore(documentSnapshots.docs.length === POSTS_PER_PAGE);
         } catch (error) {
+             const permissionError = new FirestorePermissionError({
+                path: 'posts',
+                operation: 'list',
+            });
+            errorEmitter.emit('permission-error', permissionError);
             console.error("Error fetching posts: ", error);
         } finally {
              if (loadMore) {
@@ -203,7 +209,7 @@ function HomePageContent() {
         if(currentUser) { // Only fetch posts if user is authenticated
             fetchPosts(activeCategory);
         }
-    }, [activeCategory, currentUser]); // Removed fetchPosts from deps to prevent re-fetch on every render
+    }, [activeCategory, currentUser, fetchPosts]); // Added fetchPosts to dependencies
     
     const fetchMorePosts = useCallback(() => {
         fetchPosts(activeCategory, true);
@@ -221,6 +227,12 @@ function HomePageContent() {
         const q = query(collection(db, "users", user.uid, "notifications"), where("read", "==", false));
         const unsubNotifs = onSnapshot(q, (snapshot) => {
             setHasUnreadNotifs(!snapshot.empty);
+        }, (error) => {
+            const permissionError = new FirestorePermissionError({
+                path: `users/${user.uid}/notifications`,
+                operation: 'list',
+            });
+            errorEmitter.emit('permission-error', permissionError);
         });
         
         return () => unsubNotifs();
@@ -265,6 +277,12 @@ function HomePageContent() {
     );
     const unsub = onSnapshot(q, (snapshot) => {
       setFlashes(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+        const permissionError = new FirestorePermissionError({
+            path: 'flashes',
+            operation: 'list',
+        });
+        errorEmitter.emit('permission-error', permissionError);
     });
     return () => unsub();
   }, [currentUser]);
@@ -567,5 +585,3 @@ export default function HomePage() {
     </Suspense>
   );
 }
-
-    
