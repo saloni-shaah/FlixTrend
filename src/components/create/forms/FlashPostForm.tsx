@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useState, useRef, useEffect } from 'react';
 import { X, UploadCloud, Music as MusicIcon, MapPin, Smile, Camera, Image as ImageIcon, Zap, Locate, Loader } from 'lucide-react';
@@ -75,6 +76,11 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
             return;
         }
 
+        if (file.size > 20 * 1024 * 1024) { // 20MB limit for Flashes
+            setUploadError("File is too large for a Flash (max 20MB).");
+            return;
+        }
+
         setIsUploading(true);
         setUploadError('');
         const previewUrl = URL.createObjectURL(file);
@@ -82,7 +88,7 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
 
         try {
             const fileName = `${user.uid}-${Date.now()}-${file.name}`;
-            const fileRef = storageRef(storage, `user_uploads/${user.uid}/${fileName}`);
+            const fileRef = storageRef(storage, `flashes/${user.uid}/${fileName}`);
             
             const snapshot = await uploadBytes(fileRef, file);
             const downloadURL = await getDownloadURL(snapshot.ref);
@@ -234,7 +240,7 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
                 )}
                 {mediaPreview && !isUploading && (
                      <div className="relative group aspect-video">
-                        {(mediaPreview.includes('.mp4') || mediaPreview.includes('.webm')) ? (
+                        {(mediaPreview.includes('.mp4') || mediaPreview.includes('.webm') || mediaPreview.includes('blob:')) ? (
                             <video src={mediaPreview} className="w-full h-full object-contain rounded-lg" />
                         ) : (
                             <img src={mediaPreview} alt="preview" className="w-full h-full object-contain rounded-lg" />
