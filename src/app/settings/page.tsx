@@ -8,10 +8,6 @@ import { useRouter } from 'next/navigation';
 import { auth, db } from '@/utils/firebaseClient';
 import { doc, onSnapshot, updateDoc } from "firebase/firestore";
 import { DeleteAccountModal } from '@/components/squad/DeleteAccountModal';
-import { getFunctions, httpsCallable } from "firebase/functions";
-import { app } from '@/utils/firebaseClient';
-
-const functions = getFunctions(app);
 
 export default function SettingsPage() {
     const [profile, setProfile] = useState<any>(null);
@@ -31,7 +27,6 @@ export default function SettingsPage() {
     const [resendStatus, setResendStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
     const router = useRouter();
 
-    const toggleAccountStatusCallable = httpsCallable(functions, 'toggleAccountStatus');
     
     useEffect(() => {
         const unsub = auth.onAuthStateChanged(user => {
@@ -94,26 +89,6 @@ export default function SettingsPage() {
             setIsSaving(false);
         }
     };
-
-    const handleToggleAccountStatus = async () => {
-        if (!firebaseUser) return;
-        const action = firebaseUser.disabled ? "re-enable" : "disable";
-        if (!window.confirm(`Are you sure you want to ${action} your account? You will be logged out.`)) return;
-
-        setIsSaving(true);
-        try {
-            await toggleAccountStatusCallable({ uid: firebaseUser.uid, disable: !firebaseUser.disabled });
-            alert(`Account successfully ${action}d.`);
-            await signOut(auth);
-            router.push('/login');
-        } catch (error) {
-            console.error(`Failed to ${action} account:`, error);
-            alert(`Could not ${action} your account. Please try again.`);
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
 
     const handleResendVerification = async () => {
         if (firebaseUser) {
@@ -217,13 +192,6 @@ export default function SettingsPage() {
                 
                 <div className="bg-white/5 rounded-xl p-4">
                 <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan">Account Actions</h3>
-                <button 
-                    className={`btn-glass w-full mt-2 ${firebaseUser.disabled ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}
-                    onClick={handleToggleAccountStatus} 
-                    disabled={isSaving}
-                >
-                    <UserX className="inline-block mr-2" /> {firebaseUser.disabled ? 'Re-enable Account' : 'Disable Account'}
-                </button>
                 <button className="btn-glass bg-red-500/20 text-red-400 hover:bg-red-500/40 hover:text-white w-full mt-4" onClick={() => setShowDeleteModal(true)}>
                     <Trash2 className="inline-block mr-2" /> Permanently Delete Account
                 </button>

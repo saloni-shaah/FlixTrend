@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import dynamic from 'next/dynamic';
@@ -14,10 +15,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { CreatePostPrompt } from "@/components/CreatePostPrompt";
 import { WelcomeAnimation } from "@/components/WelcomeAnimation";
-import "regenerator-runtime/runtime";
-import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
-import { errorEmitter } from "@/firebase/error-emitter";
-import { FirestorePermissionError } from "@/firebase/errors";
 
 
 const MusicDiscovery = dynamic(() => import('@/components/MusicDiscovery').then(mod => mod.MusicDiscovery), { ssr: false });
@@ -87,35 +84,10 @@ function HomePageContent() {
   const [viewedFlashes, setViewedFlashes] = useState<string[]>([]);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
-  const {
-    transcript,
-    listening,
-    finalTranscript,
-    browserSupportsSpeechRecognition
-  } = useSpeechRecognition();
   
   useEffect(() => {
     setHasMounted(true);
   }, []);
-
-    useEffect(() => {
-        if (finalTranscript) {
-            setSearchTerm(finalTranscript);
-        }
-    }, [finalTranscript]);
-
-    const handleMicClick = () => {
-        if (!browserSupportsSpeechRecognition) {
-            alert("Your browser doesn't support voice search.");
-            return;
-        }
-        if (listening) {
-            SpeechRecognition.stopListening();
-        } else {
-            SpeechRecognition.startListening();
-        }
-    };
-
 
   useEffect(() => {
     if (hasMounted && searchParams.get('new') === 'true') {
@@ -149,10 +121,10 @@ function HomePageContent() {
             setLoadingMore(true);
         } else {
             setLoading(true);
-            setPosts([]); // Clear posts on new category fetch
         }
 
         const baseQuery = collection(db, "posts");
+        
         let constraints: any[] = [orderBy("publishAt", "desc")];
 
         if (category !== 'for-you') {
@@ -186,14 +158,10 @@ function HomePageContent() {
                 setPosts(newPosts);
             }
 
+
             setLastVisible(lastDoc);
             setHasMore(documentSnapshots.docs.length === POSTS_PER_PAGE);
         } catch (error) {
-             const permissionError = new FirestorePermissionError({
-                path: 'posts',
-                operation: 'list',
-            });
-            errorEmitter.emit('permission-error', permissionError);
             console.error("Error fetching posts: ", error);
         } finally {
              if (loadMore) {
@@ -209,7 +177,7 @@ function HomePageContent() {
         if(currentUser) { // Only fetch posts if user is authenticated
             fetchPosts(activeCategory);
         }
-    }, [activeCategory, currentUser, fetchPosts]); // Added fetchPosts to dependencies
+    }, [activeCategory, currentUser]); // Removed fetchPosts from deps to prevent re-fetch on every render
     
     const fetchMorePosts = useCallback(() => {
         fetchPosts(activeCategory, true);
@@ -227,12 +195,6 @@ function HomePageContent() {
         const q = query(collection(db, "users", user.uid, "notifications"), where("read", "==", false));
         const unsubNotifs = onSnapshot(q, (snapshot) => {
             setHasUnreadNotifs(!snapshot.empty);
-        }, (error) => {
-            const permissionError = new FirestorePermissionError({
-                path: `users/${user.uid}/notifications`,
-                operation: 'list',
-            });
-            errorEmitter.emit('permission-error', permissionError);
         });
         
         return () => unsubNotifs();
@@ -277,12 +239,6 @@ function HomePageContent() {
     );
     const unsub = onSnapshot(q, (snapshot) => {
       setFlashes(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-    }, (error) => {
-        const permissionError = new FirestorePermissionError({
-            path: 'flashes',
-            operation: 'list',
-        });
-        errorEmitter.emit('permission-error', permissionError);
     });
     return () => unsub();
   }, [currentUser]);
@@ -395,11 +351,11 @@ function HomePageContent() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
         >
-            <div className={`input-glass w-full flex items-center px-4 transition-all duration-300 ${isSearchFocused ? 'ring-2 ring-brand-saffron' : ''} ${listening ? 'ring-2 ring-red-500' : ''}`}>
+            <div className={`input-glass w-full flex items-center px-4 transition-all duration-300 ${isSearchFocused ? 'ring-2 ring-brand-saffron' : ''}`}>
                   <button
-                      className={`p-1 rounded-full transition-colors text-gray-400 hover:text-brand-gold ${listening ? 'text-red-500 animate-pulse' : ''}`}
+                      className={`p-1 rounded-full transition-colors text-gray-400 hover:text-brand-gold`}
                       aria-label="Voice search"
-                      onClick={handleMicClick}
+                      disabled={true}
                   >
                       <Mic size={20} />
                   </button>
@@ -407,8 +363,8 @@ function HomePageContent() {
                   <input
                     type="text"
                     className="flex-1 bg-transparent py-3 text-lg font-body focus:outline-none"
-                    placeholder={listening ? "Listening..." : "Search posts..."}
-                    value={listening ? transcript : searchTerm}
+                    placeholder={"Search posts..."}
+                    value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     onFocus={() => setIsSearchFocused(true)}
                     onBlur={() => setIsSearchFocused(false)}

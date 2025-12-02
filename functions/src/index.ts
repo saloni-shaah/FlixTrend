@@ -144,11 +144,11 @@ export const deleteComment = onCall(async (request: any) => {
     const postDoc = await postRef.get();
     const commentDoc = await commentRef.get();
 
-    if (!postDoc.exists) {
+    if (!postDoc.exists()) {
         throw new HttpsError("not-found", "Post not found.");
     }
 
-    if (!commentDoc.exists) {
+    if (!commentDoc.exists()) {
         throw new HttpsError("not-found", "Comment not found.");
     }
 
@@ -180,7 +180,7 @@ export const updateComment = onCall(async (request: any) => {
     const commentRef = db.collection("posts").doc(postId).collection("comments").doc(commentId);
     const commentDoc = await commentRef.get();
 
-    if (!commentDoc.exists) {
+    if (!commentDoc.exists()) {
         throw new HttpsError("not-found", "Comment not found.");
     }
 
