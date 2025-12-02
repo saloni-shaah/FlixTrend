@@ -3,12 +3,12 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // General user uploads (profile pics, etc.) - 200MB limit
+    // User profile pictures and banners - 5MB limit
     match /user_uploads/{userId}/{allPaths=**} {
       allow read;
       allow write: if request.auth.uid == userId &&
-                   request.resource.size < 200 * 1024 * 1024 &&
-                   request.resource.contentType.matches('image/.*|video/.*|audio/.*');
+                   request.resource.size < 5 * 1024 * 1024 && // 5MB Limit
+                   request.resource.contentType.matches('image/.*');
     }
     
     // Vibe Space Media Posts - 200MB limit
