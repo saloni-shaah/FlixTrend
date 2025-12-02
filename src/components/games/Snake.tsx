@@ -238,4 +238,3 @@ export function Snake() {
         </motion.div>
     );
 }
-
