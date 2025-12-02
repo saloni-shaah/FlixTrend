@@ -11,7 +11,7 @@ service firebase.storage {
       // can upload files to their own folder.
       // This rule also enforces a size limit and content type validation.
       allow write: if request.auth.uid == userId &&
-                   request.resource.size < 25 * 1024 * 1024 && // 25MB limit
+                   request.resource.size < 200 * 1024 * 1024 && // 200MB limit
                    request.resource.contentType.matches('image/.*|video/.*|audio/.*');
     }
 
