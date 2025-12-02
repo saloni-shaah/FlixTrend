@@ -86,20 +86,42 @@ export function Trendboard({ currentPost }: { currentPost: any }) {
                 const postSnap = await getDocs(postQuery);
                 setTopPosts(postSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     
-                // Top 3 Creators by Followers
-                const userQueryFollowers = query(collection(db, "users"), orderBy("followerCount", "desc"), limit(3));
-                const userSnapFollowers = await getDocs(userQueryFollowers);
-                setTopCreators(userSnapFollowers.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+                const usersRef = collection(db, "users");
+                const usersSnap = await getDocs(usersRef);
+                const allUsers = usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
+                const postsSnap = await getDocs(query(collection(db, "posts")));
+                const allPosts = postsSnap.docs.map(doc => doc.data());
+
+                const userStats = await Promise.all(allUsers.map(async (user) => {
+                    const followersSnap = await getDocs(collection(db, 'users', user.id, 'followers'));
+                    
+                    const userPosts = allPosts.filter(p => p.userId === user.id);
+                    const postCount = userPosts.length;
+
+                    const starCount = userPosts.reduce((total, p) => {
+                         if (p.likes) {
+                            return total + Object.values(p.likes).filter(v => v === true).length;
+                        }
+                        return total;
+                    }, 0);
+
+                    return {
+                        ...user,
+                        followerCount: followersSnap.size,
+                        postCount,
+                        starCount,
+                    };
+                }));
+
+                // Top 3 Creators by Followers
+                setTopCreators([...userStats].sort((a, b) => b.followerCount - a.followerCount).slice(0, 3));
+                
                 // Top 5 Posters by postCount
-                const userQueryPosts = query(collection(db, "users"), orderBy("postCount", "desc"), limit(5));
-                const userSnapPosts = await getDocs(userQueryPosts);
-                setTopPosters(userSnapPosts.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+                setTopPosters([...userStats].sort((a, b) => b.postCount - a.postCount).slice(0, 5));
 
                 // Top 3 Liked Users by starCount
-                const userQueryLikes = query(collection(db, "users"), orderBy("starCount", "desc"), limit(3));
-                const userSnapLikes = await getDocs(userQueryLikes);
-                setTopLikedUsers(userSnapLikes.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+                setTopLikedUsers([...userStats].sort((a, b) => b.starCount - a.starCount).slice(0, 3));
 
             } catch (error) {
                 console.error("Error fetching trendboard data:", error);
