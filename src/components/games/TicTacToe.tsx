@@ -1,14 +1,7 @@
-
 "use client";
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Circle, RotateCcw, Users, Wifi, WifiOff } from 'lucide-react';
-import { auth, db } from '@/utils/firebaseClient';
-import { collection, addDoc, doc, onSnapshot, updateDoc, serverTimestamp, query, where, getDocs, limit } from 'firebase/firestore';
-import { useAuthState } from 'react-firebase-hooks/auth';
-import { FirestorePermissionError } from '@/firebase/errors';
-import { errorEmitter } from '@/firebase/error-emitter';
-
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import { X, Circle, RotateCcw } from 'lucide-react';
 
 const lines = [
     [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
@@ -39,7 +32,7 @@ function Square({ value, onSquareClick, isWinning }: { value: 'X' | 'O' | null, 
   );
 }
 
-function Board({ squares, onPlay, xIsNext, isMyTurn, winningLine }: { squares: ('X' | 'O' | null)[], onPlay: (i:number) => void, xIsNext: boolean, isMyTurn?: boolean, winningLine: number[] | null }) {
+function Board({ squares, onPlay, xIsNext, winningLine }: { squares: ('X' | 'O' | null)[], onPlay: (i:number) => void, xIsNext: boolean, winningLine: number[] | null }) {
     const winnerInfo = calculateWinner(squares);
     const winner = winnerInfo?.winner;
     
@@ -53,7 +46,7 @@ function Board({ squares, onPlay, xIsNext, isMyTurn, winningLine }: { squares: (
     }
 
     function handleClick(i: number) {
-        if (calculateWinner(squares) || squares[i] || (isMyTurn !== undefined && !isMyTurn)) {
+        if (calculateWinner(squares) || squares[i]) {
             return;
         }
         onPlay(i);
@@ -131,216 +124,7 @@ function OfflineGame() {
     )
 }
 
-function OnlineGame({ gameId, setGameId, user, username }: { gameId: string, setGameId: (id: string | null) => void, user: any, username: string }) {
-    const [game, setGame] = useState<any>(null);
-
-    useEffect(() => {
-        const gameDocRef = doc(db, "tictactoe", gameId);
-        const unsub = onSnapshot(gameDocRef, (doc) => {
-            if (doc.exists()) {
-                setGame({ id: doc.id, ...doc.data() });
-            } else {
-                alert("Game not found or has been deleted.");
-                setGameId(null);
-            }
-        }, async (serverError) => {
-            const permissionError = new FirestorePermissionError({
-              path: gameDocRef.path,
-              operation: 'get',
-            });
-            errorEmitter.emit('permission-error', permissionError);
-            setGameId(null); // Go back to lobby on error
-        });
-        return () => unsub();
-    }, [gameId, setGameId]);
-
-    const handlePlay = (i: number) => {
-        if (!game || calculateWinner(game.squares)) return;
-        
-        const playerSymbol = game.players[user.uid].symbol;
-        if ((game.xIsNext && playerSymbol !== 'X') || (!game.xIsNext && playerSymbol !== 'O')) {
-            return; // Not your turn
-        }
-
-        const newSquares = [...game.squares];
-        newSquares[i] = playerSymbol;
-
-        const gameDocRef = doc(db, "tictactoe", gameId);
-        const updatedData = { squares: newSquares, xIsNext: !game.xIsNext, lastMoveAt: serverTimestamp() };
-
-        updateDoc(gameDocRef, updatedData)
-            .catch(async (serverError) => {
-                const permissionError = new FirestorePermissionError({
-                  path: gameDocRef.path,
-                  operation: 'update',
-                  requestResourceData: updatedData
-                });
-                errorEmitter.emit('permission-error', permissionError);
-            });
-    };
-
-    const handleLeaveGame = async () => {
-        if(window.confirm("Are you sure you want to leave this game?")) {
-            setGameId(null);
-        }
-    }
-
-    if (!game) return <div className="text-accent-cyan animate-pulse">Loading game...</div>;
-
-    const winnerInfo = calculateWinner(game.squares);
-    const mySymbol = game.players[user.uid]?.symbol;
-    const isMyTurn = (game.xIsNext && mySymbol === 'X') || (!game.xIsNext && mySymbol === 'O');
-
-    return (
-        <div className="flex flex-col items-center gap-6">
-            <Board squares={game.squares} onPlay={handlePlay} xIsNext={game.xIsNext} isMyTurn={isMyTurn} winningLine={winnerInfo?.line || null}/>
-            <button onClick={handleLeaveGame} className="btn-glass bg-red-500/20 text-red-400 flex items-center gap-2">
-                Leave Game
-            </button>
-             {winnerInfo && (
-                <div className="text-center">
-                    <h3 className="text-2xl font-bold text-brand-gold animate-bounce">✨ Winner! ✨</h3>
-                    <p className="text-gray-300">Congratulations to Player {winnerInfo.winner}!</p>
-                </div>
-            )}
-             {!winnerInfo && <p className="text-sm text-gray-400">{isMyTurn ? "Your turn!" : "Waiting for opponent..."}</p>}
-        </div>
-    );
-}
-
-function Lobby({ setGameId, setMode, user, username }: { setGameId: (id: string) => void, setMode: (mode: 'online' | 'offline') => void, user: any, username: string }) {
-    const [openGames, setOpenGames] = useState<any[]>([]);
-
-    useEffect(() => {
-        const q = query(collection(db, "tictactoe"), where("status", "==", "waiting"), limit(10));
-        const unsub = onSnapshot(q, (snapshot) => {
-            setOpenGames(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        }, async (serverError) => {
-            const permissionError = new FirestorePermissionError({
-              path: 'tictactoe',
-              operation: 'list',
-            });
-            errorEmitter.emit('permission-error', permissionError);
-        });
-        return () => unsub();
-    }, []);
-
-    const handleCreateGame = () => {
-        const newGameData = {
-            players: { [user.uid]: { symbol: 'X', name: username } },
-            squares: Array(9).fill(null),
-            xIsNext: true,
-            status: 'waiting', // waiting, playing, finished
-            createdAt: serverTimestamp(),
-            host: username
-        };
-        addDoc(collection(db, "tictactoe"), newGameData)
-            .then((docRef) => {
-                setGameId(docRef.id);
-                setMode('online');
-            })
-            .catch(async (serverError) => {
-                const permissionError = new FirestorePermissionError({
-                    path: 'tictactoe',
-                    operation: 'create',
-                    requestResourceData: newGameData,
-                });
-                errorEmitter.emit('permission-error', permissionError);
-            });
-    };
-
-    const handleJoinGame = (gameId: string) => {
-        const gameDocRef = doc(db, "tictactoe", gameId);
-        const updatedData = {
-            [`players.${user.uid}`]: { symbol: 'O', name: username },
-            status: 'playing'
-        };
-        updateDoc(gameDocRef, updatedData)
-            .then(() => {
-                setGameId(gameId);
-                setMode('online');
-            })
-            .catch(async (serverError) => {
-                const permissionError = new FirestorePermissionError({
-                    path: gameDocRef.path,
-                    operation: 'update',
-                    requestResourceData: updatedData,
-                });
-                errorEmitter.emit('permission-error', permissionError);
-            });
-    };
-
-    return (
-        <div className="w-full">
-            <button onClick={handleCreateGame} className="w-full btn-glass bg-accent-pink mb-6">Create New Online Game</button>
-            
-            <h3 className="font-bold text-accent-cyan mb-4">Join an Existing Game</h3>
-            <div className="space-y-2 max-h-60 overflow-y-auto">
-                {openGames.length > 0 ? openGames.map(game => (
-                    <div key={game.id} className="flex items-center justify-between p-3 bg-black/20 rounded-lg">
-                        <span>Game hosted by {game.host}</span>
-                        <button onClick={() => handleJoinGame(game.id)} className="btn-glass text-xs bg-accent-cyan text-black">Join</button>
-                    </div>
-                )) : <p className="text-sm text-gray-400 text-center">No open games. Create one!</p>}
-            </div>
-        </div>
-    );
-}
-
-
 export function TicTacToe() {
-    const [mode, setMode] = useState<'menu' | 'offline' | 'online'>('menu');
-    const [gameId, setGameId] = useState<string | null>(null);
-    const [user, loading] = useAuthState(auth);
-    const [username, setUsername] = useState('Player');
-
-    useEffect(() => {
-        if (user) {
-            const unsub = onSnapshot(doc(db, "users", user.uid), (doc) => {
-                if(doc.exists()) {
-                    setUsername(doc.data().username || `Player${user.uid.slice(0, 4)}`);
-                }
-            });
-            return () => unsub();
-        }
-    }, [user]);
-
-    const handleModeSelect = (selectedMode: 'offline' | 'online') => {
-        if (selectedMode === 'online' && !user) {
-            alert("You must be logged in to play online.");
-            return;
-        }
-        setMode(selectedMode);
-    }
-    
-    const resetToMenu = () => {
-        setMode('menu');
-        setGameId(null);
-    }
-
-    const renderContent = () => {
-        if (loading) return <div className="animate-pulse text-accent-cyan">Authenticating...</div>
-        
-        if (gameId && mode === 'online' && user) {
-            return <OnlineGame gameId={gameId} setGameId={setGameId} user={user} username={username}/>
-        }
-
-        switch (mode) {
-            case 'offline':
-                return <OfflineGame />;
-            case 'online':
-                return <Lobby setGameId={setGameId} setMode={setMode} user={user} username={username} />;
-            case 'menu':
-            default:
-                return (
-                     <div className="flex flex-col gap-4">
-                        <button onClick={() => handleModeSelect('online')} className="btn-glass flex items-center gap-3"><Wifi/>Play Online</button>
-                        <button onClick={() => handleModeSelect('offline')} className="btn-glass flex items-center gap-3"><WifiOff/>Play Offline (2 Players)</button>
-                    </div>
-                );
-        }
-    }
-
     return (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
@@ -348,10 +132,7 @@ export function TicTacToe() {
           className="w-full max-w-md glass-card p-8 flex flex-col items-center gap-6"
         >
             <h2 className="text-3xl font-headline text-accent-pink">Tic-Tac-Toe</h2>
-            {mode !== 'menu' && (
-                <button onClick={resetToMenu} className="text-xs text-accent-cyan hover:underline self-start">{"< Back to Menu"}</button>
-            )}
-            {renderContent()}
+            <OfflineGame />
         </motion.div>
     )
 }
