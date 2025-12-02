@@ -11,7 +11,7 @@ export type SecurityRuleContext = {
 export class FirestorePermissionError extends Error {
   public context: SecurityRuleContext;
 
-  constructor(context: SecurityRuleCofntext) {
+  constructor(context: SecurityRuleContext) {
     // Construct a detailed error message for better logging and debugging
     const message = `FirestoreError: Missing or insufficient permissions: The following request was denied by Firestore Security Rules:
 {
