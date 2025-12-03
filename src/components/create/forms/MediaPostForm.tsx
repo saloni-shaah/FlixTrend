@@ -2,85 +2,55 @@
 "use client";
 import React, { useState, useRef, useCallback } from 'react';
 import { UploadCloud, X, MapPin, Smile, Hash, AtSign, Locate, Loader } from 'lucide-react';
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { auth, app } from '@/utils/firebaseClient';
-
-const storage = getStorage(app);
 
 export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange: (data: any) => void }) {
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isFetchingLocation, setIsFetchingLocation] = useState(false);
     const [uploadError, setUploadError] = useState<string | null>(null);
-    const [uploadingFiles, setUploadingFiles] = useState<Record<string, { progress: number }>>({});
     
-    // Derived state from props
     const mediaPreviews = data.mediaUrl || [];
 
-    const uploadFile = async (file: File) => {
-        const user = auth.currentUser;
-        if (!user) return; 
-
-        // Enforce 200MB limit
+    const handleFileSelection = (file: File) => {
         if (file.size > 200 * 1024 * 1024) {
             setUploadError(`File ${file.name} is too large (max 200MB).`);
             return;
         }
 
         const previewUrl = URL.createObjectURL(file);
-        setUploadingFiles(prev => ({ ...prev, [previewUrl]: { progress: 0 } }));
+        const newMediaUrls = [...(data.mediaUrl || []), previewUrl];
+        const newMediaFiles = [...(data.mediaFiles || []), file];
 
-        try {
-            const fileName = `${user.uid}-${Date.now()}-${file.name}`;
-            const fileRef = storageRef(storage, `posts/${user.uid}/${fileName}`);
-            
-            const snapshot = await uploadBytes(fileRef, file);
-            const downloadURL = await getDownloadURL(snapshot.ref);
-            
-            const newUrls = [...(data.mediaUrl || []), downloadURL];
+        const isVideo = file.type.startsWith('video/');
+        const updateData: any = { mediaUrl: newMediaUrls, mediaFiles: newMediaFiles, isVideo };
 
-            const isVideo = file.type.startsWith('video/');
-            const updateData: any = { mediaUrl: newUrls, isVideo };
-
-            if (isVideo) {
-                const video = document.createElement('video');
-                video.preload = 'metadata';
-                video.onloadedmetadata = () => {
-                    window.URL.revokeObjectURL(video.src);
-                    updateData.isPortrait = video.videoHeight > video.videoWidth;
-                    updateData.videoDuration = video.duration;
-                    onDataChange({ ...data, ...updateData });
-                };
-                video.src = URL.createObjectURL(file);
-            } else {
-                 updateData.isPortrait = false;
-                 updateData.videoDuration = 0;
-                 onDataChange({ ...data, ...updateData });
-            }
-
-        } catch(error: any) {
-            console.error("Upload error:", error);
-            setUploadError(error.message);
-        } finally {
-            setUploadingFiles(prev => {
-                const newUploading = { ...prev };
-                delete newUploading[previewUrl];
-                return newUploading;
-            });
-            URL.revokeObjectURL(previewUrl);
+        if (isVideo) {
+            const video = document.createElement('video');
+            video.preload = 'metadata';
+            video.onloadedmetadata = () => {
+                window.URL.revokeObjectURL(video.src);
+                updateData.isPortrait = video.videoHeight > video.videoWidth;
+                updateData.videoDuration = video.duration;
+                onDataChange({ ...data, ...updateData });
+            };
+            video.src = previewUrl;
+        } else {
+             updateData.isPortrait = false;
+             updateData.videoDuration = 0;
+             onDataChange({ ...data, ...updateData });
         }
     }
     
-    const processFiles = async (files: FileList | null) => {
+    const processFiles = (files: FileList | null) => {
         if (!files) return;
-        const filesToUpload = Array.from(files).filter(file => 
+        const filesToProcess = Array.from(files).filter(file => 
             file.type.startsWith('image/') || 
             file.type.startsWith('video/')
         );
-        if (filesToUpload.length === 0) return;
+        if (filesToProcess.length === 0) return;
 
-        for (const file of filesToUpload) {
-            await uploadFile(file);
+        for (const file of filesToProcess) {
+            handleFileSelection(file);
         }
     };
     
@@ -89,8 +59,15 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
     };
     
     const removeMedia = (urlToRemove: string) => {
-        const newUrls = (data.mediaUrl || []).filter((url: string) => url !== urlToRemove);
-        onDataChange({ ...data, mediaUrl: newUrls });
+        const indexToRemove = data.mediaUrl.findIndex((url: string) => url === urlToRemove);
+        if (indexToRemove === -1) return;
+
+        URL.revokeObjectURL(urlToRemove);
+
+        const newMediaUrls = data.mediaUrl.filter((_: any, index: number) => index !== indexToRemove);
+        const newMediaFiles = data.mediaFiles.filter((_: any, index: number) => index !== indexToRemove);
+        
+        onDataChange({ ...data, mediaUrl: newMediaUrls, mediaFiles: newMediaFiles });
     };
 
     const handleTextChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -183,13 +160,8 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
                 {uploadError && <p className="text-red-400 text-xs mt-2">{uploadError}</p>}
                 
                  <div className="mt-4 grid grid-cols-3 md:grid-cols-4 gap-2">
-                    {Object.keys(uploadingFiles).map((url, index) => (
-                         <div key={`loading-${index}`} className="relative group aspect-square bg-black/50 rounded-lg flex items-center justify-center">
-                            <Loader className="animate-spin text-accent-cyan" />
-                        </div>
-                    ))}
                     {mediaPreviews.map((url: string, index: number) => {
-                        const isVideo = url.includes('.mp4') || url.includes('.webm') || url.includes('.ogg') || url.includes('video');
+                        const isVideo = data.mediaFiles[index]?.type.startsWith('video/');
                         return (
                             <div key={url} className="relative group aspect-square">
                                 {isVideo ? (
