@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useState, Suspense, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -13,11 +14,12 @@ function CreatePostPageContent() {
     const initialType = searchParams.get('type') as 'text' | 'media' | 'poll' | 'flash' | 'live' || undefined;
     const initialImageUrl = searchParams.get('imageUrl');
 
-    const [postData, setPostData] = useState<any>({ 
-        postType: initialType, 
+    const [postData, setPostData] = useState<any>({
+        postType: initialType,
         songId: searchParams.get('songId'),
         // Initialize with imageUrl if present. Step 1 will handle the file upload if needed.
-        mediaUrl: initialImageUrl ? [initialImageUrl] : [] 
+        mediaUrl: initialImageUrl ? [initialImageUrl] : [],
+        mediaFiles: []
     });
 
     const [step, setStep] = useState(1);
@@ -38,23 +40,23 @@ function CreatePostPageContent() {
     const handleBack = () => {
         setStep(s => s - 1);
     };
-    
+
     const handleTypeChange = (type: 'text' | 'media' | 'poll' | 'flash' | 'live') => {
         setPostType(type);
-        setPostData({ postType: type, songId: searchParams.get('songId'), mediaUrl: [] }); // Reset data
+        setPostData({ postType: type, songId: searchParams.get('songId'), mediaUrl: [], mediaFiles: [] }); // Reset data
         setStep(1);
         setTypeSelected(true);
         router.push(`/create?type=${type}${searchParams.get('songId') ? `&songId=${searchParams.get('songId')}`: ''}`, { scroll: false });
     };
-    
+
     const steps = [
-        <Step1 key="step1" onNext={handleNext} postType={postType!} postData={postData} />,
+        <Step1 key="step1" onNext={handleNext} postType={postType!} postData={postData} onDataChange={setPostData} />,
         <Step3 key="step3" onBack={handleBack} postData={postData} />,
     ];
-    
-    const totalSteps = 2; 
+
+    const totalSteps = 2;
     const currentStepLogic = step;
-    
+
     const stepLabels = ['Details', 'Publish'];
 
 
@@ -63,7 +65,7 @@ function CreatePostPageContent() {
             <h1 className="text-3xl font-headline font-bold text-accent-cyan mb-8">Create Your Vibe</h1>
 
             {!typeSelected && (
-                 <motion.div 
+                 <motion.div
                     className="flex flex-col md:flex-row gap-4 mb-8 w-full md:w-auto"
                     initial="hidden"
                     animate="visible"
@@ -89,7 +91,7 @@ function CreatePostPageContent() {
                     </motion.button>
                 </motion.div>
             )}
-            
+
             {typeSelected && postType && (
                 <>
                     {/* Progress Bar */}

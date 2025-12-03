@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
@@ -5,10 +6,12 @@ import { ArrowLeft, CheckCircle, ShieldOff, Calendar as CalendarIcon, Eye } from
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { getFirestore, collection, addDoc, serverTimestamp, Timestamp, doc, getDoc } from "firebase/firestore";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { auth, app } from '@/utils/firebaseClient';
 import { useRouter } from 'next/navigation';
 
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 function PostPreview({ postData }: { postData: any }) {
     if (!postData) return null;
@@ -41,7 +44,7 @@ function PostPreview({ postData }: { postData: any }) {
                         <p className="text-sm text-gray-400">{caption}</p>
                         <div className="mt-2 grid grid-cols-3 gap-2">
                             {mediaUrl.map((url: string, index: number) => {
-                                const isVideo = url.includes('.mp4') || url.includes('.webm') || url.includes('video');
+                                const isVideo = postData.mediaFiles[index]?.type.startsWith('video/');
                                 if (isVideo) {
                                     return <video key={index} src={url} className="w-full h-auto rounded-md aspect-square object-cover" />;
                                 }
@@ -83,6 +86,20 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
     const [error, setError] = useState<string | null>(null);
     const router = useRouter();
 
+    const uploadMedia = async (files: File[]) => {
+        const user = auth.currentUser;
+        if (!user) throw new Error("User not logged in");
+
+        const uploadPromises = files.map(async (file) => {
+            const fileName = `${user.uid}-${Date.now()}-${file.name}`;
+            const fileRef = storageRef(storage, `posts/${user.uid}/${fileName}`);
+            const snapshot = await uploadBytes(fileRef, file);
+            return getDownloadURL(snapshot.ref);
+        });
+
+        return Promise.all(uploadPromises);
+    };
+
     const handleSubmit = async () => {
         setIsPublishing(true);
         setError(null);
@@ -94,7 +111,12 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
         }
 
         try {
-            const finalPostData = { ...postData };
+            let uploadedMediaUrls: string[] = [];
+            if (postData.mediaFiles && postData.mediaFiles.length > 0) {
+                uploadedMediaUrls = await uploadMedia(postData.mediaFiles);
+            }
+
+            const finalPostData = { ...postData, mediaUrl: uploadedMediaUrls };
             
             const userDocRef = doc(db, 'users', user.uid);
             const userDocSnap = await getDoc(userDocRef);
@@ -139,12 +161,12 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
                     fontStyle: postData.fontStyle || null 
                 }),
                 ...(postData.postType === 'media' && { 
-                    mediaUrl: postData.mediaUrl && postData.mediaUrl.length > 0 ? (postData.mediaUrl.length > 1 ? postData.mediaUrl : postData.mediaUrl[0]) : null, 
+                    mediaUrl: finalPostData.mediaUrl && finalPostData.mediaUrl.length > 0 ? (finalPostData.mediaUrl.length > 1 ? finalPostData.mediaUrl : finalPostData.mediaUrl[0]) : null, 
                     title: postData.title || "", 
                     description: postData.description || "", 
                 }),
                 ...(postData.postType === 'flash' && { 
-                    mediaUrl: postData.mediaUrl && postData.mediaUrl.length > 0 ? postData.mediaUrl[0] : null, 
+                    mediaUrl: finalPostData.mediaUrl && finalPostData.mediaUrl.length > 0 ? finalPostData.mediaUrl[0] : null, 
                     song: postData.song || null, 
                     expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), 
                     caption: postData.caption || "" 
