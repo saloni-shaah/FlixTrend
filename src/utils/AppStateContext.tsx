@@ -130,14 +130,20 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       if (messageUnsubscribe) messageUnsubscribe();
       
       if (user) {
-        // -- DYNAMICALLY IMPORT MESSAGING --
-        import('./firebaseMessaging').then(messagingModule => {
-            messagingModule.requestNotificationPermission(user.uid);
+        const userDocRef = doc(db, 'users', user.uid);
+
+        // -- DYNAMICALLY IMPORT MESSAGING AND ENSURE FCM TOKEN --
+        import('./firebaseMessaging').then(async (messagingModule) => {
+            const userDoc = await getDoc(userDocRef);
+            if (!userDoc.exists() || !userDoc.data()?.fcmToken) {
+                console.log('FCM token missing, requesting permission...');
+                messagingModule.requestNotificationPermission(user.uid);
+            }
+            
             messageUnsubscribe = messagingModule.onForegroundMessage(async (payload) => {
                 console.log('FCM message received in foreground:', payload);
                 const { type, callId } = payload.data || {};
                 if (type === 'incoming_call' && callId) {
-                    const userDocRef = doc(db, 'users', user.uid);
                     await updateDoc(userDocRef, { currentCallId: callId });
                 }
             });
@@ -146,7 +152,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         
         managePresence(user);
         
-        const userDocRef = doc(db, 'users', user.uid);
         callUnsubscribe = onSnapshot(userDocRef, (snap) => {
           const data = snap.data();
           const currentCallId = data?.currentCallId;
