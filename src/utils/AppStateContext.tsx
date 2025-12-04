@@ -4,9 +4,45 @@ import React, { createContext, useState, useContext, ReactNode, useEffect, useRe
 import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp, Unsubscribe, updateDoc, collection, addDoc, getDoc, writeBatch, getDocs, deleteField } from 'firebase/firestore';
 import { auth, app } from './firebaseClient';
 import { CallScreen } from '@/components/CallScreen';
-// Removed direct import of 'onMessage' and 'messaging'
+import { Bell, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const db = getFirestore(app);
+
+// --- Notification Prompt Component ---
+interface NotificationPromptProps {
+  onEnable: () => void;
+  onDismiss: () => void;
+}
+
+function NotificationPrompt({ onEnable, onDismiss }: NotificationPromptProps) {
+    return (
+        <motion.div 
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-4 right-4 z-50 bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-4 max-w-sm w-full"
+        >
+            <div className="flex items-start gap-4">
+                <div className="bg-accent-cyan/20 text-accent-cyan p-2 rounded-full">
+                    <Bell size={24} />
+                </div>
+                <div className="flex-1">
+                    <h4 className="font-bold text-white">Enable Notifications</h4>
+                    <p className="text-sm text-gray-300">Stay updated with the latest activity and never miss a call. Allow us to send you notifications.</p>
+                    <div className="mt-4 flex gap-2">
+                        <button onClick={onEnable} className="flex-1 btn-glass bg-accent-cyan text-black text-sm">Enable</button>
+                        <button onClick={onDismiss} className="flex-1 btn-glass text-sm">Not Now</button>
+                    </div>
+                </div>
+                <button onClick={onDismiss} className="text-gray-400 hover:text-white">
+                    <X size={18} />
+                </button>
+            </div>
+        </motion.div>
+    );
+}
+
 
 interface Call {
   id: string;
@@ -91,6 +127,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [selectedChat, setSelectedChat] = useState<any | null>(null);
   const [drafts, setDrafts] = useState<{ [chatId: string]: string }>({});
   const [isScopeVideoPlaying, setIsScopeVideoPlaying] = useState(false);
+  const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
 
 
   useEffect(() => {
@@ -132,12 +169,27 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       if (user) {
         const userDocRef = doc(db, 'users', user.uid);
 
-        // -- DYNAMICALLY IMPORT MESSAGING AND ENSURE FCM TOKEN --
+        // -- NOTIFICATION LOGIC --
         import('./firebaseMessaging').then(async (messagingModule) => {
-            const userDoc = await getDoc(userDocRef);
-            if (!userDoc.exists() || !userDoc.data()?.fcmToken) {
-                console.log('FCM token missing, requesting permission...');
-                messagingModule.requestNotificationPermission(user.uid);
+            const handlePermissionRequest = async () => {
+                setShowNotificationPrompt(false);
+                await messagingModule.requestNotificationPermission(user.uid);
+            };
+
+            if (typeof window !== "undefined" && "Notification" in window) {
+                const permission = Notification.permission;
+                const userDoc = await getDoc(userDocRef);
+                const fcmTokenExists = userDoc.exists() && !!userDoc.data()?.fcmToken;
+
+                if (permission === 'granted' && !fcmTokenExists) {
+                    // Permission granted but no token, silently get it.
+                    await messagingModule.requestNotificationPermission(user.uid);
+                } else if (permission === 'default') {
+                    // Not yet asked, show the custom prompt.
+                    setShowNotificationPrompt(true);
+                    // Assign handler to window to be triggered from the component.
+                    (window as any).handleNotificationPermissionRequest = handlePermissionRequest;
+                }
             }
             
             messageUnsubscribe = messagingModule.onForegroundMessage(async (payload) => {
@@ -148,7 +200,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
                 }
             });
         }).catch(err => console.error("Failed to load messaging module", err));
-        // -- END DYNAMIC IMPORT --
+        // -- END NOTIFICATION LOGIC --
         
         managePresence(user);
         
@@ -186,6 +238,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         if (callDocUnsubscribe) callDocUnsubscribe();
         if (messageUnsubscribe) messageUnsubscribe();
         if(pc) pc.close();
+        delete (window as any).handleNotificationPermissionRequest;
     };
   }, []);
 
@@ -339,11 +392,30 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     isScopeVideoPlaying,
     setIsScopeVideoPlaying,
   };
+  
+    const handleEnableClick = () => {
+        if ((window as any).handleNotificationPermissionRequest) {
+            (window as any).handleNotificationPermissionRequest();
+        }
+    };
+
+    const handleDismissClick = () => {
+        setShowNotificationPrompt(false);
+    };
+
 
   return (
     <AppStateContext.Provider value={value}>
       {children}
       {activeCall && <CallScreen call={activeCall} />}
+       <AnimatePresence>
+        {showNotificationPrompt && (
+            <NotificationPrompt 
+                onEnable={handleEnableClick}
+                onDismiss={handleDismissClick}
+            />
+        )}
+      </AnimatePresence>
     </AppStateContext.Provider>
   );
 }
