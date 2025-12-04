@@ -219,6 +219,11 @@ export default function SignupPage() {
                         <input type="password" name="password" placeholder="Password (min. 6 characters)" className="input-glass w-full" value={form.password} onChange={handleChange} required />
                         <input type="password" name="confirmPassword" placeholder="Confirm Password" className="input-glass w-full" value={form.confirmPassword} onChange={handleChange} required />
                          <input type="text" name="referredBy" placeholder="Referral Code (Optional)" className="input-glass w-full" value={form.referredBy} onChange={handleChange} />
+                          <p className="text-xs text-gray-400 text-center mt-2">
+                            By proceeding to create your account, you acknowledge that you have read, understood, and agree to be bound by our{' '}
+                            <Link href="/terms" className="underline hover:text-accent-cyan">Terms of Service</Link> and{' '}
+                            <Link href="/privacy" className="underline hover:text-accent-cyan">Privacy Policy</Link>.
+                        </p>
                     </motion.div>
                 );
             case 2:
@@ -332,6 +337,11 @@ export default function SignupPage() {
         <div className="text-center mt-4">
           <span className="text-gray-400">Already have an account? </span>
           <Link href="/login" className="text-accent-cyan hover:underline">Log In</Link>
+        </div>
+         <div className="text-center mt-2 text-xs text-gray-400">
+            <Link href="/terms" className="hover:text-accent-cyan hover:underline">Terms of Service</Link>
+            <span className="mx-2">|</span>
+            <Link href="/privacy" className="hover:text-accent-cyan hover:underline">Privacy Policy</Link>
         </div>
       </form>
     </div>
