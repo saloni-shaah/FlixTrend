@@ -196,6 +196,11 @@ function LoginPageContent() {
           <span className="text-gray-400">Don\'t have an account? </span>
           <Link href="/signup" className="text-accent-cyan hover:underline">Sign up</Link>
         </div>
+         <div className="text-center mt-2 text-xs text-gray-400">
+            <Link href="/terms" className="hover:text-accent-cyan hover:underline">Terms of Service</Link>
+            <span className="mx-2">|</span>
+            <Link href="/privacy" className="hover:text-accent-cyan hover:underline">Privacy Policy</Link>
+        </div>
       </motion.form>
       {showForgotPassword && <ForgotPasswordModal onClose={() => setShowForgotPassword(false)} />}
     </div>
