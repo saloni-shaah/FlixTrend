@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     template: '%s | FlixTrend',
   },
   description: 'FlixTrend: The Future of Social, Built for Gen-Z. Secure, Creative, Connected. Where trends find you first.',
-  manifest: "/manifest.json",
+  manifest: "/site.webmanifest",
   keywords: ['FlixTrend', 'social media', 'Gen-Z', 'video sharing', 'live streaming', 'secure social', 'Indian social media', 'flashes', 'vibes', 'vibesapce', 'scope'],
   openGraph: {
     title: 'FlixTrend',
@@ -39,8 +39,12 @@ export const metadata: Metadata = {
     images: [`${siteUrl}/og-image.png`],
   },
   icons: {
-    icon: '/icon.svg',
-    shortcut: '/favicon.ico',
+    icon: [
+        { url: '/favicon.ico' },
+        { url: '/favicon-16x16.png', type: 'image/png', sizes: '16x16' },
+        { url: '/favicon-32x32.png', type: 'image/png', sizes: '32x32' },
+        { url: '/icon.svg', type: 'image/svg+xml' }
+    ],
     apple: '/apple-touch-icon.png',
   },
 };
@@ -84,8 +88,9 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Space+Grotesk:wght@700&family=Italianno&family=Dancing+Script:wght@400..700&family=Great+Vibes&display=swap" rel="stylesheet" />
-        
-        
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
       </head>
       <body className="relative min-h-screen">
         <Providers>
@@ -95,5 +100,3 @@ export default function RootLayout({
     </html>
   );
 }
-
-    
