@@ -4,7 +4,7 @@
       "workers": {
         "app/home/page": {
           "moduleId": "[project]/.next-internal/server/app/home/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
+          "async": true,
           "exportedName": "uploadToCloudinary",
           "filename": "src/app/actions.ts"
         }
