@@ -367,6 +367,10 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$firebase$2f$
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/@firebase/firestore/dist/index.esm.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$utils$2f$firebaseClient$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/utils/firebaseClient.ts [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$CallScreen$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/components/CallScreen.tsx [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$bell$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Bell$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/bell.js [app-client] (ecmascript) <export default as Bell>");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$x$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__X$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/x.js [app-client] (ecmascript) <export default as X>");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/framer-motion/dist/es/render/components/motion/proxy.mjs [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$components$2f$AnimatePresence$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/framer-motion/dist/es/components/AnimatePresence/index.mjs [app-client] (ecmascript)");
 ;
 var _s = __turbopack_context__.k.signature(), _s1 = __turbopack_context__.k.signature();
 "use client";
@@ -374,8 +378,121 @@ var _s = __turbopack_context__.k.signature(), _s1 = __turbopack_context__.k.sign
 ;
 ;
 ;
-// Removed direct import of 'onMessage' and 'messaging'
+;
+;
 const db = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["getFirestore"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$utils$2f$firebaseClient$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["app"]);
+function NotificationPrompt({ onEnable, onDismiss }) {
+    return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["motion"].div, {
+        initial: {
+            opacity: 0,
+            y: 50
+        },
+        animate: {
+            opacity: 1,
+            y: 0
+        },
+        exit: {
+            opacity: 0,
+            y: 50
+        },
+        className: "fixed bottom-4 right-4 z-50 bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-4 max-w-sm w-full",
+        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+            className: "flex items-start gap-4",
+            children: [
+                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                    className: "bg-accent-cyan/20 text-accent-cyan p-2 rounded-full",
+                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$bell$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Bell$3e$__["Bell"], {
+                        size: 24
+                    }, void 0, false, {
+                        fileName: "[project]/src/utils/AppStateContext.tsx",
+                        lineNumber: 28,
+                        columnNumber: 21
+                    }, this)
+                }, void 0, false, {
+                    fileName: "[project]/src/utils/AppStateContext.tsx",
+                    lineNumber: 27,
+                    columnNumber: 17
+                }, this),
+                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                    className: "flex-1",
+                    children: [
+                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h4", {
+                            className: "font-bold text-white",
+                            children: "Enable Notifications"
+                        }, void 0, false, {
+                            fileName: "[project]/src/utils/AppStateContext.tsx",
+                            lineNumber: 31,
+                            columnNumber: 21
+                        }, this),
+                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                            className: "text-sm text-gray-300",
+                            children: "Stay updated with the latest activity and never miss a call. Allow us to send you notifications."
+                        }, void 0, false, {
+                            fileName: "[project]/src/utils/AppStateContext.tsx",
+                            lineNumber: 32,
+                            columnNumber: 21
+                        }, this),
+                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                            className: "mt-4 flex gap-2",
+                            children: [
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                                    onClick: onEnable,
+                                    className: "flex-1 btn-glass bg-accent-cyan text-black text-sm",
+                                    children: "Enable"
+                                }, void 0, false, {
+                                    fileName: "[project]/src/utils/AppStateContext.tsx",
+                                    lineNumber: 34,
+                                    columnNumber: 25
+                                }, this),
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                                    onClick: onDismiss,
+                                    className: "flex-1 btn-glass text-sm",
+                                    children: "Not Now"
+                                }, void 0, false, {
+                                    fileName: "[project]/src/utils/AppStateContext.tsx",
+                                    lineNumber: 35,
+                                    columnNumber: 25
+                                }, this)
+                            ]
+                        }, void 0, true, {
+                            fileName: "[project]/src/utils/AppStateContext.tsx",
+                            lineNumber: 33,
+                            columnNumber: 21
+                        }, this)
+                    ]
+                }, void 0, true, {
+                    fileName: "[project]/src/utils/AppStateContext.tsx",
+                    lineNumber: 30,
+                    columnNumber: 17
+                }, this),
+                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                    onClick: onDismiss,
+                    className: "text-gray-400 hover:text-white",
+                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$x$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__X$3e$__["X"], {
+                        size: 18
+                    }, void 0, false, {
+                        fileName: "[project]/src/utils/AppStateContext.tsx",
+                        lineNumber: 39,
+                        columnNumber: 21
+                    }, this)
+                }, void 0, false, {
+                    fileName: "[project]/src/utils/AppStateContext.tsx",
+                    lineNumber: 38,
+                    columnNumber: 17
+                }, this)
+            ]
+        }, void 0, true, {
+            fileName: "[project]/src/utils/AppStateContext.tsx",
+            lineNumber: 26,
+            columnNumber: 13
+        }, this)
+    }, void 0, false, {
+        fileName: "[project]/src/utils/AppStateContext.tsx",
+        lineNumber: 20,
+        columnNumber: 9
+    }, this);
+}
+_c = NotificationPrompt;
 const AppStateContext = /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["createContext"])(undefined);
 const servers = {
     iceServers: [
@@ -421,6 +538,7 @@ function AppStateProvider({ children }) {
     const [selectedChat, setSelectedChat] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
     const [drafts, setDrafts] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])({});
     const [isScopeVideoPlaying, setIsScopeVideoPlaying] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
+    const [showNotificationPrompt, setShowNotificationPrompt] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
         "AppStateProvider.useEffect": ()=>{
             let callUnsubscribe = null;
@@ -474,16 +592,35 @@ function AppStateProvider({ children }) {
                     if (callDocUnsubscribe) callDocUnsubscribe();
                     if (messageUnsubscribe) messageUnsubscribe();
                     if (user) {
-                        // -- DYNAMICALLY IMPORT MESSAGING --
+                        const userDocRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["doc"])(db, 'users', user.uid);
+                        // -- NOTIFICATION LOGIC --
                         __turbopack_context__.A("[project]/src/utils/firebaseMessaging.ts [app-client] (ecmascript, async loader)").then({
-                            "AppStateProvider.useEffect.authUnsubscribe": (messagingModule)=>{
-                                messagingModule.requestNotificationPermission(user.uid);
+                            "AppStateProvider.useEffect.authUnsubscribe": async (messagingModule)=>{
+                                const handlePermissionRequest = {
+                                    "AppStateProvider.useEffect.authUnsubscribe.handlePermissionRequest": async ()=>{
+                                        setShowNotificationPrompt(false);
+                                        await messagingModule.requestNotificationPermission(user.uid);
+                                    }
+                                }["AppStateProvider.useEffect.authUnsubscribe.handlePermissionRequest"];
+                                if (("TURBOPACK compile-time value", "object") !== "undefined" && "Notification" in window) {
+                                    const permission = Notification.permission;
+                                    const userDoc = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["getDoc"])(userDocRef);
+                                    const fcmTokenExists = userDoc.exists() && !!userDoc.data()?.fcmToken;
+                                    if (permission === 'granted' && !fcmTokenExists) {
+                                        // Permission granted but no token, silently get it.
+                                        await messagingModule.requestNotificationPermission(user.uid);
+                                    } else if (permission === 'default') {
+                                        // Not yet asked, show the custom prompt.
+                                        setShowNotificationPrompt(true);
+                                        // Assign handler to window to be triggered from the component.
+                                        window.handleNotificationPermissionRequest = handlePermissionRequest;
+                                    }
+                                }
                                 messageUnsubscribe = messagingModule.onForegroundMessage({
                                     "AppStateProvider.useEffect.authUnsubscribe": async (payload)=>{
                                         console.log('FCM message received in foreground:', payload);
                                         const { type, callId } = payload.data || {};
                                         if (type === 'incoming_call' && callId) {
-                                            const userDocRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["doc"])(db, 'users', user.uid);
                                             await (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["updateDoc"])(userDocRef, {
                                                 currentCallId: callId
                                             });
@@ -494,9 +631,8 @@ function AppStateProvider({ children }) {
                         }["AppStateProvider.useEffect.authUnsubscribe"]).catch({
                             "AppStateProvider.useEffect.authUnsubscribe": (err)=>console.error("Failed to load messaging module", err)
                         }["AppStateProvider.useEffect.authUnsubscribe"]);
-                        // -- END DYNAMIC IMPORT --
+                        // -- END NOTIFICATION LOGIC --
                         managePresence(user);
-                        const userDocRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["doc"])(db, 'users', user.uid);
                         callUnsubscribe = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["onSnapshot"])(userDocRef, {
                             "AppStateProvider.useEffect.authUnsubscribe": (snap)=>{
                                 const data = snap.data();
@@ -536,6 +672,7 @@ function AppStateProvider({ children }) {
                     if (callDocUnsubscribe) callDocUnsubscribe();
                     if (messageUnsubscribe) messageUnsubscribe();
                     if (pc) pc.close();
+                    delete window.handleNotificationPermissionRequest;
                 }
             })["AppStateProvider.useEffect"];
         }
@@ -682,6 +819,14 @@ function AppStateProvider({ children }) {
         isScopeVideoPlaying,
         setIsScopeVideoPlaying
     };
+    const handleEnableClick = ()=>{
+        if (window.handleNotificationPermissionRequest) {
+            window.handleNotificationPermissionRequest();
+        }
+    };
+    const handleDismissClick = ()=>{
+        setShowNotificationPrompt(false);
+    };
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(AppStateContext.Provider, {
         value: value,
         children: [
@@ -690,18 +835,32 @@ function AppStateProvider({ children }) {
                 call: activeCall
             }, void 0, false, {
                 fileName: "[project]/src/utils/AppStateContext.tsx",
-                lineNumber: 341,
+                lineNumber: 410,
                 columnNumber: 22
+            }, this),
+            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$components$2f$AnimatePresence$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AnimatePresence"], {
+                children: showNotificationPrompt && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(NotificationPrompt, {
+                    onEnable: handleEnableClick,
+                    onDismiss: handleDismissClick
+                }, void 0, false, {
+                    fileName: "[project]/src/utils/AppStateContext.tsx",
+                    lineNumber: 413,
+                    columnNumber: 13
+                }, this)
+            }, void 0, false, {
+                fileName: "[project]/src/utils/AppStateContext.tsx",
+                lineNumber: 411,
+                columnNumber: 8
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/utils/AppStateContext.tsx",
-        lineNumber: 339,
+        lineNumber: 408,
         columnNumber: 5
     }, this);
 }
-_s(AppStateProvider, "2tKZmImpL5Kwx2Rutica692/hBE=");
-_c = AppStateProvider;
+_s(AppStateProvider, "t+5irhrVapfH906SPGfY23U0nkI=");
+_c1 = AppStateProvider;
 function useAppState() {
     _s1();
     const context = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useContext"])(AppStateContext);
@@ -711,8 +870,9 @@ function useAppState() {
     return context;
 }
 _s1(useAppState, "b9L3QQ+jgeyIrH0NfHrJ8nn7VMU=");
-var _c;
-__turbopack_context__.k.register(_c, "AppStateProvider");
+var _c, _c1;
+__turbopack_context__.k.register(_c, "NotificationPrompt");
+__turbopack_context__.k.register(_c1, "AppStateProvider");
 if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelpers !== null) {
     __turbopack_context__.k.registerExports(__turbopack_context__.m, globalThis.$RefreshHelpers$);
 }

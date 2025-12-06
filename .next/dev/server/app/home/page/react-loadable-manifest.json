@@ -3,28 +3,28 @@
     "id": "[project]/src/utils/AppStateContext.tsx [app-client] (ecmascript, next/dynamic entry)",
     "files": [
       "static/chunks/src_utils_AppStateContext_tsx_211b0917._.js",
-      "static/chunks/src_utils_AppStateContext_tsx_db2f177f._.js"
+      "static/chunks/src_utils_AppStateContext_tsx_92a31e06._.js"
     ]
   },
   "[project]/src/components/NotificationPanel.tsx [app-client] (ecmascript, next/dynamic entry)": {
     "id": "[project]/src/components/NotificationPanel.tsx [app-client] (ecmascript, next/dynamic entry)",
     "files": [
       "static/chunks/src_components_NotificationPanel_tsx_11ee0c44._.js",
-      "static/chunks/src_components_NotificationPanel_tsx_cdf0a300._.js"
+      "static/chunks/src_components_NotificationPanel_tsx_c81a9a59._.js"
     ]
   },
   "[project]/src/components/FlashModal.tsx [app-client] (ecmascript, next/dynamic entry)": {
     "id": "[project]/src/components/FlashModal.tsx [app-client] (ecmascript, next/dynamic entry)",
     "files": [
       "static/chunks/src_components_FlashModal_tsx_d9f0ec89._.js",
-      "static/chunks/src_components_FlashModal_tsx_cdf0a300._.js"
+      "static/chunks/src_components_FlashModal_tsx_c81a9a59._.js"
     ]
   },
   "[project]/src/components/MusicDiscovery.tsx [app-client] (ecmascript, next/dynamic entry)": {
     "id": "[project]/src/components/MusicDiscovery.tsx [app-client] (ecmascript, next/dynamic entry)",
     "files": [
-      "static/chunks/src_components_fc15103e._.js",
-      "static/chunks/src_components_MusicDiscovery_tsx_cdf0a300._.js"
+      "static/chunks/_b8a02066._.js",
+      "static/chunks/src_components_MusicDiscovery_tsx_c81a9a59._.js"
     ]
   }
 }

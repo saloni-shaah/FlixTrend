@@ -1,16 +1,15 @@
+
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Play, Pause, Plus, Music, Search } from 'lucide-react';
 import { getFirestore, collection, addDoc, serverTimestamp, query, onSnapshot, orderBy, where, updateDoc, arrayUnion, doc } from 'firebase/firestore';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { auth, app } from '@/utils/firebaseClient';
 import { useAppState } from '@/utils/AppStateContext';
 import AdModal from './AdModal';
-
+import { uploadToCloudinary } from '@/app/actions';
 
 const db = getFirestore(app);
-const storage = getStorage(app);
 
 function AddMusicModal({ onClose }: { onClose: () => void }) {
     const [form, setForm] = useState({
@@ -42,12 +41,6 @@ function AddMusicModal({ onClose }: { onClose: () => void }) {
             }
         }
     };
-    
-    const uploadFile = async (file: File, path: string) => {
-        const fileRef = ref(storage, path);
-        await uploadBytes(fileRef, file);
-        return await getDownloadURL(fileRef);
-    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -61,13 +54,26 @@ function AddMusicModal({ onClose }: { onClose: () => void }) {
             const user = auth.currentUser;
             if (!user) throw new Error("Not logged in");
 
-            const audioUrl = await uploadFile(audioFile, `music/${user.uid}/${Date.now()}_${audioFile.name}`);
-            const artUrl = await uploadFile(albumArtFile, `album_art/${user.uid}/${Date.now()}_${albumArtFile.name}`);
+            const audioFormData = new FormData();
+            audioFormData.append('file', audioFile);
+            const audioUploadResult = await uploadToCloudinary(audioFormData);
+
+            if (!audioUploadResult.success || !audioUploadResult.url) {
+                throw new Error('Audio upload failed.');
+            }
+
+            const artFormData = new FormData();
+            artFormData.append('file', albumArtFile);
+            const artUploadResult = await uploadToCloudinary(artFormData);
+
+            if (!artUploadResult.success || !artUploadResult.url) {
+                throw new Error('Album art upload failed.');
+            }
 
             await addDoc(collection(db, 'songs'), {
                 ...form,
-                audioUrl: audioUrl,
-                albumArtUrl: artUrl,
+                audioUrl: audioUploadResult.url,
+                albumArtUrl: artUploadResult.url,
                 userId: user.uid,
                 username: user.displayName,
                 createdAt: serverTimestamp(),
@@ -79,6 +85,7 @@ function AddMusicModal({ onClose }: { onClose: () => void }) {
         }
         setLoading(false);
     };
+
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
