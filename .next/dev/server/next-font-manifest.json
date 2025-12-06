@@ -1,5 +1,6 @@
 {
   "app": {
+    "[project]/src/app/create/page": [],
     "[project]/src/app/home/page": [],
     "[project]/src/app/page": []
   },

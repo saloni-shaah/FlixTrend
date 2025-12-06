@@ -1,12 +1,12 @@
 
 "use client";
 import React, { useState, useRef, useEffect } from 'react';
-import { X, UploadCloud, Music as MusicIcon, MapPin, Smile, Camera, Image as ImageIcon, Zap, Locate, Loader } from 'lucide-react';
+import { X, UploadCloud, Music as MusicIcon, MapPin, Smile, Camera, Image as ImageIcon, Zap, Locate, Loader, Wand2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getFirestore, collection, onSnapshot, query, orderBy, getDoc, doc } from 'firebase/firestore';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { auth, app } from '@/utils/firebaseClient';
-import { Wand2 } from 'lucide-react';
+import { FilterCamera } from './FilterCamera';
 
 const db = getFirestore(app);
 const storage = getStorage(app);
@@ -16,15 +16,12 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
     const [showSongPicker, setShowSongPicker] = useState(false);
     const [appSongs, setAppSongs] = useState<any[]>([]);
     
-    const [showCamera, setShowCamera] = useState(false);
-    const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+    const [showFilterCamera, setShowFilterCamera] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [uploadError, setUploadError] = useState('');
     const [isFetchingLocation, setIsFetchingLocation] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const videoRef = useRef<HTMLVideoElement>(null);
-    const canvasRef = useRef<HTMLCanvasElement>(null);
 
     useEffect(() => {
         if (data.songId && !data.song) {
@@ -43,31 +40,6 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
         });
         return () => unsub();
     }, [data.songId]);
-
-    useEffect(() => {
-        if (showCamera) startCamera();
-        else stopCamera();
-    }, [showCamera]);
-    
-    const startCamera = async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-            setCameraStream(stream);
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-            }
-        } catch (err) {
-            console.error("Camera error:", err);
-            setUploadError("Camera access denied.");
-        }
-    };
-    
-    const stopCamera = () => {
-        if (cameraStream) {
-            cameraStream.getTracks().forEach(track => track.stop());
-            setCameraStream(null);
-        }
-    };
 
     const handleFileUpload = async (file: File) => {
         const user = auth.currentUser;
@@ -102,29 +74,23 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
             setMediaPreview(null); // Clear preview on error
         } finally {
             setIsUploading(false);
-            URL.revokeObjectURL(previewUrl); // Clean up object URL
+            // URL.revokeObjectURL(previewUrl); // Keep for display
         }
     };
 
-    const handleCapture = () => {
-        if (videoRef.current && canvasRef.current) {
-            const video = videoRef.current;
-            const canvas = canvasRef.current;
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const context = canvas.getContext('2d');
-            context?.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
-            
-            canvas.toBlob((blob) => {
-                if (blob) {
-                    const file = new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
-                    handleFileUpload(file);
-                }
-            }, 'image/jpeg');
-
-            stopCamera();
-            setShowCamera(false);
+    const handleCaptureFromFilter = (image: string) => {
+        const byteString = atob(image.split(',')[1]);
+        const mimeString = image.split(',')[0].split(':')[1].split(';')[0];
+        const ab = new ArrayBuffer(byteString.length);
+        const ia = new Uint8Array(ab);
+        for (let i = 0; i < byteString.length; i++) {
+            ia[i] = byteString.charCodeAt(i);
         }
+        const blob = new Blob([ab], { type: mimeString });
+        const file = new File([blob], `filter-capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
+        
+        handleFileUpload(file);
+        setShowFilterCamera(false);
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -190,25 +156,8 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
         }
     };
 
-    if (showCamera) {
-        return (
-             <div className="flex flex-col items-center gap-4">
-                <div className="w-full aspect-video bg-black rounded-lg overflow-hidden">
-                    {cameraStream ? (
-                        <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-                    ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-400">
-                            {uploadError ? uploadError : "Starting camera..."}
-                        </div>
-                    )}
-                </div>
-                <button type="button" className="btn-glass bg-accent-pink text-white w-20 h-20 rounded-full flex items-center justify-center" onClick={handleCapture} disabled={!cameraStream}>
-                    <Zap size={32} />
-                </button>
-                 <button type="button" className="text-sm text-gray-400" onClick={() => setShowCamera(false) }>Back to upload</button>
-                <canvas ref={canvasRef} className="hidden"></canvas>
-            </div>
-        )
+    if (showFilterCamera) {
+        return <FilterCamera onCapture={handleCaptureFromFilter} />
     }
 
     return (
@@ -229,23 +178,26 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
                     </div>
                 )}
                 {!isUploading && !mediaPreview && (
-                    <div className="grid grid-cols-2 gap-2 w-full max-w-sm">
+                    <div className="grid grid-cols-3 gap-2 w-full max-w-sm">
                         <button type="button" className="btn-glass flex items-center justify-center gap-2" onClick={() => fileInputRef.current?.click()}>
                             <ImageIcon /> Gallery
                         </button>
-                        <button type="button" className="btn-glass flex items-center justify-center gap-2" onClick={() => setShowCamera(true)}>
+                        <button type="button" className="btn-glass flex items-center justify-center gap-2" onClick={() => setShowFilterCamera(true)}>
                             <Camera /> Camera
+                        </button>
+                        <button type="button" className="btn-glass flex items-center justify-center gap-2" onClick={() => setShowFilterCamera(true)}>
+                            <Wand2 /> Filters
                         </button>
                     </div>
                 )}
                 {mediaPreview && !isUploading && (
                      <div className="relative group aspect-video">
-                        {(mediaPreview.includes('.mp4') || mediaPreview.includes('.webm') || mediaPreview.includes('blob:')) ? (
-                            <video src={mediaPreview} className="w-full h-full object-contain rounded-lg" />
+                        {(mediaPreview.includes('.mp4') || mediaPreview.includes('.webm') || mediaPreview.startsWith('blob:')) ? (
+                            <video src={mediaPreview} className="w-full h-full object-contain rounded-lg" controls/>
                         ) : (
                             <img src={mediaPreview} alt="preview" className="w-full h-full object-contain rounded-lg" />
                         )}
-                        <button type="button" onClick={removeMedia} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1">
+                        <button type="button" onClick={removeMedia} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 z-10">
                             <X size={16} />
                         </button>
                     </div>

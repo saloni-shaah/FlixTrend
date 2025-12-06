@@ -1,14 +1,16 @@
 
 "use client";
 import React, { useState, useRef, useCallback } from 'react';
-import { UploadCloud, X, MapPin, Smile, Hash, AtSign, Locate, Loader } from 'lucide-react';
+import { UploadCloud, X, MapPin, Smile, Hash, AtSign, Locate, Loader, Camera, Wand2 } from 'lucide-react';
+import { FilterCamera } from './FilterCamera';
 
 export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange: (data: any) => void }) {
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isFetchingLocation, setIsFetchingLocation] = useState(false);
     const [uploadError, setUploadError] = useState<string | null>(null);
-    
+    const [showFilterCamera, setShowFilterCamera] = useState(false);
+
     const mediaPreviews = data.mediaUrl || [];
 
     const handleFileSelection = (file: File) => {
@@ -56,6 +58,21 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
     
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         processFiles(e.target.files);
+    };
+
+    const handleCaptureFromFilter = (image: string) => {
+        const byteString = atob(image.split(',')[1]);
+        const mimeString = image.split(',')[0].split(':')[1].split(';')[0];
+        const ab = new ArrayBuffer(byteString.length);
+        const ia = new Uint8Array(ab);
+        for (let i = 0; i < byteString.length; i++) {
+            ia[i] = byteString.charCodeAt(i);
+        }
+        const blob = new Blob([ab], { type: mimeString });
+        const file = new File([blob], `filter-capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
+        
+        handleFileSelection(file);
+        setShowFilterCamera(false);
     };
     
     const removeMedia = (urlToRemove: string) => {
@@ -118,6 +135,10 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
             setUploadError("Geolocation is not supported by this browser.");
         }
     };
+    
+    if (showFilterCamera) {
+        return <FilterCamera onCapture={handleCaptureFromFilter} />
+    }
 
     return (
         <div className="flex flex-col gap-4">
@@ -150,13 +171,20 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
             >
                 <div className="flex flex-col items-center justify-center gap-2 mx-auto">
                     <UploadCloud className={`transition-transform duration-300 ${isDragging ? 'scale-110' : ''}`} />
-                    <p className="text-sm text-gray-400">{isDragging ? 'Drop your files here!' : 'Drag & drop files or click to upload'}</p>
-                    <button type="button" className="btn-glass mt-2" onClick={() => fileInputRef.current?.click()}>
-                        Choose from Device
-                    </button>
+                    <p className="text-sm text-gray-400">{isDragging ? 'Drop your files here!' : 'Drag & drop files or click an option below'}</p>
+                     <div className="flex gap-2 mt-2">
+                        <button type="button" className="btn-glass" onClick={() => fileInputRef.current?.click()}>
+                            From Device
+                        </button>
+                         <button type="button" className="btn-glass flex items-center gap-2" onClick={() => setShowFilterCamera(true)}>
+                            <Camera size={16}/> Camera
+                        </button>
+                        <button type="button" className="btn-glass flex items-center gap-2" onClick={() => setShowFilterCamera(true)}>
+                            <Wand2 size={16}/> Filters
+                        </button>
+                    </div>
                 </div>
-                <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" multiple accept="image/*,video/*,audio/*" />
-                <p className="text-xs text-gray-500 mt-2">Also supports camera and gallery on mobile.</p>
+                <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" multiple accept="image/*,video/*" />
                 {uploadError && <p className="text-red-400 text-xs mt-2">{uploadError}</p>}
                 
                  <div className="mt-4 grid grid-cols-3 md:grid-cols-4 gap-2">
