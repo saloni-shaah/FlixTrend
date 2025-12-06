@@ -67,6 +67,32 @@ DropdownMenuItem.displayName = DropdownMenuPrimitive.Item.displayName
 const db = getFirestore(app);
 const functions = getFunctions(app);
 
+const timeAgo = (timestamp: any): string => {
+    if (!timestamp) return "Just now";
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    if (isNaN(date.getTime())) {
+        return "Just now";
+    }
+
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    const days = seconds / 86400;
+
+    if (seconds < 10) return "Just now";
+    if (seconds < 60) return `${Math.floor(seconds)}s ago`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+
+    if (days < 2) return "Yesterday";
+    if (days <= 7) return `${Math.floor(days)}d ago`;
+
+    const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+    if (date.getFullYear() !== now.getFullYear()) {
+        options.year = 'numeric';
+    }
+    return date.toLocaleDateString('en-US', options);
+};
+
 const Watermark = ({ isAnimated = false }: { isAnimated?: boolean }) => (
     <div
       className={`absolute flex items-center gap-1.5 bg-black/40 text-white py-1 px-2 rounded-full text-xs pointer-events-none z-10 ${
@@ -156,7 +182,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
                     <span className="font-headline text-accent-green text-sm group-hover:underline">@{contentPost.username || "user"}</span>
                 </Link>
                 <div className="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
-                    <span>{contentPost.createdAt?.toDate?.().toLocaleString?.() || "Just now"}</span>
+                    <span>{timeAgo(contentPost.createdAt)}</span>
                     {(contentPost.isVideo || contentPost.type === 'live') && (
                         <span className="flex items-center gap-1">
                             <Eye size={14} /> {viewCount.toLocaleString()}
@@ -366,7 +392,7 @@ function Comment({ comment }: { comment: any; }) {
         <div className="rounded-xl px-3 py-2 font-body">
           <div className="flex items-center gap-2">
             <Link href={`/squad/${comment.userId}`} className="font-bold text-brand-gold text-sm hover:underline">@{userData?.username || 'user'}</Link>
-            <span className="text-xs text-muted-foreground">{comment.createdAt?.toDate?.().toLocaleString?.() || ""}</span>
+            <span className="text-xs text-muted-foreground">{timeAgo(comment.createdAt)}</span>
           </div>
           <p className="text-base">{comment.text}</p>
         </div>
