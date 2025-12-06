@@ -15,7 +15,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { CreatePostPrompt } from "@/components/CreatePostPrompt";
 import { WelcomeAnimation } from "@/components/WelcomeAnimation";
-
+import { redisClient } from '@/utils/redis';
 
 const MusicDiscovery = dynamic(() => import('@/components/MusicDiscovery').then(mod => mod.MusicDiscovery), { ssr: false });
 const FlashModal = dynamic(() => import('@/components/FlashModal'), { ssr: false });
@@ -121,6 +121,12 @@ function HomePageContent() {
             setLoadingMore(true);
         } else {
             setLoading(true);
+            const cachedPosts: any = await redisClient.get(`feed:${category}`);
+            if (cachedPosts) {
+                setPosts(cachedPosts);
+                setLoading(false);
+                return;
+            }
         }
 
         const baseQuery = collection(db, "posts");
@@ -156,6 +162,7 @@ function HomePageContent() {
                 });
             } else {
                 setPosts(newPosts);
+                await redisClient.set(`feed:${category}`, newPosts, { ex: 300 }); // Cache for 5 minutes
             }
 
 

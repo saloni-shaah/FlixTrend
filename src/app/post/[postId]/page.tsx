@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -8,6 +9,7 @@ import { VibeSpaceLoader } from '@/components/VibeSpaceLoader';
 import Link from 'next/link';
 import { FlixTrendLogo } from '@/components/FlixTrendLogo';
 import { onAuthStateChanged } from 'firebase/auth';
+import { redisClient } from '@/utils/redis';
 
 const db = getFirestore(app);
 
@@ -23,20 +25,24 @@ export default function PostPage() {
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
-                // User is logged in, redirect to the home page.
-                // A more advanced implementation could redirect to the post within the feed.
                 router.replace('/home');
             } else {
-                // User is not logged in, fetch and display the single post.
                 if (postId) {
                     try {
-                        const postRef = doc(db, "posts", postId);
-                        const postSnap = await getDoc(postRef);
-
-                        if (postSnap.exists()) {
-                            setPost({ id: postSnap.id, ...postSnap.data() });
+                        const cachedPost: any = await redisClient.get(`post:${postId}`);
+                        if (cachedPost) {
+                            setPost(cachedPost);
                         } else {
-                            setError("This vibe couldn't be found. It might have been deleted or the link is incorrect.");
+                            const postRef = doc(db, "posts", postId);
+                            const postSnap = await getDoc(postRef);
+
+                            if (postSnap.exists()) {
+                                const postData = { id: postSnap.id, ...postSnap.data() };
+                                setPost(postData);
+                                await redisClient.set(`post:${postId}`, postData, { ex: 3600 }); // Cache for 1 hour
+                            } else {
+                                setError("This vibe couldn't be found. It might have been deleted or the link is incorrect.");
+                            }
                         }
                     } catch (err) {
                         console.error("Error fetching post:", err);
@@ -47,7 +53,6 @@ export default function PostPage() {
             }
         });
 
-        // Cleanup subscription on unmount
         return () => unsubscribe();
     }, [postId, router]);
 

@@ -1,4 +1,19 @@
 
+importScripts("https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js");
+importScripts("https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js");
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBP1VyEIjPzt43DJokCj9WhPbTrZXbEVb8",
+  authDomain: "flixtrend-24072025.firebaseapp.com",
+  projectId: "flixtrend-24072025",
+  storageBucket: "flixtrend-24072025.firebasestorage.app",
+  messagingSenderId: "200803738308",
+  appId: "1:200803738308:web:ed7942db23395b0d101f91",
+  measurementId: "G-H48LZPV9QZ"
+};
+
+firebase.initializeApp(firebaseConfig);
+const messaging = firebase.messaging();
 // This service worker script handles incoming push notifications, specifically for calls.
 
 // IMPORTANT: This script will not work until you initialize Firebase in your main app.

@@ -1,26 +1,37 @@
-"use server";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { app } from '@/utils/firebaseClient'; // Import app for storage initialization
 
-const storage = getStorage(app);
+'use server';
 
-export async function uploadFileToFirebaseStorage(formData: FormData) {
+import { v2 as cloudinary } from 'cloudinary';
+import { revalidatePath } from 'next/cache';
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+export async function uploadToCloudinary(formData: FormData) {
   const file = formData.get('file') as File;
-  const userId = formData.get('userId') as string;
-
-  if (!file || !userId) {
-    return { failure: "File or user ID missing." };
-  }
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = new Uint8Array(arrayBuffer);
 
   try {
-    const fileName = `${userId}-${Date.now()}-${file.name}`;
-    const storageRef = ref(storage, `user_uploads/${fileName}`);
-    const snapshot = await uploadBytes(storageRef, file);
-    const downloadURL = await getDownloadURL(snapshot.ref);
+    const results: any = await new Promise((resolve, reject) => {
+      cloudinary.uploader.upload_stream({ resource_type: 'auto' }, (error, result) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(result);
+        }
+      }).end(buffer);
+    });
 
-    return { success: { url: downloadURL } };
-  } catch (error: any) {
-    console.error("Upload failed:", error);
-    return { failure: error.message };
+    // Optionally revalidate a path if the upload should trigger a data refresh
+    // revalidatePath('/some-path');
+
+    return { success: true, url: results.secure_url };
+  } catch (error) {
+    console.error('Cloudinary upload failed:', error);
+    return { success: false, error: 'Upload failed' };
   }
 }

@@ -1,4 +1,20 @@
 {
-  "node": {},
+  "node": {
+    "40f36866992db36470cec083c988f19c24206136de": {
+      "workers": {
+        "app/home/page": {
+          "moduleId": "[project]/.next-internal/server/app/home/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "uploadToCloudinary",
+          "filename": "src/app/actions.ts"
+        }
+      },
+      "layer": {
+        "app/home/page": "action-browser"
+      },
+      "exportedName": "uploadToCloudinary",
+      "filename": "src/app/actions.ts"
+    }
+  },
   "edge": {}
 }

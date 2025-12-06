@@ -14,37 +14,45 @@ function getCloudinaryId(url: string): string | null {
 const imageBreakpoints = [400, 600, 800, 1200, 1600];
 
 export function OptimizedImage({ src, alt, className, width, height }: { src: string; alt: string; className?: string; width?: number; height?: number; }) {
-  if (!src.startsWith(CLOUDINARY_BASE_URL)) {
-    return <img src={src} alt={alt} className={className} width={width} height={height} loading="lazy" />;
+  if (!src) {
+    return null; // Don't render anything if there's no src
   }
   
-  const publicId = getCloudinaryId(src);
-  if (!publicId) {
-     return <img src={src} alt={alt} className={className} width={width} height={height} loading="lazy" />;
+  const isCloudinaryUrl = src.startsWith(CLOUDINARY_BASE_URL);
+
+  if (isCloudinaryUrl) {
+    const publicId = getCloudinaryId(src);
+    if (!publicId) {
+       // Fallback for Cloudinary URLs that don't match the regex
+       return <img src={src} alt={alt} className={className} width={width} height={height} loading="lazy" />;
+    }
+
+    const getTransformedUrl = (w: number) => {
+      return `${CLOUDINARY_BASE_URL}/image/upload/f_auto,q_auto,w_${w}/${publicId}`;
+    };
+
+    const srcSet = imageBreakpoints.map(w => `${getTransformedUrl(w)} ${w}w`).join(', ');
+
+    return (
+      <img
+        src={getTransformedUrl(imageBreakpoints[1])} // Default src
+        srcSet={srcSet}
+        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 800px"
+        alt={alt}
+        className={className}
+        loading="lazy"
+        decoding="async"
+        width={width}
+        height={height}
+        style={{
+          width: width ? `${width}px` : '100%',
+          height: height ? `${height}px` : 'auto',
+          aspectRatio: width && height ? `${width}/${height}` : undefined,
+        }}
+      />
+    );
   }
 
-  const getTransformedUrl = (w: number) => {
-    return `${CLOUDINARY_BASE_URL}/image/upload/f_auto,q_auto,w_${w}/${publicId}`;
-  };
-
-  const srcSet = imageBreakpoints.map(w => `${getTransformedUrl(w)} ${w}w`).join(', ');
-
-  return (
-    <img
-      src={getTransformedUrl(imageBreakpoints[1])} // Default src
-      srcSet={srcSet}
-      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 800px"
-      alt={alt}
-      className={className}
-      loading="lazy"
-      decoding="async"
-      width={width}
-      height={height}
-      style={{
-        width: width ? `${width}px` : '100%',
-        height: height ? `${height}px` : 'auto',
-        aspectRatio: width && height ? `${width}/${height}` : undefined,
-      }}
-    />
-  );
+  // Default behavior for non-Cloudinary images (e.g., Firebase Storage)
+  return <img src={src} alt={alt} className={className} width={width} height={height} loading="lazy" />;
 }
