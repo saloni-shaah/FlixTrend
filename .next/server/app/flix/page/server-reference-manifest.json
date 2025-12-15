@@ -1,0 +1,20 @@
+{
+  "node": {
+    "402d1d5f9b289b58a3181d8bf4499ed3d754b00065": {
+      "workers": {
+        "app/flix/page": {
+          "moduleId": 37799,
+          "async": true,
+          "exportedName": "uploadToCloudinary",
+          "filename": "src/app/actions.ts"
+        }
+      },
+      "layer": {
+        "app/flix/page": "action-browser"
+      },
+      "exportedName": "uploadToCloudinary",
+      "filename": "src/app/actions.ts"
+    }
+  },
+  "edge": {}
+}

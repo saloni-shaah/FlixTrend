@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/signal/layout,_N_T_/signal/create-group/layout,_N_T_/signal/create-group/page,_N_T_/signal/create-group"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/signal/create-group/__PAGE__",
+    "/signal/create-group",
+    "/signal",
+    "/_index",
+    "/_head"
+  ]
+}
