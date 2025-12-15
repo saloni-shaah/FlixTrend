@@ -6,8 +6,12 @@ import { X, Glasses, Brush, Package, PartyPopper, Zap } from 'lucide-react';
 
 let faceLandmarker: FaceLandmarker;
 let lastVideoTime = -1;
+
+// Image assets for filters
 const sunglassesImg = new Image();
 sunglassesImg.src = '/filters/sunglasses.png';
+const hatImg = new Image();
+hatImg.src = '/filters/hat.png'; // New hat image
 
 const setupFaceLandmarker = async () => {
     if (faceLandmarker) return;
@@ -118,16 +122,17 @@ export function FilterCamera({ onCapture }: { onCapture: (image: string) => void
 
             case "Hat":
                 const forehead = landmarks[10];
-                if(forehead){
-                    const hatWidth = 150;
-                    const hatHeight = 100;
-                    ctx.fillStyle = 'purple';
-                    ctx.beginPath();
-                    ctx.moveTo(forehead.x * videoWidth - hatWidth / 2, forehead.y * videoHeight - 30);
-                    ctx.lineTo(forehead.x * videoWidth + hatWidth / 2, forehead.y * videoHeight - 30);
-                    ctx.lineTo(forehead.x * videoWidth, forehead.y * videoHeight - hatHeight - 30);
-                    ctx.closePath();
-                    ctx.fill();
+                const leftBrow = landmarks[70];
+                const rightBrow = landmarks[300];
+                if (forehead && leftBrow && rightBrow) {
+                    const browWidth = Math.abs(rightBrow.x - leftBrow.x) * videoWidth;
+                    const hatWidth = browWidth * 1.8;
+                    const hatHeight = hatImg.height * (hatWidth / hatImg.width)
+
+                    ctx.save();
+                    ctx.translate(forehead.x * videoWidth, forehead.y * videoHeight);
+                    ctx.drawImage(hatImg, -hatWidth / 2, -hatHeight * 0.9, hatWidth, hatHeight);
+                    ctx.restore();
                 }
                 break;
         }
