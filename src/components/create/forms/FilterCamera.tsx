@@ -29,7 +29,7 @@ const setupFaceLandmarker = async () => {
     });
 };
 
-type FilterType = "None" | "Sunglasses" | "Blush & Lipstick" | "Funny Nose" | "Hat";
+type FilterType = "None" | "Sunglasses" | "Blush & Lipstick" | "Funny Nose" | "Hat" | "Zap";
 
 export function FilterCamera({ onCapture }: { onCapture: (image: string) => void }) {
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -150,6 +150,33 @@ export function FilterCamera({ onCapture }: { onCapture: (image: string) => void
                     ctx.restore();
                 }
                 break;
+
+            case "Zap":
+                const faceOval = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109, 10].map(i => landmarks[i]);
+
+                if (faceOval.every(p => p)) {
+                    ctx.strokeStyle = '#00FFFF'; // Cyan color for lightning
+                    ctx.lineWidth = 3;
+                    ctx.shadowColor = '#00FFFF';
+                    ctx.shadowBlur = 10;
+
+                    for (let i = 0; i < 2; i++) { // Two bolts
+                        const startPoint = faceOval[Math.floor(Math.random() * faceOval.length)];
+                        const endPoint = { x: startPoint.x + (Math.random() - 0.5) * 0.4, y: startPoint.y + (Math.random() - 0.5) * 0.4 };
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(startPoint.x * videoWidth, startPoint.y * videoHeight);
+
+                        // Jagged line
+                        for (let j = 0; j < 5; j++) {
+                            const nextX = startPoint.x + (endPoint.x - startPoint.x) * (j / 4) + (Math.random() - 0.5) * 0.05;
+                            const nextY = startPoint.y + (endPoint.y - startPoint.y) * (j / 4) + (Math.random() - 0.5) * 0.05;
+                            ctx.lineTo(nextX * videoWidth, nextY * videoHeight);
+                        }
+                        ctx.stroke();
+                    }
+                }
+                break;
         }
     }
 
@@ -208,12 +235,13 @@ export function FilterCamera({ onCapture }: { onCapture: (image: string) => void
             </div>
             
             <div className="absolute bottom-0 left-0 right-0 p-4 bg-black/30 backdrop-blur-sm">
-                 <div className="flex justify-center items-center gap-4">
+                 <div className="flex justify-center items-center gap-3">
                      <FilterButton filter="None" icon={X} label="None" />
                      <FilterButton filter="Sunglasses" icon={Glasses} label="Shades" />
                      <FilterButton filter="Blush & Lipstick" icon={Brush} label="Makeup" />
                      <FilterButton filter="Funny Nose" icon={Package} label="Clown" />
                      <FilterButton filter="Hat" icon={PartyPopper} label="Party" />
+                     <FilterButton filter="Zap" icon={Zap} label="Zap" />
                  </div>
                 <div className="flex justify-center mt-4">
                     <button 
