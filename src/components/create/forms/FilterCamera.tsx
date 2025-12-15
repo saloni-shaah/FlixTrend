@@ -11,7 +11,7 @@ let lastVideoTime = -1;
 const sunglassesImg = new Image();
 sunglassesImg.src = '/filters/sunglasses.png';
 const hatImg = new Image();
-hatImg.src = '/filters/hat.png'; // New hat image
+hatImg.src = '/filters/hat.png';
 
 const setupFaceLandmarker = async () => {
     if (faceLandmarker) return;
@@ -85,11 +85,12 @@ export function FilterCamera({ onCapture }: { onCapture: (image: string) => void
                 break;
             
             case "Blush & Lipstick":
-                 const lipLandmarks = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 409, 270, 269, 267, 0, 37, 39, 40, 185, 61].map(i => landmarks[i]);
-                 const leftCheek = landmarks[117];
-                 const rightCheek = landmarks[346];
+                const lipLandmarks = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 409, 270, 269, 267, 0, 37, 39, 40, 185, 61].map(i => landmarks[i]);
+                const leftCheek = landmarks[117];
+                const rightCheek = landmarks[346];
 
-                if(lipLandmarks.every(p => p)){
+                if (lipLandmarks.every(p => p)) {
+                    // Draw lipstick
                     ctx.fillStyle = 'rgba(255, 0, 100, 0.5)';
                     ctx.beginPath();
                     ctx.moveTo(lipLandmarks[0].x * videoWidth, lipLandmarks[0].y * videoHeight);
@@ -98,8 +99,20 @@ export function FilterCamera({ onCapture }: { onCapture: (image: string) => void
                     }
                     ctx.closePath();
                     ctx.fill();
+
+                    // Add sparkles
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+                    for (let i = 0; i < 3; i++) { // Draw 3 sparkles
+                        const landmarkIndex = Math.floor(Math.random() * lipLandmarks.length);
+                        const sparklePoint = lipLandmarks[landmarkIndex];
+                        const sparkleX = sparklePoint.x * videoWidth + (Math.random() - 0.5) * 5;
+                        const sparkleY = sparklePoint.y * videoHeight + (Math.random() - 0.5) * 5;
+                        ctx.beginPath();
+                        ctx.arc(sparkleX, sparkleY, Math.random() * 2 + 1, 0, 2 * Math.PI);
+                        ctx.fill();
+                    }
                 }
-                if(leftCheek && rightCheek){
+                if (leftCheek && rightCheek) {
                     ctx.fillStyle = 'rgba(255, 105, 180, 0.4)';
                     ctx.beginPath();
                     ctx.arc(leftCheek.x * videoWidth, leftCheek.y * videoHeight, 25, 0, 2 * Math.PI);
@@ -110,12 +123,14 @@ export function FilterCamera({ onCapture }: { onCapture: (image: string) => void
                 }
                 break;
 
-            case "Funny Nose":
+             case "Funny Nose":
                 const noseTip = landmarks[4];
                 if (noseTip) {
+                    const wiggleX = (Math.random() - 0.5) * 4; // Small random horizontal offset
+                    const wiggleY = (Math.random() - 0.5) * 4; // Small random vertical offset
                     ctx.fillStyle = 'red';
                     ctx.beginPath();
-                    ctx.arc(noseTip.x * videoWidth, noseTip.y * videoHeight, 20, 0, 2 * Math.PI);
+                    ctx.arc(noseTip.x * videoWidth + wiggleX, noseTip.y * videoHeight + wiggleY, 20, 0, 2 * Math.PI);
                     ctx.fill();
                 }
                 break;
