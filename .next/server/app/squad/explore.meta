@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/squad/layout,_N_T_/squad/explore/layout,_N_T_/squad/explore/page,_N_T_/squad/explore"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/squad/explore/__PAGE__",
+    "/squad/explore",
+    "/squad",
+    "/_index",
+    "/_head"
+  ]
+}

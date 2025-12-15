@@ -1,0 +1,20 @@
+{
+  "node": {
+    "40977d5708f655c3dcedb32dbaaa9a25e0b6e7d35a": {
+      "workers": {
+        "app/create/page": {
+          "moduleId": 25657,
+          "async": true,
+          "exportedName": "uploadFileToFirebaseStorage",
+          "filename": "src/app/actions.ts"
+        }
+      },
+      "layer": {
+        "app/create/page": "action-browser"
+      },
+      "exportedName": "uploadFileToFirebaseStorage",
+      "filename": "src/app/actions.ts"
+    }
+  },
+  "edge": {}
+}

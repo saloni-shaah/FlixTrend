@@ -1,0 +1,241 @@
+{
+  "version": 3,
+  "pages404": true,
+  "caseSensitive": false,
+  "basePath": "",
+  "redirects": [
+    {
+      "source": "/:path+/",
+      "destination": "/:path+",
+      "internal": true,
+      "priority": true,
+      "statusCode": 308,
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
+    }
+  ],
+  "headers": [],
+  "rewrites": {
+    "beforeFiles": [],
+    "afterFiles": [
+      {
+        "source": "/apple-app-site-association",
+        "destination": "/apple-app-site-association",
+        "regex": "^/apple-app-site-association(?:/)?$"
+      }
+    ],
+    "fallback": []
+  },
+  "dynamicRoutes": [
+    {
+      "page": "/broadcast/[roomName]",
+      "regex": "^/broadcast/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtProomName": "nxtProomName"
+      },
+      "namedRegex": "^/broadcast/(?<nxtProomName>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/embed/[postId]",
+      "regex": "^/embed/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPpostId": "nxtPpostId"
+      },
+      "namedRegex": "^/embed/(?<nxtPpostId>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/post/[postId]",
+      "regex": "^/post/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPpostId": "nxtPpostId"
+      },
+      "namedRegex": "^/post/(?<nxtPpostId>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/signal/[id]",
+      "regex": "^/signal/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/signal/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/squad/[uid]",
+      "regex": "^/squad/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPuid": "nxtPuid"
+      },
+      "namedRegex": "^/squad/(?<nxtPuid>[^/]+?)(?:/)?$"
+    }
+  ],
+  "staticRoutes": [
+    {
+      "page": "/",
+      "regex": "^/(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/(?:/)?$"
+    },
+    {
+      "page": "/_global-error",
+      "regex": "^/_global\\-error(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_global\\-error(?:/)?$"
+    },
+    {
+      "page": "/_not-found",
+      "regex": "^/_not\\-found(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/about",
+      "regex": "^/about(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/about(?:/)?$"
+    },
+    {
+      "page": "/ad-studio",
+      "regex": "^/ad\\-studio(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/ad\\-studio(?:/)?$"
+    },
+    {
+      "page": "/ad-studio/billing",
+      "regex": "^/ad\\-studio/billing(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/ad\\-studio/billing(?:/)?$"
+    },
+    {
+      "page": "/ad-studio/create",
+      "regex": "^/ad\\-studio/create(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/ad\\-studio/create(?:/)?$"
+    },
+    {
+      "page": "/api/livekit-token",
+      "regex": "^/api/livekit\\-token(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/livekit\\-token(?:/)?$"
+    },
+    {
+      "page": "/create",
+      "regex": "^/create(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/create(?:/)?$"
+    },
+    {
+      "page": "/flix",
+      "regex": "^/flix(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/flix(?:/)?$"
+    },
+    {
+      "page": "/home",
+      "regex": "^/home(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/home(?:/)?$"
+    },
+    {
+      "page": "/icon.svg",
+      "regex": "^/icon\\.svg(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/icon\\.svg(?:/)?$"
+    },
+    {
+      "page": "/login",
+      "regex": "^/login(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/login(?:/)?$"
+    },
+    {
+      "page": "/premium",
+      "regex": "^/premium(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/premium(?:/)?$"
+    },
+    {
+      "page": "/privacy",
+      "regex": "^/privacy(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/privacy(?:/)?$"
+    },
+    {
+      "page": "/scope",
+      "regex": "^/scope(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/scope(?:/)?$"
+    },
+    {
+      "page": "/settings",
+      "regex": "^/settings(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/settings(?:/)?$"
+    },
+    {
+      "page": "/signal",
+      "regex": "^/signal(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/signal(?:/)?$"
+    },
+    {
+      "page": "/signal/create-group",
+      "regex": "^/signal/create\\-group(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/signal/create\\-group(?:/)?$"
+    },
+    {
+      "page": "/signup",
+      "regex": "^/signup(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/signup(?:/)?$"
+    },
+    {
+      "page": "/sitemap.xml",
+      "regex": "^/sitemap\\.xml(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/sitemap\\.xml(?:/)?$"
+    },
+    {
+      "page": "/squad",
+      "regex": "^/squad(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/squad(?:/)?$"
+    },
+    {
+      "page": "/squad/explore",
+      "regex": "^/squad/explore(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/squad/explore(?:/)?$"
+    },
+    {
+      "page": "/store",
+      "regex": "^/store(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/store(?:/)?$"
+    },
+    {
+      "page": "/terms",
+      "regex": "^/terms(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/terms(?:/)?$"
+    }
+  ],
+  "dataRoutes": [],
+  "rsc": {
+    "header": "rsc",
+    "varyHeader": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+    "prefetchHeader": "next-router-prefetch",
+    "didPostponeHeader": "x-nextjs-postponed",
+    "contentTypeHeader": "text/x-component",
+    "suffix": ".rsc",
+    "prefetchSuffix": ".prefetch.rsc",
+    "prefetchSegmentHeader": "next-router-segment-prefetch",
+    "prefetchSegmentSuffix": ".segment.rsc",
+    "prefetchSegmentDirSuffix": ".segments",
+    "clientParamParsing": false,
+    "dynamicRSCPrerender": false
+  },
+  "rewriteHeaders": {
+    "pathHeader": "x-nextjs-rewritten-path",
+    "queryHeader": "x-nextjs-rewritten-query"
+  }
+}

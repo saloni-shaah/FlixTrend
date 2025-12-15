@@ -1,0 +1,50 @@
+{
+  "node": {
+    "40977d5708f655c3dcedb32dbaaa9a25e0b6e7d35a": {
+      "workers": {
+        "app/ad-studio/create/page": {
+          "moduleId": 46991,
+          "async": true,
+          "exportedName": "uploadFileToFirebaseStorage",
+          "filename": "src/app/actions.ts"
+        },
+        "app/create/page": {
+          "moduleId": 25657,
+          "async": true,
+          "exportedName": "uploadFileToFirebaseStorage",
+          "filename": "src/app/actions.ts"
+        }
+      },
+      "layer": {
+        "app/ad-studio/create/page": "action-browser",
+        "app/create/page": "action-browser"
+      },
+      "filename": "src/app/actions.ts",
+      "exportedName": "uploadFileToFirebaseStorage"
+    },
+    "402d1d5f9b289b58a3181d8bf4499ed3d754b00065": {
+      "workers": {
+        "app/flix/page": {
+          "moduleId": 37799,
+          "async": true,
+          "exportedName": "uploadToCloudinary",
+          "filename": "src/app/actions.ts"
+        },
+        "app/home/page": {
+          "moduleId": 58158,
+          "async": true,
+          "exportedName": "uploadToCloudinary",
+          "filename": "src/app/actions.ts"
+        }
+      },
+      "layer": {
+        "app/flix/page": "action-browser",
+        "app/home/page": "action-browser"
+      },
+      "filename": "src/app/actions.ts",
+      "exportedName": "uploadToCloudinary"
+    }
+  },
+  "edge": {},
+  "encryptionKey": "b4ncsBtyrKmA+bt+JcEA7Kc7bLcM9/Zacz2aZAMt2xg="
+}
