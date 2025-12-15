@@ -2411,9 +2411,17 @@
     --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
   }
 
+  .bg-cover {
+    background-size: cover;
+  }
+
   .bg-clip-text {
     -webkit-background-clip: text;
     background-clip: text;
+  }
+
+  .bg-center {
+    background-position: center;
   }
 
   .fill-current {
@@ -3908,6 +3916,12 @@
   }
 
   @media (min-width: 48rem) {
+    .md\:w-1\/2 {
+      width: 50%;
+    }
+  }
+
+  @media (min-width: 48rem) {
     .md\:w-1\/3 {
       width: 33.3333%;
     }
@@ -3976,6 +3990,12 @@
   @media (min-width: 48rem) {
     .md\:gap-4 {
       gap: calc(var(--spacing) * 4);
+    }
+  }
+
+  @media (min-width: 48rem) {
+    .md\:p-8 {
+      padding: calc(var(--spacing) * 8);
     }
   }
 

@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlignLeft, Image as ImageIcon, BarChart3, Radio, Zap } from 'lucide-react';
 import Step1 from '@/components/create/Step1';
+import Step2 from '@/components/create/Step2'; // Import Step2
 import Step3 from '@/components/create/Step3';
 
 function CreatePostPageContent() {
@@ -17,7 +18,6 @@ function CreatePostPageContent() {
     const [postData, setPostData] = useState<any>({
         postType: initialType,
         songId: searchParams.get('songId'),
-        // Initialize with imageUrl if present. Step 1 will handle the file upload if needed.
         mediaUrl: initialImageUrl ? [initialImageUrl] : [],
         mediaFiles: []
     });
@@ -41,6 +41,10 @@ function CreatePostPageContent() {
         setStep(s => s - 1);
     };
 
+    const handleDataChange = (newData: any) => {
+        setPostData(prev => ({...prev, ...newData}));
+    }
+
     const handleTypeChange = (type: 'text' | 'media' | 'poll' | 'flash' | 'live') => {
         setPostType(type);
         setPostData({ postType: type, songId: searchParams.get('songId'), mediaUrl: [], mediaFiles: [] }); // Reset data
@@ -49,15 +53,18 @@ function CreatePostPageContent() {
         router.push(`/create?type=${type}${searchParams.get('songId') ? `&songId=${searchParams.get('songId')}`: ''}`, { scroll: false });
     };
 
+    // The proper 3-step flow, now including Step2
     const steps = [
-        <Step1 key="step1" onNext={handleNext} postType={postType!} postData={postData} onDataChange={setPostData} />,
+        <Step1 key="step1" onNext={handleNext} postType={postType!} postData={postData} onDataChange={handleDataChange} />,
+        <Step2 key="step2" onNext={handleNext} onBack={handleBack} postData={postData} onDataChange={handleDataChange} />,
         <Step3 key="step3" onBack={handleBack} postData={postData} />,
     ];
 
-    const totalSteps = 2;
+    // There are now 3 steps
+    const totalSteps = 3;
     const currentStepLogic = step;
 
-    const stepLabels = ['Details', 'Publish'];
+    const stepLabels = ['Details', 'Filter', 'Publish']; // Added 'Filter' label
 
 
     return (
