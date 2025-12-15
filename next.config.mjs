@@ -11,7 +11,7 @@ const withPWA = createNextPwa({
   runtimeCaching: [
     {
       urlPattern: /.*/i,
-      handler: isDev ? 'NetworkFirst' : 'CacheFirst',
+      handler: 'StaleWhileRevalidate',
       options: {
         cacheName: 'all-content-cache',
         expiration: {
