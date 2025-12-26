@@ -1,10 +1,10 @@
 
 "use client";
-import React, { useState, Suspense } from "react";
+import React, { useState, Suspense, useEffect } from "react";
 import { useSearchParams } from 'next/navigation';
 import Link from "next/link";
 import { auth } from "@/utils/firebaseClient";
-import { signInWithEmailAndPassword, sendPasswordResetEmail, sendSignInLinkToEmail } from "firebase/auth";
+import { signInWithEmailAndPassword, sendPasswordResetEmail, sendSignInLinkToEmail, GoogleAuthProvider, signInWithRedirect, getRedirectResult } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import LoginWithEmail from "./LoginWithEmail"; // Import the new component
@@ -87,6 +87,20 @@ function LoginPageContent() {
   const [passwordlessLoading, setPasswordlessLoading] = useState(false);
   const router = useRouter();
 
+  useEffect(() => {
+    const handleRedirectResult = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result) {
+          router.push("/home?new=true");
+        }
+      } catch (error: any) {
+        setError(error.message);
+      }
+    };
+    handleRedirectResult();
+  }, [router]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -95,7 +109,22 @@ function LoginPageContent() {
       await signInWithEmailAndPassword(auth, email, password);
       router.push("/home?new=true");
     } catch (err: any) {
-      setError(err.message);
+      let errorMessage = "An unexpected error occurred. Please try again.";
+      switch (err.code) {
+        case "auth/wrong-password":
+          errorMessage = "Incorrect password. Please try again.";
+          break;
+        case "auth/user-not-found":
+          errorMessage = "No account found with this email. Please sign up.";
+          break;
+        case "auth/invalid-email":
+          errorMessage = "Please enter a valid email address.";
+          break;
+        case 'auth/invalid-credential':
+            errorMessage = "The email or password you entered is incorrect. Please double-check your credentials and try again.";
+            break;
+      }
+      setError(errorMessage);
     }
     setLoading(false);
   };
@@ -119,6 +148,15 @@ function LoginPageContent() {
       setError(err.message);
     }
     setPasswordlessLoading(false);
+  };
+
+  const handleGoogleSignIn = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithRedirect(auth, provider);
+    } catch (error: any) {
+      setError(error.message);
+    }
   };
 
   return (
@@ -191,6 +229,15 @@ function LoginPageContent() {
           disabled={passwordlessLoading}
         >
           {passwordlessLoading ? "Sending link..." : "Login with Email Link"}
+        </motion.button>
+<motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          type="button"
+          onClick={handleGoogleSignIn}
+          className="btn-glass bg-blue-500/80 text-white"
+        >
+          Login with Google
         </motion.button>
         <div className="text-center mt-2">
           <span className="text-gray-400">Don\'t have an account? </span>
