@@ -85,21 +85,25 @@ function LoginPageContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [passwordlessLoading, setPasswordlessLoading] = useState(false);
-  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [isAuthenticating, setIsAuthenticating] = useState(true); // Start in authenticating state
   const router = useRouter();
 
   useEffect(() => {
     const handleRedirectResult = async () => {
-      setIsAuthenticating(true);
+      console.log("Checking for Google sign-in redirect result...");
       try {
         const result = await getRedirectResult(auth);
+        console.log("Redirect result:", result);
         if (result) {
+          console.log("Google sign-in successful, user:", result.user);
           router.push("/home?new=true");
         } else {
+          console.log("No redirect result found. Displaying login form.");
           setIsAuthenticating(false);
         }
       } catch (error: any) {
-        setError(error.message);
+        console.error("Error processing Google sign-in redirect:", error);
+        setError(`Login failed: ${error.message}`);
         setIsAuthenticating(false);
       }
     };
@@ -117,7 +121,8 @@ function LoginPageContent() {
       let errorMessage = "An unexpected error occurred. Please try again.";
       switch (err.code) {
         case "auth/wrong-password":
-          errorMessage = "Incorrect password. Please try again.";
+        case "auth/invalid-credential":
+          errorMessage = "Incorrect email or password. Please try again.";
           break;
         case "auth/user-not-found":
           errorMessage = "No account found with this email. Please sign up.";
@@ -125,9 +130,6 @@ function LoginPageContent() {
         case "auth/invalid-email":
           errorMessage = "Please enter a valid email address.";
           break;
-        case 'auth/invalid-credential':
-            errorMessage = "The email or password you entered is incorrect. Please double-check your credentials and try again.";
-            break;
       }
       setError(errorMessage);
     }
@@ -156,18 +158,34 @@ function LoginPageContent() {
   };
 
   const handleGoogleSignIn = async () => {
-    setIsAuthenticating(true);
+    console.log("Initiating Google sign-in redirect...");
     const provider = new GoogleAuthProvider();
     try {
       await signInWithRedirect(auth, provider);
     } catch (error: any) {
+      console.error("Error initiating Google sign-in:", error);
       setError(error.message);
       setIsAuthenticating(false);
     }
   };
 
   if (isAuthenticating) {
-    return <div className="min-h-screen flex items-center justify-center">Authenticating...</div>;
+    return (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white">
+            <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5 }}
+                className="text-center"
+            >
+                <h1 className="text-3xl font-headline text-accent-cyan mb-4">Authenticating</h1>
+                <p className="text-gray-400">Please wait while we securely log you in...</p>
+                 <div className="mt-8">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-accent-pink mx-auto"></div>
+                </div>
+            </motion.div>
+        </div>
+    );
   }
 
   return (
