@@ -7,7 +7,7 @@ import { auth } from "@/utils/firebaseClient";
 import { signInWithEmailAndPassword, sendPasswordResetEmail, sendSignInLinkToEmail, GoogleAuthProvider, signInWithRedirect, getRedirectResult } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import LoginWithEmail from "./LoginWithEmail"; // Import the new component
+import LoginWithEmail from "./LoginWithEmail";
 
 function ForgotPasswordModal({ onClose }: { onClose: () => void }) {
   const [email, setEmail] = useState("");
@@ -85,17 +85,22 @@ function LoginPageContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [passwordlessLoading, setPasswordlessLoading] = useState(false);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     const handleRedirectResult = async () => {
+      setIsAuthenticating(true);
       try {
         const result = await getRedirectResult(auth);
         if (result) {
           router.push("/home?new=true");
+        } else {
+          setIsAuthenticating(false);
         }
       } catch (error: any) {
         setError(error.message);
+        setIsAuthenticating(false);
       }
     };
     handleRedirectResult();
@@ -151,13 +156,19 @@ function LoginPageContent() {
   };
 
   const handleGoogleSignIn = async () => {
+    setIsAuthenticating(true);
     const provider = new GoogleAuthProvider();
     try {
       await signInWithRedirect(auth, provider);
     } catch (error: any) {
       setError(error.message);
+      setIsAuthenticating(false);
     }
   };
+
+  if (isAuthenticating) {
+    return <div className="min-h-screen flex items-center justify-center">Authenticating...</div>;
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 animate-fade-in">
@@ -254,7 +265,6 @@ function LoginPageContent() {
   );
 }
 
-// This new component contains the logic that must be suspended.
 function LoginHandler() {
     const searchParams = useSearchParams();
     const finish = searchParams.get('finish');
@@ -265,7 +275,6 @@ function LoginHandler() {
     return <LoginPageContent />;
 }
 
-// The main page component now simply wraps the handler in Suspense.
 export default function LoginPage() {
   return (
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
