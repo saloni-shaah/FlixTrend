@@ -3,16 +3,15 @@
 import React, { useState, Suspense, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlignLeft, Image as ImageIcon, BarChart3, Radio, Zap } from 'lucide-react';
+import { AlignLeft, Image as ImageIcon } from 'lucide-react';
 import Step1 from '@/components/create/Step1';
-import Step2 from '@/components/create/Step2'; // Import Step2
 import Step3 from '@/components/create/Step3';
 
 function CreatePostPageContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
 
-    const initialType = searchParams.get('type') as 'text' | 'media' | 'poll' | 'flash' | 'live' || undefined;
+    const initialType = searchParams.get('type') as 'text' | 'media' || undefined;
     const initialImageUrl = searchParams.get('imageUrl');
 
     const [postData, setPostData] = useState<any>({
@@ -23,7 +22,7 @@ function CreatePostPageContent() {
     });
 
     const [step, setStep] = useState(1);
-    const [postType, setPostType] = useState<'text' | 'media' | 'poll' | 'flash' | 'live' | undefined>(initialType);
+    const [postType, setPostType] = useState<'text' | 'media' | undefined>(initialType);
     const [typeSelected, setTypeSelected] = useState(!!initialType);
 
     useEffect(() => {
@@ -45,7 +44,7 @@ function CreatePostPageContent() {
         setPostData(prev => ({...prev, ...newData}));
     }
 
-    const handleTypeChange = (type: 'text' | 'media' | 'poll' | 'flash' | 'live') => {
+    const handleTypeChange = (type: 'text' | 'media') => {
         setPostType(type);
         setPostData({ postType: type, songId: searchParams.get('songId'), mediaUrl: [], mediaFiles: [] }); // Reset data
         setStep(1);
@@ -53,18 +52,15 @@ function CreatePostPageContent() {
         router.push(`/create?type=${type}${searchParams.get('songId') ? `&songId=${searchParams.get('songId')}`: ''}`, { scroll: false });
     };
 
-    // The proper 3-step flow, now including Step2
     const steps = [
         <Step1 key="step1" onNext={handleNext} postType={postType!} postData={postData} onDataChange={handleDataChange} />,
-        <Step2 key="step2" onNext={handleNext} onBack={handleBack} postData={postData} onDataChange={handleDataChange} />,
-        <Step3 key="step3" onBack={handleBack} postData={postData} />,
+        <Step3 key="step2" onBack={handleBack} postData={postData} />,
     ];
 
-    // There are now 3 steps
-    const totalSteps = 3;
+    const totalSteps = 2;
     const currentStepLogic = step;
 
-    const stepLabels = ['Details', 'Filter', 'Publish']; // Added 'Filter' label
+    const stepLabels = ['Details', 'Publish'];
 
 
     return (
@@ -84,17 +80,8 @@ function CreatePostPageContent() {
                     <motion.button variants={{hidden: {opacity:0, y:20}, visible: {opacity:1, y:0}}} onClick={() => handleTypeChange('text')} className={`w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'text' ? 'bg-accent-cyan text-black' : 'bg-transparent text-gray-300'}`}>
                         <AlignLeft />Text Post
                     </motion.button>
-                     <motion.button variants={{hidden: {opacity:0, y:20}, visible: {opacity:1, y:0}}} onClick={() => handleTypeChange('flash')} className={`w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'flash' ? 'bg-accent-cyan text-black' : 'bg-transparent text-gray-300'}`}>
-                        <Zap />Flash
-                    </motion.button>
                     <motion.button variants={{hidden: {opacity:0, y:20}, visible: {opacity:1, y:0}}} onClick={() => handleTypeChange('media')} className={`w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'media' ? 'bg-accent-cyan text-black' : 'bg-transparent text-gray-300'}`}>
                         <ImageIcon />Media
-                    </motion.button>
-                    <motion.button variants={{hidden: {opacity:0, y:20}, visible: {opacity:1, y:0}}} onClick={() => handleTypeChange('live')} className={`w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'live' ? 'bg-red-500 text-black' : 'bg-transparent text-red-400'}`}>
-                        <Radio />Live
-                    </motion.button>
-                    <motion.button variants={{hidden: {opacity:0, y:20}, visible: {opacity:1, y:0}}} onClick={() => handleTypeChange('poll')} className={`w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'poll' ? 'bg-accent-cyan text-black' : 'bg-transparent text-gray-300'}`}>
-                       <BarChart3 />Poll
                     </motion.button>
                 </motion.div>
             )}
