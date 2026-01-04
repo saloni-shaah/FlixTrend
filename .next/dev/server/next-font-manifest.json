@@ -1,6 +1,6 @@
 {
   "app": {
-    "[project]/src/app/home/page": [],
+    "[project]/src/app/login/page": [],
     "[project]/src/app/page": []
   },
   "appUsingSizeAdjust": false,
