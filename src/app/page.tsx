@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { auth } from "@/utils/firebaseClient";
 import { FlixTrendLogo } from "@/components/FlixTrendLogo";
 import { motion } from "framer-motion";
-import { Music, ShieldCheck, Video, MessageSquare, Flame } from "lucide-react";
+import { Music, ShieldCheck, Video, MessageSquare, Flame, Camera } from "lucide-react";
 import { FaInstagram, FaYoutube, FaFacebook } from "react-icons/fa6";
 import { FaXTwitter } from 'react-icons/fa6';
 import Head from 'next/head';
@@ -213,7 +213,7 @@ export default function LandingPage() {
                     className="font-tagline text-4xl md:text-5xl font-bold max-w-2xl text-glow"
                     style={{ color: '#FF3CAC' }}
                 >
-                    where trend finds you first
+                    The calm side of the internet.
                 </motion.h1>
                 <motion.p 
                     initial={{ opacity: 0, y: 20 }}
@@ -221,7 +221,7 @@ export default function LandingPage() {
                     transition={{ duration: 0.8, delay: 0.3 }}
                     className="font-calligraphy text-2xl md:text-3xl text-accent-cyan text-glow-variant"
                 >
-                    India's own and its first secure social media
+                    To create a space where connection feels real, not performed.
                 </motion.p>
 
                 <motion.div 
@@ -232,13 +232,6 @@ export default function LandingPage() {
                      <Link href="/signup" className="btn-glow px-8 py-3 rounded-full bg-accent-pink text-white font-bold text-lg hover:scale-105 transition-transform" style={{'--glow-color': '#FF3CAC'} as React.CSSProperties}>Sign Up</Link>
                     <Link href="/login" className="btn-glow px-8 py-3 rounded-full bg-accent-purple text-white font-bold text-lg hover:scale-105 transition-transform" style={{'--glow-color': '#BF00FF'} as React.CSSProperties}>Log In</Link>
                 </motion.div>
-                 <motion.p 
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8, delay: 0.6 }}
-                    className="text-xs text-gray-400 max-w-sm mt-6">
-                    We’re previewing FlixTrend for web right now. The Android app is in progress and will launch before the end of 2025 – crafted to be the best Gen-Z social app.
-                </motion.p>
             </div>
         </section>
 
@@ -250,6 +243,7 @@ export default function LandingPage() {
                 <FeatureCard icon={<Music />} title="Flashes" desc="Quick, fun, and expressive story-style posts that vanish." />
                 <FeatureCard icon={<Video />} title="Scope" desc="Dive into endless creativity, like shorts but smarter." />
                 <FeatureCard icon={<MessageSquare />} title="Signal" desc="Private, secure, and fast messaging for your circle." />
+                <FeatureCard icon={<Camera />} title="Drops" desc="Join unique photo challenges based on creative prompts from us." />
                 <FeatureCard icon={<ShieldCheck />} title="Voltix Security" desc="Proprietary ledger-based security providing top-layer encryption." />
             </div>
         </section>
