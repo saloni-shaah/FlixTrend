@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "@fontsource/space-grotesk/700.css";
 @import "@fontsource/inter/400.css";
+@import "@fontsource/cinzel/400.css"; /* Import Cinzel for the tagline */
+
 
 /* Light Mode Theme */
 :root {
@@ -104,12 +106,8 @@
 }
 
 body {
-  background-color: hsl(var(--background));
-  background-image: 
-    radial-gradient(at 15% 15%, hsla(160, 100%, 50%, 0.3) 0px, transparent 50%),
-    radial-gradient(at 85% 20%, hsla(330, 100%, 71%, 0.3) 0px, transparent 50%),
-    radial-gradient(at 50% 85%, hsla(250, 100%, 70%, 0.3) 0px, transparent 50%),
-    radial-gradient(at 5% 90%, hsla(42, 100%, 50%, 0.2) 0px, transparent 50%);
+  background-color: #0b0b0c;
+  background-image: radial-gradient(1200px circle at top, #121214, #0b0b0c);
   background-attachment: fixed;
   color: hsl(var(--foreground));
   font-family: 'Inter', 'Space Grotesk', Arial, Helvetica, sans-serif;
