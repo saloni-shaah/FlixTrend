@@ -2,20 +2,20 @@
 import React from "react";
 import Link from "next/link";
 import { FlixTrendLogo } from "@/components/FlixTrendLogo";
-import { Bot, Music, ShieldCheck, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen bg-[#0b0b0c] font-body text-white">
+    <div className="min-h-screen bg-[#0b0b0c] font-body text-zinc-300">
       {/* Top Navbar */}
-      <nav className="w-full flex justify-between items-center px-8 py-4 bg-black/70 border-b border-zinc-800/50 fixed top-0 left-0 z-50 backdrop-blur-md">
+      <nav className="w-full flex justify-between items-center px-8 py-4 bg-black/50 border-b border-zinc-800/50 fixed top-0 left-0 z-50 backdrop-blur-md">
         <Link href="/" className="flex items-center gap-3">
           <FlixTrendLogo size={40} />
           <span className="font-light text-2xl text-zinc-100 tracking-wide">FlixTrend</span>
         </Link>
         <div className="flex gap-6 items-center">
-          <Link href="/login" className="px-5 py-2 rounded-md border border-zinc-700 text-zinc-300 text-sm hover:border-zinc-500 transition">Log In</Link>
+          <Link href="/login" className="btn-glass text-sm">Log In</Link>
+          <Link href="/signup" className="px-5 py-2 rounded-full bg-zinc-100 text-black font-medium text-sm hover:bg-white transition-all">Sign Up</Link>
         </div>
       </nav>
 
@@ -42,9 +42,8 @@ export default function AboutPage() {
           <h2 className="text-4xl font-light mb-12 text-center text-zinc-100">Our Journey</h2>
           <div className="relative border-l-2 border-zinc-800/50 ml-6">
               <TimelineItem date="May 2025" title="The Idea Was Born" desc="The concept of FlixTrend was conceived to create a social platform prioritizing calm connection over chaotic engagement." />
-              <TimelineItem date="July 24, 2025" title="The Birth of FlixTrend" desc="The first stable preview version was launched, marking the official start of our journey to redefine social media." />
-              <TimelineItem date="Security First" title="Voltix Security" desc="Development began on Voltix, our proprietary security layer, to ensure user data and privacy are protected from day one." />
               <TimelineItem date="January 11, 2026" title="Web Launch" desc="The full web version is launched, gathering feedback as we build our native mobile apps." />
+              <TimelineItem date="January 24, 2026" title="Official Launch" desc="The first stable version for Web & Android is launched, marking the official start of our journey to redefine social media." />
           </div>
       </section>
 
@@ -56,8 +55,8 @@ export default function AboutPage() {
       </section>
 
       {/* Footer */}
-      <footer className="w-full py-8 bg-black/60 text-center flex flex-col gap-2 items-center mt-8 border-t border-zinc-800/50">
-        <p className="text-sm text-zinc-500">&copy; {new Date().getFullYear()} FlixTrend. All rights reserved.</p>
+      <footer className="w-full py-8 text-center flex flex-col gap-2 items-center mt-8 border-t border-zinc-800/50">
+        <p className="text-xs text-zinc-500">&copy; {new Date().getFullYear()} FlixTrend. All rights reserved.</p>
         <Link href="/" className="text-xs text-zinc-400 hover:underline">Home</Link>
       </footer>
     </div>

@@ -2409,16 +2409,6 @@
     background-color: var(--color-zinc-700);
   }
 
-  .bg-zinc-900\/20 {
-    background-color: #18181b33;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .bg-zinc-900\/20 {
-      background-color: color-mix(in oklab, var(--color-zinc-900) 20%, transparent);
-    }
-  }
-
   .bg-zinc-900\/30 {
     background-color: #18181b4d;
   }
@@ -2695,6 +2685,10 @@
 
   .pt-28 {
     padding-top: calc(var(--spacing) * 28);
+  }
+
+  .pt-32 {
+    padding-top: calc(var(--spacing) * 32);
   }
 
   .pr-2 {
@@ -3038,10 +3032,6 @@
     text-transform: capitalize;
   }
 
-  .uppercase {
-    text-transform: uppercase;
-  }
-
   .italic {
     font-style: italic;
   }
@@ -3198,12 +3188,6 @@
 
   .drop-shadow-\[0_0_5px_rgba\(255\,50\,50\,0\.8\)\] {
     --tw-drop-shadow-size: drop-shadow(0 0 5px var(--tw-drop-shadow-color, #ff3232cc));
-    --tw-drop-shadow: var(--tw-drop-shadow-size);
-    filter: var(--tw-blur, ) var(--tw-brightness, ) var(--tw-contrast, ) var(--tw-grayscale, ) var(--tw-hue-rotate, ) var(--tw-invert, ) var(--tw-saturate, ) var(--tw-sepia, ) var(--tw-drop-shadow, );
-  }
-
-  .drop-shadow-\[0_0_10px_\#00fff7\] {
-    --tw-drop-shadow-size: drop-shadow(0 0 10px var(--tw-drop-shadow-color, #00fff7));
     --tw-drop-shadow: var(--tw-drop-shadow-size);
     filter: var(--tw-blur, ) var(--tw-brightness, ) var(--tw-contrast, ) var(--tw-grayscale, ) var(--tw-hue-rotate, ) var(--tw-invert, ) var(--tw-saturate, ) var(--tw-sepia, ) var(--tw-drop-shadow, );
   }
