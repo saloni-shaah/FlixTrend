@@ -116,44 +116,101 @@ export default function LandingPage() {
             </p>
           </motion.div>
         </section>
-
-        {/* DIFFERENCE */}
-        <section className="py-24 px-6 border-t border-zinc-800/50">
+        
+        {/* FOUNDING STORY */}
+        <section className="py-32 px-6 border-t border-zinc-800/50">
           <motion.div
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "-100px" }}
             transition={{ staggerChildren: 0.15 }}
-            className="max-w-3xl mx-auto grid gap-12 md:grid-cols-3 text-center"
+            className="max-w-3xl mx-auto text-center space-y-8"
           >
-            {[
-              {
-                title: "Real over performed",
-                desc: "No pressure to impress. Just be yourself."
-              },
-              {
-                title: "Calm over chaos",
-                desc: "No noise. No constant stimulation."
-              },
-              {
-                title: "Meaning over metrics",
-                desc: "Connections matter more than numbers."
-              }
-            ].map(item => (
-              <motion.div
-                key={item.title}
-                variants={fadeUp}
-                transition={{ duration: 0.8 }}
-                className="space-y-3"
-              >
-                <h3 className="text-lg font-light text-zinc-100">
-                  {item.title}
-                </h3>
-                <p className="text-sm text-zinc-500">
-                  {item.desc}
+            <motion.h2 variants={fadeUp} className="text-3xl font-light text-zinc-100">A Quiet Correction</motion.h2>
+            <motion.p variants={fadeUp} className="text-lg text-zinc-400 leading-relaxed">
+              FlixTrend wasn’t built to compete. It was built to correct. We saw an internet obsessed with noise, metrics, and algorithmic control — a space that demanded performance over presence. We wanted something else.
+            </motion.p>
+            <motion.p variants={fadeUp} className="text-lg text-zinc-400 leading-relaxed">
+              Our goal isn't to be another feed you scroll endlessly. It's to be a space you visit intentionally, to connect with people you care about, in a way that feels honest and calm.
+            </motion.p>
+          </motion.div>
+        </section>
+
+        {/* ALGORITHM & VALUES */}
+        <section className="py-24 px-6">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ staggerChildren: 0.2 }}
+            className="max-w-4xl mx-auto text-center space-y-16"
+          >
+            <motion.div variants={fadeUp}>
+                <h2 className="text-3xl font-light text-zinc-100 mb-4">Our Approach</h2>
+                <p className="text-lg text-zinc-400 leading-relaxed max-w-2xl mx-auto">
+                    Algorithms should serve people, not control them. Our focus is on giving you tools to shape your experience, not shaping you for engagement metrics.
                 </p>
-              </motion.div>
-            ))}
+            </motion.div>
+            <motion.div 
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ staggerChildren: 0.15 }}
+              className="grid gap-12 md:grid-cols-2 text-left"
+            >
+              {[
+                { title: "Calm over Compulsion", desc: "We design for intention, not addiction. No endless feeds, no notification barrages." },
+                { title: "People over Performance", desc: "Your space is for you and your connections, not for chasing vanity metrics." },
+                { title: "Trust over Tricks", desc: "No hidden algorithms. You control what you see and who sees you." },
+                { title: "Safety over Speed", desc: "We prioritize a safe, respectful community over rapid, unchecked growth." }
+              ].map(item => (
+                <motion.div key={item.title} variants={fadeUp} transition={{ duration: 0.8 }} className="p-6 rounded-lg border border-zinc-800/50 bg-zinc-900/20">
+                  <h3 className="text-lg font-medium text-zinc-100 mb-2">{item.title}</h3>
+                  <p className="text-sm text-zinc-500">{item.desc}</p>
+                </motion.div>
+              ))}
+            </motion.div>
+          </motion.div>
+        </section>
+
+
+        {/* WHO IT'S FOR */}
+        <section className="py-32 px-6">
+          <motion.div
+            variants={fadeUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 1 }}
+            className="max-w-xl mx-auto text-center space-y-8"
+          >
+            <h2 className="text-3xl font-light text-zinc-100">Intentionally Different</h2>
+            <p className="text-base md:text-lg text-zinc-400 font-light leading-relaxed">
+              FlixTrend may not be for everyone — and that’s by design.
+            </p>
+            <p className="text-base md:text-lg text-zinc-400 font-light leading-relaxed">
+              If you’re looking for a quieter corner of the internet, a place for genuine sharing without the pressure to perform, you might find a home here.
+            </p>
+          </motion.div>
+        </section>
+        
+        {/* Vision */}
+        <section className="py-32 px-6 border-t border-zinc-800/50">
+            <motion.div
+            variants={fadeUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+            className="max-w-3xl mx-auto text-center space-y-10"
+          >
+            <h2 className="text-4xl md:text-5xl font-light tracking-tight text-zinc-100">
+              Our vision is simple.
+            </h2>
+
+            <p className="text-lg md:text-xl font-light text-zinc-400 leading-relaxed">
+              We want the internet to feel human again.
+            </p>
           </motion.div>
         </section>
 
@@ -168,12 +225,12 @@ export default function LandingPage() {
             className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6"
           >
             <p className="text-xs text-zinc-500">
-              © {new Date().getFullYear()} FlixTrend
+              © {new Date().getFullYear()} FlixTrend — A quiet corner of the internet.
             </p>
 
             <div className="flex gap-6 text-xs text-zinc-500">
               <Link href="/about" className="hover:text-zinc-300">About</Link>
-              <Link href="/privacy" className="hover:text-zinc-300">Privacy</Link>
+              <Link href="/privacy" className="hover:text-zinc-300">Privacy & Safety</Link>
               <Link href="/terms" className="hover:text-zinc-300">Terms</Link>
               <Link href="/contact" className="hover:text-zinc-300">Contact</Link>
             </div>

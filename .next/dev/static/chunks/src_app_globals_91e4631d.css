@@ -123,6 +123,7 @@
     --color-zinc-500: #71717b;
     --color-zinc-700: #3f3f46;
     --color-zinc-800: #27272a;
+    --color-zinc-900: #18181b;
     --color-neutral-700: #404040;
     --color-neutral-800: #262626;
     --color-neutral-900: #171717;
@@ -238,6 +239,7 @@
       --color-zinc-500: lab(47.8878% 1.65477 -5.77283);
       --color-zinc-700: lab(26.8019% 1.35387 -4.68303);
       --color-zinc-800: lab(15.7305% .613764 -2.16959);
+      --color-zinc-900: lab(8.30603% .618205 -2.16572);
       --color-neutral-700: lab(27.036% 0 0);
       --color-neutral-800: lab(15.204% 0 -.00000596046);
       --color-neutral-900: lab(7.78201% -.0000149012 0);
@@ -1657,6 +1659,12 @@
     margin-block-end: calc(calc(var(--spacing) * 12) * calc(1 - var(--tw-space-y-reverse)));
   }
 
+  :where(.space-y-16 > :not(:last-child)) {
+    --tw-space-y-reverse: 0;
+    margin-block-start: calc(calc(var(--spacing) * 16) * var(--tw-space-y-reverse));
+    margin-block-end: calc(calc(var(--spacing) * 16) * calc(1 - var(--tw-space-y-reverse)));
+  }
+
   .gap-x-4 {
     -moz-column-gap: calc(var(--spacing) * 4);
     column-gap: calc(var(--spacing) * 4);
@@ -2391,6 +2399,16 @@
 
   .bg-zinc-100 {
     background-color: var(--color-zinc-100);
+  }
+
+  .bg-zinc-900\/20 {
+    background-color: #18181b33;
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .bg-zinc-900\/20 {
+      background-color: color-mix(in oklab, var(--color-zinc-900) 20%, transparent);
+    }
   }
 
   .bg-gradient-to-r {
