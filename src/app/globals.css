@@ -111,16 +111,10 @@ body {
   background-attachment: fixed;
   color: hsl(var(--foreground));
   font-family: 'Inter', 'Space Grotesk', Arial, Helvetica, sans-serif;
-  animation: fadeIn 1s ease-in;
 }
 
 .simple body {
     background-image: none;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
 }
 
 @keyframes float-watermark {

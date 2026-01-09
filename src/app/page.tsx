@@ -1,78 +1,34 @@
-
 "use client";
+
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import Head from "next/head";
 import { useRouter } from "next/navigation";
 import { auth } from "@/utils/firebaseClient";
 import { FlixTrendLogo } from "@/components/FlixTrendLogo";
 import { motion } from "framer-motion";
-import { ShieldCheck } from "lucide-react";
-import Head from 'next/head';
-import '@fontsource/cinzel/700.css';
-import '@fontsource/cinzel/400.css';
-import '@fontsource/great-vibes';
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  visible: { opacity: 1, y: 0 }
+};
 
 export default function LandingPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
 
-  const structuredData = {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "Organization",
-        "name": "FlixTrend",
-        "url": "https://flixtrend.in",
-        "logo": "https://flixtrend.in/logo.svg",
-        "sameAs": [
-          "https://twitter.com/FlxTrnd",
-          "https://instagram.com/FlxTrnd",
-          "https://youtube.com/@FlxTrnd",
-          "https://facebook.com/FlxTrnd"
-        ]
-      },
-      {
-        "@type": "WebSite",
-        "name": "FlixTrend",
-        "url": "https://flixtrend.in",
-        "potentialAction": {
-          "@type": "SearchAction",
-          "target": {
-            "@type": "EntryPoint",
-            "urlTemplate": "https://flixtrend.in/guest?q={search_term_string}"
-          },
-          "query-input": "required name=search_term_string"
-        }
-      }
-    ]
-  };
-
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(user => {
-      if (user) {
-        router.replace('/home');
-      } else {
-        setTimeout(() => setLoading(false), 500);
-      }
+    const unsub = auth.onAuthStateChanged(user => {
+      if (user) router.replace("/home");
+      else setLoading(false);
     });
-    return () => unsubscribe();
+    return () => unsub();
   }, [router]);
 
   if (loading) {
     return (
-      <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#0b0b0c]">
-        <style jsx global>{`
-          body {
-            background: #0b0b0c !important;
-          }
-        `}</style>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-        >
-          <FlixTrendLogo size={100} />
-        </motion.div>
+      <div className="min-h-screen flex items-center justify-center bg-[#0b0b0c]">
+        <FlixTrendLogo size={88} />
       </div>
     );
   }
@@ -80,76 +36,150 @@ export default function LandingPage() {
   return (
     <>
       <Head>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        <title>FlixTrend — The calm side of the internet</title>
+        <meta
+          name="description"
+          content="FlixTrend is a calm, human-first social platform. A space where connection feels real, not performed."
         />
       </Head>
-      <style jsx global>{`
-        .font-tagline {
-            font-family: 'Cinzel', serif;
-        }
-        .font-calligraphy {
-            font-family: 'Great Vibes', cursive;
-        }
-      `}</style>
-      <div className="min-h-screen font-body text-zinc-200">
 
-        {/* Hero Section */}
-        <motion.section 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1.5, ease: "easeIn" }}
-          className="relative flex flex-col items-center justify-center min-h-[80vh] text-center px-4"
-        >
-            <div className="relative z-10 flex flex-col items-center gap-8">
-                <FlixTrendLogo size={100} />
-                
-                <h1 className="font-tagline text-4xl md:text-6xl font-bold max-w-2xl text-zinc-100">
-                    The calm side of the internet.
-                </h1>
-                <p className="font-calligraphy text-2xl md:text-4xl text-zinc-400">
-                    To create a space where connection feels real, not performed.
+      {/* Grain Overlay */}
+      <div
+        className="fixed inset-0 pointer-events-none z-50 opacity-[0.035] mix-blend-overlay"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`
+        }}
+      />
+
+      <main className="min-h-screen bg-[#0b0b0c] text-zinc-200 flex flex-col relative">
+
+        {/* HERO */}
+        <section className="min-h-screen flex items-center justify-center px-6">
+          <motion.div
+            variants={fadeUp}
+            initial="hidden"
+            animate="visible"
+            transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+            className="max-w-2xl text-center space-y-10"
+          >
+            <div className="flex justify-center">
+              <FlixTrendLogo size={96} />
+            </div>
+
+            <h1 className="text-4xl md:text-5xl font-light tracking-tight text-zinc-100">
+              The calm side of the internet.
+            </h1>
+
+            <p className="text-lg md:text-xl font-light text-zinc-400 leading-relaxed">
+              To create a space where connection feels real, not performed.
+            </p>
+
+            <div className="flex justify-center gap-4 pt-4">
+              <Link
+                href="/signup"
+                className="px-8 py-3 rounded-md bg-zinc-100 text-black text-sm font-medium hover:bg-white transition"
+              >
+                Sign up
+              </Link>
+
+              <Link
+                href="/login"
+                className="px-8 py-3 rounded-md border border-zinc-700 text-zinc-300 text-sm hover:border-zinc-500 transition"
+              >
+                Log in
+              </Link>
+            </div>
+          </motion.div>
+        </section>
+
+        {/* BELIEF */}
+        <section className="py-32 px-6">
+          <motion.div
+            variants={fadeUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 1 }}
+            className="max-w-xl mx-auto text-center space-y-8"
+          >
+            <p className="text-base md:text-lg text-zinc-400 font-light leading-relaxed">
+              Social media wasn’t always loud.
+            </p>
+
+            <p className="text-base md:text-lg text-zinc-400 font-light leading-relaxed">
+              Somewhere along the way, connection became performance.
+            </p>
+
+            <p className="text-base md:text-lg text-zinc-400 font-light leading-relaxed">
+              We built FlixTrend for people who miss the quieter internet —
+              where sharing felt human, not optimized.
+            </p>
+          </motion.div>
+        </section>
+
+        {/* DIFFERENCE */}
+        <section className="py-24 px-6 border-t border-zinc-800/50">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ staggerChildren: 0.15 }}
+            className="max-w-3xl mx-auto grid gap-12 md:grid-cols-3 text-center"
+          >
+            {[
+              {
+                title: "Real over performed",
+                desc: "No pressure to impress. Just be yourself."
+              },
+              {
+                title: "Calm over chaos",
+                desc: "No noise. No constant stimulation."
+              },
+              {
+                title: "Meaning over metrics",
+                desc: "Connections matter more than numbers."
+              }
+            ].map(item => (
+              <motion.div
+                key={item.title}
+                variants={fadeUp}
+                transition={{ duration: 0.8 }}
+                className="space-y-3"
+              >
+                <h3 className="text-lg font-light text-zinc-100">
+                  {item.title}
+                </h3>
+                <p className="text-sm text-zinc-500">
+                  {item.desc}
                 </p>
-
-                <div className="flex flex-col sm:flex-row gap-4 mt-6">
-                    <Link href="/signup" className="px-8 py-3 rounded-full bg-zinc-100 text-zinc-900 font-bold text-lg hover:bg-zinc-200 transition-colors">Sign Up</Link>
-                    <Link href="/login" className="px-8 py-3 rounded-full border border-zinc-700 text-zinc-300 font-bold text-lg hover:bg-zinc-800 transition-colors">Log In</Link>
-                </div>
-            </div>
-        </motion.section>
-
-        {/* Belief Section */}
-        <section className="py-24 px-4 max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl md:text-5xl font-tagline font-bold mb-8">
-                No trends.
-                <br/>
-                No performance.
-                <br/>
-                No noise.
-            </h2>
-            <p className="text-4xl md:text-6xl font-calligraphy text-zinc-400">Just people.</p>
+              </motion.div>
+            ))}
+          </motion.div>
         </section>
 
-        {/* Final CTA */}
-        <section className="py-20 px-4 text-center">
-            <h2 className="text-3xl font-tagline font-bold mb-4">Find your space.</h2>
-            <p className="text-lg text-zinc-400 mb-8">Ready to experience a different kind of social media?</p>
-            <Link href="/signup" className="px-10 py-4 rounded-full bg-zinc-100 text-zinc-900 font-bold text-xl hover:scale-105 hover:bg-zinc-200 transition-transform duration-200">
-                Get Started
-            </Link>
-        </section>
-        
-        {/* Footer */}
-        <footer className="w-full py-12 text-center flex flex-col gap-6 items-center mt-8 border-t border-zinc-800">
-            <div className="flex gap-6 text-zinc-500">
-                <Link href="/about" className="hover:text-zinc-300 transition-colors">Our Story</Link>
-                <Link href="/privacy" className="hover:text-zinc-300 transition-colors">Privacy Policy</Link>
-                <Link href="/terms" className="hover:text-zinc-300 transition-colors">Terms of Service</Link>
+        {/* FOOTER */}
+        <footer className="py-12 px-6 border-t border-zinc-800/50">
+          <motion.div
+            variants={fadeUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+            className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6"
+          >
+            <p className="text-xs text-zinc-500">
+              © {new Date().getFullYear()} FlixTrend
+            </p>
+
+            <div className="flex gap-6 text-xs text-zinc-500">
+              <Link href="/about" className="hover:text-zinc-300">About</Link>
+              <Link href="/privacy" className="hover:text-zinc-300">Privacy</Link>
+              <Link href="/terms" className="hover:text-zinc-300">Terms</Link>
+              <Link href="/contact" className="hover:text-zinc-300">Contact</Link>
             </div>
-            <p className="text-sm text-zinc-600">&copy; {new Date().getFullYear()} FlixTrend. All rights reserved.</p>
+          </motion.div>
         </footer>
-      </div>
+      </main>
     </>
   );
 }
