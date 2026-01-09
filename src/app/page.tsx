@@ -63,9 +63,6 @@ export default function LandingPage() {
             className="max-w-2xl text-center space-y-10"
           >
             <div className="flex justify-center flex-col items-center gap-6">
-               <p className="text-sm tracking-wide uppercase text-zinc-500">
-                  Introducing
-                </p>
               <FlixTrendLogo size={96} />
                <div className="h-px w-24 mx-auto bg-gradient-to-r from-transparent via-zinc-500/40 to-transparent" />
             </div>
@@ -137,7 +134,7 @@ export default function LandingPage() {
           >
             <motion.h2 variants={fadeUp} className="text-3xl font-light text-zinc-100">A Quiet Correction</motion.h2>
             <motion.p variants={fadeUp} className="text-lg text-zinc-400 leading-relaxed">
-              FlixTrend wasn’t built to compete. It was built to correct. We saw an internet obsessed with noise, metrics, and algorithmic control — a space that demanded performance over presence. We wanted something else.
+              FlixTrend wasn’t built to compete. It was built to correct. We saw an internet obsessed with noise, metrics, and algorithmic control. A space that demanded performance over presence.
             </motion.p>
             <motion.p variants={fadeUp} className="text-lg text-zinc-400 leading-relaxed">
              FlixTrend is a social space designed for intentional sharing — not endless consumption. Our goal isn't to be another feed you scroll endlessly. It's to be a space you visit intentionally, to connect with people you care about, in a way that feels honest and calm.
@@ -170,7 +167,7 @@ export default function LandingPage() {
               {[
                 { title: "Calm over Compulsion", desc: "We design for intention, not addiction. No endless feeds, no notification barrages." },
                 { title: "People over Performance", desc: "Your space is for you and your connections, not for chasing vanity metrics." },
-                { title: "Trust over Tricks", desc: "No hidden algorithms. You control what you see and who sees you." },
+                { title: "Transparent systems", desc: "You shape what you see and who you connect with." },
                 { title: "Safety over Speed", desc: "We prioritize a safe, respectful community over rapid, unchecked growth." }
               ].map(item => (
                 <motion.div key={item.title} variants={fadeUp} transition={{ duration: 0.8 }} className="p-6 rounded-lg border border-zinc-800/50 bg-zinc-900/40 backdrop-blur-sm hover:bg-zinc-900/60">
@@ -231,10 +228,13 @@ export default function LandingPage() {
             whileInView="visible"
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
-            className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6"
+            className="max-w-6xl mx-auto flex flex-col items-center justify-between gap-6"
           >
+             <p className="text-xs text-zinc-500">
+              Built with intention.
+            </p>
             <p className="text-xs text-zinc-500">
-              © {new Date().getFullYear()} FlixTrend — A quiet corner of the internet.
+              © {new Date().getFullYear()} FlixTrend
             </p>
 
             <div className="flex gap-6 text-xs text-zinc-500">
