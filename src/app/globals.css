@@ -1,108 +1,53 @@
 @import "tailwindcss";
-@import "@fontsource/space-grotesk/700.css";
+
+/* --- Font Imports --- */
 @import "@fontsource/inter/400.css";
-@import "@fontsource/cinzel/400.css"; /* Import Cinzel for the tagline */
+@import "@fontsource/space-grotesk/700.css";
+@import "@fontsource/cinzel/400.css"; 
+@import "@fontsource/great-vibes/400.css";
+@import "@fontsource/cinzel/400.css";
 
+/* --- Base & Dark Theme --- */
+:root, .dark {
+  --background: 240 6% 10%; /* #17171a */
+  --foreground: 0 0% 98%; /* #fafafa */
 
-/* Light Mode Theme */
-:root {
-  --background: 248 240 88%; /* #FFF8F0 Soft Ivory */
-  --foreground: 0 0 18%; /* #2E2E2E Charcoal Gray */
+  --card: 240 5% 14%; /* #212124 */
+  --card-foreground: 0 0% 98%;
+
+  --popover: 240 6% 10%;
+  --popover-foreground: 0 0% 98%;
+
+  --primary: 210 40% 98%;
+  --primary-foreground: 222 47% 11%;
+
+  --secondary: 240 4% 20%;
+  --secondary-foreground: 0 0% 98%;
+
+  --muted: 240 4% 20%;
+  --muted-foreground: 0 0% 63%; /* zinc-400 */
   
-  --card: 220 15% 95%; /* Lighter gray for cards */
-  --card-foreground: 0 0 18%;
+  --accent: 240 4% 25%;
+  --accent-foreground: 0 0% 98%;
+  
+  --destructive: 0 62% 40%;
+  --destructive-foreground: 0 0% 98%;
 
-  --popover: 0 0 95%;
-  --popover-foreground: 0 0 18%;
-
-  --primary: 207.2 88.2% 57.8%; /* Soft Blue for Almighty */
-  --primary-foreground: 0 0 10%;
-
-  --secondary: 0 0 95%;
-  --secondary-foreground: 0 0 18%;
-
-  --muted: 0 0 95%;
-  --muted-foreground: 0 0 45%;
-
-  --accent: 174.5 62.6% 49.6%; /* Teal for Almighty */
-  --accent-foreground: 0-0 10%;
-
-  --destructive: 0 72.2% 50.6%; /* Soft Red for Almighty */
-  --destructive-foreground: 0 0 98%;
-
-  --border: 0 0 89%;
-  --input: 0 0 89%;
-  --ring: 207.2 88.2% 57.8%;
+  --border: 240 4% 20%;
+  --input: 240 4% 20%;
+  --ring: 210 40% 98%;
 
   --radius: 0.5rem;
 
-  /* Custom Colors */
+  /* Custom Colors for the brand */
   --accent-pink: #FF6B6B;
   --accent-green: #4ECDC4;
   --accent-purple: #7D5FFF;
   --brand-gold: #FFB400;
   --accent-cyan: #00F0FF;
-  --brand-saffron: #FF9933; /* Saffron for Tiranga */
 
-  --card-background: rgba(242, 242, 242, 0.5);
-  --glass-border: rgba(46, 46, 46, 0.1);
-}
-
-/* Dark Mode Theme */
-.dark {
-    --background: 240 4% 11%; /* #1B1B1E Deep Space Gray */
-    --foreground: 0 0 92%; /* #EAEAEA Soft White */
-
-    --card: 222.2 84% 4.9%; /* Almighty Dark Card */
-    --card-foreground: 0 0 98%;
-
-    --popover: 240 4% 11%;
-    --popover-foreground: 0 0 92%;
-
-    --primary: 207.2 88.2% 67.8%; /* Almighty Dark Primary */
-    --primary-foreground: 0 0 10%;
-
-    --secondary: 240 4% 15%;
-    --secondary-foreground: 0 0 92%;
-
-    --muted: 240 4% 15%;
-    --muted-foreground: 0 0 63%;
-    
-    --accent: 174.5 62.6% 39.6%; /* Almighty Dark Accent */
-    --accent-foreground: 0 0 98%;
-    
-    --destructive: 0 62.8% 30.6%; /* Almighty Dark Destructive */
-    --destructive-foreground: 0 0 98%;
-
-    --border: 240 4% 20%;
-    --input: 240 4% 20%;
-    --ring: 207.2 88.2% 67.8%;
-
-    /* Custom Colors */
-    --accent-pink: #FF6B6B;
-    --accent-green: #00B8A9; /* Teal Blue for dark mode */
-    --accent-purple: #A29BFE;
-    --brand-gold: #FFB400;
-    --accent-cyan: #00F0FF;
-    --brand-saffron: #FF9933; /* Saffron for Tiranga */
-
-    --card-background: rgba(40, 40, 44, 0.7); /* Increased translucency */
-    --glass-border: rgba(234, 234, 234, 0.15); /* Slightly more visible border */
-}
-
-/* Simple Mode Themes */
-.simple:not(.dark) {
-  --background: 0 0% 98%; /* Off-white */
-  --foreground: 0 0% 3.9%; /* Almost black */
-  --card-background: rgba(255, 255, 255, 1);
-  --glass-border: rgba(0, 0, 0, 0.1);
-}
-
-.simple.dark {
-    --background: 0 0% 3.9%; /* Almost black */
-    --foreground: 0 0% 98%; /* Off-white */
-    --card-background: rgba(10, 10, 10, 1);
-    --glass-border: rgba(255, 255, 255, 0.1);
+  --card-background: rgba(23, 23, 26, 0.5); 
+  --glass-border: rgba(255, 255, 255, 0.1);
 }
 
 body {
@@ -110,119 +55,51 @@ body {
   background-image: radial-gradient(1200px circle at top, #121214, #0b0b0c);
   background-attachment: fixed;
   color: hsl(var(--foreground));
-  font-family: 'Inter', 'Space Grotesk', Arial, Helvetica, sans-serif;
+  font-family: 'Inter', sans-serif;
 }
-
-.simple body {
-    background-image: none;
-}
-
-@keyframes float-watermark {
-  0% {
-    transform: translate(0, 0);
-    opacity: 0.7;
-    bottom: 2%;
-    right: 2%;
-  }
-  20% {
-    transform: translate(-45vw, -85vh);
-    opacity: 0.4;
-  }
-  40% {
-    transform: translate(-85vw, -40vh);
-    opacity: 0.7;
-  }
-  60% {
-    transform: translate(-40vw, 0);
-    opacity: 0.4;
-  }
-  80% {
-    transform: translate(0, -45vh);
-    opacity: 0.7;
-  }
-  100% {
-    transform: translate(0, 0);
-    opacity: 0.7;
-    bottom: 2%;
-    right: 2%;
-  }
-}
-
-@keyframes shadow-glow {
-  0% { box-shadow: 0 0 5px var(--accent-cyan), 0 0 10px var(--accent-cyan); }
-  50% { box-shadow: 0 0 20px var(--accent-cyan), 0 0 30px var(--accent-cyan); }
-  100% { box-shadow: 0 0 5px var(--accent-cyan), 0 0 10px var(--accent-cyan); }
-}
-
-.shadow-glow {
-  animation: shadow-glow 2s infinite ease-in-out;
-}
-
 
 /* Base card style */
 .glass-card {
   background: var(--card-background);
   backdrop-filter: blur(20px) saturate(180%);
-  border-radius: 1.5rem; /* 24px */
+  border-radius: 1rem; 
   border: 1px solid var(--glass-border);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
 
-/* Liquid Glass Button Style */
 .btn-glass {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 9999px; /* rounded-full */
-  padding: 0.75rem 1.5rem; /* px-6 py-3 */
-  font-weight: bold;
+  padding: 0.5rem 1.25rem; /* px-5 py-2 */
+  font-weight: 500;
   color: hsl(var(--foreground));
   transition: all 0.3s ease;
-  box-shadow: 0 0 5px transparent, 0 0 10px transparent;
 }
 
 .btn-glass:hover {
-  background: rgba(255, 255, 255, 0.2);
-  box-shadow: 0 0 15px var(--brand-saffron), 0 0 5px var(--accent-green);
-  transform: scale(1.05);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
 }
 
-/* Icon Button variant */
-.btn-glass-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(125, 95, 255, 0.1); /* purple-tinged */
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 9999px;
-  width: 48px;
-  height: 48px;
-  color: hsl(var(--foreground));
-  transition: all 0.3s ease;
-}
-
-.btn-glass-icon:hover {
-  background: rgba(125, 95, 255, 0.2);
-  box-shadow: 0 0 10px var(--brand-saffron), 0 0 5px var(--accent-green);
-  transform: scale(1.1);
-}
-
-/* Input style to match */
 .input-glass {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(0, 0, 0, 0.2);
   border: 1px solid var(--glass-border);
-  border-radius: 9999px;
+  border-radius: 0.5rem;
   padding: 0.75rem 1.25rem;
   color: hsl(var(--foreground));
   transition: all 0.2s ease;
 }
 .input-glass:focus {
   outline: none;
-  border-color: var(--brand-saffron);
-  box-shadow: 0 0 10px var(--brand-saffron);
+  border-color: #a1a1aa; /* zinc-400 */
+  box-shadow: 0 0 10px rgba(161, 161, 170, 0.2);
 }
 
-.heptagon-clip {
-  clip-path: polygon(50% 0%, 95% 25%, 95% 75%, 50% 100%, 5% 75%, 5% 25%);
-}
+.font-headline { font-family: 'Space Grotesk', sans-serif; }
+.font-body { font-family: 'Inter', sans-serif; }
+.font-cursive { font-family: 'Dancing Script', cursive; }
+.font-calligraphy { font-family: 'Great Vibes', cursive; }
+.font-italiano { font-family: 'Italianno', cursive; }
