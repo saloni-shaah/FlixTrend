@@ -1,4 +1,3 @@
-
 "use client";
 import React from "react";
 import Link from "next/link";
@@ -8,58 +7,58 @@ import { motion } from "framer-motion";
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen bg-transparent font-body text-white">
+    <div className="min-h-screen bg-[#0b0b0c] font-body text-white">
       {/* Top Navbar */}
-      <nav className="w-full flex justify-between items-center px-8 py-4 bg-black/70 border-b border-accent-cyan/20 fixed top-0 left-0 z-50 backdrop-blur-md">
+      <nav className="w-full flex justify-between items-center px-8 py-4 bg-black/70 border-b border-zinc-800/50 fixed top-0 left-0 z-50 backdrop-blur-md">
         <Link href="/" className="flex items-center gap-3">
           <FlixTrendLogo size={40} />
-          <span className="font-headline text-2xl text-accent-cyan font-bold tracking-wide">FlixTrend</span>
+          <span className="font-light text-2xl text-zinc-100 tracking-wide">FlixTrend</span>
         </Link>
         <div className="flex gap-6 items-center">
-          <Link href="/login" className="px-5 py-2 rounded-full border-2 border-accent-cyan text-accent-cyan font-bold bg-black/30 hover:bg-accent-cyan hover:text-primary transition-all">Log In</Link>
+          <Link href="/login" className="px-5 py-2 rounded-md border border-zinc-700 text-zinc-300 text-sm hover:border-zinc-500 transition">Log In</Link>
         </div>
       </nav>
 
       {/* Hero Section */}
-      <section className="relative flex flex-col items-center justify-center min-h-screen text-center overflow-hidden pt-20">
+      <section className="relative flex flex-col items-center justify-center min-h-screen text-center overflow-hidden pt-20 px-6">
         <div className="relative z-10 flex flex-col items-center gap-8">
             <motion.h1 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
-                className="text-5xl md:text-7xl font-headline font-bold text-shadow-glow animate-fade-in">The Founder's Journey of FlixTrend</motion.h1>
+                className="text-5xl md:text-7xl font-light tracking-tight text-zinc-100">The Founder's Journey</motion.h1>
             <motion.p 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.4 }}
-                className="max-w-3xl text-lg md:text-xl font-semibold text-accent-cyan drop-shadow-[0_0_10px_#00fff7] animate-fade-in">
-                I started FlixTrend with a clear ambition: to build India's first, truly secure social media app—a complete solution for connection, creativity, and entertainment. My vision is a platform built for Gen-Z and Gen-Alpha, where your vibe is what matters, not opaque algorithms. This is the story of that mission.
+                className="max-w-3xl text-lg md:text-xl font-light text-zinc-400 leading-relaxed">
+                FlixTrend was born from a simple observation: social media became a stage for performance, not a space for connection. We wanted to build a quiet corner of the internet where sharing felt human again. This is the story of that mission.
             </motion.p>
         </div>
       </section>
 
       {/* Timeline Section */}
       <section className="max-w-4xl mx-auto py-20 px-4">
-          <h2 className="text-4xl font-headline font-bold mb-12 text-center text-accent-cyan">Our Development Journey</h2>
-          <div className="relative border-l-2 border-accent-purple/50 ml-6">
-              <TimelineItem date="May 2025" title="The Idea Was Born" desc="The concept of FlixTrend was conceived with the mission to create India's own secure, all-in-one social media platform." />
-              <TimelineItem date="July 24, 2025" title="The Birth of FlixTrend" desc="The first stable preview version was launched. This marked the official birth of FlixTrend and the beginning of our journey to redefine social media." />
+          <h2 className="text-4xl font-light mb-12 text-center text-zinc-100">Our Journey</h2>
+          <div className="relative border-l-2 border-zinc-800/50 ml-6">
+              <TimelineItem date="May 2025" title="The Idea Was Born" desc="The concept of FlixTrend was conceived to create a social platform prioritizing calm connection over chaotic engagement." />
+              <TimelineItem date="July 24, 2025" title="The Birth of FlixTrend" desc="The first stable preview version was launched, marking the official start of our journey to redefine social media." />
               <TimelineItem date="Security First" title="Voltix Security" desc="Development began on Voltix, our proprietary security layer, to ensure user data and privacy are protected from day one." />
-              <TimelineItem date="Today" title="Web Preview & Beyond" desc="We're launching our web preview to gather feedback as we build our native mobile apps. The journey is just beginning!" />
+              <TimelineItem date="January 11, 2026" title="Web Launch" desc="The full web version is launched, gathering feedback as we build our native mobile apps." />
           </div>
       </section>
 
       {/* Call to Action */}
       <section className="text-center py-20">
-          <h2 className="text-3xl font-headline font-bold mb-4 text-accent-pink">Join the Vibe</h2>
-          <p className="text-lg text-accent-cyan mb-8">Ready to experience a different kind of social media? Sign up and find your squad.</p>
-          <Link href="/signup" className="px-10 py-4 rounded-full bg-accent-pink text-white font-bold text-xl shadow-fab-glow hover:scale-105 hover:shadow-lg transition-all duration-200">Get Started</Link>
+          <h2 className="text-3xl font-light text-zinc-100 mb-4">Find Your Space</h2>
+          <p className="text-lg text-zinc-400 mb-8">Ready to experience a different kind of social media? Sign up and find your people.</p>
+          <Link href="/signup" className="px-10 py-4 rounded-md bg-zinc-100 text-black font-medium text-lg shadow-lg hover:bg-white transition-all duration-200">Get Started</Link>
       </section>
 
       {/* Footer */}
-      <footer className="w-full py-8 bg-black/60 text-center flex flex-col gap-2 items-center mt-8 border-t border-accent-cyan/20">
-        <p className="text-sm">&copy; {new Date().getFullYear()} FlixTrend. All rights reserved.</p>
-        <Link href="/" className="text-xs text-accent-cyan hover:underline">Home</Link>
+      <footer className="w-full py-8 bg-black/60 text-center flex flex-col gap-2 items-center mt-8 border-t border-zinc-800/50">
+        <p className="text-sm text-zinc-500">&copy; {new Date().getFullYear()} FlixTrend. All rights reserved.</p>
+        <Link href="/" className="text-xs text-zinc-400 hover:underline">Home</Link>
       </footer>
     </div>
   );
@@ -74,10 +73,10 @@ function TimelineItem({ date, title, desc }: { date: string, title: string, desc
         viewport={{ once: true }}
         transition={{ duration: 0.5 }}
     >
-        <div className="absolute -left-3.5 w-6 h-6 rounded-full bg-accent-purple border-4 border-background animate-pulse" />
-        <p className="text-sm font-bold text-accent-pink">{date}</p>
-        <h3 className="text-2xl font-headline font-bold text-accent-cyan mt-1">{title}</h3>
-        <p className="text-gray-400 mt-2">{desc}</p>
+        <div className="absolute -left-3.5 w-6 h-6 rounded-full bg-zinc-700 border-4 border-[#0b0b0c]" />
+        <p className="text-sm font-medium text-zinc-400">{date}</p>
+        <h3 className="text-2xl font-light text-zinc-100 mt-1">{title}</h3>
+        <p className="text-zinc-500 mt-2">{desc}</p>
     </motion.div>
   );
 }

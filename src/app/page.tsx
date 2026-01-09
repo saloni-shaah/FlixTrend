@@ -39,7 +39,7 @@ export default function LandingPage() {
         <title>FlixTrend — The calm side of the internet</title>
         <meta
           name="description"
-          content="FlixTrend is a calm, human-first social platform. A space where connection feels real, not performed."
+          content="FlixTrend is a social space designed for intentional sharing — not endless consumption."
         />
       </Head>
 
@@ -62,8 +62,12 @@ export default function LandingPage() {
             transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
             className="max-w-2xl text-center space-y-10"
           >
-            <div className="flex justify-center">
+            <div className="flex justify-center flex-col items-center gap-6">
+               <p className="text-sm tracking-wide uppercase text-zinc-500">
+                  Introducing
+                </p>
               <FlixTrendLogo size={96} />
+               <div className="h-px w-24 mx-auto bg-gradient-to-r from-transparent via-zinc-500/40 to-transparent" />
             </div>
 
             <h1 className="text-4xl md:text-5xl font-light tracking-tight text-zinc-100">
@@ -74,20 +78,25 @@ export default function LandingPage() {
               To create a space where connection feels real, not performed.
             </p>
 
-            <div className="flex justify-center gap-4 pt-4">
-              <Link
-                href="/signup"
-                className="px-8 py-3 rounded-md bg-zinc-100 text-black text-sm font-medium hover:bg-white transition"
-              >
-                Sign up
-              </Link>
+            <div className="flex flex-col items-center">
+              <div className="flex justify-center gap-4">
+                <Link
+                  href="/signup"
+                  className="px-8 py-3 rounded-md bg-zinc-100 text-black text-sm font-medium hover:bg-white transition"
+                >
+                  Sign up
+                </Link>
 
-              <Link
-                href="/login"
-                className="px-8 py-3 rounded-md border border-zinc-700 text-zinc-300 text-sm hover:border-zinc-500 transition"
-              >
-                Log in
-              </Link>
+                <Link
+                  href="/login"
+                  className="px-8 py-3 rounded-md border border-zinc-700 text-zinc-300 text-sm hover:border-zinc-500 transition"
+                >
+                  Log in
+                </Link>
+              </div>
+               <p className="text-xs text-zinc-500 pt-6">
+                  Opening January 24, 2026 · Web & Android
+                </p>
             </div>
           </motion.div>
         </section>
@@ -118,7 +127,7 @@ export default function LandingPage() {
         </section>
         
         {/* FOUNDING STORY */}
-        <section className="py-32 px-6 border-t border-zinc-800/50">
+        <section className="py-40 px-6 border-t border-zinc-800/50">
           <motion.div
             initial="hidden"
             whileInView="visible"
@@ -131,7 +140,7 @@ export default function LandingPage() {
               FlixTrend wasn’t built to compete. It was built to correct. We saw an internet obsessed with noise, metrics, and algorithmic control — a space that demanded performance over presence. We wanted something else.
             </motion.p>
             <motion.p variants={fadeUp} className="text-lg text-zinc-400 leading-relaxed">
-              Our goal isn't to be another feed you scroll endlessly. It's to be a space you visit intentionally, to connect with people you care about, in a way that feels honest and calm.
+             FlixTrend is a social space designed for intentional sharing — not endless consumption. Our goal isn't to be another feed you scroll endlessly. It's to be a space you visit intentionally, to connect with people you care about, in a way that feels honest and calm.
             </motion.p>
           </motion.div>
         </section>
@@ -164,7 +173,7 @@ export default function LandingPage() {
                 { title: "Trust over Tricks", desc: "No hidden algorithms. You control what you see and who sees you." },
                 { title: "Safety over Speed", desc: "We prioritize a safe, respectful community over rapid, unchecked growth." }
               ].map(item => (
-                <motion.div key={item.title} variants={fadeUp} transition={{ duration: 0.8 }} className="p-6 rounded-lg border border-zinc-800/50 bg-zinc-900/20">
+                <motion.div key={item.title} variants={fadeUp} transition={{ duration: 0.8 }} className="p-6 rounded-lg border border-zinc-800/50 bg-zinc-900/40 backdrop-blur-sm hover:bg-zinc-900/60">
                   <h3 className="text-lg font-medium text-zinc-100 mb-2">{item.title}</h3>
                   <p className="text-sm text-zinc-500">{item.desc}</p>
                 </motion.div>
@@ -195,7 +204,7 @@ export default function LandingPage() {
         </section>
         
         {/* Vision */}
-        <section className="py-32 px-6 border-t border-zinc-800/50">
+        <section className="py-40 px-6 bg-zinc-900/30 border-t border-zinc-800/50">
             <motion.div
             variants={fadeUp}
             initial="hidden"
