@@ -1,8 +1,6 @@
 {
   "app": {
-    "[project]/src/app/login/page": [],
-    "[project]/src/app/page": [],
-    "[project]/src/app/signup/page": []
+    "[project]/src/app/page": []
   },
   "appUsingSizeAdjust": false,
   "pages": {},

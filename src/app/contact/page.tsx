@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 
 export default function ContactPage() {
   return (
-    <div className="min-h-screen font-body text-white">
+    <div className="min-h-screen bg-[#0b0b0c] font-body text-white">
       {/* Top Navbar */}
       <nav className="w-full flex justify-between items-center px-8 py-4 bg-black/70 border-b border-zinc-800/50 fixed top-0 left-0 z-50 backdrop-blur-md">
         <Link href="/" className="flex items-center gap-3">
