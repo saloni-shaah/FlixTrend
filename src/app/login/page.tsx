@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from "next/link";
 import { auth } from "@/utils/firebaseClient";
 import { 
+    signInWithEmailAndPassword,
     RecaptchaVerifier,
     signInWithPhoneNumber 
 } from "firebase/auth";
@@ -12,12 +13,14 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import LoginWithEmail from "./LoginWithEmail";
 import CountrySelector from "@/components/ui/CountrySelector";
-
-// ... (ForgotPasswordModal remains the same)
+import { Mail, Phone } from "lucide-react";
 
 function LoginPageContent() {
+  const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('phone');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [countryCode, setCountryCode] = useState("+1");
+  const [countryCode, setCountryCode] = useState("+91");
   const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -26,12 +29,19 @@ function LoginPageContent() {
   const router = useRouter();
 
   useEffect(() => {
-    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-      'size': 'invisible',
-      'callback': (response: any) => {
-        // reCAPTCHA solved, allow signInWithPhoneNumber.
+    // This function will initialize the recaptcha verifier, but only when needed for phone auth.
+    // It's attached to the window object to be accessible within the phone sign-in handler.
+    (window as any).initializeRecaptchaVerifier = () => {
+      if (!window.recaptchaVerifier) {
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+          'size': 'invisible',
+          'callback': (response: any) => {
+            // reCAPTCHA solved.
+          }
+        });
       }
-    });
+      return window.recaptchaVerifier;
+    }
   }, []);
 
   const handlePhoneSignIn = async (e: React.FormEvent) => {
@@ -40,16 +50,30 @@ function LoginPageContent() {
     setLoading(true);
     try {
       const fullPhoneNumber = `${countryCode}${phoneNumber}`;
-      const verifier = window.recaptchaVerifier;
-      const result = await signInWithPhoneNumber(auth, fullPhoneNumber, verifier);
+      const appVerifier = (window as any).initializeRecaptchaVerifier();
+      const result = await signInWithPhoneNumber(auth, fullPhoneNumber, appVerifier);
       setConfirmationResult(result);
       setShowOtpInput(true);
     } catch (err: any) {
-      setError("Failed to send OTP. Please check the phone number and try again.");
+      setError("Failed to send OTP. Please check the phone number or try again later.");
       console.error("Phone Sign In Error:", err);
     }
     setLoading(false);
   };
+
+  const handleEmailSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+        await signInWithEmailAndPassword(auth, email, password);
+        router.push("/home");
+    } catch (err: any) {
+        setError("Invalid email or password.");
+        console.error("Email Sign In Error:", err);
+    }
+    setLoading(false);
+  }
 
   const handleOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,7 +81,7 @@ function LoginPageContent() {
     setLoading(true);
     try {
       await confirmationResult.confirm(otp);
-      router.push("/home?new=true");
+      router.push("/home");
     } catch (err: any) {
       setError("Invalid OTP. Please try again.");
       console.error("OTP Verification Error:", err);
@@ -65,6 +89,78 @@ function LoginPageContent() {
     setLoading(false);
   };
 
+  const renderPhoneForm = () => !showOtpInput ? (
+    <form onSubmit={handlePhoneSignIn} className="flex flex-col gap-4">
+        <CountrySelector onCountrySelect={setCountryCode} />
+        <input
+            type="tel"
+            placeholder="Phone Number"
+            className="input-glass w-full"
+            value={phoneNumber}
+            onChange={e => setPhoneNumber(e.target.value)}
+            required
+        />
+        <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            type="submit"
+            className="btn-glass mt-4 bg-accent-pink/80"
+            disabled={loading}
+        >
+            {loading ? "Sending OTP..." : "Send OTP"}
+        </motion.button>
+    </form>
+  ) : (
+    <form onSubmit={handleOtpSubmit} className="flex flex-col gap-4">
+        <input
+            type="text"
+            placeholder="Enter OTP"
+            className="input-glass w-full"
+            value={otp}
+            onChange={e => setOtp(e.target.value)}
+            required
+        />
+        <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            type="submit"
+            className="btn-glass mt-4 bg-accent-pink/80"
+            disabled={loading}
+        >
+            {loading ? "Verifying..." : "Verify OTP"}
+        </motion.button>
+    </form>
+  );
+
+  const renderEmailForm = () => (
+     <form onSubmit={handleEmailSignIn} className="flex flex-col gap-4">
+        <input
+            type="email"
+            placeholder="Email"
+            className="input-glass w-full"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            required
+        />
+        <input
+            type="password"
+            placeholder="Password"
+            className="input-glass w-full"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            required
+        />
+        <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            type="submit"
+            className="btn-glass mt-4 bg-accent-pink/80"
+            disabled={loading}
+        >
+            {loading ? "Logging In..." : "Log In"}
+        </motion.button>
+     </form>
+  );
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 animate-fade-in">
@@ -76,50 +172,17 @@ function LoginPageContent() {
       >
         <div id="recaptcha-container"></div>
         <h2 className="text-3xl font-headline font-bold text-accent-pink mb-2 text-center">Welcome Back</h2>
-        <p className="text-accent-cyan text-center mb-4">Login with your phone number</p>
         
-        {!showOtpInput ? (
-          <form onSubmit={handlePhoneSignIn} className="flex flex-col gap-4">
-            <CountrySelector onCountrySelect={setCountryCode} />
-            <input
-              type="tel"
-              placeholder="Phone Number"
-              className="input-glass w-full"
-              value={phoneNumber}
-              onChange={e => setPhoneNumber(e.target.value)}
-              required
-            />
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              type="submit"
-              className="btn-glass mt-4 bg-accent-pink/80"
-              disabled={loading}
-            >
-              {loading ? "Sending OTP..." : "Send OTP"}
-            </motion.button>
-          </form>
-        ) : (
-          <form onSubmit={handleOtpSubmit} className="flex flex-col gap-4">
-            <input
-              type="text"
-              placeholder="Enter OTP"
-              className="input-glass w-full"
-              value={otp}
-              onChange={e => setOtp(e.target.value)}
-              required
-            />
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              type="submit"
-              className="btn-glass mt-4 bg-accent-pink/80"
-              disabled={loading}
-            >
-              {loading ? "Verifying..." : "Verify OTP"}
-            </motion.button>
-          </form>
-        )}
+        <div className="flex bg-black/20 p-1 rounded-full">
+            <button onClick={() => setLoginMethod('phone')} className={`flex-1 p-2 rounded-full font-bold text-sm flex items-center justify-center gap-2 transition-colors ${loginMethod === 'phone' ? 'bg-accent-cyan text-black' : 'text-gray-300'}`}>
+                <Phone size={16}/> Phone
+            </button>
+             <button onClick={() => setLoginMethod('email')} className={`flex-1 p-2 rounded-full font-bold text-sm flex items-center justify-center gap-2 transition-colors ${loginMethod === 'email' ? 'bg-accent-cyan text-black' : 'text-gray-300'}`}>
+                <Mail size={16}/> Email
+            </button>
+        </div>
+        
+        {loginMethod === 'phone' ? renderPhoneForm() : renderEmailForm()}
 
         {error && <div className="text-red-400 text-center animate-bounce mt-2">{error}</div>}
 

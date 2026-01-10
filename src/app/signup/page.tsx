@@ -1,17 +1,24 @@
 
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { auth, app } from "@/utils/firebaseClient";
-import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } from "firebase/auth";
-import { getFirestore, doc, setDoc, collection, query, where, getDocs, serverTimestamp, getDoc } from "firebase/firestore";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { 
+    createUserWithEmailAndPassword, 
+    sendEmailVerification, 
+    updateProfile,
+    RecaptchaVerifier,
+    signInWithPhoneNumber,
+    PhoneAuthProvider,
+    linkWithCredential
+} from "firebase/auth";
+import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, ArrowLeft, Camera, UploadCloud, Gift, Tv, Mic, Gamepad2, Video, Code, Feather, Atom, LandPlot, Handshake, PenTool, Smile, Palette, Sparkles, Shirt, Utensils, Plane, Film, BrainCircuit, Landmark, Drama, CookingPot, UtensilsCrossed, Scroll, Music4, HelpingHand, Sprout, Rocket, Briefcase, Heart, Book, Trophy, Bot } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Gift } from 'lucide-react';
+import CountrySelector from "@/components/ui/CountrySelector";
 
 const db = getFirestore(app);
-const storage = getStorage(app);
 
 // Helper to check for username uniqueness
 async function isUsernameUnique(username: string): Promise<boolean> {
@@ -20,41 +27,11 @@ async function isUsernameUnique(username: string): Promise<boolean> {
     return !docSnap.exists();
 }
 
-const creatorCategories = [
-    { id: 'news', name: 'News', icon: <Tv size={14}/> },
-    { id: 'gaming', name: 'Gamer', icon: <Gamepad2 size={14}/> },
-    { id: 'music', name: 'Musician', icon: <Mic size={14}/> },
-    { id: 'vlogs', name: 'Vlogger', icon: <Video size={14}/> },
-    { id: 'comedy', name: 'Comedian', icon: <Smile size={14}/> },
-    { id: 'tech', name: 'Tech', icon: <Code size={14}/> },
-    { id: 'lifestyle', name: 'Lifestyle', icon: <Feather size={14}/> },
-    { id: 'science', name: 'Science', icon: <Atom size={14}/> },
-    { id: 'politics', name: 'Politics', icon: <Handshake size={14}/> },
-    { id: 'education', name: 'Education', icon: <PenTool size={14}/> },
-    { id: 'art-design', name: 'Art & Design', icon: <Palette size={14}/> },
-    { id: 'diy-crafts', name: 'DIY & Crafts', icon: <Sparkles size={14}/> },
-    { id: 'fashion-style', name: 'Fashion', icon: <Shirt size={14}/> },
-    { id: 'food-cooking', name: 'Food', icon: <Utensils size={14}/> },
-    { id: 'travel', name: 'Travel', icon: <Plane size={14}/> },
-    { id: 'photography-videography', name: 'Photography', icon: <Camera size={14}/> },
-    { id: 'books-literature', name: 'Books', icon: <Book size={14}/> },
-    { id: 'movies-tv', name: 'Movies & TV', icon: <Film size={14}/> },
-    { id: 'ai-future', name: 'AI & Future', icon: <Bot size={14}/> },
-    { id: 'spirituality-wellness', name: 'Wellness', icon: <BrainCircuit size={14}/> },
-    { id: 'business', name: 'Business', icon: <Briefcase size={14}/> },
-    { id: 'health-fitness', name: 'Fitness', icon: <Heart size={14}/> },
-    { id: 'sports', name: 'Sports', icon: <Trophy size={14}/> },
-    // India-Specific
-    { id: 'bollywood', name: 'Bollywood', icon: <Film size={14}/> },
-    { id: 'bhakti', name: 'Bhakti', icon: <HelpingHand size={14}/> },
-    { id: 'regional-cinema', name: 'Regional Cinema', icon: <Drama size={14}/> },
-    { id: 'street-food', name: 'Street Food', icon: <CookingPot size={14}/> },
-    { id: 'indian-mythology', name: 'Mythology', icon: <Scroll size={14}/> },
-    { id: 'classical-music-dance', name: 'Classical Arts', icon: <Music4 size={14}/> },
-    { id: 'festivals-of-india', name: 'Festivals', icon: <Landmark size={14}/> },
-    { id: 'startups-india', name: 'Startups India', icon: <Rocket size={14}/> },
-    { id: 'vedic-science', name: 'Vedic Science', icon: <Sprout size={14}/> },
-];
+declare global {
+    interface Window {
+        recaptchaVerifier?: RecaptchaVerifier;
+    }
+}
 
 export default function SignupPage() {
     const [step, setStep] = useState(1);
@@ -64,46 +41,35 @@ export default function SignupPage() {
         confirmPassword: "",
         username: "",
         name: "",
-        bio: "",
-        dob: "",
-        gender: "",
-        location: "",
         phoneNumber: "",
-        accountType: "user",
-        creatorType: "", // New field for creator category
-        referredBy: "",
+        countryCode: "+91"
     });
-    const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
-    const [profilePicturePreview, setProfilePicturePreview] = useState<string | null>(null);
-    const [bannerFile, setBannerFile] = useState<File | null>(null);
-    const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+    const [otp, setOtp] = useState("");
+    const [confirmationResult, setConfirmationResult] = useState<any>(null);
     
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
     const [loading, setLoading] = useState(false);
     const router = useRouter();
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    useEffect(() => {
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+          'size': 'invisible',
+          'callback': (response: any) => {}
+        });
+      }, []);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setForm({ ...form, [e.target.name]: e.target.value });
     };
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'banner') => {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            const previewUrl = URL.createObjectURL(file);
-            if (type === 'avatar') {
-                setProfilePictureFile(file);
-                setProfilePicturePreview(previewUrl);
-            } else {
-                setBannerFile(file);
-                setBannerPreview(previewUrl);
-            }
-        }
+    const handleCountryChange = (dialCode: string) => {
+        setForm({ ...form, countryCode: dialCode });
     };
     
     const nextStep = async () => {
         setError("");
-        if (step === 1) {
+        if (step === 1) { // Validate email, username, password
             if (form.password !== form.confirmPassword) {
                 setError("Passwords do not match");
                 return;
@@ -129,40 +95,47 @@ export default function SignupPage() {
     
     const prevStep = () => setStep(s => s - 1);
 
+    const handleSendOtp = async () => {
+        setLoading(true);
+        setError("");
+        try {
+            const fullPhoneNumber = `${form.countryCode}${form.phoneNumber}`;
+            const verifier = window.recaptchaVerifier!;
+            const result = await signInWithPhoneNumber(auth, fullPhoneNumber, verifier);
+            setConfirmationResult(result);
+            setStep(3); // Move to OTP step
+        } catch (err: any) {
+            setError("Failed to send OTP. Please check the phone number.");
+            console.error("OTP send error:", err);
+        }
+        setLoading(false);
+    };
+    
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError("");
-        
-        if(step !== 3) {
+        if (step === 1) {
             nextStep();
             return;
         }
-
+        if (step === 2) {
+            handleSendOtp();
+            return;
+        }
+        // Final step (Step 3: OTP verification and account creation)
         setLoading(true);
+        setError("");
         try {
-            // Step 1: Create user in Firebase Auth. This will trigger our onNewUserCreate Cloud Function.
+            const credential = PhoneAuthProvider.credential(confirmationResult.verificationId, otp);
+
             const userCredential = await createUserWithEmailAndPassword(auth, form.email, form.password);
+            const user = userCredential.user;
             
-            // Step 2: Upload files to Firebase Storage
-            let avatarUrl = `https://api.dicebear.com/8.x/bottts-neutral/svg?seed=${form.username}`;
-            let bannerUrl = "";
+            // Link the phone credential to the newly created email/password account
+            await linkWithCredential(user, credential);
 
-            const uploadFile = async (file: File, path: string) => {
-                const fileName = `${userCredential.user.uid}-${Date.now()}-${file.name}`;
-                const storageRef = ref(storage, `${path}/${fileName}`);
-                const snapshot = await uploadBytes(storageRef, file);
-                return await getDownloadURL(snapshot.ref);
-            };
+            const avatarUrl = `https://api.dicebear.com/8.x/bottts-neutral/svg?seed=${form.username}`;
 
-            if (profilePictureFile) {
-                avatarUrl = await uploadFile(profilePictureFile, `user_uploads/${userCredential.user.uid}`);
-            }
-            if (bannerFile) {
-                bannerUrl = await uploadFile(bannerFile, `user_uploads/${userCredential.user.uid}`);
-            }
-
-            // Step 3: Update Auth Profile
-            await updateProfile(userCredential.user, {
+            await updateProfile(user, {
                 displayName: form.name,
                 photoURL: avatarUrl,
             });
@@ -170,39 +143,33 @@ export default function SignupPage() {
             const randomSuffix = Math.floor(100 + Math.random() * 900);
             const referralCode = `${form.username.toLowerCase().replace(/\s/g, '')}${randomSuffix}`;
 
-            await setDoc(doc(db, "users", userCredential.user.uid), {
-                uid: userCredential.user.uid,
+            await setDoc(doc(db, "users", user.uid), {
+                uid: user.uid,
                 email: form.email,
+                phoneNumber: `${form.countryCode}${form.phoneNumber}`,
                 name: form.name,
                 username: form.username.toLowerCase(),
-                bio: form.bio,
-                dob: form.dob,
-                gender: form.gender,
-                location: form.location,
-                phoneNumber: form.phoneNumber,
-                accountType: form.accountType,
-                creatorType: form.accountType === 'creator' ? form.creatorType : null,
                 avatar_url: avatarUrl,
-                banner_url: bannerUrl,
-                profileComplete: !!(form.dob && form.gender && form.location),
-                referredBy: form.referredBy || null,
+                createdAt: serverTimestamp(),
+                profileComplete: false, // Prompt user to complete profile later
                 referralCode: referralCode,
+                accountType: "user",
             });
 
-            // Reserve the username in the public collection
-            await setDoc(doc(db, "usernames", form.username.toLowerCase()), {
-                uid: userCredential.user.uid
-            });
+            await setDoc(doc(db, "usernames", form.username.toLowerCase()), { uid: user.uid });
 
-            await sendEmailVerification(userCredential.user);
+            await sendEmailVerification(user);
 
-            setSuccess("Welcome to the Vibe! Your account is created & premium access is activated. Redirecting...");
+            setSuccess("Welcome! Your account is created. Redirecting...");
             setTimeout(() => router.push("/home?new=true"), 3000);
         } catch (err: any) {
             if(err.code === 'auth/email-already-in-use') {
-                setError("This email is already in use. Please use another email or log in.");
+                setError("This email is already in use. Please log in.");
+            } else if (err.code === 'auth/invalid-verification-code') {
+                setError("Invalid OTP. Please try again.");
             } else {
                 setError(err.message);
+                console.error("Final signup error:", err);
             }
         }
         setLoading(false);
@@ -213,73 +180,28 @@ export default function SignupPage() {
             case 1:
                 return (
                     <motion.div key="step1" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} className="flex flex-col gap-4">
-                        <h3 className="text-xl font-bold text-accent-cyan text-center">Step 1: Account Credentials</h3>
+                        <h3 className="text-xl font-bold text-accent-cyan text-center">Step 1: Account Details</h3>
+                        <input type="text" name="name" placeholder="Full Name" className="input-glass w-full" value={form.name} onChange={handleChange} required />
                         <input type="email" name="email" placeholder="Email" className="input-glass w-full" value={form.email} onChange={handleChange} required />
                         <input type="text" name="username" placeholder="Username" className="input-glass w-full" value={form.username} onChange={handleChange} required />
                         <input type="password" name="password" placeholder="Password (min. 6 characters)" className="input-glass w-full" value={form.password} onChange={handleChange} required />
                         <input type="password" name="confirmPassword" placeholder="Confirm Password" className="input-glass w-full" value={form.confirmPassword} onChange={handleChange} required />
-                         <input type="text" name="referredBy" placeholder="Referral Code (Optional)" className="input-glass w-full" value={form.referredBy} onChange={handleChange} />
-                          <p className="text-xs text-gray-400 text-center mt-2">
-                            By proceeding to create your account, you acknowledge that you have read, understood, and agree to be bound by our{' '}
-                            <Link href="/terms" className="underline hover:text-accent-cyan">Terms of Service</Link> and{' '}
-                            <Link href="/privacy" className="underline hover:text-accent-cyan">Privacy Policy</Link>.
-                        </p>
                     </motion.div>
                 );
             case 2:
                 return (
                      <motion.div key="step2" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} className="flex flex-col gap-4">
-                        <h3 className="text-xl font-bold text-accent-cyan text-center">Step 2: Tell Us About Yourself</h3>
-                         <input type="text" name="name" placeholder="Full Name" className="input-glass w-full" value={form.name} onChange={handleChange} required />
-                         <textarea name="bio" placeholder="Your Bio" className="input-glass w-full rounded-2xl min-h-[80px]" value={form.bio} onChange={handleChange} />
-                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <input type="date" name="dob" placeholder="Date of Birth" className="input-glass w-full" value={form.dob} onChange={handleChange} />
-                            <select name="gender" className="input-glass w-full" value={form.gender} onChange={handleChange}>
-                                <option value="" disabled>Select Gender...</option>
-                                <option value="male">Male</option>
-                                <option value="female">Female</option>
-                                <option value="non-binary">Non-binary</option>
-                                <option value="other">Other</option>
-                                <option value="prefer-not-to-say">Prefer not to say</option>
-                            </select>
-                            <input type="text" name="location" placeholder="Location (e.g., City, Country)" className="input-glass w-full" value={form.location} onChange={handleChange} />
-                            <input type="tel" name="phoneNumber" placeholder="Phone Number (Optional)" className="input-glass w-full" value={form.phoneNumber} onChange={handleChange} />
-                         </div>
-                         <select name="accountType" className="input-glass w-full" value={form.accountType} onChange={handleChange}>
-                            <option value="user">I'm a User</option>
-                            <option value="creator">I'm a Creator</option>
-                            <option value="business">I'm a Business</option>
-                        </select>
-                        {form.accountType === 'creator' && (
-                            <div className="flex flex-col gap-2">
-                                <h4 className="text-sm font-bold text-accent-cyan">What kind of creator are you?</h4>
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                                    {creatorCategories.map(cat => (
-                                        <button key={cat.id} type="button" onClick={() => setForm(f => ({...f, creatorType: cat.id}))} className={`btn-glass text-xs flex items-center justify-center gap-2 ${form.creatorType === cat.id ? 'bg-accent-cyan text-black' : ''}`}>
-                                            {cat.icon} {cat.name}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
+                        <h3 className="text-xl font-bold text-accent-cyan text-center">Step 2: Phone Verification</h3>
+                         <CountrySelector onCountrySelect={handleCountryChange} />
+                         <input type="tel" name="phoneNumber" placeholder="Phone Number" className="input-glass w-full" value={form.phoneNumber} onChange={handleChange} required />
                      </motion.div>
                 );
             case 3:
                 return (
                     <motion.div key="step3" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} className="flex flex-col gap-4 items-center">
-                        <h3 className="text-xl font-bold text-accent-cyan text-center">Step 3: Customize Your Look</h3>
-                        
-                        <div className="relative w-32 h-32 rounded-full border-4 border-accent-pink bg-black/20 flex items-center justify-center cursor-pointer overflow-hidden">
-                             <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleFileChange(e, 'avatar')} accept="image/*"/>
-                             {profilePicturePreview ? <img src={profilePicturePreview} alt="avatar" className="w-full h-full object-cover" /> : <Camera className="text-gray-400" />}
-                        </div>
-                        <p className="text-sm text-gray-300">Upload a Profile Picture</p>
-
-                        <div className="w-full h-32 rounded-lg bg-black/20 flex items-center justify-center cursor-pointer overflow-hidden relative">
-                             <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleFileChange(e, 'banner')} accept="image/*"/>
-                             {bannerPreview ? <img src={bannerPreview} alt="banner" className="w-full h-full object-cover" /> : <div className="text-gray-400 flex items-center gap-2"><UploadCloud/> <span>Upload Banner</span></div>}
-                        </div>
-                         <p className="text-sm text-gray-300">Upload a Banner Image</p>
+                        <h3 className="text-xl font-bold text-accent-cyan text-center">Step 3: Enter OTP</h3>
+                        <p className="text-sm text-gray-300 text-center">Enter the code sent to {form.countryCode} {form.phoneNumber}</p>
+                         <input type="text" name="otp" placeholder="6-digit code" className="input-glass w-full text-center tracking-widest text-lg" value={otp} onChange={e => setOtp(e.target.value)} required />
                     </motion.div>
                 );
             default: return null;
@@ -288,6 +210,7 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 animate-fade-in">
+       <div id="recaptcha-container"></div>
       <form
         onSubmit={handleSubmit}
         className="glass-card p-8 w-full max-w-lg flex flex-col gap-4"
@@ -326,8 +249,8 @@ export default function SignupPage() {
                         ) : <div />}
 
                         <button type="submit" className="btn-glass bg-accent-pink flex items-center gap-2" disabled={loading}>
-                            {loading ? 'Processing...' : step === 3 ? 'Finish & Sign Up' : 'Next'}
-                            {step < 3 && <ArrowRight size={16} />}
+                            {loading ? 'Processing...' : step === 3 ? 'Verify & Sign Up' : step === 2 ? 'Send OTP' : 'Next'}
+                            {(step < 3) && <ArrowRight size={16} />}
                         </button>
                     </div>
                 </motion.div>
@@ -339,11 +262,14 @@ export default function SignupPage() {
           <Link href="/login" className="text-accent-cyan hover:underline">Log In</Link>
         </div>
          <div className="text-center mt-2 text-xs text-gray-400">
-            <Link href="/terms" className="hover:text-accent-cyan hover:underline">Terms of Service</Link>
-            <span className="mx-2">|</span>
-            <Link href="/privacy" className="hover:text-accent-cyan hover:underline">Privacy Policy</Link>
+            <p className="text-xs text-gray-400 text-center mt-2">
+                By creating an account, you agree to our{' '}
+                <Link href="/terms" className="underline hover:text-accent-cyan">Terms</Link> and{' '}
+                <Link href="/privacy" className="underline hover:text-accent-cyan">Privacy Policy</Link>.
+            </p>
         </div>
       </form>
     </div>
   );
 }
+
