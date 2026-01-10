@@ -29,35 +29,8 @@ const categories = [
     { id: 'gaming', name: 'Gaming', icon: <Gamepad2 /> },
     { id: 'music', name: 'Music', icon: <Music /> },
     { id: 'vlogs', name: 'Vlogs', icon: <Video /> },
-    { id: 'comedy', name: 'Comedy', icon: <Smile /> },
-    { id: 'tech', name: 'Tech', icon: <Code /> },
-    { id: 'science', name: 'Science', icon: <Atom /> },
-    { id: 'politics', name: 'Politics', icon: <Handshake /> },
-    { id: 'education', name: 'Education', icon: <PenTool /> },
-    { id: 'art-design', name: 'Art & Design', icon: <Palette /> },
-    { id: 'diy-crafts', name: 'DIY & Crafts', icon: <Sparkles /> },
-    { id: 'fashion-style', name: 'Fashion', icon: <Shirt /> },
-    { id: 'food-cooking', name: 'Food', icon: <Utensils /> },
-    { id: 'travel', name: 'Travel', icon: <Plane /> },
-    { id: 'photography-videography', name: 'Photography', icon: <Camera /> },
-    { id: 'books-literature', name: 'Books', icon: <Book /> },
-    { id: 'movies-tv', name: 'Movies & TV', icon: <Film /> },
-    { id: 'ai-future', name: 'AI & Future', icon: <Bot /> },
-    { id: 'spirituality-wellness', name: 'Wellness', icon: <BrainCircuit /> },
-    { id: 'business', name: 'Business', icon: <Briefcase /> },
-    { id: 'health-fitness', name: 'Fitness', icon: <Heart /> },
-    { id: 'sports', name: 'Sports', icon: <Trophy /> },
-    // India-Specific
-    { id: 'bollywood', name: 'Bollywood', icon: <Film /> },
-    { id: 'bhakti', name: 'Bhakti', icon: <HelpingHand /> },
-    { id: 'regional-cinema', name: 'Regional Cinema', icon: <Drama /> },
-    { id: 'street-food', name: 'Street Food', icon: <UtensilsCrossed /> },
-    { id: 'indian-mythology', name: 'Mythology', icon: <Scroll /> },
-    { id: 'classical-music-dance', name: 'Classical Arts', icon: <Music4 /> },
-    { id: 'festivals-of-india', name: 'Festivals', icon: <Landmark /> },
-    { id: 'startups-india', name: 'Startups India', icon: <Rocket /> },
-    { id: 'vedic-science', name: 'Vedic Science', icon: <Sprout /> },
 ];
+
 
 function HomePageContent() {
   const [showMusicModal, setShowMusicModal] = useState(false);
@@ -74,7 +47,6 @@ function HomePageContent() {
   const [lastVisible, setLastVisible] = useState<any>(null);
   const [hasMore, setHasMore] = useState(true);
   const [activeCategory, setActiveCategory] = useState('for-you');
-  const [showAllCategories, setShowAllCategories] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const [showWelcomeAnimation, setShowWelcomeAnimation] = useState(false);
@@ -136,7 +108,7 @@ function HomePageContent() {
         if (category !== 'for-you') {
             constraints.unshift(or(
               where("category", "==", category), 
-              where("hashtags", "array-contains", category)
+              where("creatorType", "==", category)
             ));
         }
 
@@ -280,8 +252,7 @@ function HomePageContent() {
       )
     : posts;
     
-  const visibleCategories = showAllCategories ? categories : categories.slice(0, 5);
-
+  
   const canCreatePost = activeCategory === 'for-you' || (userProfile?.accountType === 'creator' && userProfile?.creatorType === activeCategory);
 
   const flashesContainerVariants = {
@@ -392,7 +363,7 @@ function HomePageContent() {
             initial="hidden"
             animate="visible"
         >
-             {visibleCategories.map(cat => (
+             {categories.map(cat => (
                 <motion.button
                     key={cat.id}
                     variants={categoryItemVariants}
@@ -404,17 +375,6 @@ function HomePageContent() {
                     {cat.icon} {cat.name}
                 </motion.button>
             ))}
-            {!showAllCategories && categories.length > 5 && (
-                <motion.button
-                    variants={categoryItemVariants}
-                    whileHover={{ y: -2 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setShowAllCategories(true)}
-                    className="btn-glass text-sm flex items-center gap-2 shrink-0 bg-accent-purple/20 text-accent-purple"
-                >
-                    More...
-                </motion.button>
-            )}
         </motion.div>
 
         {activeCategory === 'for-you' && (
