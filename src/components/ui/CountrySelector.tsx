@@ -1,6 +1,6 @@
 
 "use client";
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { countries, Country } from '@/lib/countries';
 
 interface CountrySelectorProps {
@@ -15,9 +15,14 @@ const countryCodeToEmoji = (code: string) => {
 };
 
 export default function CountrySelector({ onCountrySelect }: CountrySelectorProps) {
-  const [selectedCountry, setSelectedCountry] = useState<Country>(countries.find(c => c.code === 'US')!);
+  const [selectedCountry, setSelectedCountry] = useState<Country>(countries.find(c => c.code === 'IN')!);
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+
+  useEffect(() => {
+    // Set default country on initial render
+    onCountrySelect(selectedCountry.dial_code);
+  }, []);
 
   const filteredCountries = useMemo(() => 
     countries.filter(country => 
@@ -56,6 +61,7 @@ export default function CountrySelector({ onCountrySelect }: CountrySelectorProp
               className="input-glass w-full bg-gray-800"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              autoFocus
             />
           </div>
           <ul className="max-h-60 overflow-y-auto">
