@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState, useRef, Suspense } from "react";
 import { auth, app } from "@/utils/firebaseClient";
-import { getFirestore, doc, onSnapshot, collection, query, where, getCountFromServer, getDocs, orderBy, writeBatch, deleteDoc, arrayUnion, arrayRemove, serverTimestamp } from "firebase/firestore";
+import { getFirestore, doc, onSnapshot, collection, query, where, getCountFromServer, getDocs, orderBy, writeBatch, deleteDoc, arrayUnion, arrayRemove, serverTimestamp, setDoc } from "firebase/firestore";
 import { Cog, Compass, MapPin, User, Tag, ShieldCheck, Music, Bookmark, Heart, Folder, Download, CheckCircle, Search, Users as UsersIcon, Phone, Trophy, Award, Sparkles, Image, BarChart3, AlignLeft, Radio, Zap } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useRouter, useSearchParams } from "next/navigation";
