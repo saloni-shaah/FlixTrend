@@ -15,6 +15,10 @@
           "format": "email",
           "description": "The user's email address."
         },
+        "phoneNumber": {
+            "type": "string",
+            "description": "The user's verified phone number."
+        },
         "username": {
           "type": "string",
           "description": "The user's public, unique username."
@@ -26,6 +30,20 @@
         "bio": {
           "type": "string",
           "description": "A short user biography."
+        },
+        "dob": {
+          "type": "string",
+          "format": "date",
+          "description": "User's date of birth."
+        },
+        "gender": {
+          "type": "string",
+          "enum": ["male", "female", "non-binary", "other", "prefer-not-to-say"],
+          "description": "User's gender identity."
+        },
+        "location": {
+            "type": "string",
+            "description": "User's city and country."
         },
         "avatar_url": {
           "type": "string",
@@ -117,18 +135,6 @@
                     "items": { "type": "string" }
                 }
             }
-        },
-        "followerCount": {
-          "type": "number",
-          "description": "The total number of followers the user has."
-        },
-        "postCount": {
-            "type": "number",
-            "description": "The total number of posts the user has created."
-        },
-        "starCount": {
-            "type": "number",
-            "description": "The total number of stars (likes) the user has received across all their posts."
         }
       },
       "required": ["uid", "email", "username", "name", "createdAt"]
@@ -174,7 +180,7 @@
     }
   },
   "auth": {
-    "providers": ["EMAIL_PASSWORD", "GOOGLE"],
+    "providers": ["EMAIL_PASSWORD", "GOOGLE", "PHONE"],
     "customClaims": {
       "admin": {
         "type": "boolean",
