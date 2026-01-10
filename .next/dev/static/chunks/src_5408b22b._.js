@@ -922,7 +922,7 @@ const VibeSpaceIcon = ({ className })=>/*#__PURE__*/ (0, __TURBOPACK__imported__
                     strokeLinejoin: "round"
                 }, void 0, false, {
                     fileName: "[project]/src/app/AppNavBar.tsx",
-                    lineNumber: 18,
+                    lineNumber: 17,
                     columnNumber: 7
                 }, ("TURBOPACK compile-time value", void 0)),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
@@ -932,7 +932,7 @@ const VibeSpaceIcon = ({ className })=>/*#__PURE__*/ (0, __TURBOPACK__imported__
                     strokeLinejoin: "round"
                 }, void 0, false, {
                     fileName: "[project]/src/app/AppNavBar.tsx",
-                    lineNumber: 19,
+                    lineNumber: 18,
                     columnNumber: 7
                 }, ("TURBOPACK compile-time value", void 0)),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
@@ -942,18 +942,18 @@ const VibeSpaceIcon = ({ className })=>/*#__PURE__*/ (0, __TURBOPACK__imported__
                     strokeLinecap: "round"
                 }, void 0, false, {
                     fileName: "[project]/src/app/AppNavBar.tsx",
-                    lineNumber: 20,
+                    lineNumber: 19,
                     columnNumber: 7
                 }, ("TURBOPACK compile-time value", void 0))
             ]
         }, void 0, true, {
             fileName: "[project]/src/app/AppNavBar.tsx",
-            lineNumber: 17,
+            lineNumber: 16,
             columnNumber: 5
         }, ("TURBOPACK compile-time value", void 0))
     }, void 0, false, {
         fileName: "[project]/src/app/AppNavBar.tsx",
-        lineNumber: 16,
+        lineNumber: 15,
         columnNumber: 3
     }, ("TURBOPACK compile-time value", void 0));
 _c = VibeSpaceIcon;
@@ -974,7 +974,7 @@ const SquadIcon = ({ className })=>/*#__PURE__*/ (0, __TURBOPACK__imported__modu
                 strokeLinejoin: "round"
             }, void 0, false, {
                 fileName: "[project]/src/app/AppNavBar.tsx",
-                lineNumber: 28,
+                lineNumber: 27,
                 columnNumber: 5
             }, ("TURBOPACK compile-time value", void 0)),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
@@ -985,13 +985,13 @@ const SquadIcon = ({ className })=>/*#__PURE__*/ (0, __TURBOPACK__imported__modu
                 strokeLinejoin: "round"
             }, void 0, false, {
                 fileName: "[project]/src/app/AppNavBar.tsx",
-                lineNumber: 29,
+                lineNumber: 28,
                 columnNumber: 5
             }, ("TURBOPACK compile-time value", void 0))
         ]
     }, void 0, true, {
         fileName: "[project]/src/app/AppNavBar.tsx",
-        lineNumber: 27,
+        lineNumber: 26,
         columnNumber: 3
     }, ("TURBOPACK compile-time value", void 0));
 _c1 = SquadIcon;
@@ -1017,7 +1017,7 @@ const ScopeIcon = ({ className })=>/*#__PURE__*/ (0, __TURBOPACK__imported__modu
                             stopColor: "var(--accent-pink)"
                         }, void 0, false, {
                             fileName: "[project]/src/app/AppNavBar.tsx",
-                            lineNumber: 38,
+                            lineNumber: 37,
                             columnNumber: 17
                         }, ("TURBOPACK compile-time value", void 0)),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("stop", {
@@ -1025,18 +1025,18 @@ const ScopeIcon = ({ className })=>/*#__PURE__*/ (0, __TURBOPACK__imported__modu
                             stopColor: "var(--accent-cyan)"
                         }, void 0, false, {
                             fileName: "[project]/src/app/AppNavBar.tsx",
-                            lineNumber: 39,
+                            lineNumber: 38,
                             columnNumber: 17
                         }, ("TURBOPACK compile-time value", void 0))
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/app/AppNavBar.tsx",
-                    lineNumber: 37,
+                    lineNumber: 36,
                     columnNumber: 13
                 }, ("TURBOPACK compile-time value", void 0))
             }, void 0, false, {
                 fileName: "[project]/src/app/AppNavBar.tsx",
-                lineNumber: 36,
+                lineNumber: 35,
                 columnNumber: 9
             }, ("TURBOPACK compile-time value", void 0)),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("circle", {
@@ -1052,12 +1052,12 @@ const ScopeIcon = ({ className })=>/*#__PURE__*/ (0, __TURBOPACK__imported__modu
                     repeatCount: "indefinite"
                 }, void 0, false, {
                     fileName: "[project]/src/app/AppNavBar.tsx",
-                    lineNumber: 43,
+                    lineNumber: 42,
                     columnNumber: 14
                 }, ("TURBOPACK compile-time value", void 0))
             }, void 0, false, {
                 fileName: "[project]/src/app/AppNavBar.tsx",
-                lineNumber: 42,
+                lineNumber: 41,
                 columnNumber: 9
             }, ("TURBOPACK compile-time value", void 0)),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
@@ -1065,13 +1065,13 @@ const ScopeIcon = ({ className })=>/*#__PURE__*/ (0, __TURBOPACK__imported__modu
                 fill: "white"
             }, void 0, false, {
                 fileName: "[project]/src/app/AppNavBar.tsx",
-                lineNumber: 45,
+                lineNumber: 44,
                 columnNumber: 9
             }, ("TURBOPACK compile-time value", void 0))
         ]
     }, void 0, true, {
         fileName: "[project]/src/app/AppNavBar.tsx",
-        lineNumber: 35,
+        lineNumber: 34,
         columnNumber: 5
     }, ("TURBOPACK compile-time value", void 0));
 _c2 = ScopeIcon;
@@ -1093,7 +1093,7 @@ function NavButton({ href, icon: Icon, label, notificationCount }) {
                 className: `${isActive ? 'text-brand-gold' : ''}`
             }, void 0, false, {
                 fileName: "[project]/src/app/AppNavBar.tsx",
-                lineNumber: 62,
+                lineNumber: 61,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -1101,7 +1101,7 @@ function NavButton({ href, icon: Icon, label, notificationCount }) {
                 children: label
             }, void 0, false, {
                 fileName: "[project]/src/app/AppNavBar.tsx",
-                lineNumber: 63,
+                lineNumber: 62,
                 columnNumber: 7
             }, this),
             isActive && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["motion"].div, {
@@ -1109,7 +1109,7 @@ function NavButton({ href, icon: Icon, label, notificationCount }) {
                 layoutId: "nav-underline"
             }, void 0, false, {
                 fileName: "[project]/src/app/AppNavBar.tsx",
-                lineNumber: 65,
+                lineNumber: 64,
                 columnNumber: 9
             }, this),
             notificationCount && notificationCount > 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1117,13 +1117,13 @@ function NavButton({ href, icon: Icon, label, notificationCount }) {
                 children: notificationCount > 9 ? '9+' : notificationCount
             }, void 0, false, {
                 fileName: "[project]/src/app/AppNavBar.tsx",
-                lineNumber: 71,
+                lineNumber: 70,
                 columnNumber: 9
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/app/AppNavBar.tsx",
-        lineNumber: 61,
+        lineNumber: 60,
         columnNumber: 5
     }, this);
 }
@@ -1216,7 +1216,6 @@ function AppNavBar() {
                                         // This logic is flawed for a total count. 
                                         // A better approach for this global counter might be a dedicated collection updated by cloud functions.
                                         // Let's simulate by checking for *any* unread message for now to show a badge, not a count.
-                                        // The logic on the `signal` page itself will be more accurate.
                                         }
                                     }["AppNavBar.useEffect.fetchAllUnreadCounts.unsubGroups.unsub"]);
                                     unsubs.push(unsub);
@@ -1263,7 +1262,13 @@ function AppNavBar() {
         isOffline
     ]);
     const isAuthPage = pathname === "/login" || pathname === "/signup" || pathname === "/";
-    const isSpecialPage = pathname === "/guest" || pathname === "/about";
+    const isSpecialPage = [
+        "/guest",
+        "/about",
+        "/privacy",
+        "/terms",
+        "/contact"
+    ].includes(pathname);
     const hideNav = isAuthPage || isSpecialPage || !!activeCall;
     const hideForScopeVideo = pathname.startsWith('/scope') && isScopeVideoPlaying;
     if (!hasMounted || hideNav || hideForScopeVideo) return null;
@@ -1275,7 +1280,7 @@ function AppNavBar() {
                 children: "You are offline. Some features may be limited."
             }, void 0, false, {
                 fileName: "[project]/src/app/AppNavBar.tsx",
-                lineNumber: 201,
+                lineNumber: 199,
                 columnNumber: 9
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("nav", {
@@ -1289,7 +1294,7 @@ function AppNavBar() {
                     children: [
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$arrow$2d$left$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ArrowLeft$3e$__["ArrowLeft"], {}, void 0, false, {
                             fileName: "[project]/src/app/AppNavBar.tsx",
-                            lineNumber: 208,
+                            lineNumber: 206,
                             columnNumber: 13
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -1297,13 +1302,13 @@ function AppNavBar() {
                             children: "Back"
                         }, void 0, false, {
                             fileName: "[project]/src/app/AppNavBar.tsx",
-                            lineNumber: 209,
+                            lineNumber: 207,
                             columnNumber: 13
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/app/AppNavBar.tsx",
-                    lineNumber: 207,
+                    lineNumber: 205,
                     columnNumber: 11
                 }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Fragment"], {
                     children: [
@@ -1313,7 +1318,7 @@ function AppNavBar() {
                             label: "VibeSpace"
                         }, void 0, false, {
                             fileName: "[project]/src/app/AppNavBar.tsx",
-                            lineNumber: 213,
+                            lineNumber: 211,
                             columnNumber: 13
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(NavButton, {
@@ -1322,7 +1327,7 @@ function AppNavBar() {
                             label: "Scope"
                         }, void 0, false, {
                             fileName: "[project]/src/app/AppNavBar.tsx",
-                            lineNumber: 214,
+                            lineNumber: 212,
                             columnNumber: 13
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(NavButton, {
@@ -1331,7 +1336,7 @@ function AppNavBar() {
                             label: "Squad"
                         }, void 0, false, {
                             fileName: "[project]/src/app/AppNavBar.tsx",
-                            lineNumber: 215,
+                            lineNumber: 213,
                             columnNumber: 13
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(NavButton, {
@@ -1341,14 +1346,14 @@ function AppNavBar() {
                             notificationCount: totalUnreadMessages > 0 ? totalUnreadMessages : undefined
                         }, void 0, false, {
                             fileName: "[project]/src/app/AppNavBar.tsx",
-                            lineNumber: 216,
+                            lineNumber: 214,
                             columnNumber: 13
                         }, this)
                     ]
                 }, void 0, true)
             }, void 0, false, {
                 fileName: "[project]/src/app/AppNavBar.tsx",
-                lineNumber: 205,
+                lineNumber: 203,
                 columnNumber: 7
             }, this)
         ]
