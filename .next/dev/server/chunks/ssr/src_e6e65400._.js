@@ -10058,7 +10058,7 @@ function SquadPageContent() {
             children: "Loading profile..."
         }, void 0, false, {
             fileName: "[project]/src/app/squad/page.tsx",
-            lineNumber: 127,
+            lineNumber: 128,
             columnNumber: 12
         }, this);
     }
@@ -10068,7 +10068,7 @@ function SquadPageContent() {
             children: "Not logged in or profile not found."
         }, void 0, false, {
             fileName: "[project]/src/app/squad/page.tsx",
-            lineNumber: 130,
+            lineNumber: 131,
             columnNumber: 12
         }, this);
     }
@@ -10090,7 +10090,7 @@ function SquadPageContent() {
                 onClick: ()=>setShowFollowList(null)
             }, void 0, false, {
                 fileName: "[project]/src/app/squad/page.tsx",
-                lineNumber: 141,
+                lineNumber: 142,
                 columnNumber: 28
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {
@@ -10118,17 +10118,17 @@ function SquadPageContent() {
                     },
                     children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$cog$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Cog$3e$__["Cog"], {}, void 0, false, {
                         fileName: "[project]/src/app/squad/page.tsx",
-                        lineNumber: 152,
+                        lineNumber: 153,
                         columnNumber: 15
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/src/app/squad/page.tsx",
-                    lineNumber: 143,
+                    lineNumber: 144,
                     columnNumber: 13
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/app/squad/page.tsx",
-                lineNumber: 142,
+                lineNumber: 143,
                 columnNumber: 9
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["motion"].div, {
@@ -10147,18 +10147,18 @@ function SquadPageContent() {
                     className: "absolute inset-0 w-full h-full object-cover"
                 }, void 0, false, {
                     fileName: "[project]/src/app/squad/page.tsx",
-                    lineNumber: 161,
+                    lineNumber: 162,
                     columnNumber: 11
                 }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                     className: "absolute inset-0 w-full h-full bg-gradient-to-tr from-accent-pink/40 to-accent-cyan/40"
                 }, void 0, false, {
                     fileName: "[project]/src/app/squad/page.tsx",
-                    lineNumber: 167,
+                    lineNumber: 168,
                     columnNumber: 11
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/app/squad/page.tsx",
-                lineNumber: 156,
+                lineNumber: 157,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["motion"].div, {
@@ -10186,19 +10186,19 @@ function SquadPageContent() {
                             className: "w-full h-full object-cover"
                         }, void 0, false, {
                             fileName: "[project]/src/app/squad/page.tsx",
-                            lineNumber: 180,
+                            lineNumber: 181,
                             columnNumber: 13
                         }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                             className: "text-5xl text-white flex items-center justify-center h-full w-full",
                             children: initials
                         }, void 0, false, {
                             fileName: "[project]/src/app/squad/page.tsx",
-                            lineNumber: 182,
+                            lineNumber: 183,
                             columnNumber: 13
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/src/app/squad/page.tsx",
-                        lineNumber: 176,
+                        lineNumber: 177,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -10209,7 +10209,7 @@ function SquadPageContent() {
                                 children: profile.name
                             }, void 0, false, {
                                 fileName: "[project]/src/app/squad/page.tsx",
-                                lineNumber: 186,
+                                lineNumber: 187,
                                 columnNumber: 13
                             }, this),
                             isDeveloper && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$shield$2d$check$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__ShieldCheck$3e$__["ShieldCheck"], {
@@ -10217,7 +10217,7 @@ function SquadPageContent() {
                                 title: "FlixTrend Developer"
                             }, void 0, false, {
                                 fileName: "[project]/src/app/squad/page.tsx",
-                                lineNumber: 188,
+                                lineNumber: 189,
                                 columnNumber: 17
                             }, this),
                             isPremium && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$circle$2d$check$2d$big$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__CheckCircle$3e$__["CheckCircle"], {
@@ -10225,13 +10225,13 @@ function SquadPageContent() {
                                 title: "Premium User"
                             }, void 0, false, {
                                 fileName: "[project]/src/app/squad/page.tsx",
-                                lineNumber: 191,
+                                lineNumber: 192,
                                 columnNumber: 17
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/squad/page.tsx",
-                        lineNumber: 185,
+                        lineNumber: 186,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -10242,7 +10242,7 @@ function SquadPageContent() {
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/squad/page.tsx",
-                        lineNumber: 194,
+                        lineNumber: 195,
                         columnNumber: 9
                     }, this),
                     accolades.length > 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -10252,41 +10252,41 @@ function SquadPageContent() {
                                 type: "top_1_follower"
                             }, void 0, false, {
                                 fileName: "[project]/src/app/squad/page.tsx",
-                                lineNumber: 198,
+                                lineNumber: 199,
                                 columnNumber: 58
                             }, this),
                             accolades.includes('top_2_follower') && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$AccoladeBadge$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["AccoladeBadge"], {
                                 type: "top_2_follower"
                             }, void 0, false, {
                                 fileName: "[project]/src/app/squad/page.tsx",
-                                lineNumber: 199,
+                                lineNumber: 200,
                                 columnNumber: 58
                             }, this),
                             accolades.includes('top_3_follower') && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$AccoladeBadge$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["AccoladeBadge"], {
                                 type: "top_3_follower"
                             }, void 0, false, {
                                 fileName: "[project]/src/app/squad/page.tsx",
-                                lineNumber: 200,
+                                lineNumber: 201,
                                 columnNumber: 58
                             }, this),
                             accolades.includes('social_butterfly') && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$AccoladeBadge$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["AccoladeBadge"], {
                                 type: "social_butterfly"
                             }, void 0, false, {
                                 fileName: "[project]/src/app/squad/page.tsx",
-                                lineNumber: 201,
+                                lineNumber: 202,
                                 columnNumber: 60
                             }, this),
                             accolades.includes('vibe_starter') && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$AccoladeBadge$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["AccoladeBadge"], {
                                 type: "vibe_starter"
                             }, void 0, false, {
                                 fileName: "[project]/src/app/squad/page.tsx",
-                                lineNumber: 202,
+                                lineNumber: 203,
                                 columnNumber: 56
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/squad/page.tsx",
-                        lineNumber: 197,
+                        lineNumber: 198,
                         columnNumber: 13
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -10300,7 +10300,7 @@ function SquadPageContent() {
                                         children: postCount
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/squad/page.tsx",
-                                        lineNumber: 209,
+                                        lineNumber: 210,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -10308,13 +10308,13 @@ function SquadPageContent() {
                                         children: "Posts"
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/squad/page.tsx",
-                                        lineNumber: 210,
+                                        lineNumber: 211,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/app/squad/page.tsx",
-                                lineNumber: 208,
+                                lineNumber: 209,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -10326,7 +10326,7 @@ function SquadPageContent() {
                                         children: followers
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/squad/page.tsx",
-                                        lineNumber: 213,
+                                        lineNumber: 214,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -10334,13 +10334,13 @@ function SquadPageContent() {
                                         children: "Followers"
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/squad/page.tsx",
-                                        lineNumber: 214,
+                                        lineNumber: 215,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/app/squad/page.tsx",
-                                lineNumber: 212,
+                                lineNumber: 213,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -10352,7 +10352,7 @@ function SquadPageContent() {
                                         children: following
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/squad/page.tsx",
-                                        lineNumber: 217,
+                                        lineNumber: 218,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -10360,13 +10360,13 @@ function SquadPageContent() {
                                         children: "Following"
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/squad/page.tsx",
-                                        lineNumber: 218,
+                                        lineNumber: 219,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/app/squad/page.tsx",
-                                lineNumber: 216,
+                                lineNumber: 217,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -10378,7 +10378,7 @@ function SquadPageContent() {
                                         children: friends
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/squad/page.tsx",
-                                        lineNumber: 221,
+                                        lineNumber: 222,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -10386,19 +10386,19 @@ function SquadPageContent() {
                                         children: "Friends"
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/squad/page.tsx",
-                                        lineNumber: 222,
+                                        lineNumber: 223,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/app/squad/page.tsx",
-                                lineNumber: 220,
+                                lineNumber: 221,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/squad/page.tsx",
-                        lineNumber: 207,
+                        lineNumber: 208,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -10409,7 +10409,7 @@ function SquadPageContent() {
                                 children: profile.bio || "This user hasn't set a bio yet."
                             }, void 0, false, {
                                 fileName: "[project]/src/app/squad/page.tsx",
-                                lineNumber: 228,
+                                lineNumber: 229,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -10422,7 +10422,7 @@ function SquadPageContent() {
                                                 size: 12
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/squad/page.tsx",
-                                                lineNumber: 230,
+                                                lineNumber: 231,
                                                 columnNumber: 82
                                             }, this),
                                             " ",
@@ -10430,7 +10430,7 @@ function SquadPageContent() {
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/app/squad/page.tsx",
-                                        lineNumber: 230,
+                                        lineNumber: 231,
                                         columnNumber: 38
                                     }, this),
                                     profile.gender && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -10440,7 +10440,7 @@ function SquadPageContent() {
                                                 size: 12
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/squad/page.tsx",
-                                                lineNumber: 231,
+                                                lineNumber: 232,
                                                 columnNumber: 80
                                             }, this),
                                             " ",
@@ -10448,7 +10448,7 @@ function SquadPageContent() {
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/app/squad/page.tsx",
-                                        lineNumber: 231,
+                                        lineNumber: 232,
                                         columnNumber: 36
                                     }, this),
                                     profile.interests && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -10458,7 +10458,7 @@ function SquadPageContent() {
                                                 size: 12
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/squad/page.tsx",
-                                                lineNumber: 232,
+                                                lineNumber: 233,
                                                 columnNumber: 83
                                             }, this),
                                             " ",
@@ -10466,19 +10466,19 @@ function SquadPageContent() {
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/app/squad/page.tsx",
-                                        lineNumber: 232,
+                                        lineNumber: 233,
                                         columnNumber: 39
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/app/squad/page.tsx",
-                                lineNumber: 229,
+                                lineNumber: 230,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/squad/page.tsx",
-                        lineNumber: 227,
+                        lineNumber: 228,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["motion"].button, {
@@ -10493,20 +10493,20 @@ function SquadPageContent() {
                         children: "Edit Profile"
                     }, void 0, false, {
                         fileName: "[project]/src/app/squad/page.tsx",
-                        lineNumber: 236,
+                        lineNumber: 237,
                         columnNumber: 9
                     }, this),
                     !profile.phoneNumber && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$squad$2f$AddPhoneToProfile$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["AddPhoneToProfile"], {
                         user: firebaseUser
                     }, void 0, false, {
                         fileName: "[project]/src/app/squad/page.tsx",
-                        lineNumber: 239,
+                        lineNumber: 240,
                         columnNumber: 11
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/squad/page.tsx",
-                lineNumber: 171,
+                lineNumber: 172,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -10518,7 +10518,7 @@ function SquadPageContent() {
                         children: "Posts"
                     }, void 0, false, {
                         fileName: "[project]/src/app/squad/page.tsx",
-                        lineNumber: 245,
+                        lineNumber: 246,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -10527,7 +10527,7 @@ function SquadPageContent() {
                         children: "Likes"
                     }, void 0, false, {
                         fileName: "[project]/src/app/squad/page.tsx",
-                        lineNumber: 246,
+                        lineNumber: 247,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -10536,7 +10536,7 @@ function SquadPageContent() {
                         children: "Playlists"
                     }, void 0, false, {
                         fileName: "[project]/src/app/squad/page.tsx",
-                        lineNumber: 247,
+                        lineNumber: 248,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -10545,7 +10545,7 @@ function SquadPageContent() {
                         children: "Collections"
                     }, void 0, false, {
                         fileName: "[project]/src/app/squad/page.tsx",
-                        lineNumber: 248,
+                        lineNumber: 249,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -10554,13 +10554,13 @@ function SquadPageContent() {
                         children: "Downloads"
                     }, void 0, false, {
                         fileName: "[project]/src/app/squad/page.tsx",
-                        lineNumber: 249,
+                        lineNumber: 250,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/squad/page.tsx",
-                lineNumber: 244,
+                lineNumber: 245,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -10578,7 +10578,7 @@ function SquadPageContent() {
                                         children: "All"
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/squad/page.tsx",
-                                        lineNumber: 256,
+                                        lineNumber: 257,
                                         columnNumber: 21
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -10589,12 +10589,12 @@ function SquadPageContent() {
                                             className: "inline"
                                         }, void 0, false, {
                                             fileName: "[project]/src/app/squad/page.tsx",
-                                            lineNumber: 257,
+                                            lineNumber: 258,
                                             columnNumber: 218
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/squad/page.tsx",
-                                        lineNumber: 257,
+                                        lineNumber: 258,
                                         columnNumber: 21
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -10605,12 +10605,12 @@ function SquadPageContent() {
                                             className: "inline"
                                         }, void 0, false, {
                                             fileName: "[project]/src/app/squad/page.tsx",
-                                            lineNumber: 258,
+                                            lineNumber: 259,
                                             columnNumber: 220
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/squad/page.tsx",
-                                        lineNumber: 258,
+                                        lineNumber: 259,
                                         columnNumber: 21
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -10621,12 +10621,12 @@ function SquadPageContent() {
                                             className: "inline"
                                         }, void 0, false, {
                                             fileName: "[project]/src/app/squad/page.tsx",
-                                            lineNumber: 259,
+                                            lineNumber: 260,
                                             columnNumber: 218
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/squad/page.tsx",
-                                        lineNumber: 259,
+                                        lineNumber: 260,
                                         columnNumber: 21
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -10637,12 +10637,12 @@ function SquadPageContent() {
                                             className: "inline"
                                         }, void 0, false, {
                                             fileName: "[project]/src/app/squad/page.tsx",
-                                            lineNumber: 260,
+                                            lineNumber: 261,
                                             columnNumber: 220
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/squad/page.tsx",
-                                        lineNumber: 260,
+                                        lineNumber: 261,
                                         columnNumber: 21
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -10653,25 +10653,25 @@ function SquadPageContent() {
                                             className: "inline"
                                         }, void 0, false, {
                                             fileName: "[project]/src/app/squad/page.tsx",
-                                            lineNumber: 261,
+                                            lineNumber: 262,
                                             columnNumber: 218
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/squad/page.tsx",
-                                        lineNumber: 261,
+                                        lineNumber: 262,
                                         columnNumber: 21
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/app/squad/page.tsx",
-                                lineNumber: 255,
+                                lineNumber: 256,
                                 columnNumber: 17
                             }, this),
                             filteredUserPosts.length > 0 ? filteredUserPosts.map((post)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$PostCard$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["PostCard"], {
                                     post: post
                                 }, post.id, false, {
                                     fileName: "[project]/src/app/squad/page.tsx",
-                                    lineNumber: 264,
+                                    lineNumber: 265,
                                     columnNumber: 53
                                 }, this)) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                 className: "text-gray-400 text-center mt-16",
@@ -10681,7 +10681,7 @@ function SquadPageContent() {
                                         children: "🪐"
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/squad/page.tsx",
-                                        lineNumber: 267,
+                                        lineNumber: 268,
                                         columnNumber: 25
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -10689,19 +10689,19 @@ function SquadPageContent() {
                                         children: "No posts of this type yet."
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/squad/page.tsx",
-                                        lineNumber: 268,
+                                        lineNumber: 269,
                                         columnNumber: 25
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/app/squad/page.tsx",
-                                lineNumber: 266,
+                                lineNumber: 267,
                                 columnNumber: 21
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/squad/page.tsx",
-                        lineNumber: 254,
+                        lineNumber: 255,
                         columnNumber: 13
                     }, this),
                     activeTab === "likes" && (starredPosts.length > 0 ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -10710,12 +10710,12 @@ function SquadPageContent() {
                                 post: post
                             }, post.id, false, {
                                 fileName: "[project]/src/app/squad/page.tsx",
-                                lineNumber: 277,
+                                lineNumber: 278,
                                 columnNumber: 25
                             }, this))
                     }, void 0, false, {
                         fileName: "[project]/src/app/squad/page.tsx",
-                        lineNumber: 275,
+                        lineNumber: 276,
                         columnNumber: 17
                     }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                         className: "text-gray-400 text-center mt-16",
@@ -10724,12 +10724,12 @@ function SquadPageContent() {
                                 className: "text-4xl mb-2",
                                 children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$heart$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Heart$3e$__["Heart"], {}, void 0, false, {
                                     fileName: "[project]/src/app/squad/page.tsx",
-                                    lineNumber: 282,
+                                    lineNumber: 283,
                                     columnNumber: 52
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/app/squad/page.tsx",
-                                lineNumber: 282,
+                                lineNumber: 283,
                                 columnNumber: 21
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -10737,7 +10737,7 @@ function SquadPageContent() {
                                 children: "No liked posts"
                             }, void 0, false, {
                                 fileName: "[project]/src/app/squad/page.tsx",
-                                lineNumber: 283,
+                                lineNumber: 284,
                                 columnNumber: 21
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -10745,38 +10745,38 @@ function SquadPageContent() {
                                 children: "Your liked posts will appear here."
                             }, void 0, false, {
                                 fileName: "[project]/src/app/squad/page.tsx",
-                                lineNumber: 284,
+                                lineNumber: 285,
                                 columnNumber: 21
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/squad/page.tsx",
-                        lineNumber: 281,
+                        lineNumber: 282,
                         columnNumber: 17
                     }, this)),
                     activeTab === "playlists" && firebaseUser && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$squad$2f$UserPlaylists$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["UserPlaylists"], {
                         userId: firebaseUser.uid
                     }, void 0, false, {
                         fileName: "[project]/src/app/squad/page.tsx",
-                        lineNumber: 289,
+                        lineNumber: 290,
                         columnNumber: 13
                     }, this),
                     activeTab === "collections" && firebaseUser && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$squad$2f$UserCollections$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["UserCollections"], {
                         userId: firebaseUser.uid
                     }, void 0, false, {
                         fileName: "[project]/src/app/squad/page.tsx",
-                        lineNumber: 292,
+                        lineNumber: 293,
                         columnNumber: 13
                     }, this),
                     activeTab === "downloads" && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$squad$2f$UserDownloads$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["UserDownloads"], {}, void 0, false, {
                         fileName: "[project]/src/app/squad/page.tsx",
-                        lineNumber: 295,
+                        lineNumber: 296,
                         columnNumber: 13
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/squad/page.tsx",
-                lineNumber: 252,
+                lineNumber: 253,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -10794,24 +10794,24 @@ function SquadPageContent() {
                         children: [
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$compass$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Compass$3e$__["Compass"], {}, void 0, false, {
                                 fileName: "[project]/src/app/squad/page.tsx",
-                                lineNumber: 307,
+                                lineNumber: 308,
                                 columnNumber: 17
                             }, this),
                             "Explore Creators"
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/squad/page.tsx",
-                        lineNumber: 302,
+                        lineNumber: 303,
                         columnNumber: 13
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/src/app/squad/page.tsx",
-                    lineNumber: 301,
+                    lineNumber: 302,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/app/squad/page.tsx",
-                lineNumber: 300,
+                lineNumber: 301,
                 columnNumber: 7
             }, this),
             showCompleteProfile && profile && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$squad$2f$CompleteProfileModal$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CompleteProfileModal"], {
@@ -10819,7 +10819,7 @@ function SquadPageContent() {
                 onClose: ()=>setShowCompleteProfile(false)
             }, void 0, false, {
                 fileName: "[project]/src/app/squad/page.tsx",
-                lineNumber: 313,
+                lineNumber: 314,
                 columnNumber: 9
             }, this),
             showEdit && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$squad$2f$EditProfileModal$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["EditProfileModal"], {
@@ -10827,7 +10827,7 @@ function SquadPageContent() {
                 onClose: ()=>setShowEdit(false)
             }, void 0, false, {
                 fileName: "[project]/src/app/squad/page.tsx",
-                lineNumber: 316,
+                lineNumber: 317,
                 columnNumber: 9
             }, this),
             showFollowList && firebaseUser && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$FollowListModal$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FollowListModal"], {
@@ -10837,13 +10837,13 @@ function SquadPageContent() {
                 currentUser: firebaseUser
             }, void 0, false, {
                 fileName: "[project]/src/app/squad/page.tsx",
-                lineNumber: 319,
+                lineNumber: 320,
                 columnNumber: 9
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/app/squad/page.tsx",
-        lineNumber: 140,
+        lineNumber: 141,
         columnNumber: 5
     }, this);
 }
@@ -10853,17 +10853,17 @@ function SquadPage() {
             children: "Loading..."
         }, void 0, false, {
             fileName: "[project]/src/app/squad/page.tsx",
-            lineNumber: 333,
+            lineNumber: 334,
             columnNumber: 29
         }, void 0),
         children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(SquadPageContent, {}, void 0, false, {
             fileName: "[project]/src/app/squad/page.tsx",
-            lineNumber: 334,
+            lineNumber: 335,
             columnNumber: 13
         }, this)
     }, void 0, false, {
         fileName: "[project]/src/app/squad/page.tsx",
-        lineNumber: 333,
+        lineNumber: 334,
         columnNumber: 9
     }, this);
 }
