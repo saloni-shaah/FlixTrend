@@ -1,83 +1,229 @@
-"use client";
-import React from "react";
-import Link from "next/link";
-import { FlixTrendLogo } from "@/components/FlixTrendLogo";
+import type { Metadata } from "next";
 
-export default function TermsOfServicePage() {
+export const metadata: Metadata = {
+  title: "Terms & Conditions | FlixTrend",
+  description:
+    "The terms that govern your use of FlixTrend. Clear, fair, and designed to protect both you and the platform.",
+};
+
+export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-[#0b0b0c] font-body text-zinc-300">
-      <nav className="w-full flex justify-between items-center px-8 py-4 bg-black/50 border-b border-zinc-800/50 fixed top-0 left-0 z-50 backdrop-blur-md">
-        <Link href="/" className="flex items-center gap-3">
-          <FlixTrendLogo size={40} />
-          <span className="font-light text-2xl text-zinc-100 tracking-wide">FlixTrend</span>
-        </Link>
-        <div className="flex gap-6 items-center">
-           <Link href="/login" className="btn-glass text-sm">Log In</Link>
-          <Link href="/signup" className="px-5 py-2 rounded-full bg-zinc-100 text-black font-medium text-sm hover:bg-white transition-all">Sign Up</Link>
-        </div>
-      </nav>
+    <main className="min-h-screen bg-background text-foreground px-6 py-16">
+      <div className="mx-auto max-w-3xl">
+        {/* Header */}
+        <header className="mb-12">
+          <h1 className="text-4xl font-semibold tracking-tight mb-4">
+            Terms & Conditions
+          </h1>
+          <p className="text-muted-foreground text-sm">
+            Last updated: {new Date().toLocaleDateString()}
+          </p>
+        </header>
 
-      <div className="max-w-3xl mx-auto pt-32 pb-20 px-4">
-        <div className="glass-card p-8 md:p-12 space-y-8">
-            <header>
-                <h1 className="text-4xl font-light text-zinc-100 mb-2">Terms of Service</h1>
-                <p className="text-sm text-zinc-500">Last Updated: September 2025</p>
-            </header>
+        {/* Introduction */}
+        <section className="space-y-6 text-base leading-relaxed">
+          <p>
+            Welcome to <strong>FlixTrend</strong>.
+          </p>
+          <p>
+            These Terms & Conditions (“Terms”) govern your access to and use of
+            the FlixTrend website, mobile applications, and related services
+            (collectively, the “Platform”).
+          </p>
+          <p>
+            By accessing or using FlixTrend, you agree to be bound by these
+            Terms. If you do not agree, please do not use the Platform.
+          </p>
+        </section>
 
-            <p className="text-zinc-400">
-                Welcome to FlixTrend. These Terms of Service (“Terms”) explain your rights and responsibilities when using our platform. By signing up or using our app, you agree to follow these rules.
-            </p>
+        {/* Eligibility */}
+        <section className="mt-12 space-y-4">
+          <h2 className="text-2xl font-medium">Eligibility</h2>
 
-            <section>
-                <h2 className="text-2xl font-light text-zinc-100 mb-3">1. Your Account</h2>
-                <ul className="list-disc list-inside space-y-2 text-zinc-400">
-                    <li>You must be at least 13 years old to use FlixTrend.</li>
-                    <li>You are responsible for keeping your account secure and confidential.</li>
-                    <li>Don’t share your password with anyone.</li>
-                </ul>
-            </section>
+          <p>
+            You must be at least <strong>13 years old</strong> to use FlixTrend.
+          </p>
 
-            <section>
-                <h2 className="text-2xl font-light text-zinc-100 mb-3">2. Content Rules</h2>
-                <p className="text-zinc-400 mb-4">When you post content:</p>
-                <ul className="list-disc list-inside space-y-2 text-zinc-400">
-                    <li>You own your content, but grant FlixTrend a license to display it on the platform.</li>
-                    <li>Do not post illegal, harmful, violent, or hateful content.</li>
-                    <li>Do not spam, hack, or harass other users.</li>
-                    <li>Respect copyrights and trademarks. Only post content you own or have rights to.</li>
-                </ul>
-            </section>
-            
-            <section>
-                <h2 className="text-2xl font-light text-zinc-100 mb-3">3. Termination</h2>
-                <p className="text-zinc-400 mb-4">We reserve the right to suspend or remove accounts that:</p>
-                <ul className="list-disc list-inside space-y-2 text-zinc-400">
-                    <li>Violate these Terms.</li>
-                    <li>Spread harmful or illegal content.</li>
-                    <li>Attempt to exploit or attack the platform.</li>
-                </ul>
-                 <p className="text-zinc-400 mt-2">You can delete your account at any time in your settings.</p>
-            </section>
+          <p>
+            If you are using the Platform on behalf of an organization, you
+            confirm that you have the authority to bind that organization to
+            these Terms.
+          </p>
+        </section>
 
-            <section>
-                <h2 className="text-2xl font-light text-zinc-100 mb-3">4. Limitation of Liability</h2>
-                <p className="text-zinc-400">
-                    FlixTrend is provided “as is.” We do not guarantee uninterrupted access, error-free operation, or complete immunity from security risks. By using our service, you accept this risk.
-                </p>
-            </section>
+        {/* Account Responsibility */}
+        <section className="mt-12 space-y-4">
+          <h2 className="text-2xl font-medium">Your Account</h2>
 
-             <section>
-                <h2 className="text-2xl font-light text-zinc-100 mb-3">5. Changes to Terms</h2>
-                <p className="text-zinc-400">
-                    We may update these Terms as FlixTrend grows. We’ll notify you of major changes.
-                </p>
-            </section>
-        </div>
+          <p>
+            You are responsible for maintaining the confidentiality of your
+            account credentials and for all activity that occurs under your
+            account.
+          </p>
+
+          <p>
+            You agree to provide accurate and up-to-date information and to
+            notify us of any unauthorized access or security breach.
+          </p>
+        </section>
+
+        {/* User Content */}
+        <section className="mt-12 space-y-4">
+          <h2 className="text-2xl font-medium">User Content</h2>
+
+          <p>
+            You retain ownership of the content you create or share on
+            FlixTrend.
+          </p>
+
+          <p>
+            By posting content, you grant FlixTrend a non-exclusive, worldwide,
+            royalty-free license to host, store, display, and distribute that
+            content solely for operating and improving the Platform.
+          </p>
+
+          <p>
+            You are responsible for ensuring your content does not violate any
+            laws or infringe on the rights of others.
+          </p>
+        </section>
+
+        {/* Prohibited Activities */}
+        <section className="mt-12 space-y-4">
+          <h2 className="text-2xl font-medium">Prohibited Activities</h2>
+
+          <p>You agree not to:</p>
+
+          <ul className="list-disc pl-6 space-y-2">
+            <li>Post harmful, abusive, misleading, or illegal content</li>
+            <li>Impersonate others or misrepresent your identity</li>
+            <li>Attempt to access systems or data without authorization</li>
+            <li>Disrupt or interfere with the Platform’s operation</li>
+            <li>Use FlixTrend for unlawful or malicious purposes</li>
+          </ul>
+        </section>
+
+        {/* Moderation */}
+        <section className="mt-12 space-y-4">
+          <h2 className="text-2xl font-medium">Content Moderation</h2>
+
+          <p>
+            FlixTrend reserves the right to review, restrict, or remove content
+            that violates these Terms or harms the Platform or its users.
+          </p>
+
+          <p>
+            We may suspend or terminate accounts that repeatedly violate our
+            rules, with or without notice.
+          </p>
+        </section>
+
+        {/* Intellectual Property */}
+        <section className="mt-12 space-y-4">
+          <h2 className="text-2xl font-medium">Intellectual Property</h2>
+
+          <p>
+            All trademarks, logos, designs, and platform elements are the
+            property of FlixTrend or its licensors.
+          </p>
+
+          <p>
+            You may not copy, modify, distribute, or exploit any part of the
+            Platform without prior written permission.
+          </p>
+        </section>
+
+        {/* Third-Party Services */}
+        <section className="mt-12 space-y-4">
+          <h2 className="text-2xl font-medium">Third-Party Services</h2>
+
+          <p>
+            FlixTrend may include links or integrations with third-party
+            services.
+          </p>
+
+          <p>
+            We are not responsible for the content, policies, or practices of
+            third-party platforms.
+          </p>
+        </section>
+
+        {/* Disclaimer */}
+        <section className="mt-12 space-y-4">
+          <h2 className="text-2xl font-medium">Disclaimer</h2>
+
+          <p>
+            FlixTrend is provided on an “as is” and “as available” basis.
+          </p>
+
+          <p>
+            We do not guarantee uninterrupted access, error-free operation, or
+            absolute security.
+          </p>
+        </section>
+
+        {/* Limitation of Liability */}
+        <section className="mt-12 space-y-4">
+          <h2 className="text-2xl font-medium">Limitation of Liability</h2>
+
+          <p>
+            To the maximum extent permitted by law, FlixTrend shall not be
+            liable for indirect, incidental, or consequential damages arising
+            from your use of the Platform.
+          </p>
+        </section>
+
+        {/* Termination */}
+        <section className="mt-12 space-y-4">
+          <h2 className="text-2xl font-medium">Termination</h2>
+
+          <p>
+            You may stop using FlixTrend at any time.
+          </p>
+
+          <p>
+            We reserve the right to suspend or terminate access if these Terms
+            are violated or if required by law.
+          </p>
+        </section>
+
+        {/* Changes */}
+        <section className="mt-12 space-y-4">
+          <h2 className="text-2xl font-medium">Changes to These Terms</h2>
+
+          <p>
+            We may update these Terms from time to time. Changes will be posted
+            on this page with an updated date.
+          </p>
+
+          <p>
+            Continued use of FlixTrend means you accept the revised Terms.
+          </p>
+        </section>
+
+        {/* Governing Law */}
+        <section className="mt-12 space-y-4">
+          <h2 className="text-2xl font-medium">Governing Law</h2>
+
+          <p>
+            These Terms are governed by applicable laws without regard to
+            conflict of law principles.
+          </p>
+        </section>
+
+        {/* Contact */}
+        <section className="mt-12 space-y-4">
+          <h2 className="text-2xl font-medium">Contact</h2>
+
+          <p>
+            If you have questions about these Terms, contact us at:
+          </p>
+
+          <p className="font-medium">
+            📧 legal@flixtrend.in
+          </p>
+        </section>
       </div>
-      <footer className="w-full py-8 text-center flex flex-col gap-2 items-center mt-8 border-t border-zinc-800/50">
-        <p className="text-xs text-zinc-500">&copy; {new Date().getFullYear()} FlixTrend. All rights reserved.</p>
-        <Link href="/" className="text-xs text-zinc-400 hover:underline">Home</Link>
-      </footer>
-    </div>
+    </main>
   );
 }
