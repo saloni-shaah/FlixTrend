@@ -1,105 +1,153 @@
 @import "tailwindcss";
 
-/* --- Font Imports --- */
-@import "@fontsource/inter/400.css";
-@import "@fontsource/space-grotesk/700.css";
-@import "@fontsource/cinzel/400.css"; 
-@import "@fontsource/great-vibes/400.css";
-@import "@fontsource/cinzel/400.css";
+:root {
+  --font-sans: ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "Apple Color Emoji",
+    "Segoe UI Emoji", "Segoe UI Symbol";
+}
 
-/* --- Base & Dark Theme --- */
-:root, .dark {
-  --background: 240 6% 10%; /* #17171a */
-  --foreground: 0 0% 98%; /* #fafafa */
+:root {
+  --bg-main: #ffffff;
+  --bg-muted: #f7f7f8;
+  --bg-surface: #fafafa;
+  --text-primary: #0b0b0c;
+  --text-secondary: #4b5563;
+  --text-muted: #6b7280;
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --border-strong: rgba(0, 0, 0, 0.16);
+  --accent-primary: #111827;
+  --accent-soft: #e5e7eb;
+  --accent-focus: #2563eb;
+  --accent-success: #16a34a;
+  --accent-warning: #ca8a04;
+  --accent-danger: #dc2626;
+  --shadow-soft: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-medium: 0 8px 24px rgba(0,0,0,0.08);
+}
 
-  --card: 240 5% 14%; /* #212124 */
-  --card-foreground: 0 0% 98%;
-
-  --popover: 240 6% 10%;
-  --popover-foreground: 0 0% 98%;
-
-  --primary: 210 40% 98%;
-  --primary-foreground: 222 47% 11%;
-
-  --secondary: 240 4% 20%;
-  --secondary-foreground: 0 0% 98%;
-
-  --muted: 240 4% 20%;
-  --muted-foreground: 0 0% 63%; /* zinc-400 */
-  
-  --accent: 240 4% 25%;
-  --accent-foreground: 0 0% 98%;
-  
-  --destructive: 0 62% 40%;
-  --destructive-foreground: 0 0% 98%;
-
-  --border: 240 4% 20%;
-  --input: 240 4% 20%;
-  --ring: 210 40% 98%;
-
-  --radius: 0.5rem;
-
-  /* Custom Colors for the brand */
-  --accent-pink: #FF6B6B;
-  --accent-green: #4ECDC4;
-  --accent-purple: #7D5FFF;
-  --brand-gold: #FFB400;
-  --accent-cyan: #00F0FF;
-
-  --card-background: rgba(23, 23, 26, 0.5); 
-  --glass-border: rgba(255, 255, 255, 0.1);
+[data-theme="dark"] {
+  --bg-main: #0b0b0c;
+  --bg-muted: #111113;
+  --bg-surface: #151517;
+  --text-primary: #f9fafb;
+  --text-secondary: #d1d5db;
+  --text-muted: #9ca3af;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --accent-primary: #ffffff;
+  --accent-soft: #1f2933;
+  --accent-focus: #60a5fa;
+  --accent-success: #22c55e;
+  --accent-warning: #facc15;
+  --accent-danger: #f87171;
+  --shadow-soft: 0 1px 2px rgba(0,0,0,0.4);
+  --shadow-medium: 0 12px 32px rgba(0,0,0,0.6);
 }
 
 body {
-  background-color: #0b0b0c;
-  background-image: radial-gradient(1200px circle at top, #121214, #0b0b0c);
-  background-attachment: fixed;
-  color: hsl(var(--foreground));
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-sans);
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  line-height: 1.6;
 }
 
-/* Base card style */
-.glass-card {
-  background: var(--card-background);
-  backdrop-filter: blur(20px) saturate(180%);
-  border-radius: 1rem; 
-  border: 1px solid var(--glass-border);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+h1, h2, h3, h4 {
+  font-weight: 300;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
 }
 
-.btn-glass {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 9999px; /* rounded-full */
-  padding: 0.5rem 1.25rem; /* px-5 py-2 */
-  font-weight: 500;
-  color: hsl(var(--foreground));
-  transition: all 0.3s ease;
+h1 { font-size: clamp(2.4rem, 5vw, 3.2rem); }
+h2 { font-size: clamp(1.9rem, 4vw, 2.4rem); }
+h3 { font-size: 1.4rem; }
+h4 { font-size: 1.15rem; }
+
+p {
+  color: var(--text-secondary);
+  font-size: 1rem;
 }
 
-.btn-glass:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
-  transform: translateY(-1px);
+a {
+  color: var(--accent-focus);
+  text-decoration: none;
 }
 
-.input-glass {
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid var(--glass-border);
-  border-radius: 0.5rem;
-  padding: 0.75rem 1.25rem;
-  color: hsl(var(--foreground));
-  transition: all 0.2s ease;
+a:hover {
+  text-decoration: underline;
 }
-.input-glass:focus {
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.7rem 1.4rem;
+  font-size: 0.9rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  transition: all 0.25s ease;
+}
+
+.button:hover {
+  background: var(--bg-muted);
+  box-shadow: var(--shadow-soft);
+}
+
+.surface {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  box-shadow: var(--shadow-soft);
+}
+
+.fade-up {
+  opacity: 0;
+  transform: translateY(16px);
+  animation: fadeUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.grain {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 999;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+}
+
+input, textarea {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+  color: var(--text-primary);
+}
+
+input:focus, textarea:focus {
   outline: none;
-  border-color: #a1a1aa; /* zinc-400 */
-  box-shadow: 0 0 10px rgba(161, 161, 170, 0.2);
+  border-color: var(--accent-focus);
 }
 
-.font-headline { font-family: 'Space Grotesk', sans-serif; }
-.font-body { font-family: 'Inter', sans-serif; }
-.font-cursive { font-family: 'Dancing Script', cursive; }
-.font-calligraphy { font-family: 'Great Vibes', cursive; }
-.font-italiano { font-family: 'Italianno', cursive; }
+::selection {
+  background: var(--accent-focus);
+  color: #fff;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 8px;
+}
