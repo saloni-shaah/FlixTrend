@@ -6,5 +6,6 @@
   "/page": "app/page.js",
   "/privacy/page": "app/privacy/page.js",
   "/signup/page": "app/signup/page.js",
+  "/squad/page": "app/squad/page.js",
   "/terms/page": "app/terms/page.js"
 }
