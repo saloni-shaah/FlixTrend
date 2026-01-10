@@ -6,6 +6,8 @@ import Link from "next/link";
 import { auth } from "@/utils/firebaseClient";
 import { 
     signInWithEmailAndPassword,
+    sendPasswordResetEmail,
+    sendSignInLinkToEmail,
     RecaptchaVerifier,
     signInWithPhoneNumber 
 } from "firebase/auth";
@@ -13,31 +15,29 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import LoginWithEmail from "./LoginWithEmail";
 import CountrySelector from "@/components/ui/CountrySelector";
-import { Mail, Phone } from "lucide-react";
+import { Mail, Phone, Eye, EyeOff } from "lucide-react";
 
 function LoginPageContent() {
-  const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('phone');
+  const [loginMethod, setLoginMethod] = useState<'phone' | 'email' | 'magic-link'>('phone');
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState("");
   const [countryCode, setCountryCode] = useState("+91");
   const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [confirmationResult, setConfirmationResult] = useState<any>(null);
   const router = useRouter();
 
   useEffect(() => {
-    // This function will initialize the recaptcha verifier, but only when needed for phone auth.
-    // It's attached to the window object to be accessible within the phone sign-in handler.
     (window as any).initializeRecaptchaVerifier = () => {
       if (!window.recaptchaVerifier) {
         window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
           'size': 'invisible',
-          'callback': (response: any) => {
-            // reCAPTCHA solved.
-          }
+          'callback': (response: any) => {},
         });
       }
       return window.recaptchaVerifier;
@@ -88,6 +88,48 @@ function LoginPageContent() {
     }
     setLoading(false);
   };
+
+  const handlePasswordReset = async () => {
+      if (!email) {
+          setError("Please enter your email address to reset your password.");
+          return;
+      }
+      setError("");
+      setSuccess("");
+      setLoading(true);
+      try {
+          await sendPasswordResetEmail(auth, email);
+          setSuccess("Password reset email sent! Check your inbox.");
+      } catch(err: any) {
+          setError("Failed to send password reset email. Please check the address.");
+      } finally {
+          setLoading(false);
+      }
+  }
+
+  const handleMagicLinkSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) {
+      setError("Please enter your email address.");
+      return;
+    }
+    setError("");
+    setSuccess("");
+    setLoading(true);
+    const actionCodeSettings = {
+      url: `${window.location.origin}/login?finish=true`,
+      handleCodeInApp: true,
+    };
+    try {
+        await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+        window.localStorage.setItem('emailForSignIn', email);
+        setSuccess(`Sign-in link sent to ${email}! Please check your inbox.`);
+    } catch(err: any) {
+        setError("Failed to send sign-in link. Please check the address.");
+    } finally {
+        setLoading(false);
+    }
+  }
 
   const renderPhoneForm = () => !showOtpInput ? (
     <form onSubmit={handlePhoneSignIn} className="flex flex-col gap-4">
@@ -142,12 +184,42 @@ function LoginPageContent() {
             onChange={e => setEmail(e.target.value)}
             required
         />
+        <div className="relative">
+            <input
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Password"
+                className="input-glass w-full pr-10"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+            />
+             <button type="button" onClick={() => setShowPassword(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                {showPassword ? <EyeOff size={20}/> : <Eye size={20}/>}
+            </button>
+        </div>
+        <div className="text-right">
+            <button type="button" onClick={handlePasswordReset} className="text-xs text-accent-cyan hover:underline">Forgot Password?</button>
+        </div>
+        <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            type="submit"
+            className="btn-glass mt-2 bg-accent-pink/80"
+            disabled={loading}
+        >
+            {loading ? "Logging In..." : "Log In"}
+        </motion.button>
+     </form>
+  );
+
+  const renderMagicLinkForm = () => (
+     <form onSubmit={handleMagicLinkSignIn} className="flex flex-col gap-4">
         <input
-            type="password"
-            placeholder="Password"
+            type="email"
+            placeholder="Email"
             className="input-glass w-full"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
+            value={email}
+            onChange={e => setEmail(e.target.value)}
             required
         />
         <motion.button
@@ -157,10 +229,19 @@ function LoginPageContent() {
             className="btn-glass mt-4 bg-accent-pink/80"
             disabled={loading}
         >
-            {loading ? "Logging In..." : "Log In"}
+            {loading ? "Sending Link..." : "Send Sign-In Link"}
         </motion.button>
      </form>
   );
+
+  const renderContent = () => {
+    switch (loginMethod) {
+      case 'phone': return renderPhoneForm();
+      case 'email': return renderEmailForm();
+      case 'magic-link': return renderMagicLinkForm();
+      default: return null;
+    }
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 animate-fade-in">
@@ -173,18 +254,28 @@ function LoginPageContent() {
         <div id="recaptcha-container"></div>
         <h2 className="text-3xl font-headline font-bold text-accent-pink mb-2 text-center">Welcome Back</h2>
         
-        <div className="flex bg-black/20 p-1 rounded-full">
-            <button onClick={() => setLoginMethod('phone')} className={`flex-1 p-2 rounded-full font-bold text-sm flex items-center justify-center gap-2 transition-colors ${loginMethod === 'phone' ? 'bg-accent-cyan text-black' : 'text-gray-300'}`}>
+        <div className="flex bg-black/20 p-1 rounded-full text-sm">
+            <button onClick={() => setLoginMethod('phone')} className={`flex-1 p-2 rounded-full font-bold flex items-center justify-center gap-2 transition-colors ${loginMethod === 'phone' ? 'bg-accent-cyan text-black' : 'text-gray-300'}`}>
                 <Phone size={16}/> Phone
             </button>
-             <button onClick={() => setLoginMethod('email')} className={`flex-1 p-2 rounded-full font-bold text-sm flex items-center justify-center gap-2 transition-colors ${loginMethod === 'email' ? 'bg-accent-cyan text-black' : 'text-gray-300'}`}>
+             <button onClick={() => setLoginMethod('email')} className={`flex-1 p-2 rounded-full font-bold flex items-center justify-center gap-2 transition-colors ${loginMethod === 'email' ? 'bg-accent-cyan text-black' : 'text-gray-300'}`}>
                 <Mail size={16}/> Email
             </button>
         </div>
         
-        {loginMethod === 'phone' ? renderPhoneForm() : renderEmailForm()}
+        {renderContent()}
 
         {error && <div className="text-red-400 text-center animate-bounce mt-2">{error}</div>}
+        {success && <div className="text-green-400 text-center mt-2">{success}</div>}
+
+        <div className="text-center mt-2">
+            {loginMethod === 'email' && (
+                <button onClick={() => setLoginMethod('magic-link')} className="text-accent-cyan hover:underline text-sm">Sign in with Email Link instead</button>
+            )}
+             {loginMethod === 'magic-link' && (
+                <button onClick={() => setLoginMethod('email')} className="text-accent-cyan hover:underline text-sm">Sign in with Password instead</button>
+            )}
+        </div>
 
         <div className="text-center mt-2">
           <span className="text-gray-400">Don't have an account? </span>

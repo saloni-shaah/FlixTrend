@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
@@ -14,7 +15,7 @@ import {
 import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, ArrowLeft, Gift } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Gift, Eye, EyeOff } from 'lucide-react';
 import CountrySelector from "@/components/ui/CountrySelector";
 
 const db = getFirestore(app);
@@ -48,6 +49,8 @@ export default function SignupPage() {
         gender: "",
         accountType: "user"
     });
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [otp, setOtp] = useState("");
     const [confirmationResult, setConfirmationResult] = useState<any>(null);
     
@@ -77,7 +80,7 @@ export default function SignupPage() {
         setError("");
         setLoading(true);
 
-        if (step === 1) { // Validate account credentials
+        if (step === 1) {
             if (form.password !== form.confirmPassword) {
                 setError("Passwords do not match");
                 setLoading(false);
@@ -90,7 +93,7 @@ export default function SignupPage() {
             }
         }
         
-        if (step === 3) { // Validate profile details
+        if (step === 3) {
             if (!form.username) {
                 setError("Username is required.");
                 setLoading(false);
@@ -136,7 +139,7 @@ export default function SignupPage() {
             const verifier = window.recaptchaVerifier!;
             const result = await signInWithPhoneNumber(auth, fullPhoneNumber, verifier);
             setConfirmationResult(result);
-            setStep(3); // Move to OTP step after sending
+            setStep(3); 
         } catch (err: any) {
             setError("Failed to send OTP. Please check the phone number and try again.");
             console.error("OTP send error:", err);
@@ -145,7 +148,7 @@ export default function SignupPage() {
     };
 
     const handleFinalSubmit = async () => {
-        if (step !== 4) return; // Should only be callable at the last step
+        if (step !== 4) return;
         
         setLoading(true);
         setError("");
@@ -174,7 +177,7 @@ export default function SignupPage() {
                 accountType: form.accountType,
                 avatar_url: avatarUrl,
                 createdAt: serverTimestamp(),
-                profileComplete: false, // This will now trigger the avatar/banner modal
+                profileComplete: false, 
                 referralCode: referralCode,
             });
 
@@ -198,17 +201,27 @@ export default function SignupPage() {
 
     const renderStep = () => {
         switch(step) {
-            case 1: // Account Credentials
+            case 1:
                 return (
                     <motion.div key="step1" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} className="flex flex-col gap-4">
                         <h3 className="text-xl font-bold text-accent-cyan text-center">Step 1: Account Details</h3>
                         <input type="text" name="name" placeholder="Full Name" className="input-glass w-full" value={form.name} onChange={handleChange} required />
                         <input type="email" name="email" placeholder="Email" className="input-glass w-full" value={form.email} onChange={handleChange} required />
-                        <input type="password" name="password" placeholder="Password (min. 6 characters)" className="input-glass w-full" value={form.password} onChange={handleChange} required />
-                        <input type="password" name="confirmPassword" placeholder="Confirm Password" className="input-glass w-full" value={form.confirmPassword} onChange={handleChange} required />
+                        <div className="relative">
+                            <input type={showPassword ? "text" : "password"} name="password" placeholder="Password (min. 6 characters)" className="input-glass w-full pr-10" value={form.password} onChange={handleChange} required />
+                            <button type="button" onClick={() => setShowPassword(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                                {showPassword ? <EyeOff size={20}/> : <Eye size={20}/>}
+                            </button>
+                        </div>
+                         <div className="relative">
+                            <input type={showConfirmPassword ? "text" : "password"} name="confirmPassword" placeholder="Confirm Password" className="input-glass w-full pr-10" value={form.confirmPassword} onChange={handleChange} required />
+                             <button type="button" onClick={() => setShowConfirmPassword(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                                {showConfirmPassword ? <EyeOff size={20}/> : <Eye size={20}/>}
+                            </button>
+                        </div>
                     </motion.div>
                 );
-            case 2: // Phone Number
+            case 2:
                 return (
                      <motion.div key="step2" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} className="flex flex-col gap-4">
                         <h3 className="text-xl font-bold text-accent-cyan text-center">Step 2: Phone Verification</h3>
@@ -216,7 +229,7 @@ export default function SignupPage() {
                          <input type="tel" name="phoneNumber" placeholder="Phone Number" className="input-glass w-full" value={form.phoneNumber} onChange={handleChange} required />
                      </motion.div>
                 );
-            case 3: // Profile Details
+            case 3:
                 return (
                      <motion.div key="step3" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} className="flex flex-col gap-4">
                         <h3 className="text-xl font-bold text-accent-cyan text-center">Step 3: Profile Details</h3>
@@ -241,7 +254,7 @@ export default function SignupPage() {
                         </select>
                      </motion.div>
                 );
-            case 4: // OTP Verification
+            case 4:
                 return (
                     <motion.div key="step4" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} className="flex flex-col gap-4 items-center">
                         <h3 className="text-xl font-bold text-accent-cyan text-center">Step 4: Verify Your Account</h3>
