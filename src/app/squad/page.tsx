@@ -15,6 +15,7 @@ import { UserPlaylists } from "@/components/squad/UserPlaylists";
 import { UserCollections } from "@/components/squad/UserCollections";
 import { UserDownloads } from "@/components/squad/UserDownloads";
 import { AccoladeBadge } from "@/components/AccoladeBadge";
+import { AddPhoneToProfile } from "@/components/squad/AddPhoneToProfile";
 
 
 const db = getFirestore(app);
@@ -233,6 +234,10 @@ function SquadPageContent() {
         </div>
 
         <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="btn-glass mt-6" onClick={() => setShowEdit(true)}>Edit Profile</motion.button>
+      
+        {!profile.phoneNumber && (
+          <AddPhoneToProfile user={firebaseUser} />
+        )}
       </motion.div>
 
       {/* Tabs */}
