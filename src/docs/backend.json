@@ -68,6 +68,11 @@
           "enum": ["user", "creator", "business"],
           "description": "The type of account, which determines their platform access."
         },
+        "creatorType": {
+            "type": "string",
+            "enum": ["vlogs", "gaming", "music", "comedy", "tech", "education", "other"],
+            "description": "The primary category for a creator's content."
+        },
         "createdAt": {
           "type": "string",
           "format": "date-time",

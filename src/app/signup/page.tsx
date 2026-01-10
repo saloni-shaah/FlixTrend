@@ -33,6 +33,16 @@ declare global {
     }
 }
 
+const creatorTypes = [
+    { id: 'vlogs', name: 'Vlogs' },
+    { id: 'gaming', name: 'Gaming' },
+    { id: 'music', name: 'Music' },
+    { id: 'comedy', name: 'Comedy' },
+    { id: 'tech', name: 'Tech' },
+    { id: 'education', name: 'Education' },
+    { id: 'other', name: 'Other' },
+];
+
 export default function SignupPage() {
     const [step, setStep] = useState(1);
     const [form, setForm] = useState({
@@ -47,7 +57,8 @@ export default function SignupPage() {
         location: "",
         dob: "",
         gender: "",
-        accountType: "user"
+        accountType: "user",
+        creatorType: ""
     });
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -119,6 +130,11 @@ export default function SignupPage() {
                     return;
                 }
             }
+            if(form.accountType === 'creator' && !form.creatorType) {
+                setError("Please select a creator type.");
+                setLoading(false);
+                return;
+            }
         }
         
         setLoading(false);
@@ -175,6 +191,7 @@ export default function SignupPage() {
                 dob: form.dob,
                 gender: form.gender,
                 accountType: form.accountType,
+                creatorType: form.accountType === 'creator' ? form.creatorType : null,
                 avatar_url: avatarUrl,
                 createdAt: serverTimestamp(),
                 profileComplete: false, 
@@ -252,6 +269,14 @@ export default function SignupPage() {
                             <option value="user">General User</option>
                             <option value="creator">Creator</option>
                         </select>
+                        {form.accountType === 'creator' && (
+                            <select name="creatorType" className="input-glass w-full" value={form.creatorType} onChange={handleChange} required>
+                                <option value="" disabled>Select Creator Type...</option>
+                                {creatorTypes.map(type => (
+                                    <option key={type.id} value={type.id}>{type.name}</option>
+                                ))}
+                            </select>
+                        )}
                      </motion.div>
                 );
             case 4:
