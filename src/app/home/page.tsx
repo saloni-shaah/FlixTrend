@@ -24,6 +24,7 @@ const NotificationPanel = dynamic(() => import('@/components/NotificationPanel')
 const db = getFirestore(app);
 
 const categories = [
+    { id: 'all', name: 'All', icon: <Flame /> },
     { id: 'daily', name: 'Daily', icon: <Users /> },
     { id: 'creative', name: 'Creative', icon: <Brush /> },
     { id: 'play', name: 'Play', icon: <Gamepad2 /> },
@@ -46,7 +47,7 @@ function HomePageContent() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [lastVisible, setLastVisible] = useState<any>(null);
   const [hasMore, setHasMore] = useState(true);
-  const [activeCategory, setActiveCategory] = useState('daily');
+  const [activeCategory, setActiveCategory] = useState('all');
   const router = useRouter();
   const searchParams = useSearchParams();
   const [showWelcomeAnimation, setShowWelcomeAnimation] = useState(false);
@@ -105,7 +106,7 @@ function HomePageContent() {
         
         let constraints: any[] = [orderBy("publishAt", "desc")];
 
-        if (category) {
+        if (category && category !== 'all') {
             constraints.unshift(or(
               where("category", "==", category), 
               where("creatorType", "==", category)
@@ -508,3 +509,5 @@ export default function HomePage() {
     </Suspense>
   );
 }
+
+    
