@@ -70,8 +70,8 @@
         },
         "creatorType": {
             "type": "string",
-            "enum": ["vlogs", "gaming", "music", "comedy", "tech", "education", "other"],
-            "description": "The primary category for a creator's content."
+            "enum": ["vlogs", "moments", "travel", "self", "art", "photos", "design", "writing", "gaming", "challenges", "comedy", "reactions", "tips", "tech", "study", "explainers", "music", "movies", "trends", "community"],
+            "description": "The primary sub-category for a creator's content."
         },
         "createdAt": {
           "type": "string",
