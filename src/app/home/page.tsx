@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import dynamic from 'next/dynamic';
 import { getFirestore, collection, query, orderBy, getDoc, doc, limit, startAfter, getDocs, where, Timestamp, onSnapshot, or } from "firebase/firestore";
-import { Plus, Bell, Search, Mic, Video, Flame, Gamepad2, Tv, Music, Rss, Compass, Smile, Code, Atom, LandPlot, Handshake, PenTool, Bot, Sparkles, Book, Camera, Palette, Shirt, Utensils, Plane, Film, BrainCircuit, Landmark, Drama, CookingPot, UtensilsCrossed, Scroll, Music4, HelpingHand, Sprout, Rocket, Briefcase, Heart, Trophy, AlignLeft, BarChart3, Zap, Radio, Image as ImageIcon } from "lucide-react";
+import { Plus, Bell, Search, Mic, Video, Flame, Gamepad2, Tv, Music, Rss, Compass, Smile, Code, Atom, LandPlot, Handshake, PenTool, Bot, Sparkles, Book, Camera, Palette, Shirt, Utensils, Plane, Film, BrainCircuit, Landmark, Drama, CookingPot, UtensilsCrossed, Scroll, Music4, HelpingHand, Sprout, Rocket, Briefcase, Heart, Trophy, AlignLeft, BarChart3, Zap, Radio, Image as ImageIcon, BriefcaseBusiness, Users, Brush, GraduationCap, Popcorn } from "lucide-react";
 import { auth } from "@/utils/firebaseClient";
 import { useAppState } from "@/utils/AppStateContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -24,11 +24,11 @@ const NotificationPanel = dynamic(() => import('@/components/NotificationPanel')
 const db = getFirestore(app);
 
 const categories = [
-    { id: 'for-you', name: 'For You', icon: <Flame /> },
-    { id: 'news', name: 'News', icon: <Rss /> },
-    { id: 'gaming', name: 'Gaming', icon: <Gamepad2 /> },
-    { id: 'music', name: 'Music', icon: <Music /> },
-    { id: 'vlogs', name: 'Vlogs', icon: <Video /> },
+    { id: 'daily', name: 'Daily', icon: <Users /> },
+    { id: 'creative', name: 'Creative', icon: <Brush /> },
+    { id: 'play', name: 'Play', icon: <Gamepad2 /> },
+    { id: 'learn', name: 'Learn', icon: <GraduationCap /> },
+    { id: 'culture', name: 'Culture', icon: <Popcorn /> },
 ];
 
 
@@ -46,7 +46,7 @@ function HomePageContent() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [lastVisible, setLastVisible] = useState<any>(null);
   const [hasMore, setHasMore] = useState(true);
-  const [activeCategory, setActiveCategory] = useState('for-you');
+  const [activeCategory, setActiveCategory] = useState('daily');
   const router = useRouter();
   const searchParams = useSearchParams();
   const [showWelcomeAnimation, setShowWelcomeAnimation] = useState(false);
@@ -105,7 +105,7 @@ function HomePageContent() {
         
         let constraints: any[] = [orderBy("publishAt", "desc")];
 
-        if (category !== 'for-you') {
+        if (category) {
             constraints.unshift(or(
               where("category", "==", category), 
               where("creatorType", "==", category)
@@ -253,7 +253,7 @@ function HomePageContent() {
     : posts;
     
   
-  const canCreatePost = activeCategory === 'for-you' || (userProfile?.accountType === 'creator' && userProfile?.creatorType === activeCategory);
+  const canCreatePost = true; // Anyone can post now
 
   const flashesContainerVariants = {
     hidden: { opacity: 0, y: -20 },
@@ -377,7 +377,7 @@ function HomePageContent() {
             ))}
         </motion.div>
 
-        {activeCategory === 'for-you' && (
+        
           <motion.section 
               className="mb-6 glass-card p-4"
               variants={flashesContainerVariants}
@@ -422,7 +422,7 @@ function HomePageContent() {
                 )})}
               </motion.div>
           </motion.section>
-        )}
+        
 
         <section className="flex-1 flex flex-col items-center mt-4">
             <motion.h2 
