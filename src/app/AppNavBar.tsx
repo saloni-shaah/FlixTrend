@@ -1,4 +1,3 @@
-
 "use client";
 import { usePathname, useRouter } from "next/navigation";
 import { useAppState } from "@/utils/AppStateContext";
@@ -148,7 +147,6 @@ export default function AppNavBar() {
                      // This logic is flawed for a total count. 
                      // A better approach for this global counter might be a dedicated collection updated by cloud functions.
                      // Let's simulate by checking for *any* unread message for now to show a badge, not a count.
-                     // The logic on the `signal` page itself will be more accurate.
                  });
                  unsubs.push(unsub);
             });
@@ -186,7 +184,7 @@ export default function AppNavBar() {
 
 
   const isAuthPage = pathname === "/login" || pathname === "/signup" || pathname === "/";
-  const isSpecialPage = pathname === "/guest" || pathname === "/about";
+  const isSpecialPage = ["/guest", "/about", "/privacy", "/terms", "/contact"].includes(pathname);
   const hideNav = isAuthPage || isSpecialPage || !!activeCall;
   const hideForScopeVideo = pathname.startsWith('/scope') && isScopeVideoPlaying;
 

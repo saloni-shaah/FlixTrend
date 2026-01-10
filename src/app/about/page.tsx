@@ -57,7 +57,7 @@ export default function AboutPage() {
       {/* Footer */}
       <footer className="w-full py-8 text-center flex flex-col gap-2 items-center mt-8 border-t border-zinc-800/50">
         <p className="text-xs text-zinc-500">&copy; {new Date().getFullYear()} FlixTrend. All rights reserved.</p>
-        <Link href="/" className="text-xs text-zinc-400 hover:underline">Home</Link>
+        <Link href="/" className="text-xs text-zinc-400 hover:underline">Landing</Link>
       </footer>
     </div>
   );
