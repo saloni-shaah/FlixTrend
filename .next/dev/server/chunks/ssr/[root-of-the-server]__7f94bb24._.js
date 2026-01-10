@@ -158,6 +158,9 @@ const auth = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f
 const db = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["getFirestore"])(app);
 const storage = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$storage$2f$dist$2f$node$2d$esm$2f$index$2e$node$2e$esm$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["getStorage"])(app);
 const functions = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$functions$2f$dist$2f$esm$2f$index$2e$esm$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["getFunctions"])(app);
+// Add this block for local development to bypass reCAPTCHA
+if ("TURBOPACK compile-time falsy", 0) //TURBOPACK unreachable
+;
 ;
 }),
 "[project]/src/components/CallScreen.tsx [app-ssr] (ecmascript)", ((__turbopack_context__) => {

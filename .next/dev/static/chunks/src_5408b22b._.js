@@ -44,6 +44,13 @@ const auth = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f
 const db = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["getFirestore"])(app);
 const storage = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$storage$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["getStorage"])(app);
 const functions = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$functions$2f$dist$2f$esm$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["getFunctions"])(app);
+// Add this block for local development to bypass reCAPTCHA
+if (("TURBOPACK compile-time value", "object") !== 'undefined' && window.location.hostname === "localhost") {
+    // Point to the Auth Emulator running on a different port
+    // connectAuthEmulator(auth, "http://localhost:9099", { disableWarnings: true });
+    // Set a test phone number and SMS code
+    auth.settings.appVerificationDisabledForTesting = true;
+}
 ;
 if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelpers !== null) {
     __turbopack_context__.k.registerExports(__turbopack_context__.m, globalThis.$RefreshHelpers$);
