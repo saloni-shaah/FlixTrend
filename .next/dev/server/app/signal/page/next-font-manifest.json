@@ -1,8 +1,6 @@
 {
   "pages": {},
-  "app": {
-    "[project]/src/app/signal/page": []
-  },
+  "app": {},
   "appUsingSizeAdjust": false,
   "pagesUsingSizeAdjust": false
 }

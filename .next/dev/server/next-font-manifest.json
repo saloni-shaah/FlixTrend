@@ -1,18 +1,5 @@
 {
-  "app": {
-    "[project]/src/app/_not-found/page": [],
-    "[project]/src/app/about/page": [],
-    "[project]/src/app/contact/page": [],
-    "[project]/src/app/home/page": [],
-    "[project]/src/app/login/page": [],
-    "[project]/src/app/page": [],
-    "[project]/src/app/privacy/page": [],
-    "[project]/src/app/settings/page": [],
-    "[project]/src/app/signal/page": [],
-    "[project]/src/app/signup/page": [],
-    "[project]/src/app/squad/page": [],
-    "[project]/src/app/terms/page": []
-  },
+  "app": {},
   "appUsingSizeAdjust": false,
   "pages": {},
   "pagesUsingSizeAdjust": false

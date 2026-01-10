@@ -1,14 +1,5 @@
 {
-  "/_not-found/page": "app/_not-found/page.js",
-  "/about/page": "app/about/page.js",
-  "/contact/page": "app/contact/page.js",
   "/home/page": "app/home/page.js",
-  "/login/page": "app/login/page.js",
   "/page": "app/page.js",
-  "/privacy/page": "app/privacy/page.js",
-  "/settings/page": "app/settings/page.js",
-  "/signal/page": "app/signal/page.js",
-  "/signup/page": "app/signup/page.js",
-  "/squad/page": "app/squad/page.js",
-  "/terms/page": "app/terms/page.js"
+  "/signal/page": "app/signal/page.js"
 }
