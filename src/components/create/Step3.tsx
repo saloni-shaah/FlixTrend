@@ -13,6 +13,15 @@ import { useRouter } from 'next/navigation';
 const db = getFirestore(app);
 const storage = getStorage(app);
 
+// Mapping from sub-category (creatorType) to main category
+const creatorCategoryMap: { [key: string]: string } = {
+    'vlogs': 'daily', 'moments': 'daily', 'travel': 'daily', 'self': 'daily',
+    'art': 'creative', 'photos': 'creative', 'design': 'creative', 'writing': 'creative',
+    'gaming': 'play', 'challenges': 'play', 'comedy': 'play', 'reactions': 'play',
+    'tips': 'learn', 'tech': 'learn', 'study': 'learn', 'explainers': 'learn',
+    'music': 'culture', 'movies': 'culture', 'trends': 'culture', 'community': 'culture'
+};
+
 function PostPreview({ postData }: { postData: any }) {
     if (!postData) return null;
     
@@ -123,6 +132,10 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
             if (!userDocSnap.exists()) throw new Error("User profile not found!");
             const userData = userDocSnap.data();
 
+            // Determine the main category from the creator's sub-category type
+            const creatorType = userData.creatorType || '';
+            const mainCategory = creatorCategoryMap[creatorType] || null;
+
             let publishAt;
             if (isScheduling && scheduleDate && postData.postType !== 'live') {
                 const [hours, minutes] = scheduleTime.split(':');
@@ -154,7 +167,9 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
                 isPortrait: postData.isPortrait || false,
                 videoDuration: postData.videoDuration || 0,
                 isVideo: postData.isVideo || false,
-                viewCount: 0, 
+                viewCount: 0,
+                creatorType: creatorType, // Save the creator's specific type
+                category: mainCategory, // **NEW: Save the derived main category**
                 ...(postData.postType === 'text' && { 
                     backgroundColor: postData.backgroundColor || null, 
                     backgroundImage: postData.backgroundImage || null, 
