@@ -1,7 +1,8 @@
-
-import "./globals.css";
+import "../styles/globals.css";
 import type { Metadata } from "next";
 import { Providers } from "./providers";
+import AppNavBar from "./AppNavBar"; // Import AppNavBar
+import BodyStyling from "./BodyStyling"; // Import BodyStyling
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://flixtrend.in';
 
@@ -93,7 +94,9 @@ export default function RootLayout({
       </head>
       <body className="relative min-h-screen">
         <Providers>
+          <BodyStyling />
           {children}
+          <AppNavBar />
         </Providers>
       </body>
     </html>

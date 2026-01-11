@@ -6,17 +6,12 @@ import { auth, app } from "@/utils/firebaseClient";
 import { 
     createUserWithEmailAndPassword, 
     sendEmailVerification, 
-    updateProfile,
-    RecaptchaVerifier,
-    signInWithPhoneNumber,
-    PhoneAuthProvider,
-    linkWithCredential
+    updateProfile
 } from "firebase/auth";
 import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, ArrowLeft, Gift, Eye, EyeOff } from 'lucide-react';
-import CountrySelector from "@/components/ui/CountrySelector";
 
 const db = getFirestore(app);
 
@@ -25,12 +20,6 @@ async function isUsernameUnique(username: string): Promise<boolean> {
     const usernameDocRef = doc(db, "usernames", username.toLowerCase());
     const docSnap = await getDoc(usernameDocRef);
     return !docSnap.exists();
-}
-
-declare global {
-    interface Window {
-        recaptchaVerifier?: RecaptchaVerifier;
-    }
 }
 
 const creatorTypes = {
@@ -48,41 +37,24 @@ export default function SignupPage() {
         email: "",
         password: "",
         confirmPassword: "",
-        phoneNumber: "",
-        countryCode: "+91",
         username: "",
         bio: "",
         location: "",
         dob: "",
         gender: "",
         accountType: "user",
-        creatorType: "" // This will now store the subcategory
+        creatorType: ""
     });
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-    const [otp, setOtp] = useState("");
-    const [confirmationResult, setConfirmationResult] = useState<any>(null);
     
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
     const [loading, setLoading] = useState(false);
     const router = useRouter();
 
-    useEffect(() => {
-        if (!window.recaptchaVerifier) {
-            window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-              'size': 'invisible',
-              'callback': (response: any) => {}
-            });
-        }
-    }, []);
-
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         setForm({ ...form, [e.target.name]: e.target.value });
-    };
-
-    const handleCountryChange = (dialCode: string) => {
-        setForm({ ...form, countryCode: dialCode });
     };
 
     const nextStep = async () => {
@@ -102,7 +74,7 @@ export default function SignupPage() {
             }
         }
         
-        if (step === 3) {
+        if (step === 2) {
             if (!form.username) {
                 setError("Username is required.");
                 setLoading(false);
@@ -141,36 +113,17 @@ export default function SignupPage() {
 
     const prevStep = () => setStep(s => s - 1);
 
-    const handleSendOtp = async () => {
-        if (!form.phoneNumber) {
-            setError("Please enter a valid phone number.");
-            return;
-        }
-        setLoading(true);
-        setError("");
-        try {
-            const fullPhoneNumber = `${form.countryCode}${form.phoneNumber}`;
-            const verifier = window.recaptchaVerifier!;
-            const result = await signInWithPhoneNumber(auth, fullPhoneNumber, verifier);
-            setConfirmationResult(result);
-            setStep(3); 
-        } catch (err: any) {
-            setError("Failed to send OTP. Please check the phone number and try again.");
-            console.error("OTP send error:", err);
-        }
-        setLoading(false);
-    };
-
     const handleFinalSubmit = async () => {
-        if (step !== 4) return;
-        
+        if (step !== 2) { // Now final submit is on step 2
+             await nextStep();
+             return;
+        }
+
         setLoading(true);
         setError("");
         try {
-            const credential = PhoneAuthProvider.credential(confirmationResult.verificationId, otp);
             const userCredential = await createUserWithEmailAndPassword(auth, form.email, form.password);
             const user = userCredential.user;
-            await linkWithCredential(user, credential);
 
             const avatarUrl = `https://api.dicebear.com/8.x/bottts-neutral/svg?seed=${form.username}`;
             await updateProfile(user, { displayName: form.name, photoURL: avatarUrl });
@@ -181,7 +134,6 @@ export default function SignupPage() {
             await setDoc(doc(db, "users", user.uid), {
                 uid: user.uid,
                 email: form.email,
-                phoneNumber: `${form.countryCode}${form.phoneNumber}`,
                 name: form.name,
                 username: form.username.toLowerCase(),
                 bio: form.bio,
@@ -203,8 +155,6 @@ export default function SignupPage() {
         } catch (err: any) {
              if(err.code === 'auth/email-already-in-use') {
                 setError("This email is already in use. Please log in.");
-            } else if (err.code === 'auth/invalid-verification-code') {
-                setError("Invalid OTP. Please try again.");
             } else {
                 setError(err.message);
                 console.error("Final signup error:", err);
@@ -238,15 +188,7 @@ export default function SignupPage() {
             case 2:
                 return (
                      <motion.div key="step2" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} className="flex flex-col gap-4">
-                        <h3 className="text-xl font-bold text-accent-cyan text-center">Step 2: Phone Verification</h3>
-                         <CountrySelector onCountrySelect={handleCountryChange} />
-                         <input type="tel" name="phoneNumber" placeholder="Phone Number" className="input-glass w-full" value={form.phoneNumber} onChange={handleChange} required />
-                     </motion.div>
-                );
-            case 3:
-                return (
-                     <motion.div key="step3" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} className="flex flex-col gap-4">
-                        <h3 className="text-xl font-bold text-accent-cyan text-center">Step 3: Profile Details</h3>
+                        <h3 className="text-xl font-bold text-accent-cyan text-center">Step 2: Profile Details</h3>
                          <input type="text" name="username" placeholder="Username" className="input-glass w-full" value={form.username} onChange={handleChange} required />
                          <textarea name="bio" placeholder="Bio" className="input-glass w-full min-h-[80px]" value={form.bio} onChange={handleChange} />
                          <input type="text" name="location" placeholder="Location (e.g. City, Country)" className="input-glass w-full" value={form.location} onChange={handleChange} />
@@ -278,22 +220,12 @@ export default function SignupPage() {
                         )}
                      </motion.div>
                 );
-            case 4:
-                return (
-                    <motion.div key="step4" initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} className="flex flex-col gap-4 items-center">
-                        <h3 className="text-xl font-bold text-accent-cyan text-center">Step 4: Verify Your Account</h3>
-                        <p className="text-sm text-gray-300 text-center">Enter the code sent to {form.countryCode} {form.phoneNumber}</p>
-                         <input type="text" name="otp" placeholder="6-digit code" className="input-glass w-full text-center tracking-widest text-lg" value={otp} onChange={e => setOtp(e.target.value)} required />
-                    </motion.div>
-                );
             default: return null;
         }
     }
     
     const handleNextButton = () => {
         if (step === 2) {
-            handleSendOtp();
-        } else if (step === 4) {
             handleFinalSubmit();
         } else {
             nextStep();
@@ -302,7 +234,6 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 animate-fade-in">
-       <div id="recaptcha-container"></div>
       <div
         className="glass-card p-8 w-full max-w-lg flex flex-col gap-4"
       >
@@ -321,7 +252,7 @@ export default function SignupPage() {
                     <div className="w-full bg-black/20 rounded-full h-2.5 mb-4">
                         <motion.div 
                             className="bg-gradient-to-r from-accent-pink to-accent-cyan h-2.5 rounded-full"
-                            animate={{ width: `${(step / 4) * 100}%` }}
+                            animate={{ width: `${(step / 2) * 100}%` }}
                             transition={{ duration: 0.5, ease: 'easeInOut' }}
                         />
                     </div>
@@ -340,8 +271,8 @@ export default function SignupPage() {
                         ) : <div />}
 
                         <button type="button" className="btn-glass bg-accent-pink flex items-center gap-2" disabled={loading} onClick={handleNextButton}>
-                            {loading ? 'Processing...' : step === 4 ? 'Verify & Sign Up' : step === 2 ? 'Send OTP' : 'Next'}
-                            {(step < 4) && <ArrowRight size={16} />}
+                            {loading ? 'Processing...' : step === 2 ? 'Create Account' : 'Next'}
+                            {(step < 2) && <ArrowRight size={16} />}
                         </button>
                     </div>
                 </motion.div>
@@ -363,5 +294,3 @@ export default function SignupPage() {
     </div>
   );
 }
-
-    
