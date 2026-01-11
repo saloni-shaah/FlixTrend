@@ -10,21 +10,21 @@
     "id": "[project]/src/components/NotificationPanel.tsx [app-client] (ecmascript, next/dynamic entry)",
     "files": [
       "static/chunks/src_components_NotificationPanel_tsx_11ee0c44._.js",
-      "static/chunks/src_components_NotificationPanel_tsx_11e85e36._.js"
+      "static/chunks/src_components_NotificationPanel_tsx_91d158be._.js"
     ]
   },
   "[project]/src/components/FlashModal.tsx [app-client] (ecmascript, next/dynamic entry)": {
     "id": "[project]/src/components/FlashModal.tsx [app-client] (ecmascript, next/dynamic entry)",
     "files": [
       "static/chunks/src_components_FlashModal_tsx_d9f0ec89._.js",
-      "static/chunks/src_components_FlashModal_tsx_11e85e36._.js"
+      "static/chunks/src_components_FlashModal_tsx_91d158be._.js"
     ]
   },
   "[project]/src/components/MusicDiscovery.tsx [app-client] (ecmascript, next/dynamic entry)": {
     "id": "[project]/src/components/MusicDiscovery.tsx [app-client] (ecmascript, next/dynamic entry)",
     "files": [
       "static/chunks/_11944c2d._.js",
-      "static/chunks/src_components_MusicDiscovery_tsx_11e85e36._.js"
+      "static/chunks/src_components_MusicDiscovery_tsx_91d158be._.js"
     ]
   }
 }

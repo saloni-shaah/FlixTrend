@@ -3501,58 +3501,64 @@ const imageBreakpoints = [
     1600
 ];
 function OptimizedImage({ src, alt, className, width, height }) {
-    if (!src.startsWith(CLOUDINARY_BASE_URL)) {
+    if (!src) {
+        return null; // Don't render anything if there's no src
+    }
+    const isCloudinaryUrl = src.startsWith(CLOUDINARY_BASE_URL);
+    if (isCloudinaryUrl) {
+        const publicId = getCloudinaryId(src);
+        if (!publicId) {
+            // Fallback for Cloudinary URLs that don't match the regex
+            return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("img", {
+                src: src,
+                alt: alt,
+                className: className,
+                width: width,
+                height: height,
+                loading: "lazy"
+            }, void 0, false, {
+                fileName: "[project]/src/components/OptimizedImage.tsx",
+                lineNumber: 27,
+                columnNumber: 15
+            }, this);
+        }
+        const getTransformedUrl = (w)=>{
+            return `${CLOUDINARY_BASE_URL}/image/upload/f_auto,q_auto,w_${w}/${publicId}`;
+        };
+        const srcSet = imageBreakpoints.map((w)=>`${getTransformedUrl(w)} ${w}w`).join(', ');
         return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("img", {
-            src: src,
+            src: getTransformedUrl(imageBreakpoints[1]),
+            srcSet: srcSet,
+            sizes: "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 800px",
             alt: alt,
             className: className,
+            loading: "lazy",
+            decoding: "async",
             width: width,
             height: height,
-            loading: "lazy"
+            style: {
+                width: width ? `${width}px` : '100%',
+                height: height ? `${height}px` : 'auto',
+                aspectRatio: width && height ? `${width}/${height}` : undefined
+            }
         }, void 0, false, {
             fileName: "[project]/src/components/OptimizedImage.tsx",
-            lineNumber: 18,
-            columnNumber: 12
+            lineNumber: 37,
+            columnNumber: 7
         }, this);
     }
-    const publicId = getCloudinaryId(src);
-    if (!publicId) {
-        return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("img", {
-            src: src,
-            alt: alt,
-            className: className,
-            width: width,
-            height: height,
-            loading: "lazy"
-        }, void 0, false, {
-            fileName: "[project]/src/components/OptimizedImage.tsx",
-            lineNumber: 23,
-            columnNumber: 13
-        }, this);
-    }
-    const getTransformedUrl = (w)=>{
-        return `${CLOUDINARY_BASE_URL}/image/upload/f_auto,q_auto,w_${w}/${publicId}`;
-    };
-    const srcSet = imageBreakpoints.map((w)=>`${getTransformedUrl(w)} ${w}w`).join(', ');
+    // Default behavior for non-Cloudinary images (e.g., Firebase Storage)
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("img", {
-        src: getTransformedUrl(imageBreakpoints[1]),
-        srcSet: srcSet,
-        sizes: "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 800px",
+        src: src,
         alt: alt,
         className: className,
-        loading: "lazy",
-        decoding: "async",
         width: width,
         height: height,
-        style: {
-            width: width ? `${width}px` : '100%',
-            height: height ? `${height}px` : 'auto',
-            aspectRatio: width && height ? `${width}/${height}` : undefined
-        }
+        loading: "lazy"
     }, void 0, false, {
         fileName: "[project]/src/components/OptimizedImage.tsx",
-        lineNumber: 33,
-        columnNumber: 5
+        lineNumber: 57,
+        columnNumber: 10
     }, this);
 }
 }),
@@ -5689,6 +5695,30 @@ DropdownMenuItem.displayName = __TURBOPACK__imported__module__$5b$project$5d2f$n
 // END: Copied DropdownMenu components
 const db = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["getFirestore"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$utils$2f$firebaseClient$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["app"]);
 const functions = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$functions$2f$dist$2f$esm$2f$index$2e$esm$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["getFunctions"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$utils$2f$firebaseClient$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["app"]);
+const timeAgo = (timestamp)=>{
+    if (!timestamp) return "Just now";
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    if (isNaN(date.getTime())) {
+        return "Just now";
+    }
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    const days = seconds / 86400;
+    if (seconds < 10) return "Just now";
+    if (seconds < 60) return `${Math.floor(seconds)}s ago`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    if (days < 2) return "Yesterday";
+    if (days <= 7) return `${Math.floor(days)}d ago`;
+    const options = {
+        month: 'short',
+        day: 'numeric'
+    };
+    if (date.getFullYear() !== now.getFullYear()) {
+        options.year = 'numeric';
+    }
+    return date.toLocaleDateString('en-US', options);
+};
 const Watermark = ({ isAnimated = false })=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
         className: `absolute flex items-center gap-1.5 bg-black/40 text-white py-1 px-2 rounded-full text-xs pointer-events-none z-10 ${isAnimated ? 'animate-[float-watermark_10s_ease-in-out_infinite]' : 'bottom-2 right-2'}`,
         children: [
@@ -5696,7 +5726,7 @@ const Watermark = ({ isAnimated = false })=>/*#__PURE__*/ (0, __TURBOPACK__impor
                 size: 16
             }, void 0, false, {
                 fileName: "[project]/src/components/PostCard.tsx",
-                lineNumber: 76,
+                lineNumber: 102,
                 columnNumber: 9
             }, ("TURBOPACK compile-time value", void 0)),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -5704,13 +5734,13 @@ const Watermark = ({ isAnimated = false })=>/*#__PURE__*/ (0, __TURBOPACK__impor
                 children: "FlixTrend"
             }, void 0, false, {
                 fileName: "[project]/src/components/PostCard.tsx",
-                lineNumber: 77,
+                lineNumber: 103,
                 columnNumber: 9
             }, ("TURBOPACK compile-time value", void 0))
         ]
     }, void 0, true, {
         fileName: "[project]/src/components/PostCard.tsx",
-        lineNumber: 71,
+        lineNumber: 97,
         columnNumber: 5
     }, ("TURBOPACK compile-time value", void 0));
 function PostCard({ post, isShortVibe = false }) {
@@ -5805,19 +5835,19 @@ function PostCard({ post, isShortVibe = false }) {
                                         className: "w-full h-full object-cover"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/PostCard.tsx",
-                                        lineNumber: 154,
+                                        lineNumber: 180,
                                         columnNumber: 51
                                     }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                         className: "text-white",
                                         children: initials
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/PostCard.tsx",
-                                        lineNumber: 154,
+                                        lineNumber: 180,
                                         columnNumber: 142
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/PostCard.tsx",
-                                    lineNumber: 153,
+                                    lineNumber: 179,
                                     columnNumber: 21
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -5828,23 +5858,23 @@ function PostCard({ post, isShortVibe = false }) {
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/PostCard.tsx",
-                                    lineNumber: 156,
+                                    lineNumber: 182,
                                     columnNumber: 21
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 152,
+                            lineNumber: 178,
                             columnNumber: 17
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                             className: "ml-auto flex items-center gap-3 text-xs text-muted-foreground",
                             children: [
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                    children: contentPost.createdAt?.toDate?.().toLocaleString?.() || "Just now"
+                                    children: timeAgo(contentPost.createdAt)
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/PostCard.tsx",
-                                    lineNumber: 159,
+                                    lineNumber: 185,
                                     columnNumber: 21
                                 }, this),
                                 (contentPost.isVideo || contentPost.type === 'live') && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -5854,7 +5884,7 @@ function PostCard({ post, isShortVibe = false }) {
                                             size: 14
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/PostCard.tsx",
-                                            lineNumber: 162,
+                                            lineNumber: 188,
                                             columnNumber: 29
                                         }, this),
                                         " ",
@@ -5862,7 +5892,7 @@ function PostCard({ post, isShortVibe = false }) {
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/PostCard.tsx",
-                                    lineNumber: 161,
+                                    lineNumber: 187,
                                     columnNumber: 25
                                 }, this),
                                 currentUser?.uid === contentPost.userId && !isShortVibe && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(DropdownMenu, {
@@ -5875,17 +5905,17 @@ function PostCard({ post, isShortVibe = false }) {
                                                     size: 16
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/components/PostCard.tsx",
-                                                    lineNumber: 168,
+                                                    lineNumber: 194,
                                                     columnNumber: 88
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/PostCard.tsx",
-                                                lineNumber: 168,
+                                                lineNumber: 194,
                                                 columnNumber: 33
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/PostCard.tsx",
-                                            lineNumber: 167,
+                                            lineNumber: 193,
                                             columnNumber: 29
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(DropdownMenuContent, {
@@ -5896,14 +5926,14 @@ function PostCard({ post, isShortVibe = false }) {
                                                     children: [
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$square$2d$pen$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Edit$3e$__["Edit"], {}, void 0, false, {
                                                             fileName: "[project]/src/components/PostCard.tsx",
-                                                            lineNumber: 171,
+                                                            lineNumber: 197,
                                                             columnNumber: 85
                                                         }, this),
                                                         " Edit Post"
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/components/PostCard.tsx",
-                                                    lineNumber: 171,
+                                                    lineNumber: 197,
                                                     columnNumber: 33
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(DropdownMenuItem, {
@@ -5912,38 +5942,38 @@ function PostCard({ post, isShortVibe = false }) {
                                                     children: [
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$trash$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Trash$3e$__["Trash"], {}, void 0, false, {
                                                             fileName: "[project]/src/components/PostCard.tsx",
-                                                            lineNumber: 172,
+                                                            lineNumber: 198,
                                                             columnNumber: 138
                                                         }, this),
                                                         " Delete Post"
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/components/PostCard.tsx",
-                                                    lineNumber: 172,
+                                                    lineNumber: 198,
                                                     columnNumber: 33
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/components/PostCard.tsx",
-                                            lineNumber: 170,
+                                            lineNumber: 196,
                                             columnNumber: 29
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/PostCard.tsx",
-                                    lineNumber: 166,
+                                    lineNumber: 192,
                                     columnNumber: 25
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 158,
+                            lineNumber: 184,
                             columnNumber: 17
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 151,
+                    lineNumber: 177,
                     columnNumber: 13
                 }, this),
                 contentPost.type === "live" && contentPost.livekitRoom && contentPost.status === 'live' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -5952,12 +5982,12 @@ function PostCard({ post, isShortVibe = false }) {
                         streamPost: contentPost
                     }, void 0, false, {
                         fileName: "[project]/src/components/PostCard.tsx",
-                        lineNumber: 181,
+                        lineNumber: 207,
                         columnNumber: 21
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 180,
+                    lineNumber: 206,
                     columnNumber: 17
                 }, this),
                 contentPost.content && (contentPost.type !== 'poll' || contentPost.type === 'poll' && !contentPost.pollOptions) && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -5970,7 +6000,7 @@ function PostCard({ post, isShortVibe = false }) {
                     children: contentPost.content
                 }, void 0, false, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 186,
+                    lineNumber: 212,
                     columnNumber: 17
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -5983,7 +6013,7 @@ function PostCard({ post, isShortVibe = false }) {
                                     size: 14
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/PostCard.tsx",
-                                    lineNumber: 192,
+                                    lineNumber: 218,
                                     columnNumber: 86
                                 }, this),
                                 " ",
@@ -5991,7 +6021,7 @@ function PostCard({ post, isShortVibe = false }) {
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 192,
+                            lineNumber: 218,
                             columnNumber: 42
                         }, this),
                         contentPost.mood && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -6001,7 +6031,7 @@ function PostCard({ post, isShortVibe = false }) {
                                     size: 14
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/PostCard.tsx",
-                                    lineNumber: 193,
+                                    lineNumber: 219,
                                     columnNumber: 82
                                 }, this),
                                 " Feeling ",
@@ -6009,13 +6039,13 @@ function PostCard({ post, isShortVibe = false }) {
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 193,
+                            lineNumber: 219,
                             columnNumber: 38
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 191,
+                    lineNumber: 217,
                     columnNumber: 13
                 }, this),
                 contentPost.hashtags && contentPost.hashtags.length > 0 && !isShortVibe && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6029,12 +6059,12 @@ function PostCard({ post, isShortVibe = false }) {
                             ]
                         }, tag, true, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 198,
+                            lineNumber: 224,
                             columnNumber: 64
                         }, this))
                 }, void 0, false, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 197,
+                    lineNumber: 223,
                     columnNumber: 17
                 }, this),
                 contentPost.type === "media" && mediaUrls.length > 0 && !isShortVibe && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$video$2f$InFeedVideoPlayer$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["InFeedVideoPlayer"], {
@@ -6042,7 +6072,7 @@ function PostCard({ post, isShortVibe = false }) {
                     post: contentPost
                 }, void 0, false, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 203,
+                    lineNumber: 229,
                     columnNumber: 18
                 }, this),
                 contentPost.type === "poll" && contentPost.pollOptions && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6053,7 +6083,7 @@ function PostCard({ post, isShortVibe = false }) {
                             children: contentPost.content
                         }, void 0, false, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 211,
+                            lineNumber: 237,
                             columnNumber: 21
                         }, this),
                         contentPost.pollOptions.map((opt, idx)=>{
@@ -6075,7 +6105,7 @@ function PostCard({ post, isShortVibe = false }) {
                                         }
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/PostCard.tsx",
-                                        lineNumber: 219,
+                                        lineNumber: 245,
                                         columnNumber: 59
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6085,7 +6115,7 @@ function PostCard({ post, isShortVibe = false }) {
                                                 children: opt
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/PostCard.tsx",
-                                                lineNumber: 221,
+                                                lineNumber: 247,
                                                 columnNumber: 37
                                             }, this),
                                             userPollVote !== null && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -6097,26 +6127,26 @@ function PostCard({ post, isShortVibe = false }) {
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/PostCard.tsx",
-                                                lineNumber: 222,
+                                                lineNumber: 248,
                                                 columnNumber: 63
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/PostCard.tsx",
-                                        lineNumber: 220,
+                                        lineNumber: 246,
                                         columnNumber: 33
                                     }, this)
                                 ]
                             }, idx, true, {
                                 fileName: "[project]/src/components/PostCard.tsx",
-                                lineNumber: 217,
+                                lineNumber: 243,
                                 columnNumber: 29
                             }, this);
                         })
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 210,
+                    lineNumber: 236,
                     columnNumber: 17
                 }, this),
                 contentPost.song && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6128,7 +6158,7 @@ function PostCard({ post, isShortVibe = false }) {
                             className: "w-12 h-12 rounded-lg"
                         }, void 0, false, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 232,
+                            lineNumber: 258,
                             columnNumber: 21
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6139,7 +6169,7 @@ function PostCard({ post, isShortVibe = false }) {
                                     children: contentPost.song.name
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/PostCard.tsx",
-                                    lineNumber: 234,
+                                    lineNumber: 260,
                                     columnNumber: 25
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6147,13 +6177,13 @@ function PostCard({ post, isShortVibe = false }) {
                                     children: contentPost.song.artists.join(", ")
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/PostCard.tsx",
-                                    lineNumber: 235,
+                                    lineNumber: 261,
                                     columnNumber: 25
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 233,
+                            lineNumber: 259,
                             columnNumber: 21
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {
@@ -6163,18 +6193,18 @@ function PostCard({ post, isShortVibe = false }) {
                                 size: 14
                             }, void 0, false, {
                                 fileName: "[project]/src/components/PostCard.tsx",
-                                lineNumber: 238,
+                                lineNumber: 264,
                                 columnNumber: 25
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 237,
+                            lineNumber: 263,
                             columnNumber: 22
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 231,
+                    lineNumber: 257,
                     columnNumber: 18
                 }, this)
             ]
@@ -6199,19 +6229,19 @@ function PostCard({ post, isShortVibe = false }) {
                                         className: "w-full h-full object-cover"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/PostCard.tsx",
-                                        lineNumber: 252,
+                                        lineNumber: 278,
                                         columnNumber: 44
                                     }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                         className: "text-white",
                                         children: post.displayName?.[0] || 'U'
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/PostCard.tsx",
-                                        lineNumber: 252,
+                                        lineNumber: 278,
                                         columnNumber: 128
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/PostCard.tsx",
-                                    lineNumber: 251,
+                                    lineNumber: 277,
                                     columnNumber: 21
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -6222,13 +6252,13 @@ function PostCard({ post, isShortVibe = false }) {
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/PostCard.tsx",
-                                    lineNumber: 254,
+                                    lineNumber: 280,
                                     columnNumber: 21
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 250,
+                            lineNumber: 276,
                             columnNumber: 17
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -6236,7 +6266,7 @@ function PostCard({ post, isShortVibe = false }) {
                             children: post.content
                         }, void 0, false, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 256,
+                            lineNumber: 282,
                             columnNumber: 17
                         }, this),
                         post.song && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6244,7 +6274,7 @@ function PostCard({ post, isShortVibe = false }) {
                             children: [
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2d$icons$2f$fa$2f$index$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FaMusic"], {}, void 0, false, {
                                     fileName: "[project]/src/components/PostCard.tsx",
-                                    lineNumber: 259,
+                                    lineNumber: 285,
                                     columnNumber: 25
                                 }, this),
                                 " ",
@@ -6256,19 +6286,19 @@ function PostCard({ post, isShortVibe = false }) {
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/PostCard.tsx",
-                                    lineNumber: 259,
+                                    lineNumber: 285,
                                     columnNumber: 37
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 258,
+                            lineNumber: 284,
                             columnNumber: 21
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 249,
+                    lineNumber: 275,
                     columnNumber: 13
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6279,12 +6309,12 @@ function PostCard({ post, isShortVibe = false }) {
                         onCommentClick: ()=>setShowComments(true)
                     }, void 0, false, {
                         fileName: "[project]/src/components/PostCard.tsx",
-                        lineNumber: 264,
+                        lineNumber: 290,
                         columnNumber: 17
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 263,
+                    lineNumber: 289,
                     columnNumber: 13
                 }, this),
                 showComments && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(CommentModal, {
@@ -6294,13 +6324,13 @@ function PostCard({ post, isShortVibe = false }) {
                     post: post
                 }, void 0, false, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 266,
+                    lineNumber: 292,
                     columnNumber: 30
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/src/components/PostCard.tsx",
-            lineNumber: 248,
+            lineNumber: 274,
             columnNumber: 9
         }, this);
     }
@@ -6331,7 +6361,7 @@ function PostCard({ post, isShortVibe = false }) {
                             size: 14
                         }, void 0, false, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 282,
+                            lineNumber: 308,
                             columnNumber: 15
                         }, this),
                         " Relayed by ",
@@ -6344,13 +6374,13 @@ function PostCard({ post, isShortVibe = false }) {
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 282,
+                            lineNumber: 308,
                             columnNumber: 47
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 281,
+                    lineNumber: 307,
                     columnNumber: 11
                 }, this),
                 showEdit && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$squad$2f$EditPostModal$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["EditPostModal"], {
@@ -6358,7 +6388,7 @@ function PostCard({ post, isShortVibe = false }) {
                     onClose: ()=>setShowEdit(false)
                 }, void 0, false, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 287,
+                    lineNumber: 313,
                     columnNumber: 9
                 }, this),
                 renderPostContent(post),
@@ -6367,7 +6397,7 @@ function PostCard({ post, isShortVibe = false }) {
                     onCommentClick: ()=>setShowComments(true)
                 }, void 0, false, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 291,
+                    lineNumber: 317,
                     columnNumber: 7
                 }, this),
                 showComments && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(CommentModal, {
@@ -6377,13 +6407,13 @@ function PostCard({ post, isShortVibe = false }) {
                     post: post
                 }, void 0, false, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 293,
+                    lineNumber: 319,
                     columnNumber: 24
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/src/components/PostCard.tsx",
-            lineNumber: 273,
+            lineNumber: 299,
             columnNumber: 5
         }, this)
     }, void 0, false);
@@ -6413,7 +6443,7 @@ function CommentModal({ postId, postAuthorId, onClose, post }) {
                     children: "×"
                 }, void 0, false, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 314,
+                    lineNumber: 340,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
@@ -6421,7 +6451,7 @@ function CommentModal({ postId, postAuthorId, onClose, post }) {
                     children: "Comments"
                 }, void 0, false, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 315,
+                    lineNumber: 341,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6431,18 +6461,18 @@ function CommentModal({ postId, postAuthorId, onClose, post }) {
                         children: "No comments yet. Be the first!"
                     }, void 0, false, {
                         fileName: "[project]/src/components/PostCard.tsx",
-                        lineNumber: 318,
+                        lineNumber: 344,
                         columnNumber: 13
                     }, this) : comments.map((comment)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(Comment, {
                             comment: comment
                         }, comment.id, false, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 321,
+                            lineNumber: 347,
                             columnNumber: 15
                         }, this))
                 }, void 0, false, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 316,
+                    lineNumber: 342,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(CommentForm, {
@@ -6452,18 +6482,18 @@ function CommentModal({ postId, postAuthorId, onClose, post }) {
                     post: post
                 }, void 0, false, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 325,
+                    lineNumber: 351,
                     columnNumber: 9
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/src/components/PostCard.tsx",
-            lineNumber: 313,
+            lineNumber: 339,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/src/components/PostCard.tsx",
-        lineNumber: 312,
+        lineNumber: 338,
         columnNumber: 5
     }, this);
 }
@@ -6506,19 +6536,19 @@ function Comment({ comment }) {
                     className: "w-full h-full object-cover"
                 }, void 0, false, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 363,
+                    lineNumber: 389,
                     columnNumber: 35
                 }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                     className: "text-white",
                     children: initials
                 }, void 0, false, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 363,
+                    lineNumber: 389,
                     columnNumber: 123
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/components/PostCard.tsx",
-                lineNumber: 362,
+                lineNumber: 388,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6538,21 +6568,21 @@ function Comment({ comment }) {
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/PostCard.tsx",
-                                    lineNumber: 368,
+                                    lineNumber: 394,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                     className: "text-xs text-muted-foreground",
-                                    children: comment.createdAt?.toDate?.().toLocaleString?.() || ""
+                                    children: timeAgo(comment.createdAt)
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/PostCard.tsx",
-                                    lineNumber: 369,
+                                    lineNumber: 395,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 367,
+                            lineNumber: 393,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -6560,24 +6590,24 @@ function Comment({ comment }) {
                             children: comment.text
                         }, void 0, false, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 371,
+                            lineNumber: 397,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 366,
+                    lineNumber: 392,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/components/PostCard.tsx",
-                lineNumber: 365,
+                lineNumber: 391,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/components/PostCard.tsx",
-        lineNumber: 361,
+        lineNumber: 387,
         columnNumber: 5
     }, this);
 }
@@ -6633,7 +6663,7 @@ function CommentForm({ postId, postAuthorId, onCommentPosted, post }) {
                 disabled: loading
             }, void 0, false, {
                 fileName: "[project]/src/components/PostCard.tsx",
-                lineNumber: 427,
+                lineNumber: 453,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -6643,13 +6673,13 @@ function CommentForm({ postId, postAuthorId, onCommentPosted, post }) {
                 children: "Post"
             }, void 0, false, {
                 fileName: "[project]/src/components/PostCard.tsx",
-                lineNumber: 435,
+                lineNumber: 461,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/components/PostCard.tsx",
-        lineNumber: 426,
+        lineNumber: 452,
         columnNumber: 5
     }, this);
 }
@@ -7392,40 +7422,14 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$re
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$bell$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Bell$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/bell.js [app-ssr] (ecmascript) <export default as Bell>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$search$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Search$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/search.js [app-ssr] (ecmascript) <export default as Search>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$mic$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Mic$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/mic.js [app-ssr] (ecmascript) <export default as Mic>");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$video$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Video$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/video.js [app-ssr] (ecmascript) <export default as Video>");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$flame$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Flame$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/flame.js [app-ssr] (ecmascript) <export default as Flame>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$gamepad$2d$2$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Gamepad2$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/gamepad-2.js [app-ssr] (ecmascript) <export default as Gamepad2>");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$music$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Music$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/music.js [app-ssr] (ecmascript) <export default as Music>");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$rss$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Rss$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/rss.js [app-ssr] (ecmascript) <export default as Rss>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$compass$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Compass$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/compass.js [app-ssr] (ecmascript) <export default as Compass>");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$smile$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Smile$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/smile.js [app-ssr] (ecmascript) <export default as Smile>");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$code$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Code$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/code.js [app-ssr] (ecmascript) <export default as Code>");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$atom$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Atom$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/atom.js [app-ssr] (ecmascript) <export default as Atom>");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$handshake$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Handshake$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/handshake.js [app-ssr] (ecmascript) <export default as Handshake>");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$pen$2d$tool$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__PenTool$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/pen-tool.js [app-ssr] (ecmascript) <export default as PenTool>");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$bot$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Bot$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/bot.js [app-ssr] (ecmascript) <export default as Bot>");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$sparkles$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Sparkles$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/sparkles.js [app-ssr] (ecmascript) <export default as Sparkles>");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$book$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Book$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/book.js [app-ssr] (ecmascript) <export default as Book>");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$camera$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Camera$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/camera.js [app-ssr] (ecmascript) <export default as Camera>");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$palette$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Palette$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/palette.js [app-ssr] (ecmascript) <export default as Palette>");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$shirt$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Shirt$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/shirt.js [app-ssr] (ecmascript) <export default as Shirt>");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$utensils$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Utensils$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/utensils.js [app-ssr] (ecmascript) <export default as Utensils>");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$plane$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Plane$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/plane.js [app-ssr] (ecmascript) <export default as Plane>");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$film$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Film$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/film.js [app-ssr] (ecmascript) <export default as Film>");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$brain$2d$circuit$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__BrainCircuit$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/brain-circuit.js [app-ssr] (ecmascript) <export default as BrainCircuit>");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$landmark$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Landmark$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/landmark.js [app-ssr] (ecmascript) <export default as Landmark>");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$drama$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Drama$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/drama.js [app-ssr] (ecmascript) <export default as Drama>");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$utensils$2d$crossed$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__UtensilsCrossed$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/utensils-crossed.js [app-ssr] (ecmascript) <export default as UtensilsCrossed>");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$scroll$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Scroll$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/scroll.js [app-ssr] (ecmascript) <export default as Scroll>");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$music$2d$4$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Music4$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/music-4.js [app-ssr] (ecmascript) <export default as Music4>");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$hand$2d$helping$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__HelpingHand$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/hand-helping.js [app-ssr] (ecmascript) <export default as HelpingHand>");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$sprout$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Sprout$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/sprout.js [app-ssr] (ecmascript) <export default as Sprout>");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$rocket$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Rocket$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/rocket.js [app-ssr] (ecmascript) <export default as Rocket>");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$briefcase$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Briefcase$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/briefcase.js [app-ssr] (ecmascript) <export default as Briefcase>");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$heart$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Heart$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/heart.js [app-ssr] (ecmascript) <export default as Heart>");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$trophy$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Trophy$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/trophy.js [app-ssr] (ecmascript) <export default as Trophy>");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$users$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Users$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/users.js [app-ssr] (ecmascript) <export default as Users>");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$brush$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Brush$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/brush.js [app-ssr] (ecmascript) <export default as Brush>");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$graduation$2d$cap$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__GraduationCap$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/graduation-cap.js [app-ssr] (ecmascript) <export default as GraduationCap>");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$popcorn$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Popcorn$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/popcorn.js [app-ssr] (ecmascript) <export default as Popcorn>");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$arrow$2d$left$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__ArrowLeft$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/arrow-left.js [app-ssr] (ecmascript) <export default as ArrowLeft>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$utils$2f$firebaseClient$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/utils/firebaseClient.ts [app-ssr] (ecmascript)");
-var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$utils$2f$AppStateContext$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/utils/AppStateContext.tsx [app-ssr] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/framer-motion/dist/es/render/components/motion/proxy.mjs [app-ssr] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$components$2f$AnimatePresence$2f$index$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/framer-motion/dist/es/components/AnimatePresence/index.mjs [app-ssr] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$PostCard$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/components/PostCard.tsx [app-ssr] (ecmascript)");
@@ -7439,7 +7443,6 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$Welcome
 ;
 ;
 "use client";
-;
 ;
 ;
 ;
@@ -7482,311 +7485,94 @@ const NotificationPanel = (0, __TURBOPACK__imported__module__$5b$project$5d2f$no
 const db = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["getFirestore"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$utils$2f$firebaseClient$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["app"]);
 const categories = [
     {
-        id: 'for-you',
-        name: 'For You',
-        icon: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$flame$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Flame$3e$__["Flame"], {}, void 0, false, {
+        id: 'daily',
+        name: 'Daily',
+        icon: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$users$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Users$3e$__["Users"], {}, void 0, false, {
             fileName: "[project]/src/app/home/page.tsx",
             lineNumber: 27,
-            columnNumber: 45
-        }, ("TURBOPACK compile-time value", void 0))
+            columnNumber: 41
+        }, ("TURBOPACK compile-time value", void 0)),
+        sub: [
+            'Vlogs',
+            'Moments',
+            'Travel',
+            'Self'
+        ]
     },
     {
-        id: 'news',
-        name: 'News',
-        icon: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$rss$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Rss$3e$__["Rss"], {}, void 0, false, {
+        id: 'creative',
+        name: 'Creative',
+        icon: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$brush$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Brush$3e$__["Brush"], {}, void 0, false, {
             fileName: "[project]/src/app/home/page.tsx",
             lineNumber: 28,
-            columnNumber: 39
-        }, ("TURBOPACK compile-time value", void 0))
+            columnNumber: 47
+        }, ("TURBOPACK compile-time value", void 0)),
+        sub: [
+            'Art',
+            'Photos',
+            'Design',
+            'Writing'
+        ]
     },
     {
-        id: 'gaming',
-        name: 'Gaming',
+        id: 'play',
+        name: 'Play',
         icon: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$gamepad$2d$2$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Gamepad2$3e$__["Gamepad2"], {}, void 0, false, {
             fileName: "[project]/src/app/home/page.tsx",
             lineNumber: 29,
-            columnNumber: 43
-        }, ("TURBOPACK compile-time value", void 0))
+            columnNumber: 39
+        }, ("TURBOPACK compile-time value", void 0)),
+        sub: [
+            'Gaming',
+            'Challenges',
+            'Comedy',
+            'Reactions'
+        ]
     },
     {
-        id: 'music',
-        name: 'Music',
-        icon: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$music$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Music$3e$__["Music"], {}, void 0, false, {
+        id: 'learn',
+        name: 'Learn',
+        icon: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$graduation$2d$cap$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__GraduationCap$3e$__["GraduationCap"], {}, void 0, false, {
             fileName: "[project]/src/app/home/page.tsx",
             lineNumber: 30,
             columnNumber: 41
-        }, ("TURBOPACK compile-time value", void 0))
+        }, ("TURBOPACK compile-time value", void 0)),
+        sub: [
+            'Tips',
+            'Tech',
+            'Study',
+            'Explainers'
+        ]
     },
     {
-        id: 'vlogs',
-        name: 'Vlogs',
-        icon: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$video$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Video$3e$__["Video"], {}, void 0, false, {
+        id: 'culture',
+        name: 'Culture',
+        icon: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$popcorn$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Popcorn$3e$__["Popcorn"], {}, void 0, false, {
             fileName: "[project]/src/app/home/page.tsx",
             lineNumber: 31,
-            columnNumber: 41
-        }, ("TURBOPACK compile-time value", void 0))
-    },
-    {
-        id: 'comedy',
-        name: 'Comedy',
-        icon: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$smile$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Smile$3e$__["Smile"], {}, void 0, false, {
-            fileName: "[project]/src/app/home/page.tsx",
-            lineNumber: 32,
-            columnNumber: 43
-        }, ("TURBOPACK compile-time value", void 0))
-    },
-    {
-        id: 'tech',
-        name: 'Tech',
-        icon: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$code$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Code$3e$__["Code"], {}, void 0, false, {
-            fileName: "[project]/src/app/home/page.tsx",
-            lineNumber: 33,
-            columnNumber: 39
-        }, ("TURBOPACK compile-time value", void 0))
-    },
-    {
-        id: 'science',
-        name: 'Science',
-        icon: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$atom$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Atom$3e$__["Atom"], {}, void 0, false, {
-            fileName: "[project]/src/app/home/page.tsx",
-            lineNumber: 34,
             columnNumber: 45
-        }, ("TURBOPACK compile-time value", void 0))
-    },
-    {
-        id: 'politics',
-        name: 'Politics',
-        icon: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$handshake$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Handshake$3e$__["Handshake"], {}, void 0, false, {
-            fileName: "[project]/src/app/home/page.tsx",
-            lineNumber: 35,
-            columnNumber: 47
-        }, ("TURBOPACK compile-time value", void 0))
-    },
-    {
-        id: 'education',
-        name: 'Education',
-        icon: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$pen$2d$tool$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__PenTool$3e$__["PenTool"], {}, void 0, false, {
-            fileName: "[project]/src/app/home/page.tsx",
-            lineNumber: 36,
-            columnNumber: 49
-        }, ("TURBOPACK compile-time value", void 0))
-    },
-    {
-        id: 'art-design',
-        name: 'Art & Design',
-        icon: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$palette$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Palette$3e$__["Palette"], {}, void 0, false, {
-            fileName: "[project]/src/app/home/page.tsx",
-            lineNumber: 37,
-            columnNumber: 53
-        }, ("TURBOPACK compile-time value", void 0))
-    },
-    {
-        id: 'diy-crafts',
-        name: 'DIY & Crafts',
-        icon: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$sparkles$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Sparkles$3e$__["Sparkles"], {}, void 0, false, {
-            fileName: "[project]/src/app/home/page.tsx",
-            lineNumber: 38,
-            columnNumber: 53
-        }, ("TURBOPACK compile-time value", void 0))
-    },
-    {
-        id: 'fashion-style',
-        name: 'Fashion',
-        icon: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$shirt$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Shirt$3e$__["Shirt"], {}, void 0, false, {
-            fileName: "[project]/src/app/home/page.tsx",
-            lineNumber: 39,
-            columnNumber: 51
-        }, ("TURBOPACK compile-time value", void 0))
-    },
-    {
-        id: 'food-cooking',
-        name: 'Food',
-        icon: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$utensils$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Utensils$3e$__["Utensils"], {}, void 0, false, {
-            fileName: "[project]/src/app/home/page.tsx",
-            lineNumber: 40,
-            columnNumber: 47
-        }, ("TURBOPACK compile-time value", void 0))
-    },
-    {
-        id: 'travel',
-        name: 'Travel',
-        icon: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$plane$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Plane$3e$__["Plane"], {}, void 0, false, {
-            fileName: "[project]/src/app/home/page.tsx",
-            lineNumber: 41,
-            columnNumber: 43
-        }, ("TURBOPACK compile-time value", void 0))
-    },
-    {
-        id: 'photography-videography',
-        name: 'Photography',
-        icon: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$camera$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Camera$3e$__["Camera"], {}, void 0, false, {
-            fileName: "[project]/src/app/home/page.tsx",
-            lineNumber: 42,
-            columnNumber: 65
-        }, ("TURBOPACK compile-time value", void 0))
-    },
-    {
-        id: 'books-literature',
-        name: 'Books',
-        icon: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$book$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Book$3e$__["Book"], {}, void 0, false, {
-            fileName: "[project]/src/app/home/page.tsx",
-            lineNumber: 43,
-            columnNumber: 52
-        }, ("TURBOPACK compile-time value", void 0))
-    },
-    {
-        id: 'movies-tv',
-        name: 'Movies & TV',
-        icon: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$film$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Film$3e$__["Film"], {}, void 0, false, {
-            fileName: "[project]/src/app/home/page.tsx",
-            lineNumber: 44,
-            columnNumber: 51
-        }, ("TURBOPACK compile-time value", void 0))
-    },
-    {
-        id: 'ai-future',
-        name: 'AI & Future',
-        icon: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$bot$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Bot$3e$__["Bot"], {}, void 0, false, {
-            fileName: "[project]/src/app/home/page.tsx",
-            lineNumber: 45,
-            columnNumber: 51
-        }, ("TURBOPACK compile-time value", void 0))
-    },
-    {
-        id: 'spirituality-wellness',
-        name: 'Wellness',
-        icon: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$brain$2d$circuit$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__BrainCircuit$3e$__["BrainCircuit"], {}, void 0, false, {
-            fileName: "[project]/src/app/home/page.tsx",
-            lineNumber: 46,
-            columnNumber: 60
-        }, ("TURBOPACK compile-time value", void 0))
-    },
-    {
-        id: 'business',
-        name: 'Business',
-        icon: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$briefcase$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Briefcase$3e$__["Briefcase"], {}, void 0, false, {
-            fileName: "[project]/src/app/home/page.tsx",
-            lineNumber: 47,
-            columnNumber: 47
-        }, ("TURBOPACK compile-time value", void 0))
-    },
-    {
-        id: 'health-fitness',
-        name: 'Fitness',
-        icon: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$heart$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Heart$3e$__["Heart"], {}, void 0, false, {
-            fileName: "[project]/src/app/home/page.tsx",
-            lineNumber: 48,
-            columnNumber: 52
-        }, ("TURBOPACK compile-time value", void 0))
-    },
-    {
-        id: 'sports',
-        name: 'Sports',
-        icon: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$trophy$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Trophy$3e$__["Trophy"], {}, void 0, false, {
-            fileName: "[project]/src/app/home/page.tsx",
-            lineNumber: 49,
-            columnNumber: 43
-        }, ("TURBOPACK compile-time value", void 0))
-    },
-    // India-Specific
-    {
-        id: 'bollywood',
-        name: 'Bollywood',
-        icon: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$film$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Film$3e$__["Film"], {}, void 0, false, {
-            fileName: "[project]/src/app/home/page.tsx",
-            lineNumber: 51,
-            columnNumber: 49
-        }, ("TURBOPACK compile-time value", void 0))
-    },
-    {
-        id: 'bhakti',
-        name: 'Bhakti',
-        icon: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$hand$2d$helping$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__HelpingHand$3e$__["HelpingHand"], {}, void 0, false, {
-            fileName: "[project]/src/app/home/page.tsx",
-            lineNumber: 52,
-            columnNumber: 43
-        }, ("TURBOPACK compile-time value", void 0))
-    },
-    {
-        id: 'regional-cinema',
-        name: 'Regional Cinema',
-        icon: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$drama$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Drama$3e$__["Drama"], {}, void 0, false, {
-            fileName: "[project]/src/app/home/page.tsx",
-            lineNumber: 53,
-            columnNumber: 61
-        }, ("TURBOPACK compile-time value", void 0))
-    },
-    {
-        id: 'street-food',
-        name: 'Street Food',
-        icon: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$utensils$2d$crossed$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__UtensilsCrossed$3e$__["UtensilsCrossed"], {}, void 0, false, {
-            fileName: "[project]/src/app/home/page.tsx",
-            lineNumber: 54,
-            columnNumber: 53
-        }, ("TURBOPACK compile-time value", void 0))
-    },
-    {
-        id: 'indian-mythology',
-        name: 'Mythology',
-        icon: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$scroll$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Scroll$3e$__["Scroll"], {}, void 0, false, {
-            fileName: "[project]/src/app/home/page.tsx",
-            lineNumber: 55,
-            columnNumber: 56
-        }, ("TURBOPACK compile-time value", void 0))
-    },
-    {
-        id: 'classical-music-dance',
-        name: 'Classical Arts',
-        icon: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$music$2d$4$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Music4$3e$__["Music4"], {}, void 0, false, {
-            fileName: "[project]/src/app/home/page.tsx",
-            lineNumber: 56,
-            columnNumber: 66
-        }, ("TURBOPACK compile-time value", void 0))
-    },
-    {
-        id: 'festivals-of-india',
-        name: 'Festivals',
-        icon: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$landmark$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Landmark$3e$__["Landmark"], {}, void 0, false, {
-            fileName: "[project]/src/app/home/page.tsx",
-            lineNumber: 57,
-            columnNumber: 58
-        }, ("TURBOPACK compile-time value", void 0))
-    },
-    {
-        id: 'startups-india',
-        name: 'Startups India',
-        icon: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$rocket$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Rocket$3e$__["Rocket"], {}, void 0, false, {
-            fileName: "[project]/src/app/home/page.tsx",
-            lineNumber: 58,
-            columnNumber: 59
-        }, ("TURBOPACK compile-time value", void 0))
-    },
-    {
-        id: 'vedic-science',
-        name: 'Vedic Science',
-        icon: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$sprout$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Sprout$3e$__["Sprout"], {}, void 0, false, {
-            fileName: "[project]/src/app/home/page.tsx",
-            lineNumber: 59,
-            columnNumber: 57
-        }, ("TURBOPACK compile-time value", void 0))
+        }, ("TURBOPACK compile-time value", void 0)),
+        sub: [
+            'Music',
+            'Movies',
+            'Trends',
+            'Community'
+        ]
     }
 ];
 function HomePageContent() {
-    const [showMusicModal, setShowMusicModal] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(false);
     const [posts, setPosts] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])([]);
     const [flashes, setFlashes] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])([]);
     const [selectedFlashUser, setSelectedFlashUser] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(null);
     const [searchTerm, setSearchTerm] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])("");
     const [showNotifications, setShowNotifications] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(false);
-    const { setCallTarget, setIsCalling } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$utils$2f$AppStateContext$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useAppState"])();
     const [currentUser, setCurrentUser] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(null);
-    const [userProfile, setUserProfile] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(null);
     const [loading, setLoading] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(true);
     const [loadingMore, setLoadingMore] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(false);
     const [lastVisible, setLastVisible] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(null);
     const [hasMore, setHasMore] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(true);
-    const [activeCategory, setActiveCategory] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])('for-you');
-    const [showAllCategories, setShowAllCategories] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(false);
+    const [activeCategory, setActiveCategory] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(null);
+    const [activeSubCategory, setActiveSubCategory] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(null);
     const router = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$navigation$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useRouter"])();
     const searchParams = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$navigation$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useSearchParams"])();
     const [showWelcomeAnimation, setShowWelcomeAnimation] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(false);
@@ -7802,7 +7588,6 @@ function HomePageContent() {
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useEffect"])(()=>{
         if (hasMounted && searchParams.get('new') === 'true') {
             setShowWelcomeAnimation(true);
-            // Clean the URL
             router.replace('/home', {
                 scroll: false
             });
@@ -7829,20 +7614,25 @@ function HomePageContent() {
         }
         setSelectedFlashUser(null);
     };
-    const fetchPosts = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useCallback"])(async (category, loadMore = false)=>{
+    const fetchPosts = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useCallback"])(async (category, subCategory, loadMore = false)=>{
         if (!__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$utils$2f$firebaseClient$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["auth"].currentUser) return;
         if (loadMore) {
             if (!hasMore || loadingMore) return;
             setLoadingMore(true);
         } else {
             setLoading(true);
+            setPosts([]);
+            setLastVisible(null);
+            setHasMore(true);
         }
         const baseQuery = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["collection"])(db, "posts");
         let constraints = [
             (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["orderBy"])("publishAt", "desc")
         ];
-        if (category !== 'for-you') {
-            constraints.unshift((0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["or"])((0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["where"])("category", "==", category), (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["where"])("hashtags", "array-contains", category)));
+        if (subCategory) {
+            constraints.unshift((0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["where"])("creatorType", "==", subCategory.toLowerCase()));
+        } else if (category) {
+            constraints.unshift((0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["where"])("category", "==", category));
         }
         if (loadMore && lastVisible) {
             constraints.push((0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["startAfter"])(lastVisible));
@@ -7856,60 +7646,30 @@ function HomePageContent() {
                     ...doc.data()
                 }));
             const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
-            if (loadMore) {
-                setPosts((prev)=>{
-                    const existingIds = new Set(prev.map((p)=>p.id));
-                    const uniqueNewPosts = newPosts.filter((p)=>!existingIds.has(p.id));
-                    return [
-                        ...prev,
-                        ...uniqueNewPosts
-                    ];
-                });
-            } else {
-                setPosts(newPosts);
-            }
+            setPosts((prev)=>loadMore ? [
+                    ...prev,
+                    ...newPosts
+                ] : newPosts);
             setLastVisible(lastDoc);
             setHasMore(documentSnapshots.docs.length === POSTS_PER_PAGE);
         } catch (error) {
             console.error("Error fetching posts: ", error);
         } finally{
-            if (loadMore) {
-                setLoadingMore(false);
-            } else {
-                setLoading(false);
-            }
+            setLoading(false);
+            setLoadingMore(false);
         }
     }, [
         hasMore,
-        lastVisible,
-        loadingMore
-    ]);
-    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useEffect"])(()=>{
-        if (currentUser) {
-            fetchPosts(activeCategory);
-        }
-    }, [
-        activeCategory,
-        currentUser
-    ]); // Removed fetchPosts from deps to prevent re-fetch on every render
-    const fetchMorePosts = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useCallback"])(()=>{
-        fetchPosts(activeCategory, true);
-    }, [
-        fetchPosts,
-        activeCategory
+        loadingMore,
+        lastVisible
     ]);
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useEffect"])(()=>{
         const unsubscribe = __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$utils$2f$firebaseClient$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["auth"].onAuthStateChanged(async (user)=>{
             if (user) {
                 setCurrentUser(user);
-                const userDocRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["doc"])(db, "users", user.uid);
-                const userProfileSnap = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["getDoc"])(userDocRef);
-                const profileData = userProfileSnap.exists() ? userProfileSnap.data() : null;
-                setUserProfile(profileData);
+                fetchPosts(activeCategory, activeSubCategory);
                 const q = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["query"])((0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["collection"])(db, "users", user.uid, "notifications"), (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["where"])("read", "==", false));
-                const unsubNotifs = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["onSnapshot"])(q, (snapshot)=>{
-                    setHasUnreadNotifs(!snapshot.empty);
-                });
+                const unsubNotifs = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["onSnapshot"])(q, (snapshot)=>setHasUnreadNotifs(!snapshot.empty));
                 return ()=>unsubNotifs();
             } else {
                 router.replace('/login');
@@ -7917,25 +7677,30 @@ function HomePageContent() {
         });
         return ()=>unsubscribe();
     }, [
-        router
+        router,
+        activeCategory,
+        activeSubCategory,
+        fetchPosts
+    ]);
+    const fetchMorePosts = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useCallback"])(()=>{
+        fetchPosts(activeCategory, activeSubCategory, true);
+    }, [
+        fetchPosts,
+        activeCategory,
+        activeSubCategory
     ]);
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useEffect"])(()=>{
-        if (loading) return; // Don't setup observer while initially loading
         const observer = new IntersectionObserver((entries)=>{
-            if (entries[0].isIntersecting && hasMore && !loadingMore) {
+            if (entries[0].isIntersecting && hasMore && !loadingMore && !loading) {
                 fetchMorePosts();
             }
         }, {
             threshold: 1.0
         });
         const currentRef = feedEndRef.current;
-        if (currentRef) {
-            observer.observe(currentRef);
-        }
+        if (currentRef) observer.observe(currentRef);
         return ()=>{
-            if (currentRef) {
-                observer.unobserve(currentRef);
-            }
+            if (currentRef) observer.unobserve(currentRef);
         };
     }, [
         fetchMorePosts,
@@ -7956,11 +7721,6 @@ function HomePageContent() {
     }, [
         currentUser
     ]);
-    const handleGoLive = (title)=>{
-        const roomName = `${currentUser.uid}-${Date.now()}`;
-        router.push(`/broadcast/${encodeURIComponent(roomName)}`);
-    };
-    // Group flashes by user
     const groupedFlashes = flashes.reduce((acc, flash)=>{
         if (!acc[flash.userId]) {
             acc[flash.userId] = {
@@ -7975,24 +7735,14 @@ function HomePageContent() {
     }, {});
     const flashUsers = Object.values(groupedFlashes);
     const filteredPosts = searchTerm.trim() ? posts.filter((post)=>post.content && post.content.toLowerCase().includes(searchTerm.toLowerCase()) || post.username && post.username.toLowerCase().includes(searchTerm.toLowerCase()) || post.hashtags && post.hashtags.some((h)=>h.toLowerCase().includes(searchTerm.toLowerCase()))) : posts;
-    const visibleCategories = showAllCategories ? categories : categories.slice(0, 5);
-    const canCreatePost = activeCategory === 'for-you' || userProfile?.accountType === 'creator' && userProfile?.creatorType === activeCategory;
     const flashesContainerVariants = {
         hidden: {
-            opacity: 0,
-            y: -20
+            opacity: 0
         },
         visible: {
             opacity: 1,
-            y: 0,
             transition: {
-                when: "beforeChildren",
-                staggerChildren: 0.08,
-                duration: 0.4,
-                ease: 'easeOut',
-                type: "spring",
-                stiffness: 100,
-                damping: 10
+                staggerChildren: 0.08
             }
         }
     };
@@ -8021,13 +7771,11 @@ function HomePageContent() {
     const categoryItemVariants = {
         hidden: {
             opacity: 0,
-            y: 20,
-            scale: 0.8
+            y: 20
         },
         visible: {
             opacity: 1,
             y: 0,
-            scale: 1,
             transition: {
                 type: "spring",
                 stiffness: 100,
@@ -8035,32 +7783,95 @@ function HomePageContent() {
             }
         }
     };
-    const bellVariants = {
-        initial: {
-            rotate: 0
-        },
-        jiggle: {
-            rotate: [
-                0,
-                -15,
-                15,
-                -15,
-                15,
-                0
-            ],
-            transition: {
-                duration: 0.5,
-                ease: "easeInOut",
-                repeat: Infinity,
-                repeatDelay: 3
-            }
+    const handleCategoryClick = (catId)=>{
+        setActiveCategory(catId);
+        setActiveSubCategory(null);
+    };
+    const renderCategoryFilters = ()=>{
+        const selectedCat = categories.find((c)=>c.id === activeCategory);
+        if (selectedCat) {
+            return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["motion"].div, {
+                className: "flex gap-2 overflow-x-auto pb-4 mb-4",
+                variants: categoryContainerVariants,
+                initial: "hidden",
+                animate: "visible",
+                children: [
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["motion"].button, {
+                        variants: categoryItemVariants,
+                        onClick: ()=>handleCategoryClick(null),
+                        className: "btn-glass text-sm flex items-center gap-2 shrink-0",
+                        children: [
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$arrow$2d$left$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__ArrowLeft$3e$__["ArrowLeft"], {}, void 0, false, {
+                                fileName: "[project]/src/app/home/page.tsx",
+                                lineNumber: 224,
+                                columnNumber: 25
+                            }, this),
+                            " All Categories"
+                        ]
+                    }, void 0, true, {
+                        fileName: "[project]/src/app/home/page.tsx",
+                        lineNumber: 223,
+                        columnNumber: 21
+                    }, this),
+                    selectedCat.sub.map((sub)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["motion"].button, {
+                            variants: categoryItemVariants,
+                            whileHover: {
+                                y: -2
+                            },
+                            whileTap: {
+                                scale: 0.95
+                            },
+                            onClick: ()=>setActiveSubCategory(sub),
+                            className: `btn-glass text-sm flex items-center gap-2 shrink-0 ${activeSubCategory === sub ? 'bg-accent-cyan text-black' : ''}`,
+                            children: sub
+                        }, sub, false, {
+                            fileName: "[project]/src/app/home/page.tsx",
+                            lineNumber: 227,
+                            columnNumber: 25
+                        }, this))
+                ]
+            }, void 0, true, {
+                fileName: "[project]/src/app/home/page.tsx",
+                lineNumber: 222,
+                columnNumber: 18
+            }, this);
         }
+        return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["motion"].div, {
+            className: "flex gap-2 overflow-x-auto pb-4 mb-4",
+            variants: categoryContainerVariants,
+            initial: "hidden",
+            animate: "visible",
+            children: categories.map((cat)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["motion"].button, {
+                    variants: categoryItemVariants,
+                    whileHover: {
+                        y: -2
+                    },
+                    whileTap: {
+                        scale: 0.95
+                    },
+                    onClick: ()=>handleCategoryClick(cat.id),
+                    className: `btn-glass text-sm flex items-center gap-2 shrink-0`,
+                    children: [
+                        cat.icon,
+                        " ",
+                        cat.name
+                    ]
+                }, cat.id, true, {
+                    fileName: "[project]/src/app/home/page.tsx",
+                    lineNumber: 245,
+                    columnNumber: 21
+                }, this))
+        }, void 0, false, {
+            fileName: "[project]/src/app/home/page.tsx",
+            lineNumber: 243,
+            columnNumber: 14
+        }, this);
     };
     if (loading && posts.length === 0) {
         return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$VibeSpaceLoader$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["VibeSpaceLoader"], {}, void 0, false, {
             fileName: "[project]/src/app/home/page.tsx",
-            lineNumber: 338,
-            columnNumber: 12
+            lineNumber: 262,
+            columnNumber: 16
         }, this);
     }
     if (showWelcomeAnimation) {
@@ -8068,8 +7879,8 @@ function HomePageContent() {
             onComplete: ()=>setShowWelcomeAnimation(false)
         }, void 0, false, {
             fileName: "[project]/src/app/home/page.tsx",
-            lineNumber: 342,
-            columnNumber: 14
+            lineNumber: 266,
+            columnNumber: 16
         }, this);
     }
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -8089,8 +7900,7 @@ function HomePageContent() {
                             y: 0
                         },
                         transition: {
-                            duration: 0.5,
-                            ease: "easeOut"
+                            duration: 0.5
                         },
                         children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                             className: `input-glass w-full flex items-center px-4 transition-all duration-300 ${isSearchFocused ? 'ring-2 ring-brand-saffron' : ''}`,
@@ -8103,19 +7913,19 @@ function HomePageContent() {
                                         size: 20
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/home/page.tsx",
-                                        lineNumber: 360,
+                                        lineNumber: 275,
                                         columnNumber: 23
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/src/app/home/page.tsx",
-                                    lineNumber: 355,
+                                    lineNumber: 274,
                                     columnNumber: 19
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                     className: "w-px h-6 bg-glass-border mx-3"
                                 }, void 0, false, {
                                     fileName: "[project]/src/app/home/page.tsx",
-                                    lineNumber: 362,
+                                    lineNumber: 277,
                                     columnNumber: 19
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -8125,11 +7935,10 @@ function HomePageContent() {
                                     value: searchTerm,
                                     onChange: (e)=>setSearchTerm(e.target.value),
                                     onFocus: ()=>setIsSearchFocused(true),
-                                    onBlur: ()=>setIsSearchFocused(false),
-                                    autoFocus: false
+                                    onBlur: ()=>setIsSearchFocused(false)
                                 }, void 0, false, {
                                     fileName: "[project]/src/app/home/page.tsx",
-                                    lineNumber: 363,
+                                    lineNumber: 278,
                                     columnNumber: 19
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["motion"].div, {
@@ -8141,79 +7950,32 @@ function HomePageContent() {
                                         className: "p-2 rounded-full text-brand-gold hover:bg-brand-gold/10",
                                         children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$search$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Search$3e$__["Search"], {}, void 0, false, {
                                             fileName: "[project]/src/app/home/page.tsx",
-                                            lineNumber: 375,
+                                            lineNumber: 289,
                                             columnNumber: 25
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/home/page.tsx",
-                                        lineNumber: 374,
+                                        lineNumber: 288,
                                         columnNumber: 21
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/src/app/home/page.tsx",
-                                    lineNumber: 373,
+                                    lineNumber: 287,
                                     columnNumber: 19
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/app/home/page.tsx",
-                            lineNumber: 354,
+                            lineNumber: 273,
                             columnNumber: 13
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/src/app/home/page.tsx",
-                        lineNumber: 348,
+                        lineNumber: 272,
                         columnNumber: 9
                     }, this),
-                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["motion"].div, {
-                        className: "flex gap-2 overflow-x-auto pb-4 mb-4",
-                        variants: categoryContainerVariants,
-                        initial: "hidden",
-                        animate: "visible",
-                        children: [
-                            visibleCategories.map((cat)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["motion"].button, {
-                                    variants: categoryItemVariants,
-                                    whileHover: {
-                                        y: -2
-                                    },
-                                    whileTap: {
-                                        scale: 0.95
-                                    },
-                                    onClick: ()=>setActiveCategory(cat.id),
-                                    className: `btn-glass text-sm flex items-center gap-2 shrink-0 ${activeCategory === cat.id ? 'bg-accent-cyan text-black' : ''}`,
-                                    children: [
-                                        cat.icon,
-                                        " ",
-                                        cat.name
-                                    ]
-                                }, cat.id, true, {
-                                    fileName: "[project]/src/app/home/page.tsx",
-                                    lineNumber: 389,
-                                    columnNumber: 17
-                                }, this)),
-                            !showAllCategories && categories.length > 5 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["motion"].button, {
-                                variants: categoryItemVariants,
-                                whileHover: {
-                                    y: -2
-                                },
-                                whileTap: {
-                                    scale: 0.95
-                                },
-                                onClick: ()=>setShowAllCategories(true),
-                                className: "btn-glass text-sm flex items-center gap-2 shrink-0 bg-accent-purple/20 text-accent-purple",
-                                children: "More..."
-                            }, void 0, false, {
-                                fileName: "[project]/src/app/home/page.tsx",
-                                lineNumber: 401,
-                                columnNumber: 17
-                            }, this)
-                        ]
-                    }, void 0, true, {
-                        fileName: "[project]/src/app/home/page.tsx",
-                        lineNumber: 382,
-                        columnNumber: 9
-                    }, this),
-                    activeCategory === 'for-you' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["motion"].section, {
+                    renderCategoryFilters(),
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["motion"].section, {
                         className: "mb-6 glass-card p-4",
                         variants: flashesContainerVariants,
                         initial: "hidden",
@@ -8224,7 +7986,7 @@ function HomePageContent() {
                                 children: "Flashes"
                             }, void 0, false, {
                                 fileName: "[project]/src/app/home/page.tsx",
-                                lineNumber: 420,
+                                lineNumber: 303,
                                 columnNumber: 15
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["motion"].div, {
@@ -8247,7 +8009,7 @@ function HomePageContent() {
                                                 className: "text-gray-400 mb-1"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/home/page.tsx",
-                                                lineNumber: 433,
+                                                lineNumber: 316,
                                                 columnNumber: 21
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -8255,13 +8017,13 @@ function HomePageContent() {
                                                 children: "Add New"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/home/page.tsx",
-                                                lineNumber: 434,
+                                                lineNumber: 317,
                                                 columnNumber: 21
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/app/home/page.tsx",
-                                        lineNumber: 425,
+                                        lineNumber: 308,
                                         columnNumber: 19
                                     }, this),
                                     flashUsers.map((userFlashes)=>{
@@ -8284,32 +8046,32 @@ function HomePageContent() {
                                                 className: `w-full h-full object-cover transition-opacity ${hasBeenViewed ? 'opacity-60' : ''}`
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/home/page.tsx",
-                                                lineNumber: 450,
+                                                lineNumber: 333,
                                                 columnNumber: 25
                                             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                 className: "text-2xl text-white",
                                                 children: "⚡"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/home/page.tsx",
-                                                lineNumber: 452,
+                                                lineNumber: 335,
                                                 columnNumber: 23
                                             }, this)
                                         }, userFlashes.userId, false, {
                                             fileName: "[project]/src/app/home/page.tsx",
-                                            lineNumber: 439,
+                                            lineNumber: 322,
                                             columnNumber: 19
                                         }, this);
                                     })
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/app/home/page.tsx",
-                                lineNumber: 421,
+                                lineNumber: 304,
                                 columnNumber: 15
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/home/page.tsx",
-                        lineNumber: 414,
+                        lineNumber: 297,
                         columnNumber: 11
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("section", {
@@ -8329,22 +8091,22 @@ function HomePageContent() {
                                 children: "VibeSpace"
                             }, void 0, false, {
                                 fileName: "[project]/src/app/home/page.tsx",
-                                lineNumber: 461,
+                                lineNumber: 343,
                                 columnNumber: 13
                             }, this),
                             loading ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$VibeSpaceLoader$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["VibeSpaceLoader"], {}, void 0, false, {
                                 fileName: "[project]/src/app/home/page.tsx",
-                                lineNumber: 470,
+                                lineNumber: 347,
                                 columnNumber: 15
                             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                 className: "w-full max-w-xl flex flex-col gap-4",
                                 children: [
-                                    canCreatePost && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$CreatePostPrompt$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CreatePostPrompt"], {
-                                        onGoLive: handleGoLive
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$CreatePostPrompt$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CreatePostPrompt"], {
+                                        onGoLive: ()=>{}
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/home/page.tsx",
-                                        lineNumber: 473,
-                                        columnNumber: 35
+                                        lineNumber: 350,
+                                        columnNumber: 17
                                     }, this),
                                     filteredPosts.length > 0 ? filteredPosts.map((post, index)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"].Fragment, {
                                             children: [
@@ -8352,25 +8114,25 @@ function HomePageContent() {
                                                     post: post
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/home/page.tsx",
-                                                    lineNumber: 476,
+                                                    lineNumber: 353,
                                                     columnNumber: 21
                                                 }, this),
                                                 (index + 1) % 5 === 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$AdBanner$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {}, `ad-${post.id}`, false, {
                                                     fileName: "[project]/src/app/home/page.tsx",
-                                                    lineNumber: 477,
+                                                    lineNumber: 354,
                                                     columnNumber: 47
                                                 }, this)
                                             ]
                                         }, post.id, true, {
                                             fileName: "[project]/src/app/home/page.tsx",
-                                            lineNumber: 475,
+                                            lineNumber: 352,
                                             columnNumber: 19
                                         }, this)) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                         className: "text-center text-gray-400 p-8 glass-card",
                                         children: "No posts found in this category yet."
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/home/page.tsx",
-                                        lineNumber: 480,
+                                        lineNumber: 357,
                                         columnNumber: 21
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -8378,7 +8140,7 @@ function HomePageContent() {
                                         className: "h-10 w-full"
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/home/page.tsx",
-                                        lineNumber: 483,
+                                        lineNumber: 360,
                                         columnNumber: 17
                                     }, this),
                                     loadingMore && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -8387,44 +8149,44 @@ function HomePageContent() {
                                             className: "animate-spin rounded-full h-8 w-8 border-b-2 border-accent-cyan"
                                         }, void 0, false, {
                                             fileName: "[project]/src/app/home/page.tsx",
-                                            lineNumber: 487,
+                                            lineNumber: 364,
                                             columnNumber: 21
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/home/page.tsx",
-                                        lineNumber: 486,
+                                        lineNumber: 363,
                                         columnNumber: 19
                                     }, this),
-                                    !hasMore && !searchTerm.trim() && posts.length > 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                    !hasMore && !loadingMore && posts.length > 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                         className: "text-center text-gray-500 my-8",
                                         children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                             children: "You've reached the end of the vibe. ✨"
                                         }, void 0, false, {
                                             fileName: "[project]/src/app/home/page.tsx",
-                                            lineNumber: 493,
+                                            lineNumber: 370,
                                             columnNumber: 21
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/home/page.tsx",
-                                        lineNumber: 492,
+                                        lineNumber: 369,
                                         columnNumber: 19
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/app/home/page.tsx",
-                                lineNumber: 472,
+                                lineNumber: 349,
                                 columnNumber: 15
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/home/page.tsx",
-                        lineNumber: 460,
+                        lineNumber: 342,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/home/page.tsx",
-                lineNumber: 347,
+                lineNumber: 271,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -8440,32 +8202,30 @@ function HomePageContent() {
                     whileTap: {
                         scale: 0.95
                     },
-                    variants: bellVariants,
-                    animate: hasUnreadNotifs ? "jiggle" : "initial",
                     children: [
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$bell$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Bell$3e$__["Bell"], {
                             className: "text-xl"
                         }, void 0, false, {
                             fileName: "[project]/src/app/home/page.tsx",
-                            lineNumber: 512,
+                            lineNumber: 387,
                             columnNumber: 11
                         }, this),
                         hasUnreadNotifs && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                             className: "absolute top-1 right-1 w-2.5 h-2.5 bg-accent-pink rounded-full"
                         }, void 0, false, {
                             fileName: "[project]/src/app/home/page.tsx",
-                            lineNumber: 513,
+                            lineNumber: 388,
                             columnNumber: 31
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/app/home/page.tsx",
-                    lineNumber: 502,
+                    lineNumber: 379,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/app/home/page.tsx",
-                lineNumber: 501,
+                lineNumber: 378,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {
@@ -8484,53 +8244,46 @@ function HomePageContent() {
                         size: 32
                     }, void 0, false, {
                         fileName: "[project]/src/app/home/page.tsx",
-                        lineNumber: 524,
+                        lineNumber: 399,
                         columnNumber: 13
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/src/app/home/page.tsx",
-                    lineNumber: 518,
+                    lineNumber: 393,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/app/home/page.tsx",
-                lineNumber: 517,
+                lineNumber: 392,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$components$2f$AnimatePresence$2f$index$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["AnimatePresence"], {
                 children: [
-                    showMusicModal && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(MusicDiscovery, {
-                        onClose: ()=>setShowMusicModal(false)
-                    }, void 0, false, {
-                        fileName: "[project]/src/app/home/page.tsx",
-                        lineNumber: 529,
-                        columnNumber: 28
-                    }, this),
                     selectedFlashUser && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(FlashModal, {
                         userFlashes: selectedFlashUser,
                         onClose: ()=>handleFlashModalClose(selectedFlashUser?.userId)
                     }, void 0, false, {
                         fileName: "[project]/src/app/home/page.tsx",
-                        lineNumber: 530,
+                        lineNumber: 404,
                         columnNumber: 31
                     }, this),
                     showNotifications && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(NotificationPanel, {
                         onClose: ()=>setShowNotifications(false)
                     }, void 0, false, {
                         fileName: "[project]/src/app/home/page.tsx",
-                        lineNumber: 531,
+                        lineNumber: 405,
                         columnNumber: 31
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/home/page.tsx",
-                lineNumber: 528,
+                lineNumber: 403,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/app/home/page.tsx",
-        lineNumber: 346,
+        lineNumber: 270,
         columnNumber: 5
     }, this);
 }
@@ -8538,17 +8291,17 @@ function HomePage() {
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Suspense"], {
         fallback: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$VibeSpaceLoader$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["VibeSpaceLoader"], {}, void 0, false, {
             fileName: "[project]/src/app/home/page.tsx",
-            lineNumber: 539,
+            lineNumber: 413,
             columnNumber: 25
         }, void 0),
         children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(HomePageContent, {}, void 0, false, {
             fileName: "[project]/src/app/home/page.tsx",
-            lineNumber: 540,
+            lineNumber: 414,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/src/app/home/page.tsx",
-        lineNumber: 539,
+        lineNumber: 413,
         columnNumber: 5
     }, this);
 }
