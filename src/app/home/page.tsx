@@ -32,15 +32,6 @@ const categories = [
     { id: 'culture', name: 'Culture', icon: <Popcorn /> },
 ];
 
-const creatorCategoryMap: { [key: string]: string[] } = {
-    'daily': ['vlogs', 'moments', 'travel', 'self'],
-    'creative': ['art', 'photos', 'design', 'writing'],
-    'play': ['gaming', 'challenges', 'comedy', 'reactions'],
-    'learn': ['tips', 'tech', 'study', 'explainers'],
-    'culture': ['music', 'movies', 'trends', 'community']
-};
-
-
 function HomePageContent() {
   const [showMusicModal, setShowMusicModal] = useState(false);
   const [posts, setPosts] = useState<any[]>([]);
@@ -114,14 +105,10 @@ function HomePageContent() {
         
         let constraints: any[] = [orderBy("publishAt", "desc")];
 
+        // **REVISED LOGIC**
         if (category && category !== 'all') {
-            const creatorTypesForCategory = creatorCategoryMap[category] || [];
-            // This is the fix: include the main category itself in the query.
-            const allTypesForCategory = [category, ...creatorTypesForCategory];
-            constraints.unshift(or(
-              where("category", "==", category), 
-              where("creatorType", "in", allTypesForCategory)
-            ));
+             // This is the new, simplified query. It relies on the 'category' field on the post itself.
+             constraints.unshift(where("category", "==", category));
         }
 
         if (loadMore && lastVisible) {
@@ -168,7 +155,7 @@ function HomePageContent() {
         if(currentUser) { // Only fetch posts if user is authenticated
             fetchPosts(activeCategory);
         }
-    }, [activeCategory, currentUser]); // Removed fetchPosts from deps to prevent re-fetch on every render
+    }, [activeCategory, currentUser, fetchPosts]); 
     
     const fetchMorePosts = useCallback(() => {
         fetchPosts(activeCategory, true);

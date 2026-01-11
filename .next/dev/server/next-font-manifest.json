@@ -1,6 +1,7 @@
 {
   "app": {
     "[project]/src/app/create/page": [],
+    "[project]/src/app/flix/page": [],
     "[project]/src/app/home/page": [],
     "[project]/src/app/login/page": [],
     "[project]/src/app/page": [],

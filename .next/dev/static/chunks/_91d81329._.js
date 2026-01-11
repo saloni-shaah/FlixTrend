@@ -207,58 +207,64 @@ const imageBreakpoints = [
     1600
 ];
 function OptimizedImage({ src, alt, className, width, height }) {
-    if (!src.startsWith(CLOUDINARY_BASE_URL)) {
+    if (!src) {
+        return null; // Don't render anything if there's no src
+    }
+    const isCloudinaryUrl = src.startsWith(CLOUDINARY_BASE_URL);
+    if (isCloudinaryUrl) {
+        const publicId = getCloudinaryId(src);
+        if (!publicId) {
+            // Fallback for Cloudinary URLs that don't match the regex
+            return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("img", {
+                src: src,
+                alt: alt,
+                className: className,
+                width: width,
+                height: height,
+                loading: "lazy"
+            }, void 0, false, {
+                fileName: "[project]/src/components/OptimizedImage.tsx",
+                lineNumber: 27,
+                columnNumber: 15
+            }, this);
+        }
+        const getTransformedUrl = (w)=>{
+            return `${CLOUDINARY_BASE_URL}/image/upload/f_auto,q_auto,w_${w}/${publicId}`;
+        };
+        const srcSet = imageBreakpoints.map((w)=>`${getTransformedUrl(w)} ${w}w`).join(', ');
         return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("img", {
-            src: src,
+            src: getTransformedUrl(imageBreakpoints[1]),
+            srcSet: srcSet,
+            sizes: "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 800px",
             alt: alt,
             className: className,
+            loading: "lazy",
+            decoding: "async",
             width: width,
             height: height,
-            loading: "lazy"
+            style: {
+                width: width ? `${width}px` : '100%',
+                height: height ? `${height}px` : 'auto',
+                aspectRatio: width && height ? `${width}/${height}` : undefined
+            }
         }, void 0, false, {
             fileName: "[project]/src/components/OptimizedImage.tsx",
-            lineNumber: 18,
-            columnNumber: 12
+            lineNumber: 37,
+            columnNumber: 7
         }, this);
     }
-    const publicId = getCloudinaryId(src);
-    if (!publicId) {
-        return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("img", {
-            src: src,
-            alt: alt,
-            className: className,
-            width: width,
-            height: height,
-            loading: "lazy"
-        }, void 0, false, {
-            fileName: "[project]/src/components/OptimizedImage.tsx",
-            lineNumber: 23,
-            columnNumber: 13
-        }, this);
-    }
-    const getTransformedUrl = (w)=>{
-        return `${CLOUDINARY_BASE_URL}/image/upload/f_auto,q_auto,w_${w}/${publicId}`;
-    };
-    const srcSet = imageBreakpoints.map((w)=>`${getTransformedUrl(w)} ${w}w`).join(', ');
+    // Default behavior for non-Cloudinary images (e.g., Firebase Storage)
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("img", {
-        src: getTransformedUrl(imageBreakpoints[1]),
-        srcSet: srcSet,
-        sizes: "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 800px",
+        src: src,
         alt: alt,
         className: className,
-        loading: "lazy",
-        decoding: "async",
         width: width,
         height: height,
-        style: {
-            width: width ? `${width}px` : '100%',
-            height: height ? `${height}px` : 'auto',
-            aspectRatio: width && height ? `${width}/${height}` : undefined
-        }
+        loading: "lazy"
     }, void 0, false, {
         fileName: "[project]/src/components/OptimizedImage.tsx",
-        lineNumber: 33,
-        columnNumber: 5
+        lineNumber: 57,
+        columnNumber: 10
     }, this);
 }
 _c = OptimizedImage;
