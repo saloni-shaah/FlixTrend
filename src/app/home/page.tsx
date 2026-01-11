@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import dynamic from 'next/dynamic';
 import { getFirestore, collection, query, orderBy, getDoc, doc, limit, startAfter, getDocs, where, Timestamp, onSnapshot, or } from "firebase/firestore";
-import { Plus, Bell, Search, Mic, Video, Flame, Gamepad2, Tv, Music, Rss, Compass, Smile, Code, Atom, LandPlot, Handshake, PenTool, Bot, Sparkles, Book, Camera, Palette, Shirt, Utensils, Plane, Film, BrainCircuit, Landmark, Drama, CookingPot, UtensilsCrossed, Scroll, Music4, HelpingHand, Sprout, Rocket, Briefcase, Heart, Trophy, AlignLeft, BarChart3, Zap, Radio, Image as ImageIcon, BriefcaseBusiness, Users, Brush, GraduationCap, Popcorn, ArrowLeft } from "lucide-react";
+import { Plus, Bell, Search, Mic, ArrowLeft, Users as UsersIcon, Brush, GraduationCap, Popcorn, Gamepad2 } from "lucide-react";
 import { auth } from "@/utils/firebaseClient";
 import { useAppState } from "@/utils/AppStateContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -24,7 +24,7 @@ const NotificationPanel = dynamic(() => import('@/components/NotificationPanel')
 const db = getFirestore(app);
 
 const categories = [
-    { id: 'daily', name: 'Daily', icon: <Users />, sub: ['Vlogs', 'Moments', 'Travel', 'Self'] },
+    { id: 'daily', name: 'Daily', icon: <UsersIcon />, sub: ['Vlogs', 'Moments', 'Travel', 'Self'] },
     { id: 'creative', name: 'Creative', icon: <Brush />, sub: ['Art', 'Photos', 'Design', 'Writing'] },
     { id: 'play', name: 'Play', icon: <Gamepad2 />, sub: ['Gaming', 'Challenges', 'Comedy', 'Reactions'] },
     { id: 'learn', name: 'Learn', icon: <GraduationCap />, sub: ['Tips', 'Tech', 'Study', 'Explainers'] },
@@ -85,9 +85,9 @@ function HomePageContent() {
 
     const fetchPosts = useCallback(async (category: string | null, subCategory: string | null, loadMore = false) => {
         if (!auth.currentUser) return;
+        if (loadMore && (!hasMore || loadingMore)) return;
 
         if (loadMore) {
-            if (!hasMore || loadingMore) return;
             setLoadingMore(true);
         } else {
             setLoading(true);
@@ -102,6 +102,8 @@ function HomePageContent() {
         if (subCategory) {
             constraints.unshift(where("creatorType", "==", subCategory.toLowerCase()));
         } else if (category) {
+            const selectedCat = categories.find(c => c.id === category);
+            const subCategoryValues = selectedCat ? selectedCat.sub.map(s => s.toLowerCase()) : [];
             constraints.unshift(where("category", "==", category));
         }
 
@@ -134,7 +136,6 @@ function HomePageContent() {
         const unsubscribe = auth.onAuthStateChanged(async user => {
             if (user) {
                 setCurrentUser(user);
-                 fetchPosts(activeCategory, activeSubCategory);
                 const q = query(collection(db, "users", user.uid, "notifications"), where("read", "==", false));
                 const unsubNotifs = onSnapshot(q, (snapshot) => setHasUnreadNotifs(!snapshot.empty));
                 return () => unsubNotifs();
@@ -143,7 +144,13 @@ function HomePageContent() {
             }
         });
         return () => unsubscribe();
-    }, [router, activeCategory, activeSubCategory, fetchPosts]); 
+    }, [router]); 
+
+    useEffect(() => {
+        if (currentUser) {
+            fetchPosts(activeCategory, activeSubCategory);
+        }
+    }, [currentUser, activeCategory, activeSubCategory, fetchPosts]);
     
     const fetchMorePosts = useCallback(() => {
         fetchPosts(activeCategory, activeSubCategory, true);
@@ -258,7 +265,7 @@ function HomePageContent() {
     };
 
 
-    if (loading && posts.length === 0) {
+    if (!currentUser) {
         return <VibeSpaceLoader />;
     }
 
@@ -389,16 +396,6 @@ function HomePageContent() {
         </motion.button>
       </div>
       
-      <Link href="/flix">
-        <motion.button 
-            className="fixed bottom-24 left-4 z-30 btn-glass-icon w-16 h-16 bg-gradient-to-tr from-accent-cyan to-accent-pink"
-            aria-label="Flix Features"
-            whileHover={{ scale: 1.1, rotate: 15 }}
-            whileTap={{ scale: 0.9 }}
-        >
-            <Compass size={32} />
-        </motion.button>
-      </Link>
 
       <AnimatePresence>
         {selectedFlashUser && <FlashModal userFlashes={selectedFlashUser} onClose={() => handleFlashModalClose(selectedFlashUser?.userId)} />}
@@ -415,3 +412,5 @@ export default function HomePage() {
     </Suspense>
   );
 }
+
+    
