@@ -155,7 +155,7 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
                 userId: user.uid,
                 displayName: userData.name || user.displayName,
                 username: userData.username,
-                avatar_url: userData.avatar_url,
+                avatar_url: userData.avatar_url || null,
                 type: postData.postType,
                 content: postData.content || postData.caption || postData.question || postData.title || "",
                 hashtags: hashtags,

@@ -2507,6 +2507,29 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$navi
 ;
 const db = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["getFirestore"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$utils$2f$firebaseClient$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["app"]);
 const storage = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$storage$2f$dist$2f$node$2d$esm$2f$index$2e$node$2e$esm$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["getStorage"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$utils$2f$firebaseClient$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["app"]);
+// Mapping from sub-category (creatorType) to main category
+const creatorCategoryMap = {
+    'vlogs': 'daily',
+    'moments': 'daily',
+    'travel': 'daily',
+    'self': 'daily',
+    'art': 'creative',
+    'photos': 'creative',
+    'design': 'creative',
+    'writing': 'creative',
+    'gaming': 'play',
+    'challenges': 'play',
+    'comedy': 'play',
+    'reactions': 'play',
+    'tips': 'learn',
+    'tech': 'learn',
+    'study': 'learn',
+    'explainers': 'learn',
+    'music': 'culture',
+    'movies': 'culture',
+    'trends': 'culture',
+    'community': 'culture'
+};
 function PostPreview({ postData }) {
     if (!postData) return null;
     const { postType, content, question, pollOptions, mediaUrl, backgroundColor, fontStyle, title, caption } = postData;
@@ -2520,14 +2543,14 @@ function PostPreview({ postData }) {
                         size: 16
                     }, void 0, false, {
                         fileName: "[project]/src/components/create/Step3.tsx",
-                        lineNumber: 25,
+                        lineNumber: 34,
                         columnNumber: 93
                     }, this),
                     " Post Preview"
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/create/Step3.tsx",
-                lineNumber: 25,
+                lineNumber: 34,
                 columnNumber: 13
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2546,12 +2569,12 @@ function PostPreview({ postData }) {
                             children: content
                         }, void 0, false, {
                             fileName: "[project]/src/components/create/Step3.tsx",
-                            lineNumber: 37,
+                            lineNumber: 46,
                             columnNumber: 25
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/src/components/create/Step3.tsx",
-                        lineNumber: 28,
+                        lineNumber: 37,
                         columnNumber: 22
                     }, this),
                     (postType === 'media' || postType === 'flash') && mediaUrl && mediaUrl.length > 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Fragment"], {
@@ -2561,7 +2584,7 @@ function PostPreview({ postData }) {
                                 children: title
                             }, void 0, false, {
                                 fileName: "[project]/src/components/create/Step3.tsx",
-                                lineNumber: 43,
+                                lineNumber: 52,
                                 columnNumber: 25
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2569,7 +2592,7 @@ function PostPreview({ postData }) {
                                 children: caption
                             }, void 0, false, {
                                 fileName: "[project]/src/components/create/Step3.tsx",
-                                lineNumber: 44,
+                                lineNumber: 53,
                                 columnNumber: 25
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2582,7 +2605,7 @@ function PostPreview({ postData }) {
                                             className: "w-full h-auto rounded-md aspect-square object-cover"
                                         }, index, false, {
                                             fileName: "[project]/src/components/create/Step3.tsx",
-                                            lineNumber: 49,
+                                            lineNumber: 58,
                                             columnNumber: 44
                                         }, this);
                                     }
@@ -2592,13 +2615,13 @@ function PostPreview({ postData }) {
                                         className: "w-full h-auto rounded-md aspect-square object-cover"
                                     }, index, false, {
                                         fileName: "[project]/src/components/create/Step3.tsx",
-                                        lineNumber: 51,
+                                        lineNumber: 60,
                                         columnNumber: 40
                                     }, this);
                                 })
                             }, void 0, false, {
                                 fileName: "[project]/src/components/create/Step3.tsx",
-                                lineNumber: 45,
+                                lineNumber: 54,
                                 columnNumber: 25
                             }, this)
                         ]
@@ -2610,7 +2633,7 @@ function PostPreview({ postData }) {
                                 children: question
                             }, void 0, false, {
                                 fileName: "[project]/src/components/create/Step3.tsx",
-                                lineNumber: 59,
+                                lineNumber: 68,
                                 columnNumber: 25
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2620,12 +2643,12 @@ function PostPreview({ postData }) {
                                         children: opt.text
                                     }, idx, false, {
                                         fileName: "[project]/src/components/create/Step3.tsx",
-                                        lineNumber: 62,
+                                        lineNumber: 71,
                                         columnNumber: 33
                                     }, this))
                             }, void 0, false, {
                                 fileName: "[project]/src/components/create/Step3.tsx",
-                                lineNumber: 60,
+                                lineNumber: 69,
                                 columnNumber: 25
                             }, this)
                         ]
@@ -2638,32 +2661,32 @@ function PostPreview({ postData }) {
                                 children: "LIVE"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/create/Step3.tsx",
-                                lineNumber: 71,
+                                lineNumber: 80,
                                 columnNumber: 25
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                 children: title || "Live Stream"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/create/Step3.tsx",
-                                lineNumber: 72,
+                                lineNumber: 81,
                                 columnNumber: 25
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/create/Step3.tsx",
-                        lineNumber: 70,
+                        lineNumber: 79,
                         columnNumber: 21
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/create/Step3.tsx",
-                lineNumber: 26,
+                lineNumber: 35,
                 columnNumber: 13
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/components/create/Step3.tsx",
-        lineNumber: 24,
+        lineNumber: 33,
         columnNumber: 9
     }, this);
 }
@@ -2707,6 +2730,9 @@ function Step3({ onNext, onBack, postData }) {
             const userDocSnap = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["getDoc"])(userDocRef);
             if (!userDocSnap.exists()) throw new Error("User profile not found!");
             const userData = userDocSnap.data();
+            // Determine the main category from the creator's sub-category type
+            const creatorType = userData.creatorType || '';
+            const mainCategory = creatorCategoryMap[creatorType] || null;
             let publishAt;
             if (isScheduling && scheduleDate && postData.postType !== 'live') {
                 const [hours, minutes] = scheduleTime.split(':');
@@ -2724,7 +2750,7 @@ function Step3({ onNext, onBack, postData }) {
                 userId: user.uid,
                 displayName: userData.name || user.displayName,
                 username: userData.username,
-                avatar_url: userData.avatar_url,
+                avatar_url: userData.avatar_url || null,
                 type: postData.postType,
                 content: postData.content || postData.caption || postData.question || postData.title || "",
                 hashtags: hashtags,
@@ -2737,6 +2763,8 @@ function Step3({ onNext, onBack, postData }) {
                 videoDuration: postData.videoDuration || 0,
                 isVideo: postData.isVideo || false,
                 viewCount: 0,
+                creatorType: creatorType,
+                category: mainCategory,
                 ...postData.postType === 'text' && {
                     backgroundColor: postData.backgroundColor || null,
                     backgroundImage: postData.backgroundImage || null,
@@ -2792,14 +2820,14 @@ function Step3({ onNext, onBack, postData }) {
                         children: "Step 2: Publish"
                     }, void 0, false, {
                         fileName: "[project]/src/components/create/Step3.tsx",
-                        lineNumber: 203,
+                        lineNumber: 218,
                         columnNumber: 17
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(PostPreview, {
                         postData: postData
                     }, void 0, false, {
                         fileName: "[project]/src/components/create/Step3.tsx",
-                        lineNumber: 205,
+                        lineNumber: 220,
                         columnNumber: 17
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2807,7 +2835,7 @@ function Step3({ onNext, onBack, postData }) {
                         children: "You're ready to publish now or schedule your post for later."
                     }, void 0, false, {
                         fileName: "[project]/src/components/create/Step3.tsx",
-                        lineNumber: 207,
+                        lineNumber: 222,
                         columnNumber: 17
                     }, this),
                     error && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["motion"].div, {
@@ -2825,7 +2853,7 @@ function Step3({ onNext, onBack, postData }) {
                                 size: 24
                             }, void 0, false, {
                                 fileName: "[project]/src/components/create/Step3.tsx",
-                                lineNumber: 215,
+                                lineNumber: 230,
                                 columnNumber: 25
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2835,7 +2863,7 @@ function Step3({ onNext, onBack, postData }) {
                                         children: "Publishing Error"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/create/Step3.tsx",
-                                        lineNumber: 217,
+                                        lineNumber: 232,
                                         columnNumber: 29
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2843,19 +2871,19 @@ function Step3({ onNext, onBack, postData }) {
                                         children: error
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/create/Step3.tsx",
-                                        lineNumber: 218,
+                                        lineNumber: 233,
                                         columnNumber: 29
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/create/Step3.tsx",
-                                lineNumber: 216,
+                                lineNumber: 231,
                                 columnNumber: 25
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/create/Step3.tsx",
-                        lineNumber: 210,
+                        lineNumber: 225,
                         columnNumber: 21
                     }, this),
                     shouldShowScheduling && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2869,7 +2897,7 @@ function Step3({ onNext, onBack, postData }) {
                                         children: "Scheduling"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/create/Step3.tsx",
-                                        lineNumber: 226,
+                                        lineNumber: 241,
                                         columnNumber: 29
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
@@ -2882,26 +2910,26 @@ function Step3({ onNext, onBack, postData }) {
                                                 className: "sr-only peer"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/create/Step3.tsx",
-                                                lineNumber: 228,
+                                                lineNumber: 243,
                                                 columnNumber: 33
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                 className: "w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-accent-cyan peer-checked:after:translate-x-full after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-cyan"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/create/Step3.tsx",
-                                                lineNumber: 229,
+                                                lineNumber: 244,
                                                 columnNumber: 33
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/create/Step3.tsx",
-                                        lineNumber: 227,
+                                        lineNumber: 242,
                                         columnNumber: 29
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/create/Step3.tsx",
-                                lineNumber: 225,
+                                lineNumber: 240,
                                 columnNumber: 25
                             }, this),
                             isScheduling && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["motion"].div, {
@@ -2926,25 +2954,25 @@ function Step3({ onNext, onBack, postData }) {
                                                             className: "mr-2 h-4 w-4"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/create/Step3.tsx",
-                                                            lineNumber: 238,
+                                                            lineNumber: 253,
                                                             columnNumber: 41
                                                         }, this),
                                                         scheduleDate ? scheduleDate.toLocaleDateString() : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                             children: "Pick a date"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/create/Step3.tsx",
-                                                            lineNumber: 239,
+                                                            lineNumber: 254,
                                                             columnNumber: 93
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/components/create/Step3.tsx",
-                                                    lineNumber: 237,
+                                                    lineNumber: 252,
                                                     columnNumber: 37
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/create/Step3.tsx",
-                                                lineNumber: 236,
+                                                lineNumber: 251,
                                                 columnNumber: 37
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$popover$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["PopoverContent"], {
@@ -2957,18 +2985,18 @@ function Step3({ onNext, onBack, postData }) {
                                                     disabled: (date)=>date < new Date(new Date().setDate(new Date().getDate() - 1))
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/components/create/Step3.tsx",
-                                                    lineNumber: 243,
+                                                    lineNumber: 258,
                                                     columnNumber: 37
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/create/Step3.tsx",
-                                                lineNumber: 242,
+                                                lineNumber: 257,
                                                 columnNumber: 37
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/create/Step3.tsx",
-                                        lineNumber: 235,
+                                        lineNumber: 250,
                                         columnNumber: 33
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -2978,25 +3006,25 @@ function Step3({ onNext, onBack, postData }) {
                                         className: "input-glass"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/create/Step3.tsx",
-                                        lineNumber: 252,
+                                        lineNumber: 267,
                                         columnNumber: 33
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/create/Step3.tsx",
-                                lineNumber: 234,
+                                lineNumber: 249,
                                 columnNumber: 29
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/create/Step3.tsx",
-                        lineNumber: 224,
+                        lineNumber: 239,
                         columnNumber: 21
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/create/Step3.tsx",
-                lineNumber: 202,
+                lineNumber: 217,
                 columnNumber: 14
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3009,14 +3037,14 @@ function Step3({ onNext, onBack, postData }) {
                         children: [
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$arrow$2d$left$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__ArrowLeft$3e$__["ArrowLeft"], {}, void 0, false, {
                                 fileName: "[project]/src/components/create/Step3.tsx",
-                                lineNumber: 266,
+                                lineNumber: 281,
                                 columnNumber: 21
                             }, this),
                             " Back"
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/create/Step3.tsx",
-                        lineNumber: 265,
+                        lineNumber: 280,
                         columnNumber: 17
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -3028,25 +3056,25 @@ function Step3({ onNext, onBack, postData }) {
                             " ",
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$circle$2d$check$2d$big$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__CheckCircle$3e$__["CheckCircle"], {}, void 0, false, {
                                 fileName: "[project]/src/components/create/Step3.tsx",
-                                lineNumber: 273,
+                                lineNumber: 288,
                                 columnNumber: 145
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/create/Step3.tsx",
-                        lineNumber: 268,
+                        lineNumber: 283,
                         columnNumber: 17
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/create/Step3.tsx",
-                lineNumber: 264,
+                lineNumber: 279,
                 columnNumber: 14
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/components/create/Step3.tsx",
-        lineNumber: 201,
+        lineNumber: 216,
         columnNumber: 9
     }, this);
 }
