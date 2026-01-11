@@ -7869,6 +7869,38 @@ const categories = [
         }, ("TURBOPACK compile-time value", void 0))
     }
 ];
+const creatorCategoryMap = {
+    'daily': [
+        'vlogs',
+        'moments',
+        'travel',
+        'self'
+    ],
+    'creative': [
+        'art',
+        'photos',
+        'design',
+        'writing'
+    ],
+    'play': [
+        'gaming',
+        'challenges',
+        'comedy',
+        'reactions'
+    ],
+    'learn': [
+        'tips',
+        'tech',
+        'study',
+        'explainers'
+    ],
+    'culture': [
+        'music',
+        'movies',
+        'trends',
+        'community'
+    ]
+};
 function HomePageContent() {
     _s();
     const [showMusicModal, setShowMusicModal] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
@@ -7953,7 +7985,13 @@ function HomePageContent() {
                 (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["orderBy"])("publishAt", "desc")
             ];
             if (category && category !== 'all') {
-                constraints.unshift((0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["or"])((0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["where"])("category", "==", category), (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["where"])("creatorType", "==", category)));
+                const creatorTypesForCategory = creatorCategoryMap[category] || [];
+                // This is the fix: include the main category itself in the query.
+                const allTypesForCategory = [
+                    category,
+                    ...creatorTypesForCategory
+                ];
+                constraints.unshift((0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["or"])((0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["where"])("category", "==", category), (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["where"])("creatorType", "in", allTypesForCategory)));
             }
             if (loadMore && lastVisible) {
                 constraints.push((0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["startAfter"])(lastVisible));
@@ -8209,7 +8247,7 @@ function HomePageContent() {
     if (loading && posts.length === 0) {
         return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$VibeSpaceLoader$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["VibeSpaceLoader"], {}, void 0, false, {
             fileName: "[project]/src/app/home/page.tsx",
-            lineNumber: 317,
+            lineNumber: 328,
             columnNumber: 12
         }, this);
     }
@@ -8218,7 +8256,7 @@ function HomePageContent() {
             onComplete: ()=>setShowWelcomeAnimation(false)
         }, void 0, false, {
             fileName: "[project]/src/app/home/page.tsx",
-            lineNumber: 321,
+            lineNumber: 332,
             columnNumber: 14
         }, this);
     }
@@ -8253,19 +8291,19 @@ function HomePageContent() {
                                         size: 20
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/home/page.tsx",
-                                        lineNumber: 339,
+                                        lineNumber: 350,
                                         columnNumber: 23
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/src/app/home/page.tsx",
-                                    lineNumber: 334,
+                                    lineNumber: 345,
                                     columnNumber: 19
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                     className: "w-px h-6 bg-glass-border mx-3"
                                 }, void 0, false, {
                                     fileName: "[project]/src/app/home/page.tsx",
-                                    lineNumber: 341,
+                                    lineNumber: 352,
                                     columnNumber: 19
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -8279,7 +8317,7 @@ function HomePageContent() {
                                     autoFocus: false
                                 }, void 0, false, {
                                     fileName: "[project]/src/app/home/page.tsx",
-                                    lineNumber: 342,
+                                    lineNumber: 353,
                                     columnNumber: 19
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["motion"].div, {
@@ -8291,28 +8329,28 @@ function HomePageContent() {
                                         className: "p-2 rounded-full text-brand-gold hover:bg-brand-gold/10",
                                         children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$search$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Search$3e$__["Search"], {}, void 0, false, {
                                             fileName: "[project]/src/app/home/page.tsx",
-                                            lineNumber: 354,
+                                            lineNumber: 365,
                                             columnNumber: 25
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/home/page.tsx",
-                                        lineNumber: 353,
+                                        lineNumber: 364,
                                         columnNumber: 21
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/src/app/home/page.tsx",
-                                    lineNumber: 352,
+                                    lineNumber: 363,
                                     columnNumber: 19
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/app/home/page.tsx",
-                            lineNumber: 333,
+                            lineNumber: 344,
                             columnNumber: 13
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/src/app/home/page.tsx",
-                        lineNumber: 327,
+                        lineNumber: 338,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["motion"].div, {
@@ -8337,12 +8375,12 @@ function HomePageContent() {
                                 ]
                             }, cat.id, true, {
                                 fileName: "[project]/src/app/home/page.tsx",
-                                lineNumber: 368,
+                                lineNumber: 379,
                                 columnNumber: 17
                             }, this))
                     }, void 0, false, {
                         fileName: "[project]/src/app/home/page.tsx",
-                        lineNumber: 361,
+                        lineNumber: 372,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["motion"].section, {
@@ -8356,7 +8394,7 @@ function HomePageContent() {
                                 children: "Flashes"
                             }, void 0, false, {
                                 fileName: "[project]/src/app/home/page.tsx",
-                                lineNumber: 388,
+                                lineNumber: 399,
                                 columnNumber: 15
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["motion"].div, {
@@ -8379,7 +8417,7 @@ function HomePageContent() {
                                                 className: "text-gray-400 mb-1"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/home/page.tsx",
-                                                lineNumber: 401,
+                                                lineNumber: 412,
                                                 columnNumber: 21
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -8387,13 +8425,13 @@ function HomePageContent() {
                                                 children: "Add New"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/home/page.tsx",
-                                                lineNumber: 402,
+                                                lineNumber: 413,
                                                 columnNumber: 21
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/app/home/page.tsx",
-                                        lineNumber: 393,
+                                        lineNumber: 404,
                                         columnNumber: 19
                                     }, this),
                                     flashUsers.map((userFlashes)=>{
@@ -8416,32 +8454,32 @@ function HomePageContent() {
                                                 className: `w-full h-full object-cover transition-opacity ${hasBeenViewed ? 'opacity-60' : ''}`
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/home/page.tsx",
-                                                lineNumber: 418,
+                                                lineNumber: 429,
                                                 columnNumber: 25
                                             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                 className: "text-2xl text-white",
                                                 children: "⚡"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/home/page.tsx",
-                                                lineNumber: 420,
+                                                lineNumber: 431,
                                                 columnNumber: 23
                                             }, this)
                                         }, userFlashes.userId, false, {
                                             fileName: "[project]/src/app/home/page.tsx",
-                                            lineNumber: 407,
+                                            lineNumber: 418,
                                             columnNumber: 19
                                         }, this);
                                     })
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/app/home/page.tsx",
-                                lineNumber: 389,
+                                lineNumber: 400,
                                 columnNumber: 15
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/home/page.tsx",
-                        lineNumber: 382,
+                        lineNumber: 393,
                         columnNumber: 11
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("section", {
@@ -8461,12 +8499,12 @@ function HomePageContent() {
                                 children: "VibeSpace"
                             }, void 0, false, {
                                 fileName: "[project]/src/app/home/page.tsx",
-                                lineNumber: 429,
+                                lineNumber: 440,
                                 columnNumber: 13
                             }, this),
                             loading ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$VibeSpaceLoader$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["VibeSpaceLoader"], {}, void 0, false, {
                                 fileName: "[project]/src/app/home/page.tsx",
-                                lineNumber: 438,
+                                lineNumber: 449,
                                 columnNumber: 15
                             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                 className: "w-full max-w-xl flex flex-col gap-4",
@@ -8475,7 +8513,7 @@ function HomePageContent() {
                                         onGoLive: handleGoLive
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/home/page.tsx",
-                                        lineNumber: 441,
+                                        lineNumber: 452,
                                         columnNumber: 35
                                     }, this),
                                     filteredPosts.length > 0 ? filteredPosts.map((post, index)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].Fragment, {
@@ -8484,25 +8522,25 @@ function HomePageContent() {
                                                     post: post
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/home/page.tsx",
-                                                    lineNumber: 444,
+                                                    lineNumber: 455,
                                                     columnNumber: 21
                                                 }, this),
                                                 (index + 1) % 5 === 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$AdBanner$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {}, `ad-${post.id}`, false, {
                                                     fileName: "[project]/src/app/home/page.tsx",
-                                                    lineNumber: 445,
+                                                    lineNumber: 456,
                                                     columnNumber: 47
                                                 }, this)
                                             ]
                                         }, post.id, true, {
                                             fileName: "[project]/src/app/home/page.tsx",
-                                            lineNumber: 443,
+                                            lineNumber: 454,
                                             columnNumber: 19
                                         }, this)) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                         className: "text-center text-gray-400 p-8 glass-card",
                                         children: "No posts found in this category yet."
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/home/page.tsx",
-                                        lineNumber: 448,
+                                        lineNumber: 459,
                                         columnNumber: 21
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -8510,7 +8548,7 @@ function HomePageContent() {
                                         className: "h-10 w-full"
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/home/page.tsx",
-                                        lineNumber: 451,
+                                        lineNumber: 462,
                                         columnNumber: 17
                                     }, this),
                                     loadingMore && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -8519,12 +8557,12 @@ function HomePageContent() {
                                             className: "animate-spin rounded-full h-8 w-8 border-b-2 border-accent-cyan"
                                         }, void 0, false, {
                                             fileName: "[project]/src/app/home/page.tsx",
-                                            lineNumber: 455,
+                                            lineNumber: 466,
                                             columnNumber: 21
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/home/page.tsx",
-                                        lineNumber: 454,
+                                        lineNumber: 465,
                                         columnNumber: 19
                                     }, this),
                                     !hasMore && !searchTerm.trim() && posts.length > 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -8533,30 +8571,30 @@ function HomePageContent() {
                                             children: "You've reached the end of the vibe. ✨"
                                         }, void 0, false, {
                                             fileName: "[project]/src/app/home/page.tsx",
-                                            lineNumber: 461,
+                                            lineNumber: 472,
                                             columnNumber: 21
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/home/page.tsx",
-                                        lineNumber: 460,
+                                        lineNumber: 471,
                                         columnNumber: 19
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/app/home/page.tsx",
-                                lineNumber: 440,
+                                lineNumber: 451,
                                 columnNumber: 15
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/home/page.tsx",
-                        lineNumber: 428,
+                        lineNumber: 439,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/home/page.tsx",
-                lineNumber: 326,
+                lineNumber: 337,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -8579,25 +8617,25 @@ function HomePageContent() {
                             className: "text-xl"
                         }, void 0, false, {
                             fileName: "[project]/src/app/home/page.tsx",
-                            lineNumber: 480,
+                            lineNumber: 491,
                             columnNumber: 11
                         }, this),
                         hasUnreadNotifs && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                             className: "absolute top-1 right-1 w-2.5 h-2.5 bg-accent-pink rounded-full"
                         }, void 0, false, {
                             fileName: "[project]/src/app/home/page.tsx",
-                            lineNumber: 481,
+                            lineNumber: 492,
                             columnNumber: 31
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/app/home/page.tsx",
-                    lineNumber: 470,
+                    lineNumber: 481,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/app/home/page.tsx",
-                lineNumber: 469,
+                lineNumber: 480,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
@@ -8616,17 +8654,17 @@ function HomePageContent() {
                         size: 32
                     }, void 0, false, {
                         fileName: "[project]/src/app/home/page.tsx",
-                        lineNumber: 492,
+                        lineNumber: 503,
                         columnNumber: 13
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/src/app/home/page.tsx",
-                    lineNumber: 486,
+                    lineNumber: 497,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/app/home/page.tsx",
-                lineNumber: 485,
+                lineNumber: 496,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$components$2f$AnimatePresence$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AnimatePresence"], {
@@ -8635,7 +8673,7 @@ function HomePageContent() {
                         onClose: ()=>setShowMusicModal(false)
                     }, void 0, false, {
                         fileName: "[project]/src/app/home/page.tsx",
-                        lineNumber: 497,
+                        lineNumber: 508,
                         columnNumber: 28
                     }, this),
                     selectedFlashUser && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(FlashModal, {
@@ -8643,26 +8681,26 @@ function HomePageContent() {
                         onClose: ()=>handleFlashModalClose(selectedFlashUser?.userId)
                     }, void 0, false, {
                         fileName: "[project]/src/app/home/page.tsx",
-                        lineNumber: 498,
+                        lineNumber: 509,
                         columnNumber: 31
                     }, this),
                     showNotifications && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(NotificationPanel, {
                         onClose: ()=>setShowNotifications(false)
                     }, void 0, false, {
                         fileName: "[project]/src/app/home/page.tsx",
-                        lineNumber: 499,
+                        lineNumber: 510,
                         columnNumber: 31
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/home/page.tsx",
-                lineNumber: 496,
+                lineNumber: 507,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/app/home/page.tsx",
-        lineNumber: 325,
+        lineNumber: 336,
         columnNumber: 5
     }, this);
 }
@@ -8678,17 +8716,17 @@ function HomePage() {
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Suspense"], {
         fallback: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$VibeSpaceLoader$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["VibeSpaceLoader"], {}, void 0, false, {
             fileName: "[project]/src/app/home/page.tsx",
-            lineNumber: 507,
+            lineNumber: 518,
             columnNumber: 25
         }, void 0),
         children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(HomePageContent, {}, void 0, false, {
             fileName: "[project]/src/app/home/page.tsx",
-            lineNumber: 508,
+            lineNumber: 519,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/src/app/home/page.tsx",
-        lineNumber: 507,
+        lineNumber: 518,
         columnNumber: 5
     }, this);
 }

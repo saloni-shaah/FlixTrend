@@ -378,6 +378,7 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$re
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$brush$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Brush$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/brush.js [app-ssr] (ecmascript) <export default as Brush>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$package$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Package$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/package.js [app-ssr] (ecmascript) <export default as Package>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$party$2d$popper$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__PartyPopper$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/party-popper.js [app-ssr] (ecmascript) <export default as PartyPopper>");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$zap$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Zap$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/zap.js [app-ssr] (ecmascript) <export default as Zap>");
 "use client";
 ;
 ;
@@ -385,8 +386,11 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$re
 ;
 let faceLandmarker;
 let lastVideoTime = -1;
+// Image assets for filters
 const sunglassesImg = new Image();
 sunglassesImg.src = '/filters/sunglasses.png';
+const hatImg = new Image();
+hatImg.src = '/filters/hat.png';
 const setupFaceLandmarker = async ()=>{
     if (faceLandmarker) return;
     const vision = await __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$mediapipe$2f$tasks$2d$vision$2f$vision_bundle$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FilesetResolver"].forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm");
@@ -480,6 +484,7 @@ function FilterCamera({ onCapture }) {
                 const leftCheek = landmarks[117];
                 const rightCheek = landmarks[346];
                 if (lipLandmarks.every((p)=>p)) {
+                    // Draw lipstick
                     ctx.fillStyle = 'rgba(255, 0, 100, 0.5)';
                     ctx.beginPath();
                     ctx.moveTo(lipLandmarks[0].x * videoWidth, lipLandmarks[0].y * videoHeight);
@@ -488,6 +493,17 @@ function FilterCamera({ onCapture }) {
                     }
                     ctx.closePath();
                     ctx.fill();
+                    // Add sparkles
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+                    for(let i = 0; i < 3; i++){
+                        const landmarkIndex = Math.floor(Math.random() * lipLandmarks.length);
+                        const sparklePoint = lipLandmarks[landmarkIndex];
+                        const sparkleX = sparklePoint.x * videoWidth + (Math.random() - 0.5) * 5;
+                        const sparkleY = sparklePoint.y * videoHeight + (Math.random() - 0.5) * 5;
+                        ctx.beginPath();
+                        ctx.arc(sparkleX, sparkleY, Math.random() * 2 + 1, 0, 2 * Math.PI);
+                        ctx.fill();
+                    }
                 }
                 if (leftCheek && rightCheek) {
                     ctx.fillStyle = 'rgba(255, 105, 180, 0.4)';
@@ -502,24 +518,89 @@ function FilterCamera({ onCapture }) {
             case "Funny Nose":
                 const noseTip = landmarks[4];
                 if (noseTip) {
+                    const wiggleX = (Math.random() - 0.5) * 4; // Small random horizontal offset
+                    const wiggleY = (Math.random() - 0.5) * 4; // Small random vertical offset
                     ctx.fillStyle = 'red';
                     ctx.beginPath();
-                    ctx.arc(noseTip.x * videoWidth, noseTip.y * videoHeight, 20, 0, 2 * Math.PI);
+                    ctx.arc(noseTip.x * videoWidth + wiggleX, noseTip.y * videoHeight + wiggleY, 20, 0, 2 * Math.PI);
                     ctx.fill();
                 }
                 break;
             case "Hat":
                 const forehead = landmarks[10];
-                if (forehead) {
-                    const hatWidth = 150;
-                    const hatHeight = 100;
-                    ctx.fillStyle = 'purple';
-                    ctx.beginPath();
-                    ctx.moveTo(forehead.x * videoWidth - hatWidth / 2, forehead.y * videoHeight - 30);
-                    ctx.lineTo(forehead.x * videoWidth + hatWidth / 2, forehead.y * videoHeight - 30);
-                    ctx.lineTo(forehead.x * videoWidth, forehead.y * videoHeight - hatHeight - 30);
-                    ctx.closePath();
-                    ctx.fill();
+                const leftBrow = landmarks[70];
+                const rightBrow = landmarks[300];
+                if (forehead && leftBrow && rightBrow) {
+                    const browWidth = Math.abs(rightBrow.x - leftBrow.x) * videoWidth;
+                    const hatWidth = browWidth * 1.8;
+                    const hatHeight = hatImg.height * (hatWidth / hatImg.width);
+                    ctx.save();
+                    ctx.translate(forehead.x * videoWidth, forehead.y * videoHeight);
+                    ctx.drawImage(hatImg, -hatWidth / 2, -hatHeight * 0.9, hatWidth, hatHeight);
+                    ctx.restore();
+                }
+                break;
+            case "Zap":
+                const faceOval = [
+                    10,
+                    338,
+                    297,
+                    332,
+                    284,
+                    251,
+                    389,
+                    356,
+                    454,
+                    323,
+                    361,
+                    288,
+                    397,
+                    365,
+                    379,
+                    378,
+                    400,
+                    377,
+                    152,
+                    148,
+                    176,
+                    149,
+                    150,
+                    136,
+                    172,
+                    58,
+                    132,
+                    93,
+                    234,
+                    127,
+                    162,
+                    21,
+                    54,
+                    103,
+                    67,
+                    109,
+                    10
+                ].map((i)=>landmarks[i]);
+                if (faceOval.every((p)=>p)) {
+                    ctx.strokeStyle = '#00FFFF'; // Cyan color for lightning
+                    ctx.lineWidth = 3;
+                    ctx.shadowColor = '#00FFFF';
+                    ctx.shadowBlur = 10;
+                    for(let i = 0; i < 2; i++){
+                        const startPoint = faceOval[Math.floor(Math.random() * faceOval.length)];
+                        const endPoint = {
+                            x: startPoint.x + (Math.random() - 0.5) * 0.4,
+                            y: startPoint.y + (Math.random() - 0.5) * 0.4
+                        };
+                        ctx.beginPath();
+                        ctx.moveTo(startPoint.x * videoWidth, startPoint.y * videoHeight);
+                        // Jagged line
+                        for(let j = 0; j < 5; j++){
+                            const nextX = startPoint.x + (endPoint.x - startPoint.x) * (j / 4) + (Math.random() - 0.5) * 0.05;
+                            const nextY = startPoint.y + (endPoint.y - startPoint.y) * (j / 4) + (Math.random() - 0.5) * 0.05;
+                            ctx.lineTo(nextX * videoWidth, nextY * videoHeight);
+                        }
+                        ctx.stroke();
+                    }
                 }
                 break;
         }
@@ -560,7 +641,7 @@ function FilterCamera({ onCapture }) {
                     className: "text-white"
                 }, void 0, false, {
                     fileName: "[project]/src/components/create/forms/FilterCamera.tsx",
-                    lineNumber: 173,
+                    lineNumber: 220,
                     columnNumber: 13
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -568,13 +649,13 @@ function FilterCamera({ onCapture }) {
                     children: label
                 }, void 0, false, {
                     fileName: "[project]/src/components/create/forms/FilterCamera.tsx",
-                    lineNumber: 174,
+                    lineNumber: 221,
                     columnNumber: 13
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/src/components/create/forms/FilterCamera.tsx",
-            lineNumber: 172,
+            lineNumber: 219,
             columnNumber: 10
         }, this);
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -590,7 +671,7 @@ function FilterCamera({ onCapture }) {
                         className: "w-full h-full object-cover"
                     }, void 0, false, {
                         fileName: "[project]/src/components/create/forms/FilterCamera.tsx",
-                        lineNumber: 181,
+                        lineNumber: 228,
                         columnNumber: 17
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("canvas", {
@@ -598,7 +679,7 @@ function FilterCamera({ onCapture }) {
                         className: "absolute top-0 left-0 w-full h-full"
                     }, void 0, false, {
                         fileName: "[project]/src/components/create/forms/FilterCamera.tsx",
-                        lineNumber: 182,
+                        lineNumber: 229,
                         columnNumber: 17
                     }, this),
                     !isCameraReady && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -608,25 +689,25 @@ function FilterCamera({ onCapture }) {
                             children: "Starting camera..."
                         }, void 0, false, {
                             fileName: "[project]/src/components/create/forms/FilterCamera.tsx",
-                            lineNumber: 185,
+                            lineNumber: 232,
                             columnNumber: 25
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/src/components/create/forms/FilterCamera.tsx",
-                        lineNumber: 184,
+                        lineNumber: 231,
                         columnNumber: 21
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/create/forms/FilterCamera.tsx",
-                lineNumber: 180,
+                lineNumber: 227,
                 columnNumber: 13
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                 className: "absolute bottom-0 left-0 right-0 p-4 bg-black/30 backdrop-blur-sm",
                 children: [
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                        className: "flex justify-center items-center gap-4",
+                        className: "flex justify-center items-center gap-3",
                         children: [
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(FilterButton, {
                                 filter: "None",
@@ -634,7 +715,7 @@ function FilterCamera({ onCapture }) {
                                 label: "None"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/create/forms/FilterCamera.tsx",
-                                lineNumber: 192,
+                                lineNumber: 239,
                                 columnNumber: 22
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(FilterButton, {
@@ -643,7 +724,7 @@ function FilterCamera({ onCapture }) {
                                 label: "Shades"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/create/forms/FilterCamera.tsx",
-                                lineNumber: 193,
+                                lineNumber: 240,
                                 columnNumber: 22
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(FilterButton, {
@@ -652,7 +733,7 @@ function FilterCamera({ onCapture }) {
                                 label: "Makeup"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/create/forms/FilterCamera.tsx",
-                                lineNumber: 194,
+                                lineNumber: 241,
                                 columnNumber: 22
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(FilterButton, {
@@ -661,7 +742,7 @@ function FilterCamera({ onCapture }) {
                                 label: "Clown"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/create/forms/FilterCamera.tsx",
-                                lineNumber: 195,
+                                lineNumber: 242,
                                 columnNumber: 22
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(FilterButton, {
@@ -670,13 +751,22 @@ function FilterCamera({ onCapture }) {
                                 label: "Party"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/create/forms/FilterCamera.tsx",
-                                lineNumber: 196,
+                                lineNumber: 243,
+                                columnNumber: 22
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(FilterButton, {
+                                filter: "Zap",
+                                icon: __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$zap$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Zap$3e$__["Zap"],
+                                label: "Zap"
+                            }, void 0, false, {
+                                fileName: "[project]/src/components/create/forms/FilterCamera.tsx",
+                                lineNumber: 244,
                                 columnNumber: 22
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/create/forms/FilterCamera.tsx",
-                        lineNumber: 191,
+                        lineNumber: 238,
                         columnNumber: 18
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -688,24 +778,24 @@ function FilterCamera({ onCapture }) {
                             disabled: !isCameraReady
                         }, void 0, false, {
                             fileName: "[project]/src/components/create/forms/FilterCamera.tsx",
-                            lineNumber: 199,
+                            lineNumber: 247,
                             columnNumber: 21
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/src/components/create/forms/FilterCamera.tsx",
-                        lineNumber: 198,
+                        lineNumber: 246,
                         columnNumber: 17
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/create/forms/FilterCamera.tsx",
-                lineNumber: 190,
+                lineNumber: 237,
                 columnNumber: 13
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/components/create/forms/FilterCamera.tsx",
-        lineNumber: 179,
+        lineNumber: 226,
         columnNumber: 9
     }, this);
 }
@@ -2975,9 +3065,6 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$mo
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$components$2f$AnimatePresence$2f$index$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/framer-motion/dist/es/components/AnimatePresence/index.mjs [app-ssr] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$text$2d$align$2d$start$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__AlignLeft$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/text-align-start.js [app-ssr] (ecmascript) <export default as AlignLeft>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$image$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Image$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/image.js [app-ssr] (ecmascript) <export default as Image>");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$chart$2d$column$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__BarChart3$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/chart-column.js [app-ssr] (ecmascript) <export default as BarChart3>");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$radio$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Radio$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/radio.js [app-ssr] (ecmascript) <export default as Radio>");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$zap$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Zap$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/zap.js [app-ssr] (ecmascript) <export default as Zap>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$create$2f$Step1$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/components/create/Step1.tsx [app-ssr] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$create$2f$Step3$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/components/create/Step3.tsx [app-ssr] (ecmascript)");
 "use client";
@@ -2996,7 +3083,6 @@ function CreatePostPageContent() {
     const [postData, setPostData] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])({
         postType: initialType,
         songId: searchParams.get('songId'),
-        // Initialize with imageUrl if present. Step 1 will handle the file upload if needed.
         mediaUrl: initialImageUrl ? [
             initialImageUrl
         ] : [],
@@ -3023,6 +3109,12 @@ function CreatePostPageContent() {
     const handleBack = ()=>{
         setStep((s)=>s - 1);
     };
+    const handleDataChange = (newData)=>{
+        setPostData((prev)=>({
+                ...prev,
+                ...newData
+            }));
+    };
     const handleTypeChange = (type)=>{
         setPostType(type);
         setPostData({
@@ -3042,18 +3134,18 @@ function CreatePostPageContent() {
             onNext: handleNext,
             postType: postType,
             postData: postData,
-            onDataChange: setPostData
+            onDataChange: handleDataChange
         }, "step1", false, {
             fileName: "[project]/src/app/create/page.tsx",
-            lineNumber: 53,
+            lineNumber: 56,
             columnNumber: 9
         }, this),
         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$create$2f$Step3$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {
             onBack: handleBack,
             postData: postData
-        }, "step3", false, {
+        }, "step2", false, {
             fileName: "[project]/src/app/create/page.tsx",
-            lineNumber: 54,
+            lineNumber: 57,
             columnNumber: 9
         }, this)
     ];
@@ -3071,7 +3163,7 @@ function CreatePostPageContent() {
                 children: "Create Your Vibe"
             }, void 0, false, {
                 fileName: "[project]/src/app/create/page.tsx",
-                lineNumber: 65,
+                lineNumber: 68,
                 columnNumber: 13
             }, this),
             !typeSelected && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["motion"].div, {
@@ -3103,41 +3195,15 @@ function CreatePostPageContent() {
                         children: [
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$text$2d$align$2d$start$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__AlignLeft$3e$__["AlignLeft"], {}, void 0, false, {
                                 fileName: "[project]/src/app/create/page.tsx",
-                                lineNumber: 78,
+                                lineNumber: 81,
                                 columnNumber: 25
                             }, this),
                             "Text Post"
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/create/page.tsx",
-                        lineNumber: 77,
-                        columnNumber: 21
-                    }, this),
-                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["motion"].button, {
-                        variants: {
-                            hidden: {
-                                opacity: 0,
-                                y: 20
-                            },
-                            visible: {
-                                opacity: 1,
-                                y: 0
-                            }
-                        },
-                        onClick: ()=>handleTypeChange('flash'),
-                        className: `w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'flash' ? 'bg-accent-cyan text-black' : 'bg-transparent text-gray-300'}`,
-                        children: [
-                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$zap$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Zap$3e$__["Zap"], {}, void 0, false, {
-                                fileName: "[project]/src/app/create/page.tsx",
-                                lineNumber: 81,
-                                columnNumber: 25
-                            }, this),
-                            "Flash"
-                        ]
-                    }, void 0, true, {
-                        fileName: "[project]/src/app/create/page.tsx",
                         lineNumber: 80,
-                        columnNumber: 22
+                        columnNumber: 21
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["motion"].button, {
                         variants: {
@@ -3164,63 +3230,11 @@ function CreatePostPageContent() {
                         fileName: "[project]/src/app/create/page.tsx",
                         lineNumber: 83,
                         columnNumber: 21
-                    }, this),
-                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["motion"].button, {
-                        variants: {
-                            hidden: {
-                                opacity: 0,
-                                y: 20
-                            },
-                            visible: {
-                                opacity: 1,
-                                y: 0
-                            }
-                        },
-                        onClick: ()=>handleTypeChange('live'),
-                        className: `w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'live' ? 'bg-red-500 text-black' : 'bg-transparent text-red-400'}`,
-                        children: [
-                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$radio$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Radio$3e$__["Radio"], {}, void 0, false, {
-                                fileName: "[project]/src/app/create/page.tsx",
-                                lineNumber: 87,
-                                columnNumber: 25
-                            }, this),
-                            "Live"
-                        ]
-                    }, void 0, true, {
-                        fileName: "[project]/src/app/create/page.tsx",
-                        lineNumber: 86,
-                        columnNumber: 21
-                    }, this),
-                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["motion"].button, {
-                        variants: {
-                            hidden: {
-                                opacity: 0,
-                                y: 20
-                            },
-                            visible: {
-                                opacity: 1,
-                                y: 0
-                            }
-                        },
-                        onClick: ()=>handleTypeChange('poll'),
-                        className: `w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'poll' ? 'bg-accent-cyan text-black' : 'bg-transparent text-gray-300'}`,
-                        children: [
-                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$chart$2d$column$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__BarChart3$3e$__["BarChart3"], {}, void 0, false, {
-                                fileName: "[project]/src/app/create/page.tsx",
-                                lineNumber: 90,
-                                columnNumber: 24
-                            }, this),
-                            "Poll"
-                        ]
-                    }, void 0, true, {
-                        fileName: "[project]/src/app/create/page.tsx",
-                        lineNumber: 89,
-                        columnNumber: 21
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/create/page.tsx",
-                lineNumber: 68,
+                lineNumber: 71,
                 columnNumber: 18
             }, this),
             typeSelected && postType && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Fragment"], {
@@ -3234,12 +3248,12 @@ function CreatePostPageContent() {
                                         children: label
                                     }, label, false, {
                                         fileName: "[project]/src/app/create/page.tsx",
-                                        lineNumber: 100,
+                                        lineNumber: 94,
                                         columnNumber: 53
                                     }, this))
                             }, void 0, false, {
                                 fileName: "[project]/src/app/create/page.tsx",
-                                lineNumber: 99,
+                                lineNumber: 93,
                                 columnNumber: 25
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3259,12 +3273,12 @@ function CreatePostPageContent() {
                                                         d: "M0,5 L20,0 L90,2 L150,0 L200,5 L160,10 L80,9 L30,10 Z"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/app/create/page.tsx",
-                                                        lineNumber: 106,
+                                                        lineNumber: 100,
                                                         columnNumber: 41
                                                     }, this)
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/create/page.tsx",
-                                                    lineNumber: 105,
+                                                    lineNumber: 99,
                                                     columnNumber: 37
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("linearGradient", {
@@ -3279,7 +3293,7 @@ function CreatePostPageContent() {
                                                             stopColor: "var(--accent-pink)"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/app/create/page.tsx",
-                                                            lineNumber: 109,
+                                                            lineNumber: 103,
                                                             columnNumber: 41
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("stop", {
@@ -3287,19 +3301,19 @@ function CreatePostPageContent() {
                                                             stopColor: "var(--accent-cyan)"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/app/create/page.tsx",
-                                                            lineNumber: 110,
+                                                            lineNumber: 104,
                                                             columnNumber: 41
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/app/create/page.tsx",
-                                                    lineNumber: 108,
+                                                    lineNumber: 102,
                                                     columnNumber: 37
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/app/create/page.tsx",
-                                            lineNumber: 104,
+                                            lineNumber: 98,
                                             columnNumber: 33
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("g", {
@@ -3314,7 +3328,7 @@ function CreatePostPageContent() {
                                                     fill: "currentColor"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/create/page.tsx",
-                                                    lineNumber: 114,
+                                                    lineNumber: 108,
                                                     columnNumber: 37
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["motion"].rect, {
@@ -3334,30 +3348,30 @@ function CreatePostPageContent() {
                                                     }
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/create/page.tsx",
-                                                    lineNumber: 115,
+                                                    lineNumber: 109,
                                                     columnNumber: 37
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/app/create/page.tsx",
-                                            lineNumber: 113,
+                                            lineNumber: 107,
                                             columnNumber: 33
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/app/create/page.tsx",
-                                    lineNumber: 103,
+                                    lineNumber: 97,
                                     columnNumber: 29
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/app/create/page.tsx",
-                                lineNumber: 102,
+                                lineNumber: 96,
                                 columnNumber: 26
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/create/page.tsx",
-                        lineNumber: 98,
+                        lineNumber: 92,
                         columnNumber: 21
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$components$2f$AnimatePresence$2f$index$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["AnimatePresence"], {
@@ -3382,12 +3396,12 @@ function CreatePostPageContent() {
                             children: steps[step - 1]
                         }, step, false, {
                             fileName: "[project]/src/app/create/page.tsx",
-                            lineNumber: 131,
+                            lineNumber: 125,
                             columnNumber: 25
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/src/app/create/page.tsx",
-                        lineNumber: 130,
+                        lineNumber: 124,
                         columnNumber: 21
                     }, this)
                 ]
@@ -3395,7 +3409,7 @@ function CreatePostPageContent() {
         ]
     }, void 0, true, {
         fileName: "[project]/src/app/create/page.tsx",
-        lineNumber: 64,
+        lineNumber: 67,
         columnNumber: 9
     }, this);
 }
@@ -3405,17 +3419,17 @@ function CreatePostPage() {
             children: "Loading..."
         }, void 0, false, {
             fileName: "[project]/src/app/create/page.tsx",
-            lineNumber: 150,
+            lineNumber: 144,
             columnNumber: 29
         }, void 0),
         children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(CreatePostPageContent, {}, void 0, false, {
             fileName: "[project]/src/app/create/page.tsx",
-            lineNumber: 151,
+            lineNumber: 145,
             columnNumber: 13
         }, this)
     }, void 0, false, {
         fileName: "[project]/src/app/create/page.tsx",
-        lineNumber: 150,
+        lineNumber: 144,
         columnNumber: 9
     }, this);
 }
