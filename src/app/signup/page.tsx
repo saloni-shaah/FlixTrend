@@ -114,7 +114,7 @@ export default function SignupPage() {
     const prevStep = () => setStep(s => s - 1);
 
     const handleFinalSubmit = async () => {
-        if (step !== 2) { // Now final submit is on step 2
+        if (step !== 2) { 
              await nextStep();
              return;
         }
@@ -213,6 +213,7 @@ export default function SignupPage() {
                                 <option value="" disabled>What do you mostly post about?</option>
                                 {Object.entries(creatorTypes).map(([category, subcategories]) => (
                                     <optgroup label={category} key={category}>
+                                        <option value={category.toLowerCase()}>Mix of All in {category}</option>
                                         {subcategories.map(sub => <option key={sub} value={sub.toLowerCase()}>{sub}</option>)}
                                     </optgroup>
                                 ))}
