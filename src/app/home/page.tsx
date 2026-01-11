@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import dynamic from 'next/dynamic';
 import { getFirestore, collection, query, orderBy, getDoc, doc, limit, startAfter, getDocs, where, Timestamp, onSnapshot, or } from "firebase/firestore";
-import { Plus, Bell, Search, Mic, Video, Flame, Gamepad2, Tv, Music, Rss, Compass, Smile, Code, Atom, LandPlot, Handshake, PenTool, Bot, Sparkles, Book, Camera, Palette, Shirt, Utensils, Plane, Film, BrainCircuit, Landmark, Drama, CookingPot, UtensilsCrossed, Scroll, Music4, HelpingHand, Sprout, Rocket, Briefcase, Heart, Trophy, AlignLeft, BarChart3, Zap, Radio, Image as ImageIcon, BriefcaseBusiness, Users, Brush, GraduationCap, Popcorn } from "lucide-react";
+import { Plus, Bell, Search, Mic, Video, Flame, Gamepad2, Tv, Music, Rss, Compass, Smile, Code, Atom, LandPlot, Handshake, PenTool, Bot, Sparkles, Book, Camera, Palette, Shirt, Utensils, Plane, Film, BrainCircuit, Landmark, Drama, CookingPot, UtensilsCrossed, Scroll, Music4, HelpingHand, Sprout, Rocket, Briefcase, Heart, Trophy, AlignLeft, BarChart3, Zap, Radio, Image as ImageIcon, BriefcaseBusiness, Users, Brush, GraduationCap, Popcorn, ArrowLeft } from "lucide-react";
 import { auth } from "@/utils/firebaseClient";
 import { useAppState } from "@/utils/AppStateContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -24,29 +24,28 @@ const NotificationPanel = dynamic(() => import('@/components/NotificationPanel')
 const db = getFirestore(app);
 
 const categories = [
-    { id: 'all', name: 'All', icon: <Flame /> },
-    { id: 'daily', name: 'Daily', icon: <Users /> },
-    { id: 'creative', name: 'Creative', icon: <Brush /> },
-    { id: 'play', name: 'Play', icon: <Gamepad2 /> },
-    { id: 'learn', name: 'Learn', icon: <GraduationCap /> },
-    { id: 'culture', name: 'Culture', icon: <Popcorn /> },
+    { id: 'daily', name: 'Daily', icon: <Users />, sub: ['Vlogs', 'Moments', 'Travel', 'Self'] },
+    { id: 'creative', name: 'Creative', icon: <Brush />, sub: ['Art', 'Photos', 'Design', 'Writing'] },
+    { id: 'play', name: 'Play', icon: <Gamepad2 />, sub: ['Gaming', 'Challenges', 'Comedy', 'Reactions'] },
+    { id: 'learn', name: 'Learn', icon: <GraduationCap />, sub: ['Tips', 'Tech', 'Study', 'Explainers'] },
+    { id: 'culture', name: 'Culture', icon: <Popcorn />, sub: ['Music', 'Movies', 'Trends', 'Community'] },
 ];
 
 function HomePageContent() {
-  const [showMusicModal, setShowMusicModal] = useState(false);
   const [posts, setPosts] = useState<any[]>([]);
   const [flashes, setFlashes] = useState<any[]>([]);
   const [selectedFlashUser, setSelectedFlashUser] = useState<any | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showNotifications, setShowNotifications] = useState(false);
-  const { setCallTarget, setIsCalling } = useAppState();
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [userProfile, setUserProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [lastVisible, setLastVisible] = useState<any>(null);
   const [hasMore, setHasMore] = useState(true);
-  const [activeCategory, setActiveCategory] = useState('all');
+  
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [activeSubCategory, setActiveSubCategory] = useState<string | null>(null);
+  
   const router = useRouter();
   const searchParams = useSearchParams();
   const [showWelcomeAnimation, setShowWelcomeAnimation] = useState(false);
@@ -64,7 +63,6 @@ function HomePageContent() {
   useEffect(() => {
     if (hasMounted && searchParams.get('new') === 'true') {
         setShowWelcomeAnimation(true);
-        // Clean the URL
         router.replace('/home', { scroll: false });
     }
   }, [searchParams, hasMounted, router]);
@@ -85,7 +83,7 @@ function HomePageContent() {
     setSelectedFlashUser(null);
   };
 
-    const fetchPosts = useCallback(async (category: string, loadMore = false) => {
+    const fetchPosts = useCallback(async (category: string | null, subCategory: string | null, loadMore = false) => {
         if (!auth.currentUser) return;
 
         if (loadMore) {
@@ -93,22 +91,18 @@ function HomePageContent() {
             setLoadingMore(true);
         } else {
             setLoading(true);
-            const cachedPosts: any = await redisClient.get(`feed:${category}`);
-            if (cachedPosts) {
-                setPosts(cachedPosts);
-                setLoading(false);
-                return;
-            }
+            setPosts([]); // Clear posts for new category
+            setLastVisible(null);
+            setHasMore(true);
         }
 
         const baseQuery = collection(db, "posts");
-        
         let constraints: any[] = [orderBy("publishAt", "desc")];
 
-        // **REVISED LOGIC**
-        if (category && category !== 'all') {
-             // This is the new, simplified query. It relies on the 'category' field on the post itself.
-             constraints.unshift(where("category", "==", category));
+        if (subCategory) {
+            constraints.unshift(where("creatorType", "==", subCategory.toLowerCase()));
+        } else if (category) {
+            constraints.unshift(where("category", "==", category));
         }
 
         if (loadMore && lastVisible) {
@@ -121,219 +115,168 @@ function HomePageContent() {
 
         try {
             const documentSnapshots = await getDocs(postQuery);
-            
             const newPosts = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
 
-            if (loadMore) {
-                 setPosts(prev => {
-                    const existingIds = new Set(prev.map(p => p.id));
-                    const uniqueNewPosts = newPosts.filter(p => !existingIds.has(p.id));
-                    return [...prev, ...uniqueNewPosts];
-                });
-            } else {
-                setPosts(newPosts);
-                await redisClient.set(`feed:${category}`, newPosts, { ex: 300 }); // Cache for 5 minutes
-            }
-
-
+            setPosts(prev => loadMore ? [...prev, ...newPosts] : newPosts);
             setLastVisible(lastDoc);
             setHasMore(documentSnapshots.docs.length === POSTS_PER_PAGE);
         } catch (error) {
             console.error("Error fetching posts: ", error);
         } finally {
-             if (loadMore) {
-                setLoadingMore(false);
-            } else {
-                setLoading(false);
-            }
+            setLoading(false);
+            setLoadingMore(false);
         }
-    }, [hasMore, lastVisible, loadingMore]);
+    }, [hasMore, loadingMore, lastVisible]);
 
 
     useEffect(() => {
-        if(currentUser) { // Only fetch posts if user is authenticated
-            fetchPosts(activeCategory);
+        if(currentUser) {
+            fetchPosts(activeCategory, activeSubCategory);
         }
-    }, [activeCategory, currentUser, fetchPosts]); 
+    }, [activeCategory, activeSubCategory, currentUser, fetchPosts]); 
     
     const fetchMorePosts = useCallback(() => {
-        fetchPosts(activeCategory, true);
-    }, [fetchPosts, activeCategory]);
+        fetchPosts(activeCategory, activeSubCategory, true);
+    }, [fetchPosts, activeCategory, activeSubCategory]);
 
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async user => {
-      if (user) {
-        setCurrentUser(user);
-        const userDocRef = doc(db, "users", user.uid);
-        const userProfileSnap = await getDoc(userDocRef);
-        const profileData = userProfileSnap.exists() ? userProfileSnap.data() : null;
-        setUserProfile(profileData);
-        
-        const q = query(collection(db, "users", user.uid, "notifications"), where("read", "==", false));
-        const unsubNotifs = onSnapshot(q, (snapshot) => {
-            setHasUnreadNotifs(!snapshot.empty);
+    useEffect(() => {
+        const unsubscribe = auth.onAuthStateChanged(async user => {
+            if (user) {
+                setCurrentUser(user);
+                const q = query(collection(db, "users", user.uid, "notifications"), where("read", "==", false));
+                const unsubNotifs = onSnapshot(q, (snapshot) => setHasUnreadNotifs(!snapshot.empty));
+                return () => unsubNotifs();
+            } else {
+                router.replace('/login'); 
+            }
         });
-        
-        return () => unsubNotifs();
-
-      } else {
-        router.replace('/login'); 
-      }
-    });
-    return () => unsubscribe();
-  }, [router]);
+        return () => unsubscribe();
+    }, [router]);
   
-  useEffect(() => {
-    if (loading) return; // Don't setup observer while initially loading
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loadingMore) {
-          fetchMorePosts();
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting && hasMore && !loadingMore) {
+                    fetchMorePosts();
+                }
+            },
+            { threshold: 1.0 }
+        );
+
+        const currentRef = feedEndRef.current;
+        if (currentRef) observer.observe(currentRef);
+        return () => {
+            if (currentRef) observer.unobserve(currentRef);
+        };
+    }, [fetchMorePosts, hasMore, loading, loadingMore]);
+
+
+    useEffect(() => {
+        if (!currentUser) return;
+        const q = query(
+            collection(db, "flashes"), 
+            where("expiresAt", ">", new Date()),
+            orderBy("expiresAt", "desc")
+        );
+        const unsub = onSnapshot(q, (snapshot) => {
+            setFlashes(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+        });
+        return () => unsub();
+    }, [currentUser]);
+  
+    const groupedFlashes = flashes.reduce((acc: any, flash) => {
+        if (!acc[flash.userId]) {
+            acc[flash.userId] = {
+                userId: flash.userId,
+                username: flash.username,
+                avatar_url: flash.avatar_url,
+                flashes: []
+            };
         }
-      },
-      { threshold: 1.0 }
-    );
+        acc[flash.userId].flashes.push(flash);
+        return acc;
+    }, {});
 
-    const currentRef = feedEndRef.current;
-    if (currentRef) {
-      observer.observe(currentRef);
-    }
+    const flashUsers = Object.values(groupedFlashes);
 
-    return () => {
-      if (currentRef) {
-        observer.unobserve(currentRef);
-      }
-    };
-  }, [fetchMorePosts, hasMore, loading, loadingMore]);
-
-
-  useEffect(() => {
-    if (!currentUser) return;
-    const q = query(
-        collection(db, "flashes"), 
-        where("expiresAt", ">", new Date()),
-        orderBy("expiresAt", "desc")
-    );
-    const unsub = onSnapshot(q, (snapshot) => {
-      setFlashes(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-    });
-    return () => unsub();
-  }, [currentUser]);
-  
-  const handleGoLive = (title: string) => {
-      const roomName = `${currentUser.uid}-${Date.now()}`;
-      router.push(`/broadcast/${encodeURIComponent(roomName)}`);
-  }
-
-  // Group flashes by user
-  const groupedFlashes = flashes.reduce((acc: any, flash) => {
-    if (!acc[flash.userId]) {
-      acc[flash.userId] = {
-        userId: flash.userId,
-        username: flash.username,
-        avatar_url: flash.avatar_url,
-        flashes: []
-      };
-    }
-    acc[flash.userId].flashes.push(flash);
-    return acc;
-  }, {});
-
-  const flashUsers = Object.values(groupedFlashes);
-
-  const filteredPosts = searchTerm.trim()
-    ? posts.filter(
-        (post) =>
-          (post.content && post.content.toLowerCase().includes(searchTerm.toLowerCase())) ||
-          (post.username && post.username.toLowerCase().includes(searchTerm.toLowerCase())) ||
-          (post.hashtags && post.hashtags.some((h: string) => h.toLowerCase().includes(searchTerm.toLowerCase())))
-      )
-    : posts;
+    const filteredPosts = searchTerm.trim()
+        ? posts.filter(
+            (post) =>
+              (post.content && post.content.toLowerCase().includes(searchTerm.toLowerCase())) ||
+              (post.username && post.username.toLowerCase().includes(searchTerm.toLowerCase())) ||
+              (post.hashtags && post.hashtags.some((h: string) => h.toLowerCase().includes(searchTerm.toLowerCase())))
+          )
+        : posts;
     
-  
-  const canCreatePost = true; // Anyone can post now
+    const flashesContainerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.08 }}};
+    const flashItemVariants = { hidden: { opacity: 0, scale: 0.5 }, visible: { opacity: 1, scale: 1 }};
+    const categoryContainerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.3 }}};
+    const categoryItemVariants = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100, damping: 12 }}};
 
-  const flashesContainerVariants = {
-    hidden: { opacity: 0, y: -20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        when: "beforeChildren",
-        staggerChildren: 0.08,
-        duration: 0.4,
-        ease: 'easeOut',
-        type: "spring",
-        stiffness: 100,
-        damping: 10
-      },
-    },
-  };
+    const handleCategoryClick = (catId: string | null) => {
+        setActiveCategory(catId);
+        setActiveSubCategory(null);
+    }
 
-  const flashItemVariants = {
-    hidden: { opacity: 0, scale: 0.5 },
-    visible: { opacity: 1, scale: 1 },
-  };
-  
-  const categoryContainerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.3,
-      },
-    },
-  };
-
-  const categoryItemVariants = {
-    hidden: { opacity: 0, y: 20, scale: 0.8 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      scale: 1,
-      transition: { type: "spring", stiffness: 100, damping: 12 },
-    },
-  };
-
-  const bellVariants = {
-    initial: { rotate: 0 },
-    jiggle: {
-      rotate: [0, -15, 15, -15, 15, 0],
-      transition: {
-        duration: 0.5,
-        ease: "easeInOut",
-        repeat: Infinity,
-        repeatDelay: 3,
-      },
-    },
-  };
+    const renderCategoryFilters = () => {
+        const selectedCat = categories.find(c => c.id === activeCategory);
+        
+        if (selectedCat) {
+            return (
+                 <motion.div className="flex gap-2 overflow-x-auto pb-4 mb-4" variants={categoryContainerVariants} initial="hidden" animate="visible">
+                    <motion.button variants={categoryItemVariants} onClick={() => handleCategoryClick(null)} className="btn-glass text-sm flex items-center gap-2 shrink-0">
+                        <ArrowLeft /> All Categories
+                    </motion.button>
+                     {selectedCat.sub.map(sub => (
+                        <motion.button
+                            key={sub}
+                            variants={categoryItemVariants}
+                            whileHover={{ y: -2 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => setActiveSubCategory(sub)}
+                            className={`btn-glass text-sm flex items-center gap-2 shrink-0 ${activeSubCategory === sub ? 'bg-accent-cyan text-black' : ''}`}
+                        >
+                            {sub}
+                        </motion.button>
+                    ))}
+                </motion.div>
+            )
+        }
+        
+        return (
+             <motion.div className="flex gap-2 overflow-x-auto pb-4 mb-4" variants={categoryContainerVariants} initial="hidden" animate="visible">
+                 {categories.map(cat => (
+                    <motion.button
+                        key={cat.id}
+                        variants={categoryItemVariants}
+                        whileHover={{ y: -2 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => handleCategoryClick(cat.id)}
+                        className={`btn-glass text-sm flex items-center gap-2 shrink-0`}
+                    >
+                        {cat.icon} {cat.name}
+                    </motion.button>
+                ))}
+            </motion.div>
+        )
+    };
 
 
-  if (loading && posts.length === 0) {
-    return <VibeSpaceLoader />;
-  }
+    if (loading && posts.length === 0) {
+        return <VibeSpaceLoader />;
+    }
 
-  if (showWelcomeAnimation) {
-      return <WelcomeAnimation onComplete={() => setShowWelcomeAnimation(false)} />;
-  }
+    if (showWelcomeAnimation) {
+        return <WelcomeAnimation onComplete={() => setShowWelcomeAnimation(false)} />;
+    }
 
   return (
     <div className="flex flex-col w-full">
       <div className="w-full max-w-2xl mx-auto">
-        <motion.div 
-            className="flex justify-center items-center mb-6 w-full"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
-        >
+        <motion.div className="flex justify-center items-center mb-6 w-full" initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
             <div className={`input-glass w-full flex items-center px-4 transition-all duration-300 ${isSearchFocused ? 'ring-2 ring-brand-saffron' : ''}`}>
-                  <button
-                      className={`p-1 rounded-full transition-colors text-gray-400 hover:text-brand-gold`}
-                      aria-label="Voice search"
-                      disabled={true}
-                  >
+                  <button className={`p-1 rounded-full transition-colors text-gray-400 hover:text-brand-gold`} aria-label="Voice search" disabled={true}>
                       <Mic size={20} />
                   </button>
                   <div className="w-px h-6 bg-glass-border mx-3"></div>
@@ -345,7 +288,6 @@ function HomePageContent() {
                     onChange={(e) => setSearchTerm(e.target.value)}
                     onFocus={() => setIsSearchFocused(true)}
                     onBlur={() => setIsSearchFocused(false)}
-                    autoFocus={false}
                   />
                   <motion.div whileHover={{ scale: 1.1, rotate: 10 }}>
                     <button className="p-2 rounded-full text-brand-gold hover:bg-brand-gold/10">
@@ -355,27 +297,7 @@ function HomePageContent() {
               </div>
         </motion.div>
 
-        {/* Category Filters */}
-        <motion.div 
-            className="flex gap-2 overflow-x-auto pb-4 mb-4"
-            variants={categoryContainerVariants}
-            initial="hidden"
-            animate="visible"
-        >
-             {categories.map(cat => (
-                <motion.button
-                    key={cat.id}
-                    variants={categoryItemVariants}
-                    whileHover={{ y: -2 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setActiveCategory(cat.id)}
-                    className={`btn-glass text-sm flex items-center gap-2 shrink-0 ${activeCategory === cat.id ? 'bg-accent-cyan text-black' : ''}`}
-                >
-                    {cat.icon} {cat.name}
-                </motion.button>
-            ))}
-        </motion.div>
-
+        {renderCategoryFilters()}
         
           <motion.section 
               className="mb-6 glass-card p-4"
@@ -422,21 +344,15 @@ function HomePageContent() {
               </motion.div>
           </motion.section>
         
-
         <section className="flex-1 flex flex-col items-center mt-4">
-            <motion.h2 
-                className="text-xl font-headline self-start bg-gradient-to-r from-accent-pink to-accent-green bg-clip-text text-transparent mb-4 text-glow"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.4 }}
-            >
+            <motion.h2 className="text-xl font-headline self-start bg-gradient-to-r from-accent-pink to-accent-green bg-clip-text text-transparent mb-4 text-glow" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
                 VibeSpace
             </motion.h2>
             {loading ? (
               <VibeSpaceLoader />
             ) : (
               <div className="w-full max-w-xl flex flex-col gap-4">
-                {canCreatePost && <CreatePostPrompt onGoLive={handleGoLive} />}
+                <CreatePostPrompt onGoLive={() => {}} />
                 {filteredPosts.length > 0 ? filteredPosts.map((post, index) => (
                   <React.Fragment key={post.id}>
                     <PostCard post={post} />
@@ -454,7 +370,7 @@ function HomePageContent() {
                   </div>
                 )}
                 
-                {!hasMore && !searchTerm.trim() && posts.length > 0 && (
+                {!hasMore && !loadingMore && posts.length > 0 && (
                   <div className="text-center text-gray-500 my-8">
                     <p>You've reached the end of the vibe. ✨</p>
                   </div>
@@ -472,8 +388,6 @@ function HomePageContent() {
           aria-label="Notifications"
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.95 }}
-          variants={bellVariants}
-          animate={hasUnreadNotifs ? "jiggle" : "initial"}
         >
           <Bell className="text-xl" />
           {hasUnreadNotifs && <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-accent-pink rounded-full"></span>}
@@ -492,7 +406,6 @@ function HomePageContent() {
       </Link>
 
       <AnimatePresence>
-        {showMusicModal && <MusicDiscovery onClose={() => setShowMusicModal(false)} />}
         {selectedFlashUser && <FlashModal userFlashes={selectedFlashUser} onClose={() => handleFlashModalClose(selectedFlashUser?.userId)} />}
         {showNotifications && <NotificationPanel onClose={() => setShowNotifications(false)} />}
       </AnimatePresence>

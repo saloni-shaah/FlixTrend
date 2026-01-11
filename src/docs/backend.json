@@ -70,8 +70,8 @@
         },
         "creatorType": {
             "type": "string",
-            "enum": ["vlogs", "moments", "travel", "self", "art", "photos", "design", "writing", "gaming", "challenges", "comedy", "reactions", "tips", "tech", "study", "explainers", "music", "movies", "trends", "community"],
-            "description": "The primary sub-category for a creator's content."
+            "enum": ["daily", "vlogs", "moments", "travel", "self", "creative", "art", "photos", "design", "writing", "play", "gaming", "challenges", "comedy", "reactions", "learn", "tips", "tech", "study", "explainers", "culture", "music", "movies", "trends", "community"],
+            "description": "The primary sub-category for a creator's content, or the main category if they choose 'Mix of All'."
         },
         "createdAt": {
           "type": "string",
