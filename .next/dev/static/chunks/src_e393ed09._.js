@@ -7929,15 +7929,15 @@ function HomePageContent() {
     };
     const fetchPosts = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCallback"])({
         "HomePageContent.useCallback[fetchPosts]": async (category, subCategory, loadMore = false)=>{
-            if (!__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$utils$2f$firebaseClient$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["auth"].currentUser) return;
             if (loadMore && (!hasMore || loadingMore)) return;
-            if (loadMore) {
-                setLoadingMore(true);
-            } else {
+            const isInitialLoad = !loadMore;
+            if (isInitialLoad) {
                 setLoading(true);
                 setPosts([]);
                 setLastVisible(null);
                 setHasMore(true);
+            } else {
+                setLoadingMore(true);
             }
             const baseQuery = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["collection"])(db, "posts");
             let constraints = [
@@ -7946,12 +7946,6 @@ function HomePageContent() {
             if (subCategory) {
                 constraints.unshift((0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["where"])("creatorType", "==", subCategory.toLowerCase()));
             } else if (category) {
-                const selectedCat = categories.find({
-                    "HomePageContent.useCallback[fetchPosts].selectedCat": (c)=>c.id === category
-                }["HomePageContent.useCallback[fetchPosts].selectedCat"]);
-                const subCategoryValues = selectedCat ? selectedCat.sub.map({
-                    "HomePageContent.useCallback[fetchPosts]": (s)=>s.toLowerCase()
-                }["HomePageContent.useCallback[fetchPosts]"]) : [];
                 constraints.unshift((0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["where"])("category", "==", category));
             }
             if (loadMore && lastVisible) {
@@ -7979,8 +7973,8 @@ function HomePageContent() {
             } catch (error) {
                 console.error("Error fetching posts: ", error);
             } finally{
-                setLoading(false);
-                setLoadingMore(false);
+                if (isInitialLoad) setLoading(false);
+                if (loadMore) setLoadingMore(false);
             }
         }
     }["HomePageContent.useCallback[fetchPosts]"], [
@@ -8022,17 +8016,19 @@ function HomePageContent() {
     }["HomePageContent.useEffect"], [
         currentUser,
         activeCategory,
-        activeSubCategory,
-        fetchPosts
+        activeSubCategory
     ]);
     const fetchMorePosts = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCallback"])({
         "HomePageContent.useCallback[fetchMorePosts]": ()=>{
-            fetchPosts(activeCategory, activeSubCategory, true);
+            if (currentUser) {
+                fetchPosts(activeCategory, activeSubCategory, true);
+            }
         }
     }["HomePageContent.useCallback[fetchMorePosts]"], [
-        fetchPosts,
+        currentUser,
         activeCategory,
-        activeSubCategory
+        activeSubCategory,
+        fetchPosts
     ]);
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
         "HomePageContent.useEffect": ()=>{

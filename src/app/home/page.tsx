@@ -84,16 +84,16 @@ function HomePageContent() {
   };
 
     const fetchPosts = useCallback(async (category: string | null, subCategory: string | null, loadMore = false) => {
-        if (!auth.currentUser) return;
         if (loadMore && (!hasMore || loadingMore)) return;
 
-        if (loadMore) {
-            setLoadingMore(true);
-        } else {
+        const isInitialLoad = !loadMore;
+        if (isInitialLoad) {
             setLoading(true);
-            setPosts([]); 
+            setPosts([]);
             setLastVisible(null);
             setHasMore(true);
+        } else {
+            setLoadingMore(true);
         }
 
         const baseQuery = collection(db, "posts");
@@ -102,8 +102,6 @@ function HomePageContent() {
         if (subCategory) {
             constraints.unshift(where("creatorType", "==", subCategory.toLowerCase()));
         } else if (category) {
-            const selectedCat = categories.find(c => c.id === category);
-            const subCategoryValues = selectedCat ? selectedCat.sub.map(s => s.toLowerCase()) : [];
             constraints.unshift(where("category", "==", category));
         }
 
@@ -126,8 +124,8 @@ function HomePageContent() {
         } catch (error) {
             console.error("Error fetching posts: ", error);
         } finally {
-            setLoading(false);
-            setLoadingMore(false);
+            if (isInitialLoad) setLoading(false);
+            if (loadMore) setLoadingMore(false);
         }
     }, [hasMore, loadingMore, lastVisible]);
 
@@ -150,11 +148,13 @@ function HomePageContent() {
         if (currentUser) {
             fetchPosts(activeCategory, activeSubCategory);
         }
-    }, [currentUser, activeCategory, activeSubCategory, fetchPosts]);
+    }, [currentUser, activeCategory, activeSubCategory]);
     
     const fetchMorePosts = useCallback(() => {
-        fetchPosts(activeCategory, activeSubCategory, true);
-    }, [fetchPosts, activeCategory, activeSubCategory]);
+        if (currentUser) {
+            fetchPosts(activeCategory, activeSubCategory, true);
+        }
+    }, [currentUser, activeCategory, activeSubCategory, fetchPosts]);
 
     useEffect(() => {
         const observer = new IntersectionObserver(
@@ -412,5 +412,3 @@ export default function HomePage() {
     </Suspense>
   );
 }
-
-    
