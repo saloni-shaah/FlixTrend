@@ -91,7 +91,7 @@ function HomePageContent() {
             setLoadingMore(true);
         } else {
             setLoading(true);
-            setPosts([]); // Clear posts for new category
+            setPosts([]); 
             setLastVisible(null);
             setHasMore(true);
         }
@@ -131,19 +131,10 @@ function HomePageContent() {
 
 
     useEffect(() => {
-        if(currentUser) {
-            fetchPosts(activeCategory, activeSubCategory);
-        }
-    }, [activeCategory, activeSubCategory, currentUser, fetchPosts]); 
-    
-    const fetchMorePosts = useCallback(() => {
-        fetchPosts(activeCategory, activeSubCategory, true);
-    }, [fetchPosts, activeCategory, activeSubCategory]);
-
-    useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged(async user => {
             if (user) {
                 setCurrentUser(user);
+                 fetchPosts(activeCategory, activeSubCategory);
                 const q = query(collection(db, "users", user.uid, "notifications"), where("read", "==", false));
                 const unsubNotifs = onSnapshot(q, (snapshot) => setHasUnreadNotifs(!snapshot.empty));
                 return () => unsubNotifs();
@@ -152,12 +143,16 @@ function HomePageContent() {
             }
         });
         return () => unsubscribe();
-    }, [router]);
-  
+    }, [router, activeCategory, activeSubCategory, fetchPosts]); 
+    
+    const fetchMorePosts = useCallback(() => {
+        fetchPosts(activeCategory, activeSubCategory, true);
+    }, [fetchPosts, activeCategory, activeSubCategory]);
+
     useEffect(() => {
         const observer = new IntersectionObserver(
             (entries) => {
-                if (entries[0].isIntersecting && hasMore && !loadingMore) {
+                if (entries[0].isIntersecting && hasMore && !loadingMore && !loading) {
                     fetchMorePosts();
                 }
             },
