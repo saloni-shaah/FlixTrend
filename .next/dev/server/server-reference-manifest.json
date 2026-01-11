@@ -14,6 +14,21 @@
       },
       "filename": "src/app/actions.ts",
       "exportedName": "uploadToCloudinary"
+    },
+    "409ea8b5d544e60571e19d25c522e19c3bfa50194d": {
+      "workers": {
+        "app/create/page": {
+          "moduleId": "[project]/.next-internal/server/app/create/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": true,
+          "exportedName": "uploadFileToFirebaseStorage",
+          "filename": "src/app/actions.ts"
+        }
+      },
+      "layer": {
+        "app/create/page": "action-browser"
+      },
+      "filename": "src/app/actions.ts",
+      "exportedName": "uploadFileToFirebaseStorage"
     }
   },
   "edge": {},

@@ -32,6 +32,14 @@ const categories = [
     { id: 'culture', name: 'Culture', icon: <Popcorn /> },
 ];
 
+const creatorCategoryMap: { [key: string]: string[] } = {
+    'daily': ['vlogs', 'moments', 'travel', 'self'],
+    'creative': ['art', 'photos', 'design', 'writing'],
+    'play': ['gaming', 'challenges', 'comedy', 'reactions'],
+    'learn': ['tips', 'tech', 'study', 'explainers'],
+    'culture': ['music', 'movies', 'trends', 'community']
+};
+
 
 function HomePageContent() {
   const [showMusicModal, setShowMusicModal] = useState(false);
@@ -107,9 +115,12 @@ function HomePageContent() {
         let constraints: any[] = [orderBy("publishAt", "desc")];
 
         if (category && category !== 'all') {
+            const creatorTypesForCategory = creatorCategoryMap[category] || [];
+            // This is the fix: include the main category itself in the query.
+            const allTypesForCategory = [category, ...creatorTypesForCategory];
             constraints.unshift(or(
               where("category", "==", category), 
-              where("creatorType", "==", category)
+              where("creatorType", "in", allTypesForCategory)
             ));
         }
 
@@ -509,5 +520,3 @@ export default function HomePage() {
     </Suspense>
   );
 }
-
-    
