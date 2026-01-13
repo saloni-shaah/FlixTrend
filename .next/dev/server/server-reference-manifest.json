@@ -2,12 +2,6 @@
   "node": {
     "40f36866992db36470cec083c988f19c24206136de": {
       "workers": {
-        "app/flix/page": {
-          "moduleId": "[project]/.next-internal/server/app/flix/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": true,
-          "exportedName": "uploadToCloudinary",
-          "filename": "src/app/actions.ts"
-        },
         "app/home/page": {
           "moduleId": "[project]/.next-internal/server/app/home/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
           "async": true,
@@ -16,7 +10,6 @@
         }
       },
       "layer": {
-        "app/flix/page": "action-browser",
         "app/home/page": "action-browser"
       },
       "filename": "src/app/actions.ts",

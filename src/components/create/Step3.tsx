@@ -21,6 +21,8 @@ const creatorCategoryMap: { [key: string]: string } = {
     'tips': 'learn', 'tech': 'learn', 'study': 'learn', 'explainers': 'learn',
     'music': 'culture', 'movies': 'culture', 'trends': 'culture', 'community': 'culture'
 };
+const mainCategories = ['daily', 'creative', 'play', 'learn', 'culture'];
+
 
 function PostPreview({ postData }: { postData: any }) {
     if (!postData) return null;
@@ -132,9 +134,13 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
             if (!userDocSnap.exists()) throw new Error("User profile not found!");
             const userData = userDocSnap.data();
 
-            // Determine the main category from the creator's sub-category type
             const creatorType = userData.creatorType || '';
-            const mainCategory = creatorCategoryMap[creatorType] || null;
+            let mainCategory = null;
+            if (mainCategories.includes(creatorType)) {
+                mainCategory = creatorType;
+            } else {
+                mainCategory = creatorCategoryMap[creatorType] || null;
+            }
 
             let publishAt;
             if (isScheduling && scheduleDate && postData.postType !== 'live') {
@@ -168,8 +174,8 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
                 videoDuration: postData.videoDuration || 0,
                 isVideo: postData.isVideo || false,
                 viewCount: 0,
-                creatorType: creatorType, // Save the creator's specific type
-                category: mainCategory, // **NEW: Save the derived main category**
+                creatorType: creatorType,
+                category: mainCategory,
                 ...(postData.postType === 'text' && { 
                     backgroundColor: postData.backgroundColor || null, 
                     backgroundImage: postData.backgroundImage || null, 
