@@ -284,7 +284,7 @@ function SquadPageContent() {
                 </div>
             ) : (
                 <div className="text-gray-400 text-center mt-16">
-                    <div className="text-4xl mb-2"><Heart /></div>
+                    <div className="text-4xl mb-2"><Heart/></div>
                     <div className="text-lg font-semibold">No liked posts</div>
                     <div className="text-sm">Your liked posts will appear here.</div>
                 </div>
