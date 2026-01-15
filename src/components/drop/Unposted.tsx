@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db } from '@/utils/firebaseClient';
 import { Button } from "@/components/ui/button";
 
 export default function Unposted({ setIsCreating }: { setIsCreating: (isCreating: boolean) => void }) {
