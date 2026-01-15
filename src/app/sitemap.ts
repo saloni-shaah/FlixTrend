@@ -36,12 +36,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.7,
     },
     {
-        url: `${URL}/ad-studio`,
-        lastModified: new Date(),
-        changeFrequency: 'monthly',
-        priority: 0.6,
-    },
-    {
         url: `${URL}/privacy`,
         lastModified: new Date(),
         changeFrequency: 'yearly',

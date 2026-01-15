@@ -1002,8 +1002,8 @@ const SquadIcon = ({ className })=>/*#__PURE__*/ (0, __TURBOPACK__imported__modu
         columnNumber: 3
     }, ("TURBOPACK compile-time value", void 0));
 _c1 = SquadIcon;
-// Custom animated circular SVG for Scope
-const ScopeIcon = ({ className })=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("svg", {
+// Custom animated circular SVG for Flow
+const FlowIcon = ({ className })=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("svg", {
         width: "24",
         height: "24",
         viewBox: "0 0 24 24",
@@ -1013,7 +1013,7 @@ const ScopeIcon = ({ className })=>/*#__PURE__*/ (0, __TURBOPACK__imported__modu
         children: [
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("defs", {
                 children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("linearGradient", {
-                    id: "scopeGradient",
+                    id: "flowGradient",
                     x1: "0",
                     y1: "0",
                     x2: "1",
@@ -1050,7 +1050,7 @@ const ScopeIcon = ({ className })=>/*#__PURE__*/ (0, __TURBOPACK__imported__modu
                 cx: "12",
                 cy: "12",
                 r: "12",
-                fill: "url(#scopeGradient)",
+                fill: "url(#flowGradient)",
                 className: "group-hover:opacity-80 transition-opacity",
                 children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("animate", {
                     attributeName: "opacity",
@@ -1081,7 +1081,7 @@ const ScopeIcon = ({ className })=>/*#__PURE__*/ (0, __TURBOPACK__imported__modu
         lineNumber: 34,
         columnNumber: 5
     }, ("TURBOPACK compile-time value", void 0));
-_c2 = ScopeIcon;
+_c2 = FlowIcon;
 function NavButton({ href, icon: Icon, label, notificationCount }) {
     _s();
     const pathname = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$navigation$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["usePathname"])();
@@ -1144,7 +1144,7 @@ _c3 = NavButton;
 function AppNavBar() {
     _s1();
     const pathname = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$navigation$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["usePathname"])();
-    const { activeCall, selectedChat, setSelectedChat, isScopeVideoPlaying } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$utils$2f$AppStateContext$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useAppState"])();
+    const { activeCall, selectedChat, setSelectedChat, isFlowVideoPlaying } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$utils$2f$AppStateContext$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useAppState"])();
     const [hasMounted, setHasMounted] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
     const [isMobile, setIsMobile] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
     const [isOffline, setIsOffline] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
@@ -1277,8 +1277,8 @@ function AppNavBar() {
         "/contact"
     ].includes(pathname);
     const hideNav = isAuthPage || isSpecialPage || !!activeCall;
-    const hideForScopeVideo = pathname.startsWith('/scope') && isScopeVideoPlaying;
-    if (!hasMounted || hideNav || hideForScopeVideo) return null;
+    const hideForFlowVideo = pathname.startsWith('/flow') && isFlowVideoPlaying;
+    if (!hasMounted || hideNav || hideForFlowVideo) return null;
     const isSignalChatView = isMobile && pathname.startsWith('/signal/') && selectedChat;
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Fragment"], {
         children: [
@@ -1329,9 +1329,9 @@ function AppNavBar() {
                             columnNumber: 13
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(NavButton, {
-                            href: "/scope",
-                            icon: ScopeIcon,
-                            label: "Scope"
+                            href: "/flow",
+                            icon: FlowIcon,
+                            label: "Flow"
                         }, void 0, false, {
                             fileName: "[project]/src/app/AppNavBar.tsx",
                             lineNumber: 212,
@@ -1366,7 +1366,7 @@ function AppNavBar() {
         ]
     }, void 0, true);
 }
-_s1(AppNavBar, "6V93V/hy/bUEI6d+oEYYVqne1Ss=", false, function() {
+_s1(AppNavBar, "D8C0Eph+4W21SwPi7iQwrziwIZ0=", false, function() {
     return [
         __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$navigation$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["usePathname"],
         __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$utils$2f$AppStateContext$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useAppState"]
@@ -1376,7 +1376,7 @@ _c4 = AppNavBar;
 var _c, _c1, _c2, _c3, _c4;
 __turbopack_context__.k.register(_c, "VibeSpaceIcon");
 __turbopack_context__.k.register(_c1, "SquadIcon");
-__turbopack_context__.k.register(_c2, "ScopeIcon");
+__turbopack_context__.k.register(_c2, "FlowIcon");
 __turbopack_context__.k.register(_c3, "NavButton");
 __turbopack_context__.k.register(_c4, "AppNavBar");
 if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelpers !== null) {
