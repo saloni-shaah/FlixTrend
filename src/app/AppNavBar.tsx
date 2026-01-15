@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { getFirestore, collection, query, where, onSnapshot, getDocs } from "firebase/firestore";
 import { auth, app } from "@/utils/firebaseClient";
 import { getDownloadedPosts } from "@/utils/offline-db";
+import DropIcon from "../components/icons/DropIcon"
 
 const db = getFirestore(app);
 
@@ -29,16 +30,16 @@ const SquadIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-// Custom animated circular SVG for Scope
-const ScopeIcon = ({ className }: { className?: string }) => (
+// Custom animated circular SVG for Flow
+const FlowIcon = ({ className }: { className?: string }) => (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
         <defs>
-            <linearGradient id="scopeGradient" x1="0" y1="0" x2="1" y2="1">
+            <linearGradient id="flowGradient" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stopColor="var(--accent-pink)" />
                 <stop offset="100%" stopColor="var(--accent-cyan)" />
             </linearGradient>
         </defs>
-        <circle cx="12" cy="12" r="12" fill="url(#scopeGradient)" className="group-hover:opacity-80 transition-opacity">
+        <circle cx="12" cy="12" r="12" fill="url(#flowGradient)" className="group-hover:opacity-80 transition-opacity">
              <animate attributeName="opacity" values="0.7;1;0.7" dur="2s" repeatCount="indefinite" />
         </circle>
         <path d="M9.5 16V8L16.5 12L9.5 16Z" fill="white"/>
@@ -77,7 +78,7 @@ function NavButton({ href, icon: Icon, label, notificationCount }: { href: strin
 
 export default function AppNavBar() {
   const pathname = usePathname();
-  const { activeCall, selectedChat, setSelectedChat, isScopeVideoPlaying } = useAppState();
+  const { activeCall, selectedChat, setSelectedChat, isFlowVideoPlaying } = useAppState();
   const [hasMounted, setHasMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
@@ -186,10 +187,10 @@ export default function AppNavBar() {
   const isAuthPage = pathname === "/login" || pathname === "/signup" || pathname === "/";
   const isSpecialPage = ["/guest", "/about", "/privacy", "/terms", "/contact"].includes(pathname);
   const hideNav = isAuthPage || isSpecialPage || !!activeCall;
-  const hideForScopeVideo = pathname.startsWith('/scope') && isScopeVideoPlaying;
+  const hideForFlowVideo = pathname.startsWith('/flow') && isFlowVideoPlaying;
 
 
-  if (!hasMounted || hideNav || hideForScopeVideo) return null;
+  if (!hasMounted || hideNav || hideForFlowVideo) return null;
 
   const isSignalChatView = isMobile && pathname.startsWith('/signal/') && selectedChat;
 
@@ -209,7 +210,8 @@ export default function AppNavBar() {
         ) : (
           <>
             <NavButton href="/home" icon={VibeSpaceIcon} label="VibeSpace" />
-            <NavButton href="/scope" icon={ScopeIcon} label="Scope" />
+            <NavButton href="/flow" icon={FlowIcon} label="Flow" />
+            <NavButton href="/drop" icon={DropIcon} label="Drop" />
             <NavButton href="/squad" icon={SquadIcon} label="Squad" />
             <NavButton href="/signal" icon={MessageSquare} label="Signal" notificationCount={totalUnreadMessages > 0 ? totalUnreadMessages : undefined} />
           </>

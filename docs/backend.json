@@ -151,7 +151,7 @@
         "biddingStrategy": { "type": "string", "enum": ["cpc", "cpm", "cpv"], "description": "Cost-Per-Click, Cost-Per-Mille, or Cost-Per-View." },
         "placements": {
           "type": "array",
-          "items": { "type": "string", "enum": ["vibes_feed", "flashes", "scope", "games", "almighty"] },
+          "items": { "type": "string", "enum": ["vibes_feed", "flashes", "flow", "games", "almighty"] },
           "description": "Where the ads for this campaign will be shown."
         },
         "impressions": { "type": "number", "description": "Total times the ad has been shown." },

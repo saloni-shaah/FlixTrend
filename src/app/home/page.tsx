@@ -13,7 +13,6 @@ import { VibeSpaceLoader } from "@/components/VibeSpaceLoader";
 import AdBanner from "@/components/AdBanner";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { CreatePostPrompt } from "@/components/CreatePostPrompt";
 import { WelcomeAnimation } from "@/components/WelcomeAnimation";
 import { redisClient } from '@/utils/redis';
 
@@ -354,7 +353,6 @@ function HomePageContent() {
               <VibeSpaceLoader />
             ) : (
               <div className="w-full max-w-xl flex flex-col gap-4">
-                <CreatePostPrompt onGoLive={() => {}} />
                 {filteredPosts.length > 0 ? filteredPosts.map((post, index) => (
                   <React.Fragment key={post.id}>
                     <PostCard post={post} />

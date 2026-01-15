@@ -1,4 +1,3 @@
-
 rules_version = '2';
 
 service cloud.firestore {
@@ -112,6 +111,23 @@ service cloud.firestore {
     match /songs/{songId} {
         allow read: if isSignedIn();
         allow write: if false;
+    }
+
+    // Drops: Allow signed-in users to create and read, but only the owner can update or delete.
+    match /drops/{dropId} {
+      allow read, create: if isSignedIn();
+      allow update, delete: if isSignedIn() && request.auth.uid == resource.data.userId;
+    }
+
+    // Prompts: 'current' is for the old system, 'dropPrompts' is the new system.
+    match /prompts/current {
+      allow read: if true;
+      allow write: if request.auth.uid == 'x04gu2AkBFVX4y6Iho6J713cJOy2';
+    }
+
+    match /dropPrompts/{promptId} {
+      allow read: if true;
+      allow write: if request.auth.uid == 'x04gu2AkBFVX4y6Iho6J713cJOy2';
     }
   }
 }

@@ -17,15 +17,15 @@
   "[project]/src/components/MusicDiscovery.tsx [app-client] (ecmascript, next/dynamic entry)": {
     "id": "[project]/src/components/MusicDiscovery.tsx [app-client] (ecmascript, next/dynamic entry)",
     "files": [
-      "static/chunks/_434419fa._.js",
+      "static/chunks/_8e709a31._.js",
       "static/chunks/src_components_MusicDiscovery_tsx_d7f9a0a8._.js"
     ]
   },
-  "[project]/src/components/scope/Trendboard.tsx [app-client] (ecmascript, next/dynamic entry)": {
-    "id": "[project]/src/components/scope/Trendboard.tsx [app-client] (ecmascript, next/dynamic entry)",
+  "[project]/src/components/flix/Trendboard.tsx [app-client] (ecmascript, next/dynamic entry)": {
+    "id": "[project]/src/components/flix/Trendboard.tsx [app-client] (ecmascript, next/dynamic entry)",
     "files": [
-      "static/chunks/_91d81329._.js",
-      "static/chunks/src_components_scope_Trendboard_tsx_d7f9a0a8._.js"
+      "static/chunks/_d00394bd._.js",
+      "static/chunks/src_components_flix_Trendboard_tsx_d7f9a0a8._.js"
     ]
   }
 }

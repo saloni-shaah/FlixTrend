@@ -1,52 +1,35 @@
-
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+    // Allow public read access for all files
+    allow read: if true;
 
-    // User profile pictures and banners - 5MB limit
-    match /user_uploads/{userId}/{allPaths=**} {
-      allow read;
-      allow write: if request.auth.uid == userId &&
-                   request.resource.size < 5 * 1024 * 1024 && // 5MB Limit
-                   request.resource.contentType.matches('image/.*');
+    // User-specific uploads (avatars, banners)
+    match /user_uploads/{userId}/{fileName} {
+      allow write: if request.auth != null && request.auth.uid == userId
+                  && request.resource.size < 5 * 1024 * 1024 // 5MB limit
+                  && request.resource.contentType.matches('image/.*');
     }
-    
-    // Vibe Space Media Posts - 200MB limit
+
+    // Post media
     match /posts/{userId}/{fileName} {
-      allow read;
-      allow write: if request.auth.uid == userId &&
-                   request.resource.size < 200 * 1024 * 1024 &&
-                   request.resource.contentType.matches('image/.*|video/.*');
+      allow write: if request.auth != null && request.auth.uid == userId
+                  && request.resource.size < 200 * 1024 * 1024 // 200MB limit
+                  && request.resource.contentType.matches('image/.*|video/.*');
     }
-    
-    // Flashes (Stories) - 20MB limit
+
+    // Flashes (Stories)
     match /flashes/{userId}/{fileName} {
-      allow read;
-      allow write: if request.auth.uid == userId &&
-                   request.resource.size < 20 * 1024 * 1024 && // 20MB limit
-                   request.resource.contentType.matches('image/.*|video/.*');
+       allow write: if request.auth != null && request.auth.uid == userId
+                   && request.resource.size < 20 * 1024 * 1024 // 20MB limit
+                   && request.resource.contentType.matches('image/.*|video/.*');
     }
 
-    // Signal Chat Media - 5MB limit, images only
-    match /chat_media/{userId}/{fileName} {
-      allow read;
-      allow write: if request.auth.uid == userId &&
-                   request.resource.size < 5 * 1024 * 1024 && // 5MB limit
-                   request.resource.contentType.matches('image/.*');
-    }
-
-    // Voice Messages - 5MB limit, audio only
-    match /voice_messages/{userId}/{fileName} {
-      allow read, write: if request.auth.uid == userId &&
-                          request.resource.size < 5 * 1024 * 1024 && // 5MB limit for audio
-                          request.resource.contentType.matches('audio/.*');
-    }
-
-     // Product Images for Store
-    match /products/{fileName} {
-        allow read;
-        // Write access could be restricted to admins
-        allow write: if request.auth != null; 
+    // Drops media - THIS IS THE FIX
+    match /drops/{userId}/{fileName} {
+      allow write: if request.auth != null && request.auth.uid == userId
+                  && request.resource.size < 20 * 1024 * 1024 // 20MB limit
+                  && request.resource.contentType.matches('image/.*');
     }
   }
 }

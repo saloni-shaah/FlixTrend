@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Providers } from "./providers";
 import AppNavBar from "./AppNavBar"; // Import AppNavBar
 import BodyStyling from "./BodyStyling"; // Import BodyStyling
+import { FirebaseErrorDebugger } from "@/firebase/error-debugger";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://flixtrend.in';
 
@@ -14,7 +15,7 @@ export const metadata: Metadata = {
   },
   description: 'FlixTrend: The Future of Social, Built for Gen-Z. Secure, Creative, Connected. Where trends find you first.',
   manifest: "/manifest.json",
-  keywords: ['FlixTrend', 'social media', 'Gen-Z', 'video sharing', 'live streaming', 'secure social', 'Indian social media', 'flashes', 'vibes', 'vibesapce', 'scope'],
+  keywords: ['FlixTrend', 'social media', 'Gen-Z', 'video sharing', 'live streaming', 'secure social', 'Indian social media', 'flashes', 'vibes', 'vibesapce', 'flow'],
   openGraph: {
     title: 'FlixTrend',
     description: 'The Future of Social, Built for Gen-Z. Secure, Creative, Connected.',
@@ -97,6 +98,7 @@ export default function RootLayout({
           <BodyStyling />
           {children}
           <AppNavBar />
+          <FirebaseErrorDebugger />
         </Providers>
       </body>
     </html>

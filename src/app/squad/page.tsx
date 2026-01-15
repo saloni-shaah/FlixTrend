@@ -17,7 +17,7 @@ import { UserCollections } from "@/components/squad/UserCollections";
 import { UserDownloads } from "@/components/squad/UserDownloads";
 import { AccoladeBadge } from "@/components/AccoladeBadge";
 import { AddPhoneToProfile } from "@/components/squad/AddPhoneToProfile";
-
+import { CreatePostPrompt } from "@/components/CreatePostPrompt";
 
 const db = getFirestore(app);
 
@@ -228,9 +228,9 @@ function SquadPageContent() {
         <div className="mt-4 w-full max-w-lg">
             <p className="text-gray-400 text-center mb-4 text-sm">{profile.bio || "This user hasn't set a bio yet."}</p>
             <div className="flex justify-center flex-wrap gap-x-4 gap-y-2 text-xs text-gray-500">
-                {profile.location && <span className="flex items-center gap-1.5"><MapPin size={12}/> {profile.location}</span>}
-                {profile.gender && <span className="flex items-center gap-1.5"><User size={12}/> {profile.gender}</span>}
-                {profile.interests && <span className="flex items-center gap-1.5"><Tag size={12}/> {profile.interests}</span>}
+                {profile.location && <span className="flex items-center gap-1.5"><MapPin size={12} /> {profile.location}</span>}
+                {profile.gender && <span className="flex items-center gap-1.5"><User size={12} /> {profile.gender}</span>}
+                {profile.interests && <span className="flex items-center gap-1.5"><Tag size={12} /> {profile.interests}</span>}
             </div>
         </div>
 
@@ -239,7 +239,11 @@ function SquadPageContent() {
         {!profile.phoneNumber && (
           <AddPhoneToProfile user={firebaseUser} />
         )}
-      </motion.div>
+      </div>
+
+      <div className="my-8 w-full max-w-2xl mx-auto">
+        <CreatePostPrompt />
+      </div>
 
       {/* Tabs */}
       <div className="flex justify-center gap-2 md:gap-4 my-8 flex-wrap">

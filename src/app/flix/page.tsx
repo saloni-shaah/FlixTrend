@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Flame, Music, Gamepad2 } from 'lucide-react';
 import { VibeSpaceLoader } from '@/components/VibeSpaceLoader';
 
-const Trendboard = dynamic(() => import('@/components/scope/Trendboard').then(mod => mod.Trendboard), { loading: () => <VibeSpaceLoader />, ssr: false });
+const Trendboard = dynamic(() => import('@/components/flix/Trendboard').then(mod => mod.Trendboard), { loading: () => <VibeSpaceLoader />, ssr: false });
 const MusicDiscovery = dynamic(() => import('@/components/MusicDiscovery').then(mod => mod.MusicDiscovery), { loading: () => <VibeSpaceLoader />, ssr: false });
 const GamesHub = dynamic(() => import('@/components/GamesHub').then(mod => mod.GamesHub), { loading: () => <VibeSpaceLoader />, ssr: false });
 

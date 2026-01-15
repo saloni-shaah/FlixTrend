@@ -1,27 +1,16 @@
-// A specialized error for Firestore permission issues.
-// This is used to create rich, contextual errors that can be caught
-// by a listener to provide detailed debugging information.
-
-export type SecurityRuleContext = {
+export interface FirestorePermissionErrorDetails {
   path: string;
-  operation: 'get' | 'list' | 'create' | 'update' | 'delete' | 'write';
+  operation: 'read' | 'write' | 'delete';
   requestResourceData?: any;
-};
+}
 
 export class FirestorePermissionError extends Error {
-  public context: SecurityRuleContext;
+  details: FirestorePermissionErrorDetails;
 
-  constructor(context: SecurityRuleContext) {
-    // Construct a detailed error message for better logging and debugging
-    const message = `FirestoreError: Missing or insufficient permissions: The following request was denied by Firestore Security Rules:
-{
-  "operation": "${context.operation}",
-  "path": "${context.path}"
-  ${context.requestResourceData ? `,"requestData": ${JSON.stringify(context.requestResourceData, null, 2)}` : ''}
-}`;
-
+  constructor(details: FirestorePermissionErrorDetails) {
+    const message = `Firestore Permission Denied: Cannot ${details.operation} on '${details.path}'.`;
     super(message);
     this.name = 'FirestorePermissionError';
-    this.context = context;
+    this.details = details;
   }
 }

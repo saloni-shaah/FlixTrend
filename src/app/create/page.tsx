@@ -3,15 +3,23 @@
 import React, { useState, Suspense, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlignLeft, Image as ImageIcon } from 'lucide-react';
+import { AlignLeft, Image as ImageIcon, BarChart3, Zap, Radio } from 'lucide-react';
 import Step1 from '@/components/create/Step1';
 import Step3 from '@/components/create/Step3';
+
+const POST_TYPES = [
+  { id: 'text', label: 'Text Post', icon: AlignLeft },
+  { id: 'media', label: 'Media', icon: ImageIcon },
+  { id: 'poll', label: 'Poll', icon: BarChart3 },
+  { id: 'flash', label: 'Flash', icon: Zap },
+  { id: 'live', label: 'Live', icon: Radio },
+];
 
 function CreatePostPageContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
 
-    const initialType = searchParams.get('type') as 'text' | 'media' || undefined;
+    const initialType = searchParams.get('type') as 'text' | 'media' | 'poll' | 'flash' | 'live' || undefined;
     const initialImageUrl = searchParams.get('imageUrl');
 
     const [postData, setPostData] = useState<any>({
@@ -22,7 +30,7 @@ function CreatePostPageContent() {
     });
 
     const [step, setStep] = useState(1);
-    const [postType, setPostType] = useState<'text' | 'media' | undefined>(initialType);
+    const [postType, setPostType] = useState<'text' | 'media' | 'poll' | 'flash' | 'live' | undefined>(initialType);
     const [typeSelected, setTypeSelected] = useState(!!initialType);
 
     useEffect(() => {
@@ -44,7 +52,7 @@ function CreatePostPageContent() {
         setPostData(prev => ({...prev, ...newData}));
     }
 
-    const handleTypeChange = (type: 'text' | 'media') => {
+    const handleTypeChange = (type: 'text' | 'media' | 'poll' | 'flash' | 'live') => {
         setPostType(type);
         setPostData({ postType: type, songId: searchParams.get('songId'), mediaUrl: [], mediaFiles: [] }); // Reset data
         setStep(1);
@@ -69,20 +77,23 @@ function CreatePostPageContent() {
 
             {!typeSelected && (
                  <motion.div
-                    className="flex flex-col md:flex-row gap-4 mb-8 w-full md:w-auto"
+                    className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8 w-full"
                     initial="hidden"
                     animate="visible"
                     variants={{
                         hidden: {},
-                        visible: { transition: { staggerChildren: 0.1 }}
+                        visible: { transition: { staggerChildren: 0.05 }}
                     }}
                 >
-                    <motion.button variants={{hidden: {opacity:0, y:20}, visible: {opacity:1, y:0}}} onClick={() => handleTypeChange('text')} className={`w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'text' ? 'bg-accent-cyan text-black' : 'bg-transparent text-gray-300'}`}>
-                        <AlignLeft />Text Post
-                    </motion.button>
-                    <motion.button variants={{hidden: {opacity:0, y:20}, visible: {opacity:1, y:0}}} onClick={() => handleTypeChange('media')} className={`w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === 'media' ? 'bg-accent-cyan text-black' : 'bg-transparent text-gray-300'}`}>
-                        <ImageIcon />Media
-                    </motion.button>
+                    {POST_TYPES.map(type => (
+                        <motion.button 
+                            key={type.id}
+                            variants={{hidden: {opacity:0, y:20}, visible: {opacity:1, y:0}}}
+                            onClick={() => handleTypeChange(type.id as any)}
+                            className={`w-full p-4 rounded-lg font-bold text-lg flex items-center justify-start gap-4 transition-colors glass-card ${postType === type.id ? 'bg-accent-cyan text-black' : 'bg-transparent text-gray-300'}`}>
+                            <type.icon />{type.label}
+                        </motion.button>
+                    ))}
                 </motion.div>
             )}
 

@@ -1022,8 +1022,8 @@ const SquadIcon = ({ className })=>/*#__PURE__*/ (0, __TURBOPACK__imported__modu
         lineNumber: 26,
         columnNumber: 3
     }, ("TURBOPACK compile-time value", void 0));
-// Custom animated circular SVG for Scope
-const ScopeIcon = ({ className })=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("svg", {
+// Custom animated circular SVG for Flow
+const FlowIcon = ({ className })=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("svg", {
         width: "24",
         height: "24",
         viewBox: "0 0 24 24",
@@ -1033,7 +1033,7 @@ const ScopeIcon = ({ className })=>/*#__PURE__*/ (0, __TURBOPACK__imported__modu
         children: [
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("defs", {
                 children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("linearGradient", {
-                    id: "scopeGradient",
+                    id: "flowGradient",
                     x1: "0",
                     y1: "0",
                     x2: "1",
@@ -1070,7 +1070,7 @@ const ScopeIcon = ({ className })=>/*#__PURE__*/ (0, __TURBOPACK__imported__modu
                 cx: "12",
                 cy: "12",
                 r: "12",
-                fill: "url(#scopeGradient)",
+                fill: "url(#flowGradient)",
                 className: "group-hover:opacity-80 transition-opacity",
                 children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("animate", {
                     attributeName: "opacity",
@@ -1154,7 +1154,7 @@ function NavButton({ href, icon: Icon, label, notificationCount }) {
 }
 function AppNavBar() {
     const pathname = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$navigation$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["usePathname"])();
-    const { activeCall, selectedChat, setSelectedChat, isScopeVideoPlaying } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$utils$2f$AppStateContext$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useAppState"])();
+    const { activeCall, selectedChat, setSelectedChat, isFlowVideoPlaying } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$utils$2f$AppStateContext$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useAppState"])();
     const [hasMounted, setHasMounted] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(false);
     const [isMobile, setIsMobile] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(false);
     const [isOffline, setIsOffline] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(false);
@@ -1255,8 +1255,8 @@ function AppNavBar() {
         "/contact"
     ].includes(pathname);
     const hideNav = isAuthPage || isSpecialPage || !!activeCall;
-    const hideForScopeVideo = pathname.startsWith('/scope') && isScopeVideoPlaying;
-    if (!hasMounted || hideNav || hideForScopeVideo) return null;
+    const hideForFlowVideo = pathname.startsWith('/flow') && isFlowVideoPlaying;
+    if (!hasMounted || hideNav || hideForFlowVideo) return null;
     const isSignalChatView = isMobile && pathname.startsWith('/signal/') && selectedChat;
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Fragment"], {
         children: [
@@ -1307,9 +1307,9 @@ function AppNavBar() {
                             columnNumber: 13
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(NavButton, {
-                            href: "/scope",
-                            icon: ScopeIcon,
-                            label: "Scope"
+                            href: "/flow",
+                            icon: FlowIcon,
+                            label: "Flow"
                         }, void 0, false, {
                             fileName: "[project]/src/app/AppNavBar.tsx",
                             lineNumber: 212,
