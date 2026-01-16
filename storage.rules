@@ -2,31 +2,37 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Allow public read access for all files
-    allow read: if true;
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
 
     // User-specific uploads (avatars, banners)
     match /user_uploads/{userId}/{fileName} {
-      allow write: if request.auth != null && request.auth.uid == userId
+      allow read: if true;
+      allow write: if isSignedIn() && request.auth.uid == userId
                   && request.resource.size < 5 * 1024 * 1024 // 5MB limit
                   && request.resource.contentType.matches('image/.*');
     }
 
     // Post media
     match /posts/{userId}/{allPaths=**} {
-      allow write: if request.auth != null && request.auth.uid == userId
+      allow read: if true;
+      allow write: if isSignedIn() && request.auth.uid == userId
                   && request.resource.size < 200 * 1024 * 1024;
     }
 
     // Flashes (Stories)
     match /flashes/{userId}/{allPaths=**} {
-       allow write: if request.auth != null && request.auth.uid == userId
+       allow read: if isSignedIn();
+       allow write: if isSignedIn() && request.auth.uid == userId
                    && request.resource.size < 20 * 1024 * 1024;
     }
 
-    // Drops media (DEBUGGING - TEMPORARILY PUBLIC)
-    match /drops/{allPaths=**} {
-      allow write: if true;
+    // Drops media
+    match /drops/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if isSignedIn() && request.auth.uid == userId;
     }
   }
 }
