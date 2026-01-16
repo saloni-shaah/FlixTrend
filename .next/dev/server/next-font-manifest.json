@@ -1,6 +1,7 @@
 {
   "app": {
     "[project]/src/app/admin/page": [],
+    "[project]/src/app/create/drop/page": [],
     "[project]/src/app/create/page": [],
     "[project]/src/app/drop/page": [],
     "[project]/src/app/home/page": [],
