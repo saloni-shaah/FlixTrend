@@ -1,9 +1,6 @@
 {
-  "/admin/page": "app/admin/page.js",
   "/create/drop/page": "app/create/drop/page.js",
-  "/create/page": "app/create/page.js",
   "/drop/page": "app/drop/page.js",
   "/home/page": "app/home/page.js",
-  "/page": "app/page.js",
-  "/squad/page": "app/squad/page.js"
+  "/page": "app/page.js"
 }
