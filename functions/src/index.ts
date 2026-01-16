@@ -585,4 +585,3 @@ export const updateComment = onCall(async (request) => {
 
     return { success: true, message: "Comment updated. Thank you!" };
 });
-    

@@ -4,7 +4,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { getFirestore, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, deleteDoc, updateDoc, doc as fsDoc, setDoc, getDoc, runTransaction } from "firebase/firestore";
 import { FaPlay, FaRegComment, FaExclamationTriangle, FaVolumeMute, FaUserSlash, FaLink, FaMusic } from "react-icons/fa";
-import { Repeat2, Star, Share, MessageCircle, Bookmark, MapPin, Smile, Download, X, MoreVertical, Check, ChevronRight, Circle, ThumbsUp, ThumbsDown, Edit, Trash, Eye, AlertCircle } from "lucide-react";
+import { Repeat2, Star, Share, MessageCircle, Bookmark, MapPin, Smile, Download, X, MoreVertical, Check, ChevronRight, Circle, ThumbsUp, ThumbsDown, Edit, Trash, Eye, AlertCircle, Sparkles } from "lucide-react";
 import { auth, app } from '@/utils/firebaseClient';
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -202,6 +202,13 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
                 </div>
             </div>
 
+            {contentPost.type === 'drop' && (
+                <div className="text-xs text-accent-cyan font-bold mb-2 flex items-center gap-2 p-2 bg-accent-cyan/10 rounded-lg">
+                <Sparkles size={16} />
+                <span>DROP IN RESPONSE TO: "{contentPost.promptText}"</span>
+                </div>
+            )}
+
             {contentPost.type === "live" && contentPost.livekitRoom && contentPost.status === 'live' && (
                 <div className="w-full aspect-video rounded-xl overflow-hidden mt-2">
                     <StreamViewer streamPost={contentPost} />
@@ -225,7 +232,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
                 </div>
             )}
 
-            {contentPost.type === "media" && mediaUrls.length > 0 && !isShortVibe && (
+            {(contentPost.type === "media" || contentPost.type === "drop") && mediaUrls.length > 0 && !isShortVibe && (
                  <InFeedVideoPlayer 
                     mediaUrls={mediaUrls} 
                     post={contentPost}

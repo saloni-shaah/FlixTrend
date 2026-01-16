@@ -5795,6 +5795,7 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$re
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$square$2d$pen$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Edit$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/square-pen.js [app-client] (ecmascript) <export default as Edit>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$trash$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Trash$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/trash.js [app-client] (ecmascript) <export default as Trash>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$eye$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Eye$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/eye.js [app-client] (ecmascript) <export default as Eye>");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$sparkles$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Sparkles$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/sparkles.js [app-client] (ecmascript) <export default as Sparkles>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$utils$2f$firebaseClient$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/utils/firebaseClient.ts [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/client/app-dir/link.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/framer-motion/dist/es/render/components/motion/proxy.mjs [app-client] (ecmascript)");
@@ -6161,18 +6162,45 @@ function PostCard({ post, isShortVibe = false }) {
                     lineNumber: 177,
                     columnNumber: 13
                 }, this),
+                contentPost.type === 'drop' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                    className: "text-xs text-accent-cyan font-bold mb-2 flex items-center gap-2 p-2 bg-accent-cyan/10 rounded-lg",
+                    children: [
+                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$sparkles$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Sparkles$3e$__["Sparkles"], {
+                            size: 16
+                        }, void 0, false, {
+                            fileName: "[project]/src/components/PostCard.tsx",
+                            lineNumber: 207,
+                            columnNumber: 17
+                        }, this),
+                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                            children: [
+                                'DROP IN RESPONSE TO: "',
+                                contentPost.promptText,
+                                '"'
+                            ]
+                        }, void 0, true, {
+                            fileName: "[project]/src/components/PostCard.tsx",
+                            lineNumber: 208,
+                            columnNumber: 17
+                        }, this)
+                    ]
+                }, void 0, true, {
+                    fileName: "[project]/src/components/PostCard.tsx",
+                    lineNumber: 206,
+                    columnNumber: 17
+                }, this),
                 contentPost.type === "live" && contentPost.livekitRoom && contentPost.status === 'live' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                     className: "w-full aspect-video rounded-xl overflow-hidden mt-2",
                     children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$StreamViewer$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["StreamViewer"], {
                         streamPost: contentPost
                     }, void 0, false, {
                         fileName: "[project]/src/components/PostCard.tsx",
-                        lineNumber: 207,
+                        lineNumber: 214,
                         columnNumber: 21
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 206,
+                    lineNumber: 213,
                     columnNumber: 17
                 }, this),
                 contentPost.content && (contentPost.type !== 'poll' || contentPost.type === 'poll' && !contentPost.pollOptions) && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6185,7 +6213,7 @@ function PostCard({ post, isShortVibe = false }) {
                     children: contentPost.content
                 }, void 0, false, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 212,
+                    lineNumber: 219,
                     columnNumber: 17
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6198,7 +6226,7 @@ function PostCard({ post, isShortVibe = false }) {
                                     size: 14
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/PostCard.tsx",
-                                    lineNumber: 218,
+                                    lineNumber: 225,
                                     columnNumber: 86
                                 }, this),
                                 " ",
@@ -6206,7 +6234,7 @@ function PostCard({ post, isShortVibe = false }) {
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 218,
+                            lineNumber: 225,
                             columnNumber: 42
                         }, this),
                         contentPost.mood && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -6216,7 +6244,7 @@ function PostCard({ post, isShortVibe = false }) {
                                     size: 14
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/PostCard.tsx",
-                                    lineNumber: 219,
+                                    lineNumber: 226,
                                     columnNumber: 82
                                 }, this),
                                 " Feeling ",
@@ -6224,13 +6252,13 @@ function PostCard({ post, isShortVibe = false }) {
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 219,
+                            lineNumber: 226,
                             columnNumber: 38
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 217,
+                    lineNumber: 224,
                     columnNumber: 13
                 }, this),
                 contentPost.hashtags && contentPost.hashtags.length > 0 && !isShortVibe && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6244,20 +6272,20 @@ function PostCard({ post, isShortVibe = false }) {
                             ]
                         }, tag, true, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 224,
+                            lineNumber: 231,
                             columnNumber: 64
                         }, this))
                 }, void 0, false, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 223,
+                    lineNumber: 230,
                     columnNumber: 17
                 }, this),
-                contentPost.type === "media" && mediaUrls.length > 0 && !isShortVibe && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$video$2f$InFeedVideoPlayer$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["InFeedVideoPlayer"], {
+                (contentPost.type === "media" || contentPost.type === "drop") && mediaUrls.length > 0 && !isShortVibe && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$video$2f$InFeedVideoPlayer$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["InFeedVideoPlayer"], {
                     mediaUrls: mediaUrls,
                     post: contentPost
                 }, void 0, false, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 229,
+                    lineNumber: 236,
                     columnNumber: 18
                 }, this),
                 contentPost.type === "poll" && contentPost.pollOptions && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6268,7 +6296,7 @@ function PostCard({ post, isShortVibe = false }) {
                             children: contentPost.content
                         }, void 0, false, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 237,
+                            lineNumber: 244,
                             columnNumber: 21
                         }, this),
                         contentPost.pollOptions.map((opt, idx)=>{
@@ -6290,7 +6318,7 @@ function PostCard({ post, isShortVibe = false }) {
                                         }
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/PostCard.tsx",
-                                        lineNumber: 245,
+                                        lineNumber: 252,
                                         columnNumber: 59
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6300,7 +6328,7 @@ function PostCard({ post, isShortVibe = false }) {
                                                 children: opt
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/PostCard.tsx",
-                                                lineNumber: 247,
+                                                lineNumber: 254,
                                                 columnNumber: 37
                                             }, this),
                                             userPollVote !== null && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -6312,26 +6340,26 @@ function PostCard({ post, isShortVibe = false }) {
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/PostCard.tsx",
-                                                lineNumber: 248,
+                                                lineNumber: 255,
                                                 columnNumber: 63
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/PostCard.tsx",
-                                        lineNumber: 246,
+                                        lineNumber: 253,
                                         columnNumber: 33
                                     }, this)
                                 ]
                             }, idx, true, {
                                 fileName: "[project]/src/components/PostCard.tsx",
-                                lineNumber: 243,
+                                lineNumber: 250,
                                 columnNumber: 29
                             }, this);
                         })
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 236,
+                    lineNumber: 243,
                     columnNumber: 17
                 }, this),
                 contentPost.song && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6343,7 +6371,7 @@ function PostCard({ post, isShortVibe = false }) {
                             className: "w-12 h-12 rounded-lg"
                         }, void 0, false, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 258,
+                            lineNumber: 265,
                             columnNumber: 21
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6354,7 +6382,7 @@ function PostCard({ post, isShortVibe = false }) {
                                     children: contentPost.song.name
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/PostCard.tsx",
-                                    lineNumber: 260,
+                                    lineNumber: 267,
                                     columnNumber: 25
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6362,13 +6390,13 @@ function PostCard({ post, isShortVibe = false }) {
                                     children: contentPost.song.artists.join(", ")
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/PostCard.tsx",
-                                    lineNumber: 261,
+                                    lineNumber: 268,
                                     columnNumber: 25
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 259,
+                            lineNumber: 266,
                             columnNumber: 21
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
@@ -6378,18 +6406,18 @@ function PostCard({ post, isShortVibe = false }) {
                                 size: 14
                             }, void 0, false, {
                                 fileName: "[project]/src/components/PostCard.tsx",
-                                lineNumber: 264,
+                                lineNumber: 271,
                                 columnNumber: 25
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 263,
+                            lineNumber: 270,
                             columnNumber: 22
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 257,
+                    lineNumber: 264,
                     columnNumber: 18
                 }, this)
             ]
@@ -6414,19 +6442,19 @@ function PostCard({ post, isShortVibe = false }) {
                                         className: "w-full h-full object-cover"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/PostCard.tsx",
-                                        lineNumber: 278,
+                                        lineNumber: 285,
                                         columnNumber: 44
                                     }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                         className: "text-white",
                                         children: post.displayName?.[0] || 'U'
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/PostCard.tsx",
-                                        lineNumber: 278,
+                                        lineNumber: 285,
                                         columnNumber: 128
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/PostCard.tsx",
-                                    lineNumber: 277,
+                                    lineNumber: 284,
                                     columnNumber: 21
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -6437,13 +6465,13 @@ function PostCard({ post, isShortVibe = false }) {
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/PostCard.tsx",
-                                    lineNumber: 280,
+                                    lineNumber: 287,
                                     columnNumber: 21
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 276,
+                            lineNumber: 283,
                             columnNumber: 17
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -6451,7 +6479,7 @@ function PostCard({ post, isShortVibe = false }) {
                             children: post.content
                         }, void 0, false, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 282,
+                            lineNumber: 289,
                             columnNumber: 17
                         }, this),
                         post.song && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6459,7 +6487,7 @@ function PostCard({ post, isShortVibe = false }) {
                             children: [
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2d$icons$2f$fa$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["FaMusic"], {}, void 0, false, {
                                     fileName: "[project]/src/components/PostCard.tsx",
-                                    lineNumber: 285,
+                                    lineNumber: 292,
                                     columnNumber: 25
                                 }, this),
                                 " ",
@@ -6471,19 +6499,19 @@ function PostCard({ post, isShortVibe = false }) {
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/PostCard.tsx",
-                                    lineNumber: 285,
+                                    lineNumber: 292,
                                     columnNumber: 37
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 284,
+                            lineNumber: 291,
                             columnNumber: 21
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 275,
+                    lineNumber: 282,
                     columnNumber: 13
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6494,12 +6522,12 @@ function PostCard({ post, isShortVibe = false }) {
                         onCommentClick: ()=>setShowComments(true)
                     }, void 0, false, {
                         fileName: "[project]/src/components/PostCard.tsx",
-                        lineNumber: 290,
+                        lineNumber: 297,
                         columnNumber: 17
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 289,
+                    lineNumber: 296,
                     columnNumber: 13
                 }, this),
                 showComments && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(CommentModal, {
@@ -6509,13 +6537,13 @@ function PostCard({ post, isShortVibe = false }) {
                     post: post
                 }, void 0, false, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 292,
+                    lineNumber: 299,
                     columnNumber: 30
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/src/components/PostCard.tsx",
-            lineNumber: 274,
+            lineNumber: 281,
             columnNumber: 9
         }, this);
     }
@@ -6546,7 +6574,7 @@ function PostCard({ post, isShortVibe = false }) {
                             size: 14
                         }, void 0, false, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 308,
+                            lineNumber: 315,
                             columnNumber: 15
                         }, this),
                         " Relayed by ",
@@ -6559,13 +6587,13 @@ function PostCard({ post, isShortVibe = false }) {
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 308,
+                            lineNumber: 315,
                             columnNumber: 47
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 307,
+                    lineNumber: 314,
                     columnNumber: 11
                 }, this),
                 showEdit && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$squad$2f$EditPostModal$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["EditPostModal"], {
@@ -6573,7 +6601,7 @@ function PostCard({ post, isShortVibe = false }) {
                     onClose: ()=>setShowEdit(false)
                 }, void 0, false, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 313,
+                    lineNumber: 320,
                     columnNumber: 9
                 }, this),
                 renderPostContent(post),
@@ -6582,7 +6610,7 @@ function PostCard({ post, isShortVibe = false }) {
                     onCommentClick: ()=>setShowComments(true)
                 }, void 0, false, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 317,
+                    lineNumber: 324,
                     columnNumber: 7
                 }, this),
                 showComments && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(CommentModal, {
@@ -6592,13 +6620,13 @@ function PostCard({ post, isShortVibe = false }) {
                     post: post
                 }, void 0, false, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 319,
+                    lineNumber: 326,
                     columnNumber: 24
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/src/components/PostCard.tsx",
-            lineNumber: 299,
+            lineNumber: 306,
             columnNumber: 5
         }, this)
     }, void 0, false);
@@ -6639,7 +6667,7 @@ function CommentModal({ postId, postAuthorId, onClose, post }) {
                     children: "×"
                 }, void 0, false, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 340,
+                    lineNumber: 347,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
@@ -6647,7 +6675,7 @@ function CommentModal({ postId, postAuthorId, onClose, post }) {
                     children: "Comments"
                 }, void 0, false, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 341,
+                    lineNumber: 348,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6657,18 +6685,18 @@ function CommentModal({ postId, postAuthorId, onClose, post }) {
                         children: "No comments yet. Be the first!"
                     }, void 0, false, {
                         fileName: "[project]/src/components/PostCard.tsx",
-                        lineNumber: 344,
+                        lineNumber: 351,
                         columnNumber: 13
                     }, this) : comments.map((comment)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(Comment, {
                             comment: comment
                         }, comment.id, false, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 347,
+                            lineNumber: 354,
                             columnNumber: 15
                         }, this))
                 }, void 0, false, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 342,
+                    lineNumber: 349,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(CommentForm, {
@@ -6678,18 +6706,18 @@ function CommentModal({ postId, postAuthorId, onClose, post }) {
                     post: post
                 }, void 0, false, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 351,
+                    lineNumber: 358,
                     columnNumber: 9
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/src/components/PostCard.tsx",
-            lineNumber: 339,
+            lineNumber: 346,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/src/components/PostCard.tsx",
-        lineNumber: 338,
+        lineNumber: 345,
         columnNumber: 5
     }, this);
 }
@@ -6737,19 +6765,19 @@ function Comment({ comment }) {
                     className: "w-full h-full object-cover"
                 }, void 0, false, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 389,
+                    lineNumber: 396,
                     columnNumber: 35
                 }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                     className: "text-white",
                     children: initials
                 }, void 0, false, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 389,
+                    lineNumber: 396,
                     columnNumber: 123
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/components/PostCard.tsx",
-                lineNumber: 388,
+                lineNumber: 395,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6769,7 +6797,7 @@ function Comment({ comment }) {
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/PostCard.tsx",
-                                    lineNumber: 394,
+                                    lineNumber: 401,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -6777,13 +6805,13 @@ function Comment({ comment }) {
                                     children: timeAgo(comment.createdAt)
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/PostCard.tsx",
-                                    lineNumber: 395,
+                                    lineNumber: 402,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 393,
+                            lineNumber: 400,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -6791,24 +6819,24 @@ function Comment({ comment }) {
                             children: comment.text
                         }, void 0, false, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 397,
+                            lineNumber: 404,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 392,
+                    lineNumber: 399,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/components/PostCard.tsx",
-                lineNumber: 391,
+                lineNumber: 398,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/components/PostCard.tsx",
-        lineNumber: 387,
+        lineNumber: 394,
         columnNumber: 5
     }, this);
 }
@@ -6867,7 +6895,7 @@ function CommentForm({ postId, postAuthorId, onCommentPosted, post }) {
                 disabled: loading
             }, void 0, false, {
                 fileName: "[project]/src/components/PostCard.tsx",
-                lineNumber: 453,
+                lineNumber: 460,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -6877,13 +6905,13 @@ function CommentForm({ postId, postAuthorId, onCommentPosted, post }) {
                 children: "Post"
             }, void 0, false, {
                 fileName: "[project]/src/components/PostCard.tsx",
-                lineNumber: 461,
+                lineNumber: 468,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/components/PostCard.tsx",
-        lineNumber: 452,
+        lineNumber: 459,
         columnNumber: 5
     }, this);
 }
