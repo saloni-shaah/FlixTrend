@@ -48,10 +48,10 @@ const formatTimestamp = (ts: any) => {
 };
 
 // --- COMPONENT: Single Reply ---
-const ReplyComponent = ({ reply, postId, parentCommentId, currentUser }: { reply: Reply, postId: string, parentCommentId: string, currentUser: any }) => {
+const ReplyComponent = ({ reply, postId, parentCommentId, currentUser, collectionName }: { reply: Reply, postId: string, parentCommentId: string, currentUser: any, collectionName: string }) => {
     const handleLikeReply = async () => {
         if (!currentUser) return;
-        const replyRef = doc(db, "posts", postId, "comments", parentCommentId, "replies", reply.id);
+        const replyRef = doc(db, collectionName, postId, "comments", parentCommentId, "replies", reply.id);
         const replyDoc = await getDoc(replyRef);
         const replyData = replyDoc.data();
         if (!replyData) return;
@@ -92,11 +92,11 @@ const ReplyComponent = ({ reply, postId, parentCommentId, currentUser }: { reply
 }
 
 // --- COMPONENT: Single Comment with Replies ---
-const CommentComponent = ({ comment, postId, postAuthorId, onReply, currentUser }: { comment: Comment, postId: string, postAuthorId: string, onReply: (commentId: string, username: string) => void, currentUser: any }) => {
+const CommentComponent = ({ comment, postId, postAuthorId, onReply, currentUser, collectionName }: { comment: Comment, postId: string, postAuthorId: string, onReply: (commentId: string, username: string) => void, currentUser: any, collectionName: string }) => {
 
     const handleLikeComment = async () => {
         if (!currentUser) return;
-        const commentRef = doc(db, "posts", postId, "comments", comment.id);
+        const commentRef = doc(db, collectionName, postId, "comments", comment.id);
         const commentDoc = await getDoc(commentRef);
         const commentData = commentDoc.data();
         if (!commentData) return;
@@ -113,6 +113,8 @@ const CommentComponent = ({ comment, postId, postAuthorId, onReply, currentUser 
     const handleDeleteComment = async () => {
         if (window.confirm("Are you sure you want to delete this comment?")) {
             try {
+                // This cloud function is hardcoded for 'posts', so it won't work for drops.
+                // We're disabling the UI for now, but if re-enabled, it needs a backend change.
                 await deleteCommentCallable({ postId, commentId: comment.id });
             } catch (error: any) {
                 console.error("Error deleting comment:", error);
@@ -134,7 +136,7 @@ const CommentComponent = ({ comment, postId, postAuthorId, onReply, currentUser 
                         <p className="text-base whitespace-pre-wrap mt-1">{comment.text}</p>
                     </div>
 
-                    {currentUser?.uid === comment.userId || currentUser?.uid === postAuthorId ? (
+                    {(currentUser?.uid === comment.userId || currentUser?.uid === postAuthorId) && collectionName === 'posts' ? (
                          <DropdownMenu.Root>
                             <DropdownMenu.Trigger asChild>
                                 <button className="absolute top-1 right-1 p-1.5 rounded-full opacity-0 group-hover:opacity-100 hover:bg-white/10"><MoreVertical size={16}/></button>
@@ -166,7 +168,7 @@ const CommentComponent = ({ comment, postId, postAuthorId, onReply, currentUser 
                 
                 <div className="pt-1">
                     {comment.replies && comment.replies.map(reply => (
-                        <ReplyComponent key={reply.id} reply={reply} postId={postId} parentCommentId={comment.id} currentUser={currentUser} />
+                        <ReplyComponent key={reply.id} reply={reply} postId={postId} parentCommentId={comment.id} currentUser={currentUser} collectionName={collectionName} />
                     ))}
                 </div>
             </div>
@@ -175,7 +177,7 @@ const CommentComponent = ({ comment, postId, postAuthorId, onReply, currentUser 
 }
 
 // --- MAIN MODAL COMPONENT ---
-export function CommentModal({ postId, postAuthorId, onClose, post }: { postId: string, postAuthorId: string, onClose: () => void, post: any }) {
+export function CommentModal({ postId, postAuthorId, onClose, post, collectionName }: { postId: string, postAuthorId: string, onClose: () => void, post: any, collectionName: string }) {
     const [comments, setComments] = useState<Comment[]>([]);
     const [newComment, setNewComment] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -185,7 +187,7 @@ export function CommentModal({ postId, postAuthorId, onClose, post }: { postId: 
 
     // Fetch comments and replies in real-time
     useEffect(() => {
-        const q = query(collection(db, "posts", postId, "comments"), orderBy("createdAt", "asc"));
+        const q = query(collection(db, collectionName, postId, "comments"), orderBy("createdAt", "asc"));
         const unsubscribe = onSnapshot(q, async (snapshot) => {
             const commentsData = await Promise.all(snapshot.docs.map(async (commentDoc) => {
                 const commentData = commentDoc.data();
@@ -204,7 +206,7 @@ export function CommentModal({ postId, postAuthorId, onClose, post }: { postId: 
             setComments(commentsData);
         });
         return () => unsubscribe();
-    }, [postId]);
+    }, [postId, collectionName]);
 
     const handleReply = (commentId: string, username: string) => {
         setReplyingTo({ commentId, username });
@@ -222,12 +224,12 @@ export function CommentModal({ postId, postAuthorId, onClose, post }: { postId: 
         try {
             const batch = writeBatch(db);
             if (replyingTo) {
-                const replyRef = doc(collection(db, "posts", postId, "comments", replyingTo.commentId, "replies"));
+                const replyRef = doc(collection(db, collectionName, postId, "comments", replyingTo.commentId, "replies"));
                 batch.set(replyRef, commentPayload);
             } else {
-                const commentRef = doc(collection(db, "posts", postId, "comments"));
+                const commentRef = doc(collection(db, collectionName, postId, "comments"));
                 batch.set(commentRef, commentPayload);
-                const postRef = doc(db, "posts", postId);
+                const postRef = doc(db, collectionName, postId);
                 batch.update(postRef, { commentCount: (post.commentCount || 0) + 1 });
             }
             await batch.commit();
@@ -251,7 +253,7 @@ export function CommentModal({ postId, postAuthorId, onClose, post }: { postId: 
 
                     <div className="flex-1 overflow-y-auto p-4 space-y-6">
                         {comments.map((comment) => (
-                            <CommentComponent key={comment.id} comment={comment} postId={postId} postAuthorId={postAuthorId} onReply={handleReply} currentUser={currentUser} />
+                            <CommentComponent key={comment.id} comment={comment} postId={postId} postAuthorId={postAuthorId} onReply={handleReply} currentUser={currentUser} collectionName={collectionName} />
                         ))}
                     </div>
 

@@ -14,7 +14,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 
 const db = getFirestore(app);
 
-export function PostActions({ post, onCommentClick, isShortVibe = false }: { post: any; onCommentClick: () => void; isShortVibe?: boolean }) {
+export function PostActions({ post, onCommentClick, isShortVibe = false, collectionName = 'posts' }: { post: any; onCommentClick: () => void; isShortVibe?: boolean, collectionName?: string }) {
     const [likes, setLikes] = React.useState(0);
     const [userHasLiked, setUserHasLiked] = React.useState(false);
     const [relays, setRelays] = React.useState(0);
@@ -29,7 +29,7 @@ export function PostActions({ post, onCommentClick, isShortVibe = false }: { pos
     React.useEffect(() => {
         if (!post.id) return;
 
-        const postRef = doc(db, "posts", post.id);
+        const postRef = doc(db, collectionName, post.id);
         const unsubPost = onSnapshot(postRef, (doc) => {
             const data = doc.data();
             if (data && data.likes) {
@@ -44,8 +44,8 @@ export function PostActions({ post, onCommentClick, isShortVibe = false }: { pos
             }
         });
 
-        const unsubRelays = onSnapshot(collection(db, "posts", post.id, "relays"), (snap) => setRelays(snap.size));
-        const unsubComments = onSnapshot(collection(db, "posts", post.id, "comments"), (snap) => setCommentsCount(snap.size));
+        const unsubRelays = onSnapshot(collection(db, collectionName, post.id, "relays"), (snap) => setRelays(snap.size));
+        const unsubComments = onSnapshot(collection(db, collectionName, post.id, "comments"), (snap) => setCommentsCount(snap.size));
         
         isPostDownloaded(post.id).then(setIsDownloaded);
 
@@ -54,13 +54,13 @@ export function PostActions({ post, onCommentClick, isShortVibe = false }: { pos
             unsubRelays();
             unsubComments();
         };
-    }, [post.id, currentUser]);
+    }, [post.id, currentUser, collectionName]);
 
     const handleLike = async (e: React.MouseEvent) => {
         e.stopPropagation();
         if (!currentUser) return;
         
-        const postRef = doc(db, "posts", post.id);
+        const postRef = doc(db, collectionName, post.id);
         const userId = currentUser.uid;
 
         const dataToUpdate = {
@@ -115,7 +115,7 @@ export function PostActions({ post, onCommentClick, isShortVibe = false }: { pos
         
         runTransaction(db, async (transaction) => {
             const userRelayRef = doc(db, 'users', currentUser.uid, 'relayedPosts', post.id);
-            const postRelayRef = doc(db, 'posts', post.id, 'relays', currentUser.uid);
+            const postRelayRef = doc(db, collectionName, post.id, 'relays', currentUser.uid);
             
             const userRelayDoc = await transaction.get(userRelayRef);
 
@@ -177,10 +177,12 @@ export function PostActions({ post, onCommentClick, isShortVibe = false }: { pos
                         <MessageCircle size={20} />
                         {!isShortVibe && <span>{commentsCount}</span>}
                     </button>
-                    <button className={cn('flex items-center gap-1.5 font-bold transition-all text-lg', userHasRelayed ? 'text-green-400' : textClass, 'hover:text-green-400')} onClick={handleRelay} >
-                        <Repeat2 size={20} />
-                        {!isShortVibe && <span>{relays}</span>}
-                    </button>
+                    {collectionName !== 'drops' && (
+                        <button className={cn('flex items-center gap-1.5 font-bold transition-all text-lg', userHasRelayed ? 'text-green-400' : textClass, 'hover:text-green-400')} onClick={handleRelay} >
+                            <Repeat2 size={20} />
+                            {!isShortVibe && <span>{relays}</span>}
+                        </button>
+                    )}
                     <button data-like-button="true" className={cn('flex items-center gap-1.5 font-bold transition-all text-lg', userHasLiked ? 'text-yellow-400' : textClass, 'hover:text-yellow-400')} onClick={handleLike}>
                         <Star size={20} fill={userHasLiked ? "currentColor" : "none"} />
                          {!isShortVibe && <span>{likes}</span>}
