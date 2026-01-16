@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { getFirestore, doc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { auth, app } from '@/utils/firebaseClient';
 import { User } from 'firebase/auth';
@@ -18,7 +18,6 @@ function CreateDropPage() {
   const [details, setDetails] = useState('');
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasAlreadyDropped, setHasAlreadyDropped] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -42,11 +41,11 @@ function CreateDropPage() {
       }
 
       if (promptId) {
-          // Check if user has already created a drop for this prompt
           const dropsQuery = query(
-              collection(db, 'drops'), 
+              collection(db, 'posts'), 
               where('userId', '==', currentUser.uid),
-              where('promptId', '==', promptId)
+              where('promptId', '==', promptId),
+              where('type', '==', 'drop')
           );
           const dropsSnapshot = await getDocs(dropsQuery);
           if (!dropsSnapshot.empty) {
@@ -91,35 +90,35 @@ function CreateDropPage() {
     if (hasAlreadyDropped) return;
 
     setIsSubmitting(true);
-    setIsUploading(true);
 
     try {
       const imageRef = ref(storage, `drops/${user.uid}/${Date.now()}_${image.name}`);
       await uploadBytes(imageRef, image);
       const imageUrl = await getDownloadURL(imageRef);
-      setIsUploading(false);
 
-      await addDoc(collection(db, 'drops'), {
+      await addDoc(collection(db, 'posts'), {
         userId: user.uid,
         username: userProfile.username || 'anonymous',
         avatar_url: userProfile.avatar_url || null,
         promptId: promptId,
         promptText: prompt?.text,
-        details: details,
-        imageUrl: imageUrl,
+        content: details, // Mapped from 'details' for PostCard compatibility
+        mediaUrl: [imageUrl], // Mapped from 'imageUrl' for PostCard
         createdAt: serverTimestamp(),
+        publishAt: serverTimestamp(), // Added for sorting consistency
         likes: {},
         commentCount: 0,
-        type: 'drop' // To distinguish from regular posts
+        type: 'drop', // Special type for drops
+        isVideo: false, // Drops are images for now
+        viewCount: 0,
       });
 
-      router.push('/drops'); // Redirect back to the drops page
+      router.push(`/drop`); // Redirect back to the drop page to see the feed
 
     } catch (error) {
       console.error("Error creating drop:", error);
       alert("There was an error creating your drop. Please check the console and try again.");
       setIsSubmitting(false);
-      setIsUploading(false);
     }
   };
 
@@ -137,8 +136,8 @@ function CreateDropPage() {
             <div className="glass-card p-8">
                 <CheckCircle className="mx-auto h-16 w-16 text-green-500 mb-4" />
                 <h1 className="text-2xl font-bold mb-2">You've already dropped!</h1>
-                <p className="text-gray-400 mb-6">You can only submit one drop per prompt. Check back tomorrow for the next one!</p>
-                <Button onClick={() => router.push('/drops')} className="bg-accent-cyan hover:bg-accent-cyan/80">
+                <p className="text-gray-400 mb-6">You can only submit one drop per prompt. Check out the feed to see what others created!</p>
+                <Button onClick={() => router.push('/drop')} className="bg-accent-cyan hover:bg-accent-cyan/80">
                     Back to Drops
                 </Button>
             </div>
@@ -153,7 +152,7 @@ function CreateDropPage() {
 
       <div className="flex flex-col gap-6">
         <textarea
-          className="w-full p-3 bg-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-pink"
+          className="input-glass w-full rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent-pink"
           rows={4}
           value={details}
           onChange={(e) => setDetails(e.target.value)}
@@ -178,7 +177,7 @@ function CreateDropPage() {
           {isSubmitting ? (
             <div className="flex items-center gap-2">
               <Loader className="animate-spin h-5 w-5" />
-              <span>{isUploading ? 'Uploading Image...' : 'Submitting Drop...'}</span>
+              <span>Submitting Drop...</span>
             </div>
           ) : 'Submit Drop'}
         </Button>

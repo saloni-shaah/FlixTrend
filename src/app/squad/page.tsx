@@ -1,8 +1,7 @@
-
 "use client";
 import React, { useEffect, useState, useRef, Suspense } from "react";
 import { auth, app } from "@/utils/firebaseClient";
-import { getFirestore, doc, onSnapshot, collection, query, where, getCountFromServer, getDocs, orderBy, writeBatch, deleteDoc, arrayUnion, arrayRemove, serverTimestamp, setDoc } from "firebase/firestore";
+import { getFirestore, doc, onSnapshot, collection, query, where, getCountFromServer, getDocs, orderBy, writeBatch, deleteDoc, arrayUnion, arrayRemove, serverTimestamp } from "firebase/firestore";
 import { Cog, Compass, MapPin, User, Tag, ShieldCheck, Music, Bookmark, Heart, Folder, Download, CheckCircle, Search, Users as UsersIcon, Phone, Trophy, Award, Sparkles, Image, BarChart3, AlignLeft, Radio, Zap } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -16,8 +15,7 @@ import { UserPlaylists } from "@/components/squad/UserPlaylists";
 import { UserCollections } from "@/components/squad/UserCollections";
 import { UserDownloads } from "@/components/squad/UserDownloads";
 import { AccoladeBadge } from "@/components/AccoladeBadge";
-import { AddPhoneToProfile } from "@/components/squad/AddPhoneToProfile";
-import { CreatePostPrompt } from "@/components/CreatePostPrompt";
+
 
 const db = getFirestore(app);
 
@@ -228,22 +226,14 @@ function SquadPageContent() {
         <div className="mt-4 w-full max-w-lg">
             <p className="text-gray-400 text-center mb-4 text-sm">{profile.bio || "This user hasn't set a bio yet."}</p>
             <div className="flex justify-center flex-wrap gap-x-4 gap-y-2 text-xs text-gray-500">
-                {profile.location && <span className="flex items-center gap-1.5"><MapPin size={12} /> {profile.location}</span>}
-                {profile.gender && <span className="flex items-center gap-1.5"><User size={12} /> {profile.gender}</span>}
-                {profile.interests && <span className="flex items-center gap-1.5"><Tag size={12} /> {profile.interests}</span>}
+                {profile.location && <span className="flex items-center gap-1.5"><MapPin size={12}/> {profile.location}</span>}
+                {profile.gender && <span className="flex items-center gap-1.5"><User size={12}/> {profile.gender}</span>}
+                {profile.interests && <span className="flex items-center gap-1.5"><Tag size={12}/> {profile.interests}</span>}
             </div>
         </div>
 
         <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="btn-glass mt-6" onClick={() => setShowEdit(true)}>Edit Profile</motion.button>
-      
-        {!profile.phoneNumber && (
-          <AddPhoneToProfile user={firebaseUser} />
-        )}
-      </div>
-
-      <div className="my-8 w-full max-w-2xl mx-auto">
-        <CreatePostPrompt />
-      </div>
+      </motion.div>
 
       {/* Tabs */}
       <div className="flex justify-center gap-2 md:gap-4 my-8 flex-wrap">
@@ -284,7 +274,7 @@ function SquadPageContent() {
                 </div>
             ) : (
                 <div className="text-gray-400 text-center mt-16">
-                    <div className="text-4xl mb-2"><Heart/></div>
+                    <div className="text-4xl mb-2"><Heart /></div>
                     <div className="text-lg font-semibold">No liked posts</div>
                     <div className="text-sm">Your liked posts will appear here.</div>
                 </div>
