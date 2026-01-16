@@ -22,46 +22,7 @@ import { InFeedVideoPlayer } from './video/InFeedVideoPlayer';
 import { PostActions } from './PostActions';
 import { StreamViewer } from './StreamViewer';
 import { EditPostModal } from './squad/EditPostModal';
-
-// START: Copied DropdownMenu components
-const DropdownMenu = DropdownMenuPrimitive.Root
-const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger
-const DropdownMenuContent = React.forwardRef<
-  React.ElementRef<typeof DropdownMenuPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Content>
->(({ className, sideOffset = 4, ...props }, ref) => (
-  <DropdownMenuPrimitive.Portal>
-    <DropdownMenuPrimitive.Content
-      ref={ref}
-      sideOffset={sideOffset}
-      className={cn(
-        "z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
-        "glass-card" /* Custom class for glassmorphism */,
-        className
-      )}
-      {...props}
-    />
-  </DropdownMenuPrimitive.Portal>
-))
-DropdownMenuContent.displayName = DropdownMenuPrimitive.Content.displayName
-const DropdownMenuItem = React.forwardRef<
-  React.ElementRef<typeof DropdownMenuPrimitive.Item>,
-  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Item> & {
-    inset?: boolean
-  }
->(({ className, inset, ...props }, ref) => (
-  <DropdownMenuPrimitive.Item
-    ref={ref}
-    className={cn(
-      "relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&>svg]:pointer-events-none [&>svg]:size-4 [&>svg]:shrink-0",
-      inset && "pl-8",
-      className
-    )}
-    {...props}
-  />
-))
-DropdownMenuItem.displayName = DropdownMenuPrimitive.Item.displayName
-// END: Copied DropdownMenu components
+import { CommentModal } from './CommentModal';
 
 
 const db = getFirestore(app);
@@ -105,7 +66,7 @@ const Watermark = ({ isAnimated = false }: { isAnimated?: boolean }) => (
 );
 
 
-export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe?: boolean }) {
+export function PostCard({ post, isShortVibe = false, collectionName = 'posts' }: { post: any; isShortVibe?: boolean, collectionName?: string }) {
   const [showComments, setShowComments] = React.useState(false);
   const [showEdit, setShowEdit] = React.useState(false);
   const [pollVotes, setPollVotes] = React.useState<{ [optionIdx: number]: { count: number, voters: string[] } }>({});
@@ -118,7 +79,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
   React.useEffect(() => {
     if (!currentUser || post.type !== "poll" || !post.pollOptions) return;
     
-    const unsubPollVotes = onSnapshot(collection(db, "posts", post.id, "pollVotes"), (snap) => {
+    const unsubPollVotes = onSnapshot(collection(db, collectionName, post.id, "pollVotes"), (snap) => {
       const votes: { [optionIdx: number]: { count: number, voters: string[] } } = {};
       post.pollOptions.forEach((_:any, index:number) => {
           votes[index] = { count: 0, voters: [] };
@@ -138,18 +99,18 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
     });
 
     return () => unsubPollVotes();
-  }, [post.id, currentUser, post.type, post.pollOptions]);
+  }, [post.id, currentUser, post.type, post.pollOptions, collectionName]);
 
   // Real-time listener for viewCount
   useEffect(() => {
-    const postRef = fsDoc(db, 'posts', post.id);
+    const postRef = fsDoc(db, collectionName, post.id);
     const unsubscribe = onSnapshot(postRef, (doc) => {
         if (doc.exists()) {
             setViewCount(doc.data().viewCount || 0);
         }
     });
     return () => unsubscribe();
-  }, [post.id]);
+  }, [post.id, collectionName]);
 
   const handleDelete = async () => {
     if (window.confirm("Are you sure you want to permanently delete this post and all its interactions? This cannot be undone.")) {
@@ -164,7 +125,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
 
   const handlePollVote = async (optionIdx: number) => {
     if (!currentUser || userPollVote !== null) return;
-    await setDoc(fsDoc(db, "posts", post.id, "pollVotes", currentUser.uid), { userId: currentUser.uid, optionIdx, createdAt: serverTimestamp() });
+    await setDoc(fsDoc(db, collectionName, post.id, "pollVotes", currentUser.uid), { userId: currentUser.uid, optionIdx, createdAt: serverTimestamp() });
   };
   
   const renderPostContent = (p: any) => {
@@ -188,7 +149,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
                             <Eye size={14} /> {viewCount.toLocaleString()}
                         </span>
                     )}
-                    {currentUser?.uid === contentPost.userId && !isShortVibe && (
+                    {currentUser?.uid === contentPost.userId && !isShortVibe && collectionName === 'posts' && (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <button className="p-1 rounded-full hover:bg-white/10"><MoreVertical size={16}/></button>
@@ -232,7 +193,7 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
                 </div>
             )}
 
-            {(contentPost.type === "media" || contentPost.type === "drop") && mediaUrls.length > 0 && !isShortVibe && (
+            {(contentPost.type === "media" || collectionName === "drops") && mediaUrls.length > 0 && !isShortVibe && (
                  <InFeedVideoPlayer 
                     mediaUrls={mediaUrls} 
                     post={contentPost}
@@ -294,9 +255,9 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
                  )}
             </div>
             <div className="flex flex-col gap-4 self-end pointer-events-auto">
-                <PostActions post={post} isShortVibe={true} onCommentClick={() => setShowComments(true)} />
+                <PostActions post={post} collectionName={collectionName} isShortVibe={true} onCommentClick={() => setShowComments(true)} />
             </div>
-            {showComments && <CommentModal postId={post.id} postAuthorId={post.userId} onClose={() => setShowComments(false)} post={post} />}
+            {showComments && <CommentModal postId={post.id} postAuthorId={post.userId} onClose={() => setShowComments(false)} post={post} collectionName={collectionName} />}
         </div>
     );
   }
@@ -321,157 +282,11 @@ export function PostCard({ post, isShortVibe = false }: { post: any; isShortVibe
       )}
 
       {renderPostContent(post)}
-      <PostActions post={post} onCommentClick={() => setShowComments(true)} />
+      <PostActions post={post} onCommentClick={() => setShowComments(true)} collectionName={collectionName} />
       
-      {showComments && <CommentModal postId={post.id} postAuthorId={post.userId} onClose={() => setShowComments(false)} post={post} />}
+      {showComments && <CommentModal postId={post.id} postAuthorId={post.userId} onClose={() => setShowComments(false)} post={post} collectionName={collectionName} />}
 
     </motion.div>
     </>
   );
-}
-
-function CommentModal({ postId, postAuthorId, onClose, post }: { postId: string; postAuthorId: string; onClose: () => void; post: any }) {
-  const [comments, setComments] = React.useState<any[]>([]);
-
-  React.useEffect(() => {
-    const q = query(collection(db, "posts", postId, "comments"), orderBy("createdAt", "asc"));
-    const unsub = onSnapshot(q, (snapshot) => {
-      setComments(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-    });
-    return () => unsub();
-  }, [postId]);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="glass-card p-6 w-full max-w-md relative flex flex-col">
-        <button onClick={onClose} className="absolute top-2 right-2 text-accent-pink text-2xl">&times;</button>
-        <h3 className="text-xl font-headline font-bold mb-4 text-brand-gold">Comments</h3>
-        <div className="flex flex-col gap-3 max-h-60 overflow-y-auto mb-4 p-2">
-          {comments.length === 0 ? (
-            <div className="text-muted-foreground text-center">No comments yet. Be the first!</div>
-          ) : (
-            comments.map((comment) => (
-              <Comment key={comment.id} comment={comment} />
-            ))
-          )}
-        </div>
-        <CommentForm postId={postId} postAuthorId={postAuthorId} onCommentPosted={() => {}} post={post} />
-      </div>
-    </div>
-  );
-}
-
-function Comment({ comment }: { comment: any; }) {
-  const [userData, setUserData] = React.useState<any>(null);
-
-  React.useEffect(() => {
-    async function fetchUserData() {
-      if (comment.userId) {
-        const userDoc = await getDoc(fsDoc(db, "users", comment.userId));
-        if (userDoc.exists()) {
-          const data = userDoc.data();
-          setUserData({
-            username: data.username,
-            avatar_url: data.avatar_url,
-            displayName: data.name,
-          });
-        } else {
-          // Fallback for a user that might have been deleted
-          setUserData({ 
-            username: 'deleted_user',
-            displayName: 'Deleted User',
-            avatar_url: null 
-          });
-        }
-      }
-    }
-    fetchUserData();
-  }, [comment.userId]); // Depend only on comment.userId
-
-  const initials = userData?.displayName?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || userData?.username?.slice(0, 2).toUpperCase() || "U";
-  
-  return (
-    <div className="flex gap-3">
-      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green flex items-center justify-center font-bold text-sm overflow-hidden shrink-0">
-          {userData?.avatar_url ? <img src={userData.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : <span className="text-white">{initials}</span>}
-      </div>
-      <div className="flex-1">
-        <div className="rounded-xl px-3 py-2 font-body">
-          <div className="flex items-center gap-2">
-            <Link href={`/squad/${comment.userId}`} className="font-bold text-brand-gold text-sm hover:underline">@{userData?.username || 'user'}</Link>
-            <span className="text-xs text-muted-foreground">{timeAgo(comment.createdAt)}</span>
-          </div>
-          <p className="text-base">{comment.text}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CommentForm({ postId, postAuthorId, onCommentPosted, post }: { postId: string; postAuthorId: string; onCommentPosted: () => void; post: any; }) {
-  const [newComment, setNewComment] = React.useState("");
-  const [loading, setLoading] = React.useState(false);
-  const user = auth.currentUser;
-
-  const handleAddComment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newComment.trim() || !user) return;
-    setLoading(true);
-
-    const userDoc = await getDoc(fsDoc(db, "users", user.uid));
-    const userData = userDoc.exists() ? userDoc.data() : {};
-
-    const displayName = userData.name || user.displayName || 'Anonymous';
-    const username = userData.username || user.displayName || 'anonymous';
-    const avatarUrl = userData.avatar_url || user.photoURL || null;
-
-    const commentData = {
-        text: newComment,
-        userId: user.uid,
-        displayName: displayName,
-        username: username,
-        avatar_url: avatarUrl,
-        createdAt: serverTimestamp(),
-    };
-
-    await addDoc(collection(db, "posts", postId, "comments"), commentData);
-    
-    if (postAuthorId !== user.uid) {
-        const notifRef = collection(db, "users", postAuthorId, "notifications");
-        await addDoc(notifRef, {
-            type: 'comment',
-            fromUserId: user.uid,
-            fromUsername: username,
-            fromAvatarUrl: avatarUrl,
-            postId: postId,
-            postContent: newComment.substring(0, 50),
-            createdAt: serverTimestamp(),
-            read: false,
-        });
-    }
-
-    setNewComment("");
-    setLoading(false);
-    onCommentPosted();
-  };
-  
-  return (
-    <form onSubmit={handleAddComment} className="flex gap-2">
-      <input
-        type="text"
-        className="input-glass flex-1"
-        placeholder="Add a comment..."
-        value={newComment}
-        onChange={e => setNewComment(e.target.value)}
-        disabled={loading}
-      />
-      <button
-        type="submit"
-        className="btn-glass px-4"
-        disabled={loading || !newComment.trim()}
-      >
-        Post
-      </button>
-    </form>
-  )
 }

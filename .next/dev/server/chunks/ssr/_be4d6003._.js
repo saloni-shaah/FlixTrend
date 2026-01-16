@@ -115,7 +115,7 @@ function CreateDropPage() {
                 setUserProfile(userDoc.data());
             }
             if (promptId) {
-                const dropsQuery = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["query"])((0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["collection"])(db, 'posts'), (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["where"])('userId', '==', currentUser.uid), (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["where"])('promptId', '==', promptId), (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["where"])('type', '==', 'drop'));
+                const dropsQuery = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["query"])((0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["collection"])(db, 'drops'), (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["where"])('userId', '==', currentUser.uid), (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["where"])('promptId', '==', promptId));
                 const dropsSnapshot = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["getDocs"])(dropsQuery);
                 if (!dropsSnapshot.empty) {
                     setHasAlreadyDropped(true);
@@ -165,7 +165,7 @@ function CreateDropPage() {
             const imageRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$storage$2f$dist$2f$node$2d$esm$2f$index$2e$node$2e$esm$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["ref"])(storage, `drops/${user.uid}/drop_${Date.now()}_${image.name}`);
             await (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$storage$2f$dist$2f$node$2d$esm$2f$index$2e$node$2e$esm$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["uploadBytes"])(imageRef, image);
             const imageUrl = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$storage$2f$dist$2f$node$2d$esm$2f$index$2e$node$2e$esm$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["getDownloadURL"])(imageRef);
-            await (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["addDoc"])((0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["collection"])(db, 'posts'), {
+            await (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["addDoc"])((0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["collection"])(db, 'drops'), {
                 userId: user.uid,
                 username: userProfile.username || 'anonymous',
                 avatar_url: userProfile.avatar_url || null,
@@ -179,7 +179,6 @@ function CreateDropPage() {
                 publishAt: (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["serverTimestamp"])(),
                 likes: {},
                 commentCount: 0,
-                type: 'drop',
                 isVideo: false,
                 viewCount: 0
             });
@@ -196,7 +195,7 @@ function CreateDropPage() {
             children: "Loading..."
         }, void 0, false, {
             fileName: "[project]/src/app/create/drop/page.tsx",
-            lineNumber: 127,
+            lineNumber: 125,
             columnNumber: 14
         }, this);
     }
@@ -206,7 +205,7 @@ function CreateDropPage() {
             children: "Invalid or missing prompt. Please go back to the Drops page."
         }, void 0, false, {
             fileName: "[project]/src/app/create/drop/page.tsx",
-            lineNumber: 131,
+            lineNumber: 129,
             columnNumber: 12
         }, this);
     }
@@ -220,7 +219,7 @@ function CreateDropPage() {
                         className: "mx-auto h-16 w-16 text-green-500 mb-4"
                     }, void 0, false, {
                         fileName: "[project]/src/app/create/drop/page.tsx",
-                        lineNumber: 138,
+                        lineNumber: 136,
                         columnNumber: 17
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("h1", {
@@ -228,7 +227,7 @@ function CreateDropPage() {
                         children: "You've already dropped!"
                     }, void 0, false, {
                         fileName: "[project]/src/app/create/drop/page.tsx",
-                        lineNumber: 139,
+                        lineNumber: 137,
                         columnNumber: 17
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -236,7 +235,7 @@ function CreateDropPage() {
                         children: "You can only submit one drop per prompt. Check out the feed to see what others created!"
                     }, void 0, false, {
                         fileName: "[project]/src/app/create/drop/page.tsx",
-                        lineNumber: 140,
+                        lineNumber: 138,
                         columnNumber: 17
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -245,18 +244,18 @@ function CreateDropPage() {
                         children: "Back to Drops"
                     }, void 0, false, {
                         fileName: "[project]/src/app/create/drop/page.tsx",
-                        lineNumber: 141,
+                        lineNumber: 139,
                         columnNumber: 17
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/create/drop/page.tsx",
-                lineNumber: 137,
+                lineNumber: 135,
                 columnNumber: 13
             }, this)
         }, void 0, false, {
             fileName: "[project]/src/app/create/drop/page.tsx",
-            lineNumber: 136,
+            lineNumber: 134,
             columnNumber: 9
         }, this);
     }
@@ -268,7 +267,7 @@ function CreateDropPage() {
                 children: "Create a Drop"
             }, void 0, false, {
                 fileName: "[project]/src/app/create/drop/page.tsx",
-                lineNumber: 151,
+                lineNumber: 149,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -280,13 +279,13 @@ function CreateDropPage() {
                         children: prompt.text
                     }, void 0, false, {
                         fileName: "[project]/src/app/create/drop/page.tsx",
-                        lineNumber: 152,
+                        lineNumber: 150,
                         columnNumber: 56
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/create/drop/page.tsx",
-                lineNumber: 152,
+                lineNumber: 150,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -300,7 +299,7 @@ function CreateDropPage() {
                         placeholder: "Add some details about your drop... (optional)"
                     }, void 0, false, {
                         fileName: "[project]/src/app/create/drop/page.tsx",
-                        lineNumber: 155,
+                        lineNumber: 153,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -314,7 +313,7 @@ function CreateDropPage() {
                                     className: "w-full h-full object-cover rounded-lg"
                                 }, void 0, false, {
                                     fileName: "[project]/src/app/create/drop/page.tsx",
-                                    lineNumber: 166,
+                                    lineNumber: 164,
                                     columnNumber: 15
                                 }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                     className: "text-center",
@@ -323,7 +322,7 @@ function CreateDropPage() {
                                             className: "mx-auto h-12 w-12 text-gray-400"
                                         }, void 0, false, {
                                             fileName: "[project]/src/app/create/drop/page.tsx",
-                                            lineNumber: 169,
+                                            lineNumber: 167,
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -331,18 +330,18 @@ function CreateDropPage() {
                                             children: "Click to upload your drop image"
                                         }, void 0, false, {
                                             fileName: "[project]/src/app/create/drop/page.tsx",
-                                            lineNumber: 170,
+                                            lineNumber: 168,
                                             columnNumber: 17
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/app/create/drop/page.tsx",
-                                    lineNumber: 168,
+                                    lineNumber: 166,
                                     columnNumber: 15
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/app/create/drop/page.tsx",
-                                lineNumber: 164,
+                                lineNumber: 162,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -353,13 +352,13 @@ function CreateDropPage() {
                                 onChange: handleImageChange
                             }, void 0, false, {
                                 fileName: "[project]/src/app/create/drop/page.tsx",
-                                lineNumber: 174,
+                                lineNumber: 172,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/create/drop/page.tsx",
-                        lineNumber: 163,
+                        lineNumber: 161,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -373,37 +372,37 @@ function CreateDropPage() {
                                     className: "animate-spin h-5 w-5"
                                 }, void 0, false, {
                                     fileName: "[project]/src/app/create/drop/page.tsx",
-                                    lineNumber: 180,
+                                    lineNumber: 178,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                     children: "Submitting Drop..."
                                 }, void 0, false, {
                                     fileName: "[project]/src/app/create/drop/page.tsx",
-                                    lineNumber: 181,
+                                    lineNumber: 179,
                                     columnNumber: 15
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/app/create/drop/page.tsx",
-                            lineNumber: 179,
+                            lineNumber: 177,
                             columnNumber: 13
                         }, this) : 'Submit Drop'
                     }, void 0, false, {
                         fileName: "[project]/src/app/create/drop/page.tsx",
-                        lineNumber: 177,
+                        lineNumber: 175,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/create/drop/page.tsx",
-                lineNumber: 154,
+                lineNumber: 152,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/app/create/drop/page.tsx",
-        lineNumber: 150,
+        lineNumber: 148,
         columnNumber: 5
     }, this);
 }
@@ -414,17 +413,17 @@ function CreateDropPageWrapper() {
             children: "Loading Drop..."
         }, void 0, false, {
             fileName: "[project]/src/app/create/drop/page.tsx",
-            lineNumber: 192,
+            lineNumber: 190,
             columnNumber: 29
         }, void 0),
         children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(CreateDropPage, {}, void 0, false, {
             fileName: "[project]/src/app/create/drop/page.tsx",
-            lineNumber: 193,
+            lineNumber: 191,
             columnNumber: 13
         }, this)
     }, void 0, false, {
         fileName: "[project]/src/app/create/drop/page.tsx",
-        lineNumber: 192,
+        lineNumber: 190,
         columnNumber: 9
     }, this);
 }

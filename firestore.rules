@@ -113,10 +113,26 @@ service cloud.firestore {
         allow write: if false;
     }
 
-    // Drops: Allow signed-in users to create and read, but only the owner can update or delete.
+    // Drops: main document
     match /drops/{dropId} {
-      allow read, create: if isSignedIn();
-      allow update, delete: if isSignedIn() && request.auth.uid == resource.data.userId;
+      allow read: if isSignedIn();
+      allow create: if request.auth.uid == request.resource.data.userId;
+
+      // Allow update for owner, or for specific, controlled actions like liking.
+      allow update: if isSignedIn() && (
+        (request.auth.uid == resource.data.userId) ||
+        (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes']) &&
+          request.resource.data.likes.diff(resource.data.get('likes', {})).affectedKeys().hasOnly([request.auth.uid])
+        )
+      );
+      allow delete: if isSignedIn() && request.auth.uid == resource.data.userId;
+    }
+    
+    // Drops: subcollections
+    match /drops/{dropId}/{subcollection}/{docId} {
+        allow read, create: if isSignedIn();
+        allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
 
     // Prompts: 'current' is for the old system, 'dropPrompts' is the new system.

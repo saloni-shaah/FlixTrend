@@ -77,10 +77,9 @@ function DropPageContent() {
 
             // Check if user has already posted for this prompt
             const dropQuery = query(
-                collection(db, 'posts'), 
+                collection(db, 'drops'), 
                 where('userId', '==', user.uid),
-                where('promptId', '==', currentPrompt.id),
-                where('type', '==', 'drop')
+                where('promptId', '==', currentPrompt.id)
             );
             const dropSnap = await getDocs(dropQuery);
             const hasPosted = !dropSnap.empty;
@@ -89,9 +88,8 @@ function DropPageContent() {
             // If user has posted, fetch all drops for the feed
             if (hasPosted) {
                 const allDropsQuery = query(
-                    collection(db, 'posts'), 
+                    collection(db, 'drops'), 
                     where('promptId', '==', currentPrompt.id),
-                    where('type', '==', 'drop'),
                     orderBy('createdAt', 'desc')
                 );
                 const allDropsSnap = await getDocs(allDropsQuery);
@@ -147,7 +145,7 @@ function DropPageContent() {
 
             <div className="flex flex-col gap-6">
                 {drops.length > 0 ? (
-                    drops.map(drop => <PostCard key={drop.id} post={drop} />)
+                    drops.map(drop => <PostCard key={drop.id} post={drop} collectionName="drops" />)
                 ) : (
                      <div className="text-center text-gray-400 p-8 glass-card">
                         <p>No drops have been submitted yet. Be the first!</p>

@@ -43,10 +43,9 @@ function CreateDropPage() {
 
       if (promptId) {
           const dropsQuery = query(
-              collection(db, 'posts'), 
+              collection(db, 'drops'), 
               where('userId', '==', currentUser.uid),
-              where('promptId', '==', promptId),
-              where('type', '==', 'drop')
+              where('promptId', '==', promptId)
           );
           const dropsSnapshot = await getDocs(dropsQuery);
           if (!dropsSnapshot.empty) {
@@ -97,20 +96,19 @@ function CreateDropPage() {
       await uploadBytes(imageRef, image);
       const imageUrl = await getDownloadURL(imageRef);
 
-      await addDoc(collection(db, 'posts'), {
+      await addDoc(collection(db, 'drops'), {
         userId: user.uid,
         username: userProfile.username || 'anonymous',
         avatar_url: userProfile.avatar_url || null,
         promptId: promptId,
         promptText: prompt?.text,
-        content: details, // Mapped from 'details' for PostCard compatibility
-        mediaUrl: [imageUrl], // Mapped from 'imageUrl' for PostCard
+        content: details,
+        mediaUrl: [imageUrl],
         createdAt: serverTimestamp(),
-        publishAt: serverTimestamp(), // Added for sorting consistency
+        publishAt: serverTimestamp(),
         likes: {},
         commentCount: 0,
-        type: 'drop', // Special type for drops
-        isVideo: false, // Drops are images for now
+        isVideo: false,
         viewCount: 0,
       });
 
