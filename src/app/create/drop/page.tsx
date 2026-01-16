@@ -93,7 +93,7 @@ function CreateDropPage() {
     setIsSubmitting(true);
 
     try {
-      const imageRef = ref(storage, `user_uploads/${user.uid}/drop_${Date.now()}_${image.name}`);
+      const imageRef = ref(storage, `drops/${user.uid}/drop_${Date.now()}_${image.name}`);
       await uploadBytes(imageRef, image);
       const imageUrl = await getDownloadURL(imageRef);
 
@@ -194,4 +194,3 @@ export default function CreateDropPageWrapper() {
         </Suspense>
     );
 }
-
