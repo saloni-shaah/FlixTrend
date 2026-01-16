@@ -12,22 +12,20 @@ service firebase.storage {
     }
 
     // Post media
-    match /posts/{userId}/{fileName} {
+    match /posts/{userId}/{allPaths=**} {
       allow write: if request.auth != null && request.auth.uid == userId
-                  && request.resource.size < 200 * 1024 * 1024 // 200MB limit
-                  && request.resource.contentType.matches('image/.*|video/.*');
+                  && request.resource.size < 200 * 1024 * 1024;
     }
 
     // Flashes (Stories)
-    match /flashes/{userId}/{fileName} {
+    match /flashes/{userId}/{allPaths=**} {
        allow write: if request.auth != null && request.auth.uid == userId
-                   && request.resource.size < 20 * 1024 * 1024 // 20MB limit
-                   && request.resource.contentType.matches('image/.*|video/.*');
+                   && request.resource.size < 20 * 1024 * 1024;
     }
 
-    // Drops media
-    match /drops/{userId}/{allPaths=**} {
-      allow write: if request.auth != null && request.auth.uid == userId;
+    // Drops media (DEBUGGING)
+    match /drops/{allPaths=**} {
+      allow write: if request.auth != null;
     }
   }
 }

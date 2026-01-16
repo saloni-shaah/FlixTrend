@@ -1,6 +1,5 @@
 {
   "/create/drop/page": "app/create/drop/page.js",
-  "/drop/page": "app/drop/page.js",
   "/home/page": "app/home/page.js",
   "/page": "app/page.js"
 }
