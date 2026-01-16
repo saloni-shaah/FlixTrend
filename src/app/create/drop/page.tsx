@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -92,7 +93,7 @@ function CreateDropPage() {
     setIsSubmitting(true);
 
     try {
-      const imageRef = ref(storage, `posts/${user.uid}/drops/${Date.now()}_${image.name}`);
+      const imageRef = ref(storage, `user_uploads/${user.uid}/drop_${Date.now()}_${image.name}`);
       await uploadBytes(imageRef, image);
       const imageUrl = await getDownloadURL(imageRef);
 
@@ -193,3 +194,4 @@ export default function CreateDropPageWrapper() {
         </Suspense>
     );
 }
+
