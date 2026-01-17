@@ -1,5 +1,6 @@
 {
   "app": {
+    "[project]/src/app/_not-found/page": [],
     "[project]/src/app/create/page": [],
     "[project]/src/app/drop/page": [],
     "[project]/src/app/home/page": [],
