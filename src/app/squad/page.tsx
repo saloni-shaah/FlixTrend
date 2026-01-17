@@ -15,6 +15,7 @@ import { UserPlaylists } from "@/components/squad/UserPlaylists";
 import { UserCollections } from "@/components/squad/UserCollections";
 import { UserDownloads } from "@/components/squad/UserDownloads";
 import { AccoladeBadge } from "@/components/AccoladeBadge";
+import { CreatePostPrompt } from "@/components/CreatePostPrompt";
 
 
 const db = getFirestore(app);
@@ -136,7 +137,7 @@ function SquadPageContent() {
 
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col w-full pb-24">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col w-full items-center pb-24">
         {showFollowList && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" onClick={() => setShowFollowList(null)} />}
         <Link href="/settings">
             <motion.button
@@ -155,7 +156,7 @@ function SquadPageContent() {
       <motion.div 
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="relative h-40 md:h-60 w-full rounded-2xl overflow-hidden mb-8 glass-card">
+        className="relative h-40 md:h-60 w-full max-w-2xl rounded-2xl overflow-hidden mb-8 glass-card">
         {profile.banner_url ? (
           <img
             src={profile.banner_url}
@@ -234,6 +235,12 @@ function SquadPageContent() {
 
         <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="btn-glass mt-6" onClick={() => setShowEdit(true)}>Edit Profile</motion.button>
       </motion.div>
+      
+      {firebaseUser && firebaseUser.uid === profile.uid && (
+        <div className="w-full max-w-xl mt-8">
+            <CreatePostPrompt />
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex justify-center gap-2 md:gap-4 my-8 flex-wrap">
