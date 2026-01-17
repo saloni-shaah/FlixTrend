@@ -129,9 +129,6 @@ function DropPageContent() {
             <div className="text-center glass-card p-8">
               <h1 className="text-2xl font-bold mb-4">No active drop right now.</h1>
               <p className="text-gray-400 mb-6">Check back later for the next daily prompt!</p>
-               <Link href="/drops/archive" className="btn-glass flex items-center gap-2 mx-auto">
-                    <Archive size={16}/> View Past Drops
-                </Link>
             </div>
         </motion.div>
       );
@@ -150,11 +147,6 @@ function DropPageContent() {
 
         {userHasPosted ? (
             <div className="flex flex-col gap-6">
-                 <div className="flex justify-center">
-                     <Link href="/drops/archive" className="btn-glass flex items-center gap-2">
-                        <Archive size={16}/> View Past Drops
-                    </Link>
-                </div>
                 {drops.length > 0 ? (
                     drops.map(drop => <PostCard key={drop.id} post={drop} collectionName="drops" />)
                 ) : (
