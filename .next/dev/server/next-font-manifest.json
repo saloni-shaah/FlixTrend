@@ -1,10 +1,9 @@
 {
   "app": {
-    "[project]/src/app/create/drop/page": [],
+    "[project]/src/app/create/page": [],
     "[project]/src/app/drop/page": [],
     "[project]/src/app/home/page": [],
-    "[project]/src/app/page": [],
-    "[project]/src/app/squad/[uid]/page": []
+    "[project]/src/app/page": []
   },
   "appUsingSizeAdjust": false,
   "pages": {},
