@@ -44,7 +44,7 @@ export function CreatePostPrompt() {
     'U';
 
   return (
-    <div className="w-full max-w-xl mb-8 glass-card p-4 flex flex-col">
+    <div className="w-full max-w-xl glass-card p-4 flex flex-col">
       <div className="flex items-start w-full">
         <div className="w-12 h-12 rounded-full bg-accent-cyan flex-shrink-0 mr-4">
           {userProfile?.avatar_url ? (
