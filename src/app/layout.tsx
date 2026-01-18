@@ -1,7 +1,6 @@
 import "../styles/globals.css";
 import type { Metadata } from "next";
 import { Providers } from "./providers";
-import AppNavBar from "./AppNavBar"; // Import AppNavBar
 import BodyStyling from "./BodyStyling"; // Import BodyStyling
 import { FirebaseErrorDebugger } from "@/firebase/error-debugger";
 
@@ -95,10 +94,7 @@ export default function RootLayout({
       </head>
       <body className="relative min-h-screen">
         <Providers>
-          <BodyStyling />
-          {children}
-          <AppNavBar />
-          <FirebaseErrorDebugger />
+            {children}
         </Providers>
       </body>
     </html>
