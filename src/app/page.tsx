@@ -19,7 +19,7 @@ export default function LandingPage() {
 
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(user => {
-      if (user) router.replace("/home");
+      if (user) router.replace("/vibespace");
       else setLoading(false);
     });
     return () => unsub();
@@ -195,7 +195,7 @@ export default function LandingPage() {
               FlixTrend may not be for everyone — and that’s by design.
             </p>
             <p className="text-base md:text-lg text-zinc-400 font-light leading-relaxed">
-              If you’re looking for a quieter corner of the internet, a place for genuine sharing without the pressure to perform, you might find a home here.
+              If you’re looking for a quieter corner of the internet, a place for genuine sharing without the pressure to perform, you might find a vibespace here.
             </p>
           </motion.div>
         </section>

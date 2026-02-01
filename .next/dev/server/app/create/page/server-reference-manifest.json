@@ -1,20 +1,4 @@
 {
-  "node": {
-    "40a483d96f49057a6b4598d874d0d042836698563b": {
-      "workers": {
-        "app/create/page": {
-          "moduleId": "[project]/.next-internal/server/app/create/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": true,
-          "exportedName": "uploadFileToFirebaseStorage",
-          "filename": "src/app/actions.ts"
-        }
-      },
-      "layer": {
-        "app/create/page": "action-browser"
-      },
-      "exportedName": "uploadFileToFirebaseStorage",
-      "filename": "src/app/actions.ts"
-    }
-  },
+  "node": {},
   "edge": {}
 }

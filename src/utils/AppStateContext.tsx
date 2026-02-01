@@ -77,8 +77,8 @@ interface AppState {
   setSelectedChat: React.Dispatch<React.SetStateAction<any | null>>;
   drafts: { [chatId: string]: string };
   setDraft: (chatId: string, text: string) => void;
-  isScopeVideoPlaying: boolean;
-  setIsScopeVideoPlaying: React.Dispatch<React.SetStateAction<boolean>>;
+  isFlowVideoPlaying: boolean;
+  setIsFlowVideoPlaying: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const AppStateContext = createContext<AppState | undefined>(undefined);
@@ -126,7 +126,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [selectedChat, setSelectedChat] = useState<any | null>(null);
   const [drafts, setDrafts] = useState<{ [chatId: string]: string }>({});
-  const [isScopeVideoPlaying, setIsScopeVideoPlaying] = useState(false);
+  const [isFlowVideoPlaying, setIsFlowVideoPlaying] = useState(false);
   const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
 
 
@@ -389,8 +389,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setSelectedChat,
     drafts,
     setDraft,
-    isScopeVideoPlaying,
-    setIsScopeVideoPlaying,
+    isFlowVideoPlaying,
+    setIsFlowVideoPlaying,
   };
   
     const handleEnableClick = () => {

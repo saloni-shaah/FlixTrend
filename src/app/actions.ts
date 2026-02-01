@@ -1,94 +1,71 @@
 'use server';
 
 import { v2 as cloudinary } from 'cloudinary';
-import { revalidatePath } from 'next/cache';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getStorage } from 'firebase-admin/storage';
-import { v4 as uuidv4 } from 'uuid';
 
-// --- Cloudinary Configuration & Upload ---
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+/**
+ * Uploads a file to Cloudinary after ensuring the environment is configured.
+ * This is a robust Next.js Server Action.
+ * @param formData The FormData object containing the file to upload.
+ * @returns A promise that resolves to an object with success status and either a URL or an error message.
+ */
+export async function uploadToCloudinary(formData: FormData): Promise<{ success: boolean; url?: string; error?: string }> {
 
-export async function uploadToCloudinary(formData: FormData) {
-  const file = formData.get('file') as File;
-  const arrayBuffer = await file.arrayBuffer();
-  const buffer = new Uint8Array(arrayBuffer);
+  // --- Step 1: Load and Validate Credentials ---
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  const apiKey = process.env.CLOUDINARY_API_KEY;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
 
-  try {
-    const results: any = await new Promise((resolve, reject) => {
-      cloudinary.uploader.upload_stream({ resource_type: 'auto' }, (error, result) => {
-        if (error) {
-          reject(error);
-        } else {
-          resolve(result);
-        }
-      }).end(buffer);
-    });
-    return { success: true, url: results.secure_url };
-  } catch (error) {
-    console.error('Cloudinary upload failed:', error);
-    return { success: false, error: 'Upload failed' };
+  if (!cloudName || !apiKey || !apiSecret) {
+    const errorMessage = "Server Configuration Error: Cloudinary environment variables are not set. Please ensure CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET are in your .env.local file and that you have restarted the server.";
+    console.error(errorMessage);
+    return { success: false, error: errorMessage };
   }
-}
 
-// --- Firebase Admin Configuration & Upload ---
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY as string);
-
-if (!getApps().length) {
-  initializeApp({
-    credential: cert(serviceAccount),
-    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+  // --- Step 2: Configure Cloudinary for this specific call ---
+  cloudinary.config({
+    cloud_name: cloudName,
+    api_key: apiKey,
+    api_secret: apiSecret,
+    secure: true,
   });
-}
 
-export async function uploadFileToFirebaseStorage(formData: FormData) {
+  // --- Step 3: Process the File from FormData ---
   const file = formData.get('file') as File;
-  const userId = formData.get('userId') as string;
-
-  if (!file || !userId) {
-    return { failure: 'File or user ID is missing.' };
+  if (!file) {
+    return { success: false, error: "No file was found in the form data." };
   }
-  
-  const bucket = getStorage().bucket();
-  const fileExtension = file.name.split('.').pop();
-  const fileName = `${userId}/${uuidv4()}.${fileExtension}`;
-  const blob = bucket.file(fileName);
-  
-  const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
 
+  // --- Step 4: Upload the File ---
   try {
-    await new Promise((resolve, reject) => {
-      const blobStream = blob.createWriteStream({
-        metadata: {
-          contentType: file.type,
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    const url = await new Promise<string>((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          resource_type: 'auto',
         },
-      });
-
-      blobStream.on('error', (err) => {
-        console.error('Firebase upload stream error:', err);
-        reject(err);
-      });
-
-      blobStream.on('finish', () => {
-        // The public URL can be constructed like this.
-        // You might want to make it a signed URL for private files.
-        const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(fileName)}?alt=media`;
-        resolve(publicUrl);
-      });
-
-      blobStream.end(buffer);
+        (error, result) => {
+          if (error) {
+            console.error('Cloudinary Upload Callback Error:', error);
+            return reject(new Error(error.message));
+          }
+          if (result) {
+            return resolve(result.secure_url);
+          }
+          return reject(new Error('Cloudinary upload finished without a result or an error.'));
+        }
+      );
+      uploadStream.end(buffer);
     });
 
-    const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(fileName)}?alt=media`;
-    return { success: { url: publicUrl } };
+    // --- Step 5: Return Success ---
+    return { success: true, url };
 
   } catch (error) {
-    console.error('Firebase upload failed:', error);
-    return { failure: 'Firebase upload process failed.' };
+    // --- Step 6: Handle Errors Gracefully ---
+    const errorMessage = (error instanceof Error) ? error.message : "An unknown error occurred during the upload process.";
+    console.error("Error in uploadToCloudinary action:", errorMessage);
+    return { success: false, error: errorMessage };
   }
 }

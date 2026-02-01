@@ -151,7 +151,7 @@ export default function SignupPage() {
             await sendEmailVerification(user);
 
             setSuccess("Welcome! Your account is created. Redirecting...");
-            setTimeout(() => router.push("/home?new=true"), 3000);
+            setTimeout(() => router.push("/vibespace?new=true"), 3000);
         } catch (err: any) {
              if(err.code === 'auth/email-already-in-use') {
                 setError("This email is already in use. Please log in.");

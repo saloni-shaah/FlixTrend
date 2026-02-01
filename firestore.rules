@@ -89,28 +89,34 @@ service cloud.firestore {
     // Groups: Allow members to read, admins to update.
     match /groups/{groupId} {
       allow read, create: if isSignedIn();
-      allow update: if isSignedIn() && request.auth.uid in resource.data.admins;
+      allow update: if isSignedIn() && request.auth.uid in resource.data.members;
       allow delete: if isSignedIn() && resource.data.createdBy == request.auth.uid;
     }
 
-    // Chat Messages
-    match /chats/{chatId}/messages/{messageId} {
-      function isParticipant() {
+    // Chats & Messages
+    match /chats/{chatId} {
+      // These rules apply to potential (but non-existent) chat documents. 
+      // They are here for structure but the main logic is in the subcollection.
+      // A function to determine if a user is part of a DM or Group chat.
+      function isChatParticipant() {
         let isDmParticipant = request.auth.uid in chatId.split('_');
         let isGroupParticipant = exists(/databases/$(database)/documents/groups/$(chatId)) && 
                                  request.auth.uid in get(/databases/$(database)/documents/groups/$(chatId)).data.members;
         return isDmParticipant || isGroupParticipant;
       }
 
-      allow read, create: if isSignedIn() && isParticipant();
-      allow update: if isSignedIn() && isParticipant();
-      allow delete: if isSignedIn() && resource.data.sender == request.auth.uid;
+      // Messages subcollection
+      match /messages/{messageId} {
+        allow read, create, update: if isSignedIn() && isChatParticipant();
+        allow delete: if isSignedIn() && resource.data.sender == request.auth.uid;
+      }
     }
 
-    // Songs: Read-only.
+    // Songs: Read for any signed in user, create for owner.
     match /songs/{songId} {
         allow read: if isSignedIn();
-        allow write: if false;
+        allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+        allow update, delete: if false; // Future: allow update/delete for owner or admin
     }
 
     // Drops: main document

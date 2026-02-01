@@ -1,8 +1,8 @@
 {
   "app": {
-    "[project]/src/app/home/page": [],
+    "[project]/src/app/flix/page": [],
     "[project]/src/app/page": [],
-    "[project]/src/app/squad/page": []
+    "[project]/src/app/vibespace/page": []
   },
   "appUsingSizeAdjust": false,
   "pages": {},

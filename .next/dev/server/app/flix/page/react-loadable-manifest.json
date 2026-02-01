@@ -3,29 +3,29 @@
     "id": "[project]/src/utils/AppStateContext.tsx [app-client] (ecmascript, next/dynamic entry)",
     "files": [
       "static/chunks/src_utils_AppStateContext_tsx_211b0917._.js",
-      "static/chunks/src_utils_AppStateContext_tsx_9fe3fc6f._.js"
+      "static/chunks/src_utils_AppStateContext_tsx_a17054b9._.js"
     ]
   },
   "[project]/src/components/GamesHub.tsx [app-client] (ecmascript, next/dynamic entry)": {
     "id": "[project]/src/components/GamesHub.tsx [app-client] (ecmascript, next/dynamic entry)",
     "files": [
-      "static/chunks/src_f6af68a8._.js",
+      "static/chunks/src_3c799e42._.js",
       "static/chunks/node_modules_lucide-react_dist_esm_icons_acbb61e4._.js",
-      "static/chunks/src_components_GamesHub_tsx_d7f9a0a8._.js"
+      "static/chunks/src_components_GamesHub_tsx_88187cbe._.js"
     ]
   },
   "[project]/src/components/MusicDiscovery.tsx [app-client] (ecmascript, next/dynamic entry)": {
     "id": "[project]/src/components/MusicDiscovery.tsx [app-client] (ecmascript, next/dynamic entry)",
     "files": [
-      "static/chunks/_8e709a31._.js",
-      "static/chunks/src_components_MusicDiscovery_tsx_d7f9a0a8._.js"
+      "static/chunks/_59740400._.js",
+      "static/chunks/src_components_MusicDiscovery_tsx_88187cbe._.js"
     ]
   },
   "[project]/src/components/flix/Trendboard.tsx [app-client] (ecmascript, next/dynamic entry)": {
     "id": "[project]/src/components/flix/Trendboard.tsx [app-client] (ecmascript, next/dynamic entry)",
     "files": [
       "static/chunks/_d00394bd._.js",
-      "static/chunks/src_components_flix_Trendboard_tsx_d7f9a0a8._.js"
+      "static/chunks/src_components_flix_Trendboard_tsx_88187cbe._.js"
     ]
   }
 }

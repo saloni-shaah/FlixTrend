@@ -1,33 +1,25 @@
+
 "use client";
 
-import React, { useEffect, useState, useRef } from 'react';
-import { getFirestore, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, deleteDoc, updateDoc, doc as fsDoc, setDoc, getDoc, runTransaction } from "firebase/firestore";
-import { FaPlay, FaRegComment, FaExclamationTriangle, FaVolumeMute, FaUserSlash, FaLink, FaMusic } from "react-icons/fa";
-import { Repeat2, Star, Share, MessageCircle, Bookmark, MapPin, Smile, Download, X, MoreVertical, Check, ChevronRight, Circle, ThumbsUp, ThumbsDown, Edit, Trash, Eye, AlertCircle, Sparkles } from "lucide-react";
+import React, { useEffect, useState, useMemo } from 'react';
+import { getFirestore, collection, query, onSnapshot, doc as fsDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { FaMusic } from "react-icons/fa";
+import { Repeat2, MapPin, Smile, MoreVertical, Edit, Trash, Eye, Sparkles, Zap } from "lucide-react";
 import { auth, app } from '@/utils/firebaseClient';
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
-import { ShareModal } from './ShareModal';
-import { SignalShareModal } from './SignalShareModal';
-import { AddToCollectionModal } from './AddToCollectionModal';
-import { OptimizedImage } from './OptimizedImage';
-import { FlixTrendLogo } from './FlixTrendLogo';
-import { savePostForOffline, isPostDownloaded, removeDownloadedPost } from '@/utils/offline-db';
+import { motion } from "framer-motion";
 import { getFunctions, httpsCallable } from "firebase/functions";
-import { CheckCircle, Award, Mic, Crown, Zap, Rocket, Search, Pin, Phone, Mail, Folder } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils"
 import { InFeedVideoPlayer } from './video/InFeedVideoPlayer';
 import { PostActions } from './PostActions';
 import { StreamViewer } from './StreamViewer';
 import { EditPostModal } from './squad/EditPostModal';
 import { CommentModal } from './CommentModal';
-
 
 const db = getFirestore(app);
 const functions = getFunctions(app);
@@ -38,37 +30,21 @@ const timeAgo = (timestamp: any): string => {
     if (isNaN(date.getTime())) {
         return "Just now";
     }
-
     const now = new Date();
     const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-    const days = seconds / 86400;
-
     if (seconds < 10) return "Just now";
     if (seconds < 60) return `${Math.floor(seconds)}s ago`;
     if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
     if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-
+    const days = seconds / 86400;
     if (days < 2) return "Yesterday";
     if (days <= 7) return `${Math.floor(days)}d ago`;
-
     const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
     if (date.getFullYear() !== now.getFullYear()) {
         options.year = 'numeric';
     }
     return date.toLocaleDateString('en-US', options);
 };
-
-const Watermark = ({ isAnimated = false }: { isAnimated?: boolean }) => (
-    <div
-      className={`absolute flex items-center gap-1.5 bg-black/40 text-white py-1 px-2 rounded-full text-xs pointer-events-none z-10 ${
-        isAnimated ? 'animate-[float-watermark_10s_ease-in-out_infinite]' : 'bottom-2 right-2'
-      }`}
-    >
-        <FlixTrendLogo size={16} />
-        <span className="font-bold">FlixTrend</span>
-    </div>
-);
-
 
 export function PostCard({ post, isShortVibe = false, collectionName = 'posts' }: { post: any; isShortVibe?: boolean, collectionName?: string }) {
   const [showComments, setShowComments] = React.useState(false);
@@ -79,6 +55,15 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts' }
 
   const currentUser = auth.currentUser;
   const deletePostCallable = httpsCallable(functions, 'deletePost');
+
+  const { totalVotes, maxVotes, maxVoteIndex } = useMemo(() => {
+    if (post.type !== 'poll') return { totalVotes: 0, maxVotes: 0, maxVoteIndex: -1 };
+    const voteCounts = Object.values(pollVotes).map(v => v.count);
+    const total = voteCounts.reduce((sum, count) => sum + count, 0);
+    const max = Math.max(0, ...voteCounts);
+    const maxIndex = max > 0 ? voteCounts.indexOf(max) : -1;
+    return { totalVotes: total, maxVotes: max, maxVoteIndex: maxIndex };
+  }, [pollVotes, post.type]);
   
   React.useEffect(() => {
     if (!currentUser || post.type !== "poll" || !post.pollOptions) return;
@@ -92,7 +77,7 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts' }
       let userVote: number | null = null;
       snap.forEach(doc => {
         const { optionIdx, userId } = doc.data();
-        if (votes[optionIdx]) {
+        if (votes[optionIdx] !== undefined) {
             votes[optionIdx].count++;
             votes[optionIdx].voters.push(userId);
         }
@@ -105,7 +90,6 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts' }
     return () => unsubPollVotes();
   }, [post.id, currentUser, post.type, post.pollOptions, collectionName]);
 
-  // Real-time listener for viewCount
   useEffect(() => {
     const postRef = fsDoc(db, collectionName, post.id);
     const unsubscribe = onSnapshot(postRef, (doc) => {
@@ -136,7 +120,7 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts' }
     const contentPost = p.type === 'relay' ? p.originalPost : p;
     const initials = contentPost.displayName?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || contentPost.username?.slice(0, 2).toUpperCase() || "U";
     const mediaUrls = Array.isArray(contentPost.mediaUrl) ? contentPost.mediaUrl : (contentPost.mediaUrl ? [contentPost.mediaUrl] : []);
-    
+
     return (
         <>
             <div className="flex items-center gap-3 mb-2">
@@ -180,8 +164,8 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts' }
                 </div>
             )}
 
-            {contentPost.content && (contentPost.type !== 'poll' || (contentPost.type === 'poll' && !contentPost.pollOptions)) && (
-                <div className={`whitespace-pre-line mb-2 px-4 py-3 rounded-xl ${isShortVibe ? 'text-white text-base font-body line-clamp-2 text-left' : 'text-[1.15rem] font-body'}`} style={{ backgroundColor: contentPost.backgroundColor && !isShortVibe ? contentPost.backgroundColor : 'transparent', color: contentPost.backgroundColor && contentPost.backgroundColor !== '#ffffff' && !isShortVibe ? 'hsl(var(--foreground))' : 'inherit', textShadow: isShortVibe ? "0 1px 4px #000" : "none" }}>
+            {contentPost.content && (
+                 <div className={`whitespace-pre-line mb-2 px-4 py-3 rounded-xl ${isShortVibe ? 'text-white text-base line-clamp-2 text-left' : 'text-[1.15rem]'} ${contentPost.fontStyle || 'font-body'}`} style={{ backgroundColor: contentPost.backgroundColor && !isShortVibe ? contentPost.backgroundColor : 'transparent', color: contentPost.backgroundColor && contentPost.backgroundColor !== '#ffffff' && !isShortVibe ? 'hsl(var(--foreground))' : 'inherit', textShadow: isShortVibe ? "0 1px 4px #000" : "none" }}>
                     {contentPost.content}
                 </div>
             )}
@@ -201,27 +185,62 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts' }
                  <InFeedVideoPlayer 
                     mediaUrls={mediaUrls} 
                     post={contentPost}
+                    navigatesToWatchPage={true}
                  />
             )}
 
             {contentPost.type === "poll" && contentPost.pollOptions && (
-                <div className="flex flex-col gap-2 p-4">
-                    <div className="font-bold text-brand-gold mb-3">{contentPost.content}</div>
-                    {contentPost.pollOptions.map((opt: string, idx: number) => {
-                        const voteData = pollVotes[idx] || { count: 0, voters: [] };
-                        const totalVotes = Object.values(pollVotes).reduce((sum, current) => sum + current.count, 0);
-                        const percent = totalVotes > 0 ? Math.round((voteData.count / totalVotes) * 100) : 0;
-                        return (
-                            <button key={idx} className={`w-full p-2 rounded-full font-bold transition-all relative overflow-hidden btn-glass`}
-                                onClick={() => handlePollVote(idx)} disabled={userPollVote !== null}>
-                                {userPollVote !== null && <div className="absolute left-0 top-0 h-full bg-brand-gold/50" style={{ width: `${percent}%` }} />}
-                                <div className="relative flex justify-between z-10 px-2">
-                                    <span>{opt}</span>
-                                    {userPollVote !== null && <span>{percent}% ({voteData.count})</span>}
-                                </div>
-                            </button>
-                        );
-                    })}
+                <div className="flex flex-col gap-2.5 p-4">
+                    <div className="font-bold text-brand-gold mb-3 text-lg">{contentPost.question}</div>
+                    <motion.div className="flex flex-col gap-3">
+                        {contentPost.pollOptions.map((opt: any, idx: number) => {
+                            const voteData = pollVotes[idx] || { count: 0 };
+                            const percent = totalVotes > 0 ? Math.round((voteData.count / totalVotes) * 100) : 0;
+                            const hasVoted = userPollVote !== null;
+                            const isQuiz = contentPost.correctAnswerIndex !== null && contentPost.correctAnswerIndex !== undefined;
+                            
+                            const isUserChoice = userPollVote === idx;
+                            const isCorrectAnswer = isQuiz && contentPost.correctAnswerIndex === idx;
+                            const isMostVoted = !isQuiz && idx === maxVoteIndex;
+
+                            let barColor = "";
+                            if (hasVoted) {
+                                if(isQuiz) {
+                                    barColor = isCorrectAnswer ? "bg-green-500" : (isUserChoice ? "bg-red-500" : "bg-gray-600/70");
+                                } else {
+                                    barColor = isMostVoted ? "bg-purple-500" : "bg-green-500/80";
+                                }
+                            }
+
+                            return (
+                                <motion.button
+                                    key={idx}
+                                    className={`w-full p-3 rounded-xl font-bold transition-shadow relative overflow-hidden border-2`}
+                                    onClick={() => handlePollVote(idx)}
+                                    disabled={hasVoted}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: idx * 0.1 + 0.2 }}
+                                    style={{
+                                        borderColor: hasVoted && isUserChoice ? (isQuiz ? (isCorrectAnswer ? '#22c55e' : '#ef4444') : 'transparent') : 'transparent',
+                                    }}
+                                >
+                                    {hasVoted &&
+                                        <motion.div
+                                            className={`absolute left-0 top-0 h-full ${barColor} opacity-40`}
+                                            initial={{ width: 0 }}
+                                            animate={{ width: `${percent}%` }}
+                                            transition={{ duration: 0.8, ease: "easeInOut" }}
+                                        />
+                                    }
+                                    <div className="relative flex justify-between items-center z-10 px-2">
+                                        <span className={`transition-colors ${hasVoted && isCorrectAnswer ? 'text-green-300' : ''}`}>{opt.text}</span>
+                                        {hasVoted && <span className="text-sm text-gray-300 font-medium">{percent}% ({voteData.count})</span>}
+                                    </div>
+                                </motion.button>
+                            );
+                        })}
+                    </motion.div>
                 </div>
             )}
             
@@ -251,7 +270,7 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts' }
                     </div>
                     <span className="font-headline text-white text-base group-hover:underline">@{post.username || "user"}</span>
                 </Link>
-                <p className="text-white text-sm font-body line-clamp-3">{post.content}</p>
+                <p className={`text-white text-sm line-clamp-3 ${post.fontStyle || 'font-body'}`}>{post.content || post.question}</p>
                  {post.song && (
                     <div className="flex items-center gap-2 text-white text-sm">
                         <FaMusic /> <span>{post.song.name} - {post.song.artists.join(", ")}</span>

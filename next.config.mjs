@@ -28,6 +28,11 @@ const withPWA = createNextPwa({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '50mb', // Increase upload limit for music files
+    },
+  },
   typescript: {
     ignoreBuildErrors: true,
   },

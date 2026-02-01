@@ -1,6 +1,7 @@
 
 "use client";
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation'; // Import useRouter
 import { OptimizedVideo } from '../OptimizedVideo';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Pause, Volume2, VolumeX, Maximize, PictureInPicture2, Youtube } from 'lucide-react';
@@ -19,19 +20,29 @@ function formatTime(seconds: number) {
     return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
-export function InFeedVideoPlayer({ mediaUrls, post }: { mediaUrls: string[]; post: any }) {
+// Add navigatesToWatchPage prop
+export function InFeedVideoPlayer({ mediaUrls, post, navigatesToWatchPage = false }: { mediaUrls: string[]; post: any; navigatesToWatchPage?: boolean }) {
+    const router = useRouter(); // Initialize useRouter
     const videoUrl = mediaUrls.find(url => url.includes('.mp4') || url.includes('.webm') || url.includes('.ogg'));
     const viewCountedRef = useRef(false);
 
+    // This part remains the same, if it's not a video, it renders an image.
     if (!videoUrl) {
-        if (mediaUrls && mediaUrls.length > 0) {
-            return (
-                <div className="mt-2 rounded-xl overflow-hidden">
-                    <OptimizedImage src={mediaUrls[0]} alt="Post media" />
+        const imageUrl = mediaUrls && mediaUrls.length > 0 ? mediaUrls[0] : null;
+        const content = imageUrl ? <OptimizedImage src={imageUrl} alt="Post media" /> : null;
+        
+        if (navigatesToWatchPage && post.id) {
+             return (
+                <div className="mt-2 rounded-xl overflow-hidden cursor-pointer" onClick={() => router.push(`/watch?v=${post.id}`)}>
+                    {content}
                 </div>
             );
         }
-        return null;
+        return (
+            <div className="mt-2 rounded-xl overflow-hidden">
+                {content}
+            </div>
+        );
     }
     
     const containerRef = useRef<HTMLDivElement>(null);
@@ -98,7 +109,16 @@ export function InFeedVideoPlayer({ mediaUrls, post }: { mediaUrls: string[]; po
         video.currentTime = video.duration * percentage;
     };
 
+    // Modified handleContainerClick
     const handleContainerClick = (e: React.MouseEvent) => {
+        if (navigatesToWatchPage) {
+            if (post.id) {
+                router.push(`/watch?v=${post.id}`);
+            }
+            return;
+        }
+
+        // Keep original double-tap/single-tap behavior for the watch page itself
         const now = Date.now();
         const DOUBLE_TAP_DELAY = 300;
         if (now - lastTap.current < DOUBLE_TAP_DELAY) {
@@ -119,12 +139,16 @@ export function InFeedVideoPlayer({ mediaUrls, post }: { mediaUrls: string[]; po
 
     const handlePlay = () => {
         setIsPlaying(true);
-        incrementViewCount();
+        // Only increment view count if the video is NOT on the watch page (i.e., it's in a feed)
+        // On the watch page, the view will be counted on page load.
+        if (navigatesToWatchPage) {
+            incrementViewCount();
+        }
     };
     
     useEffect(() => {
         const video = videoRef.current;
-        if (!video) return;
+        if (!video || navigatesToWatchPage) return; // Don't add keyboard shortcuts for the feed player
 
         const handleKeyDown = (e: KeyboardEvent) => {
             if(document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
@@ -156,8 +180,33 @@ export function InFeedVideoPlayer({ mediaUrls, post }: { mediaUrls: string[]; po
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
         };
-    }, [togglePlay, toggleMute]);
+    }, [togglePlay, toggleMute, navigatesToWatchPage]);
 
+    // Simplified view for the feed player
+    if (navigatesToWatchPage) {
+        return (
+             <div
+                className="w-full h-full relative cursor-pointer bg-black mt-2 rounded-xl overflow-hidden"
+                onClick={handleContainerClick}
+            >
+                <OptimizedVideo
+                    ref={videoRef}
+                    src={videoUrl}
+                    className="w-full h-full object-contain"
+                    muted // Autoplay muted
+                    loop
+                    playsInline // For mobile
+                    onPlay={handlePlay}
+                />
+                <Watermark />
+                <div className="absolute inset-0 bg-black/30 flex items-center justify-center pointer-events-none">
+                     <Play size={64} className="text-white/80 drop-shadow-lg" />
+                </div>
+            </div>
+        )
+    }
+
+    // Full player for the watch page
     return (
         <TheaterModeContainer isTheaterMode={isTheaterMode} setIsTheaterMode={setIsTheaterMode}>
             <div
@@ -176,6 +225,7 @@ export function InFeedVideoPlayer({ mediaUrls, post }: { mediaUrls: string[]; po
                     onPlay={handlePlay}
                     onPause={() => setIsPlaying(false)}
                     loop={false}
+                    autoPlay // Autoplay on the watch page
                 />
                 <Watermark isAnimated={isPlaying} />
 

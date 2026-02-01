@@ -78,7 +78,7 @@ export default function PremiumPage() {
           <FlixTrendLogo size={40} />
           <span className="font-headline text-2xl text-accent-cyan font-bold tracking-wide">FlixTrend</span>
         </Link>
-        <Link href="/home" className="px-5 py-2 rounded-full border-2 border-accent-cyan text-accent-cyan font-bold bg-black/30 hover:bg-accent-cyan hover:text-primary transition-all">Back to App</Link>
+        <Link href="/vibespace" className="px-5 py-2 rounded-full border-2 border-accent-cyan text-accent-cyan font-bold bg-black/30 hover:bg-accent-cyan hover:text-primary transition-all">Back to App</Link>
       </nav>
 
       <div className="max-w-4xl mx-auto pt-28 pb-20 px-4 flex flex-col items-center">

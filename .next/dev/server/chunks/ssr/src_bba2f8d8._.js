@@ -35,7 +35,7 @@ function LoginWithEmail() {
                     if (email) {
                         await (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$auth$2f$dist$2f$node$2d$esm$2f$index$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["signInWithEmailLink"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$utils$2f$firebaseClient$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["auth"], email, window.location.href);
                         window.localStorage.removeItem('emailForSignIn');
-                        router.push('/home?new=true');
+                        router.push('/vibespace?new=true');
                     }
                 } catch (err) {
                     setError('Failed to sign in. The link may have expired or been used already.');
@@ -1493,7 +1493,7 @@ function LoginPageContent() {
         setLoading(true);
         try {
             await (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$auth$2f$dist$2f$node$2d$esm$2f$index$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["signInWithEmailAndPassword"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$utils$2f$firebaseClient$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["auth"], email, password);
-            router.push("/home");
+            router.push("/vibespace");
         } catch (err) {
             setError("Invalid email or password.");
             console.error("Email Sign In Error:", err);
@@ -1506,7 +1506,7 @@ function LoginPageContent() {
         setLoading(true);
         try {
             await confirmationResult.confirm(otp);
-            router.push("/home");
+            router.push("/vibespace");
         } catch (err) {
             setError("Invalid OTP. Please try again.");
             console.error("OTP Verification Error:", err);

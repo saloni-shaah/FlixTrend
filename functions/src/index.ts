@@ -100,7 +100,7 @@ export const sendNotification = v1.firestore
         title: notificationTitle,
         body: notificationBody,
         icon: fromAvatarUrl || '/icon-192x192.png',
-        click_action: 'https://flixtrend.in/home', 
+        click_action: 'https://flixtrend.in/vibespace', 
       },
     };
 

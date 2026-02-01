@@ -67,7 +67,7 @@ function LoginPageContent() {
     setLoading(true);
     try {
         await signInWithEmailAndPassword(auth, email, password);
-        router.push("/home");
+        router.push("/vibespace");
     } catch (err: any) {
         setError("Invalid email or password.");
         console.error("Email Sign In Error:", err);
@@ -81,7 +81,7 @@ function LoginPageContent() {
     setLoading(true);
     try {
       await confirmationResult.confirm(otp);
-      router.push("/home");
+      router.push("/vibespace");
     } catch (err: any) {
       setError("Invalid OTP. Please try again.");
       console.error("OTP Verification Error:", err);

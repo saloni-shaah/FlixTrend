@@ -1,8 +1,8 @@
 import "../styles/globals.css";
 import type { Metadata } from "next";
 import { Providers } from "./providers";
-import BodyStyling from "./BodyStyling"; // Import BodyStyling
-import { FirebaseErrorDebugger } from "@/firebase/error-debugger";
+import BodyStyling from "./BodyStyling";
+import MainLayout from './MainLayout'; // Import the new MainLayout
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://flixtrend.in';
 
@@ -94,7 +94,8 @@ export default function RootLayout({
       </head>
       <body className="relative min-h-screen">
         <Providers>
-            {children}
+          <BodyStyling />
+          <MainLayout>{children}</MainLayout>
         </Providers>
       </body>
     </html>
