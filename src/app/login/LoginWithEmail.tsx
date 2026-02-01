@@ -22,7 +22,7 @@ export default function LoginWithEmail() {
           if (email) {
             await signInWithEmailLink(auth, email, window.location.href);
             window.localStorage.removeItem('emailForSignIn');
-            router.push('/home?new=true');
+            router.push('/vibespace?new=true');
           }
         } catch (err: any) {
           setError('Failed to sign in. The link may have expired or been used already.');

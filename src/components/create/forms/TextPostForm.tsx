@@ -1,75 +1,42 @@
 "use client";
 import React, { useState } from 'react';
-import { MapPin, Smile, Locate, Loader } from 'lucide-react';
-import { uploadFileToFirebaseStorage } from '@/app/actions';
-import { auth } from '@/utils/firebaseClient';
+import { MapPin, Smile, Locate, Loader, Slash } from 'lucide-react';
 
+// New curated color palette
 const backgroundColors = [
-  '#ffffff', '#ffadad', '#ffd6a5', '#fdffb6', '#caffbf', '#9bf6ff',
-  '#a0c4ff', '#bdb2ff', '#ffc6ff', '#fffffc', '#f1f1f1', '#e0e0e0'
+  '#ffadad', // Light Red
+  '#ffd6a5', // Light Orange
+  '#fdffb6', // Light Yellow
+  '#caffbf', // Light Green
+  '#9bf6ff', // Light Cyan
+  '#a0c4ff', // Light Blue
+  '#bdb2ff', // Light Purple
+  '#ffc6ff', // Light Pink
 ];
 
 const fontStyles = [
-    { name: 'Default', style: 'font-body' },
     { name: 'Cursive', style: 'font-cursive' },
     { name: 'Calligraphy', style: 'font-calligraphy' },
-    { name: 'Italiano', style: 'font-italiano' }
+    { name: 'Serif', style: 'font-serif' },
+    { name: 'Mono', style: 'font-mono' }
 ];
 
 export function TextPostForm({ data, onDataChange }: { data: any, onDataChange: (data: any) => void }) {
     const [isFetchingLocation, setIsFetchingLocation] = useState(false);
     
-    // Local state for image preview before it's uploaded and the final URL is stored in the parent.
-    const [bgImagePreview, setBgImagePreview] = useState<string | null>(data.backgroundImage || null);
-    const [isUploading, setIsUploading] = useState(false);
-    
-    // Derived state from props for the textarea background
-    const currentBg = data.backgroundImage || data.backgroundColor || '#ffffff';
+    const currentBg = data.backgroundColor;
 
     const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
         onDataChange({ ...data, [e.target.name]: e.target.value });
     };
 
-    const handleBgColorChange = (color: string) => {
-        setBgImagePreview(null);
-        onDataChange({ ...data, backgroundColor: color, backgroundImage: null });
-    };
-    
-    const handleImageBgChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            const user = auth.currentUser;
-            if (!user) {
-                alert("You must be logged in to upload images.");
-                return;
-            }
-
-            setIsUploading(true);
-            const previewUrl = URL.createObjectURL(file);
-            setBgImagePreview(previewUrl);
-
-            try {
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('userId', user.uid);
-                const result = await uploadFileToFirebaseStorage(formData);
-
-                if (result.success?.url) {
-                    onDataChange({ ...data, backgroundImage: result.success.url, backgroundColor: null });
-                } else {
-                    throw new Error(result.failure || "Background image upload failed.");
-                }
-            } catch (error: any) {
-                alert(error.message);
-                setBgImagePreview(null); // Clear preview on error
-            } finally {
-                setIsUploading(false);
-            }
-        }
+    const handleBgColorChange = (color: string | null) => {
+        onDataChange({ ...data, backgroundColor: color });
     };
     
     const handleFontStyleChange = (style: string) => {
-        onDataChange({ ...data, fontStyle: style });
+        const newStyle = data.fontStyle === style ? 'font-body' : style;
+        onDataChange({ ...data, fontStyle: newStyle });
     }
 
     const handleGetLocation = () => {
@@ -114,10 +81,7 @@ export function TextPostForm({ data, onDataChange }: { data: any, onDataChange: 
                 value={data.content || ''}
                 onChange={handleTextChange}
                 style={{
-                    backgroundColor: data.backgroundImage ? 'transparent' : data.backgroundColor,
-                    backgroundImage: data.backgroundImage ? `url(${data.backgroundImage})` : 'none',
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
+                    backgroundColor: data.backgroundColor || 'transparent',
                 }}
             />
             
@@ -144,15 +108,19 @@ export function TextPostForm({ data, onDataChange }: { data: any, onDataChange: 
                 </div>
 
                 <h4 className="font-bold text-sm text-accent-cyan">Background Color</h4>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 items-center">
+                    <button 
+                        type="button" 
+                        onClick={() => handleBgColorChange(null)} 
+                        className={`w-8 h-8 rounded-full border-2 flex items-center justify-center bg-black/20`}
+                        style={{ borderColor: currentBg === null ? 'var(--accent-pink)' : 'transparent' }}
+                    >
+                        <Slash size={18} className="text-gray-400"/>
+                    </button>
                     {backgroundColors.map(color => (
                         <button type="button" key={color} onClick={() => handleBgColorChange(color)} className="w-8 h-8 rounded-full border-2" style={{ backgroundColor: color, borderColor: currentBg === color ? 'var(--accent-pink)' : 'transparent' }} />
                     ))}
                 </div>
-
-                <h4 className="font-bold text-sm text-accent-cyan">Or Upload Background Image</h4>
-                <input type="file" accept="image/*" onChange={handleImageBgChange} className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent-pink/20 file:text-accent-pink hover:file:bg-accent-pink/40"/>
-                {isUploading && <p className="text-sm text-accent-cyan animate-pulse">Uploading background...</p>}
             </div>
         </div>
     );

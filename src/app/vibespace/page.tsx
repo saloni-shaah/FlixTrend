@@ -17,6 +17,7 @@ import Link from "next/link";
 import { WelcomeAnimation } from "@/components/WelcomeAnimation";
 import { redisClient } from '@/utils/redis';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
+import { FlixFlameIcon } from '@/components/icons/FlixFlameIcon';
 
 const MusicDiscovery = dynamic(() => import('@/components/MusicDiscovery').then(mod => mod.MusicDiscovery), { ssr: false });
 const FlashModal = dynamic(() => import('@/components/FlashModal'), { ssr: false });
@@ -32,7 +33,7 @@ const categories = [
     { id: 'culture', name: 'Culture', icon: <Popcorn />, sub: ['Music', 'Movies', 'Trends', 'Community'] },
 ];
 
-function HomePageContent() {
+function VibeSpaceContent() {
   const [posts, setPosts] = useState<any[]>([]);
   const [flashes, setFlashes] = useState<any[]>([]);
   const [selectedFlashUser, setSelectedFlashUser] = useState<any | null>(null);
@@ -88,7 +89,7 @@ function HomePageContent() {
   useEffect(() => {
     if (hasMounted && searchParams.get('new') === 'true') {
         setShowWelcomeAnimation(true);
-        router.replace('/home', { scroll: false });
+        router.replace('/vibespace', { scroll: false });
     }
   }, [searchParams, hasMounted, router]);
 
@@ -204,7 +205,8 @@ function HomePageContent() {
         const q = query(
             collection(db, "flashes"), 
             where("expiresAt", ">", new Date()),
-            orderBy("expiresAt", "desc")
+            where("createdAt", "<=", new Date()),
+            orderBy("createdAt", "desc")
         );
         const unsub = onSnapshot(q, (snapshot) => {
             setFlashes(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
@@ -425,6 +427,22 @@ function HomePageContent() {
         </motion.button>
       </div>
       
+        <motion.div
+            initial={{ scale: 0, y: 100 }}
+            animate={{ scale: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.5 }}
+            whileHover={{ scale: 1.1, rotate: 5 }}
+            whileTap={{ scale: 0.9 }}
+            className="fixed bottom-24 md:bottom-8 left-6 z-50"
+        >
+            <Link
+                href="/flix"
+                className="w-14 h-14 rounded-full bg-background/50 backdrop-blur-md border border-white/10 flex items-center justify-center text-white shadow-lg"
+                aria-label="Go to Flix Hub"
+            >
+                <FlixFlameIcon className="w-8 h-8" />
+            </Link>
+        </motion.div>
 
       <AnimatePresence>
         {selectedFlashUser && <FlashModal userFlashes={selectedFlashUser} onClose={() => handleFlashModalClose(selectedFlashUser?.userId)} />}
@@ -434,10 +452,10 @@ function HomePageContent() {
   );
 }
 
-export default function HomePage() {
+export default function VibeSpacePage() {
   return (
     <Suspense fallback={<VibeSpaceLoader />}>
-      <HomePageContent />
+      <VibeSpaceContent />
     </Suspense>
   );
 }

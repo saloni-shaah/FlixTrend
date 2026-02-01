@@ -2917,7 +2917,7 @@ function Step3({ onNext, onBack, postData }) {
             if (postData.postType === 'live' && livekitRoomName) {
                 router.push(`/broadcast/${encodeURIComponent(livekitRoomName)}`);
             } else {
-                router.push('/home');
+                router.push('/vibespace');
             }
         } catch (error) {
             console.error("Error publishing post:", error);

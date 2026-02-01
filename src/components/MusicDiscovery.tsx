@@ -52,38 +52,43 @@ function AddMusicModal({ onClose }: { onClose: () => void }) {
         setError('');
         try {
             const user = auth.currentUser;
-            if (!user) throw new Error("Not logged in");
+            if (!user) throw new Error("You must be logged in to upload music.");
 
+            // --- Step 1: Upload Audio File ---
             const audioFormData = new FormData();
             audioFormData.append('file', audioFile);
             const audioUploadResult = await uploadToCloudinary(audioFormData);
-
             if (!audioUploadResult.success || !audioUploadResult.url) {
-                throw new Error('Audio upload failed.');
+                throw new Error(`Audio upload failed: ${audioUploadResult.error || 'Unknown reason'}`);
             }
 
+            // --- Step 2: Upload Album Art File ---
             const artFormData = new FormData();
             artFormData.append('file', albumArtFile);
             const artUploadResult = await uploadToCloudinary(artFormData);
-
             if (!artUploadResult.success || !artUploadResult.url) {
-                throw new Error('Album art upload failed.');
+                // Note: If this fails, the audio is already on Cloudinary.
+                // In a production app, you might want to delete it.
+                throw new Error(`Album art upload failed: ${artUploadResult.error || 'Unknown reason'}`);
             }
 
+            // --- Step 3: Add Song to Firestore ---
             await addDoc(collection(db, 'songs'), {
                 ...form,
                 audioUrl: audioUploadResult.url,
                 albumArtUrl: artUploadResult.url,
                 userId: user.uid,
-                username: user.displayName,
+                username: user.displayName || "Anonymous",
                 createdAt: serverTimestamp(),
+                playCount: 0,
             });
 
-            onClose();
+            onClose(); // Success!
         } catch (err: any) {
-            setError(err.message);
+            setError(err.message); // Display the specific error from the try block
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
 
@@ -119,7 +124,7 @@ function AddMusicModal({ onClose }: { onClose: () => void }) {
                     <label className="text-sm font-bold text-accent-cyan mt-2">Upload Audio File</label>
                     <input type="file" accept="audio/*" onChange={(e) => handleFileChange(e, 'audio')} className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent-cyan/20 file:text-accent-cyan hover:file:bg-accent-cyan/40" required/>
 
-                    {error && <div className="text-red-400 text-center">{error}</div>}
+                    {error && <div className="text-red-400 text-center p-2 bg-red-900/20 rounded-lg">{error}</div>}
                     <button type="submit" className="btn-glass bg-accent-cyan text-black mt-4" disabled={loading}>
                         {loading ? "Uploading..." : "Add Song"}
                     </button>

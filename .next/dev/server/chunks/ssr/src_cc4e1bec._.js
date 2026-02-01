@@ -3782,6 +3782,7 @@ __turbopack_context__.s([
 ]);
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/server/route-modules/app-page/vendored/ssr/react-jsx-dev-runtime.js [app-ssr] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/server/route-modules/app-page/vendored/ssr/react.js [app-ssr] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$navigation$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/navigation.js [app-ssr] (ecmascript)"); // Import useRouter
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$OptimizedVideo$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/components/OptimizedVideo.tsx [app-ssr] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/framer-motion/dist/es/render/components/motion/proxy.mjs [app-ssr] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$components$2f$AnimatePresence$2f$index$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/framer-motion/dist/es/components/AnimatePresence/index.mjs [app-ssr] (ecmascript)");
@@ -3808,6 +3809,7 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$utils$2f$firebaseClie
 ;
 ;
 ;
+;
 const db = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$node$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["getFirestore"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$utils$2f$firebaseClient$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["app"]);
 function formatTime(seconds) {
     if (isNaN(seconds)) return "00:00";
@@ -3815,28 +3817,40 @@ function formatTime(seconds) {
     const secs = Math.floor(seconds % 60);
     return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
-function InFeedVideoPlayer({ mediaUrls, post }) {
+function InFeedVideoPlayer({ mediaUrls, post, navigatesToWatchPage = false }) {
+    const router = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$navigation$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useRouter"])(); // Initialize useRouter
     const videoUrl = mediaUrls.find((url)=>url.includes('.mp4') || url.includes('.webm') || url.includes('.ogg'));
     const viewCountedRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useRef"])(false);
+    // This part remains the same, if it's not a video, it renders an image.
     if (!videoUrl) {
-        if (mediaUrls && mediaUrls.length > 0) {
+        const imageUrl = mediaUrls && mediaUrls.length > 0 ? mediaUrls[0] : null;
+        const content = imageUrl ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$OptimizedImage$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["OptimizedImage"], {
+            src: imageUrl,
+            alt: "Post media"
+        }, void 0, false, {
+            fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
+            lineNumber: 32,
+            columnNumber: 36
+        }, this) : null;
+        if (navigatesToWatchPage && post.id) {
             return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                className: "mt-2 rounded-xl overflow-hidden",
-                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$OptimizedImage$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["OptimizedImage"], {
-                    src: mediaUrls[0],
-                    alt: "Post media"
-                }, void 0, false, {
-                    fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                    lineNumber: 30,
-                    columnNumber: 21
-                }, this)
+                className: "mt-2 rounded-xl overflow-hidden cursor-pointer",
+                onClick: ()=>router.push(`/watch?v=${post.id}`),
+                children: content
             }, void 0, false, {
                 fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                lineNumber: 29,
+                lineNumber: 36,
                 columnNumber: 17
             }, this);
         }
-        return null;
+        return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+            className: "mt-2 rounded-xl overflow-hidden",
+            children: content
+        }, void 0, false, {
+            fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
+            lineNumber: 42,
+            columnNumber: 13
+        }, this);
     }
     const containerRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useRef"])(null);
     const videoRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useRef"])(null);
@@ -3895,7 +3909,15 @@ function InFeedVideoPlayer({ mediaUrls, post }) {
         const percentage = clickX / rect.width;
         video.currentTime = video.duration * percentage;
     };
+    // Modified handleContainerClick
     const handleContainerClick = (e)=>{
+        if (navigatesToWatchPage) {
+            if (post.id) {
+                router.push(`/watch?v=${post.id}`);
+            }
+            return;
+        }
+        // Keep original double-tap/single-tap behavior for the watch page itself
         const now = Date.now();
         const DOUBLE_TAP_DELAY = 300;
         if (now - lastTap.current < DOUBLE_TAP_DELAY) {
@@ -3914,11 +3936,15 @@ function InFeedVideoPlayer({ mediaUrls, post }) {
     };
     const handlePlay = ()=>{
         setIsPlaying(true);
-        incrementViewCount();
+        // Only increment view count if the video is NOT on the watch page (i.e., it's in a feed)
+        // On the watch page, the view will be counted on page load.
+        if (navigatesToWatchPage) {
+            incrementViewCount();
+        }
     };
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useEffect"])(()=>{
         const video = videoRef.current;
-        if (!video) return;
+        if (!video || navigatesToWatchPage) return; // Don't add keyboard shortcuts for the feed player
         const handleKeyDown = (e)=>{
             if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
             switch(e.key.toLowerCase()){
@@ -3949,8 +3975,56 @@ function InFeedVideoPlayer({ mediaUrls, post }) {
         };
     }, [
         togglePlay,
-        toggleMute
+        toggleMute,
+        navigatesToWatchPage
     ]);
+    // Simplified view for the feed player
+    if (navigatesToWatchPage) {
+        return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+            className: "w-full h-full relative cursor-pointer bg-black mt-2 rounded-xl overflow-hidden",
+            onClick: handleContainerClick,
+            children: [
+                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$OptimizedVideo$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["OptimizedVideo"], {
+                    ref: videoRef,
+                    src: videoUrl,
+                    className: "w-full h-full object-contain",
+                    muted: true,
+                    loop: true,
+                    playsInline: true,
+                    onPlay: handlePlay
+                }, void 0, false, {
+                    fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
+                    lineNumber: 192,
+                    columnNumber: 17
+                }, this),
+                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$video$2f$Watermark$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Watermark"], {}, void 0, false, {
+                    fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
+                    lineNumber: 201,
+                    columnNumber: 17
+                }, this),
+                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                    className: "absolute inset-0 bg-black/30 flex items-center justify-center pointer-events-none",
+                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$play$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Play$3e$__["Play"], {
+                        size: 64,
+                        className: "text-white/80 drop-shadow-lg"
+                    }, void 0, false, {
+                        fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
+                        lineNumber: 203,
+                        columnNumber: 22
+                    }, this)
+                }, void 0, false, {
+                    fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
+                    lineNumber: 202,
+                    columnNumber: 17
+                }, this)
+            ]
+        }, void 0, true, {
+            fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
+            lineNumber: 188,
+            columnNumber: 14
+        }, this);
+    }
+    // Full player for the watch page
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$video$2f$TheaterModeContainer$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TheaterModeContainer"], {
         isTheaterMode: isTheaterMode,
         setIsTheaterMode: setIsTheaterMode,
@@ -3969,17 +4043,18 @@ function InFeedVideoPlayer({ mediaUrls, post }) {
                     onLoadedMetadata: handleLoadedMetadata,
                     onPlay: handlePlay,
                     onPause: ()=>setIsPlaying(false),
-                    loop: false
+                    loop: false,
+                    autoPlay: true
                 }, void 0, false, {
                     fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                    lineNumber: 170,
+                    lineNumber: 219,
                     columnNumber: 17
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$video$2f$Watermark$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Watermark"], {
                     isAnimated: isPlaying
                 }, void 0, false, {
                     fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                    lineNumber: 180,
+                    lineNumber: 230,
                     columnNumber: 17
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$components$2f$AnimatePresence$2f$index$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["AnimatePresence"], {
@@ -3997,7 +4072,7 @@ function InFeedVideoPlayer({ mediaUrls, post }) {
                         children: [
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {}, void 0, false, {
                                 fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                lineNumber: 190,
+                                lineNumber: 240,
                                 columnNumber: 25
                             }, this),
                             !isPlaying && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4007,12 +4082,12 @@ function InFeedVideoPlayer({ mediaUrls, post }) {
                                     className: "text-white/80 drop-shadow-lg"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                    lineNumber: 194,
+                                    lineNumber: 244,
                                     columnNumber: 29
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                lineNumber: 193,
+                                lineNumber: 243,
                                 columnNumber: 29
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4034,17 +4109,17 @@ function InFeedVideoPlayer({ mediaUrls, post }) {
                                                 }
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                                lineNumber: 205,
+                                                lineNumber: 255,
                                                 columnNumber: 37
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                            lineNumber: 204,
+                                            lineNumber: 254,
                                             columnNumber: 33
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                        lineNumber: 199,
+                                        lineNumber: 249,
                                         columnNumber: 29
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4061,23 +4136,23 @@ function InFeedVideoPlayer({ mediaUrls, post }) {
                                                                 size: 20
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                                                lineNumber: 210,
+                                                                lineNumber: 260,
                                                                 columnNumber: 108
                                                             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$play$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Play$3e$__["Play"], {
                                                                 size: 20
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                                                lineNumber: 210,
+                                                                lineNumber: 260,
                                                                 columnNumber: 129
                                                             }, this)
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                                            lineNumber: 210,
+                                                            lineNumber: 260,
                                                             columnNumber: 66
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                                        lineNumber: 210,
+                                                        lineNumber: 260,
                                                         columnNumber: 37
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4089,18 +4164,18 @@ function InFeedVideoPlayer({ mediaUrls, post }) {
                                                                     size: 20
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                                                    lineNumber: 212,
+                                                                    lineNumber: 262,
                                                                     columnNumber: 81
                                                                 }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$volume$2d$2$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__Volume2$3e$__["Volume2"], {
                                                                     size: 20
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                                                    lineNumber: 212,
+                                                                    lineNumber: 262,
                                                                     columnNumber: 104
                                                                 }, this)
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                                                lineNumber: 212,
+                                                                lineNumber: 262,
                                                                 columnNumber: 41
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -4119,13 +4194,13 @@ function InFeedVideoPlayer({ mediaUrls, post }) {
                                                                 }
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                                                lineNumber: 213,
+                                                                lineNumber: 263,
                                                                 columnNumber: 41
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                                        lineNumber: 211,
+                                                        lineNumber: 261,
                                                         columnNumber: 37
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -4136,13 +4211,13 @@ function InFeedVideoPlayer({ mediaUrls, post }) {
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                                        lineNumber: 227,
+                                                        lineNumber: 277,
                                                         columnNumber: 37
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                                lineNumber: 209,
+                                                lineNumber: 259,
                                                 columnNumber: 33
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4155,12 +4230,12 @@ function InFeedVideoPlayer({ mediaUrls, post }) {
                                                             size: 20
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                                            lineNumber: 230,
+                                                            lineNumber: 280,
                                                             columnNumber: 112
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                                        lineNumber: 230,
+                                                        lineNumber: 280,
                                                         columnNumber: 37
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -4170,52 +4245,52 @@ function InFeedVideoPlayer({ mediaUrls, post }) {
                                                             size: 18
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                                            lineNumber: 231,
+                                                            lineNumber: 281,
                                                             columnNumber: 96
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                                        lineNumber: 231,
+                                                        lineNumber: 281,
                                                         columnNumber: 37
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                                lineNumber: 229,
+                                                lineNumber: 279,
                                                 columnNumber: 33
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                        lineNumber: 208,
+                                        lineNumber: 258,
                                         columnNumber: 29
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                lineNumber: 198,
+                                lineNumber: 248,
                                 columnNumber: 25
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                        lineNumber: 184,
+                        lineNumber: 234,
                         columnNumber: 21
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                    lineNumber: 182,
+                    lineNumber: 232,
                     columnNumber: 17
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-            lineNumber: 163,
+            lineNumber: 212,
             columnNumber: 13
         }, this)
     }, void 0, false, {
         fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-        lineNumber: 162,
+        lineNumber: 211,
         columnNumber: 9
     }, this);
 }
@@ -7088,7 +7163,8 @@ function PostCard({ post, isShortVibe = false, collectionName = 'posts' }) {
                 }, this),
                 (contentPost.type === "media" || collectionName === "drops") && mediaUrls.length > 0 && !isShortVibe && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$video$2f$InFeedVideoPlayer$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["InFeedVideoPlayer"], {
                     mediaUrls: mediaUrls,
-                    post: contentPost
+                    post: contentPost,
+                    navigatesToWatchPage: true
                 }, void 0, false, {
                     fileName: "[project]/src/components/PostCard.tsx",
                     lineNumber: 201,
@@ -7102,7 +7178,7 @@ function PostCard({ post, isShortVibe = false, collectionName = 'posts' }) {
                             children: contentPost.content
                         }, void 0, false, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 209,
+                            lineNumber: 210,
                             columnNumber: 21
                         }, this),
                         contentPost.pollOptions.map((opt, idx)=>{
@@ -7124,7 +7200,7 @@ function PostCard({ post, isShortVibe = false, collectionName = 'posts' }) {
                                         }
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/PostCard.tsx",
-                                        lineNumber: 217,
+                                        lineNumber: 218,
                                         columnNumber: 59
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -7134,7 +7210,7 @@ function PostCard({ post, isShortVibe = false, collectionName = 'posts' }) {
                                                 children: opt
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/PostCard.tsx",
-                                                lineNumber: 219,
+                                                lineNumber: 220,
                                                 columnNumber: 37
                                             }, this),
                                             userPollVote !== null && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -7146,26 +7222,26 @@ function PostCard({ post, isShortVibe = false, collectionName = 'posts' }) {
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/PostCard.tsx",
-                                                lineNumber: 220,
+                                                lineNumber: 221,
                                                 columnNumber: 63
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/PostCard.tsx",
-                                        lineNumber: 218,
+                                        lineNumber: 219,
                                         columnNumber: 33
                                     }, this)
                                 ]
                             }, idx, true, {
                                 fileName: "[project]/src/components/PostCard.tsx",
-                                lineNumber: 215,
+                                lineNumber: 216,
                                 columnNumber: 29
                             }, this);
                         })
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 208,
+                    lineNumber: 209,
                     columnNumber: 17
                 }, this),
                 contentPost.song && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -7177,7 +7253,7 @@ function PostCard({ post, isShortVibe = false, collectionName = 'posts' }) {
                             className: "w-12 h-12 rounded-lg"
                         }, void 0, false, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 230,
+                            lineNumber: 231,
                             columnNumber: 21
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -7188,7 +7264,7 @@ function PostCard({ post, isShortVibe = false, collectionName = 'posts' }) {
                                     children: contentPost.song.name
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/PostCard.tsx",
-                                    lineNumber: 232,
+                                    lineNumber: 233,
                                     columnNumber: 25
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -7196,13 +7272,13 @@ function PostCard({ post, isShortVibe = false, collectionName = 'posts' }) {
                                     children: contentPost.song.artists.join(", ")
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/PostCard.tsx",
-                                    lineNumber: 233,
+                                    lineNumber: 234,
                                     columnNumber: 25
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 231,
+                            lineNumber: 232,
                             columnNumber: 21
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {
@@ -7212,18 +7288,18 @@ function PostCard({ post, isShortVibe = false, collectionName = 'posts' }) {
                                 size: 14
                             }, void 0, false, {
                                 fileName: "[project]/src/components/PostCard.tsx",
-                                lineNumber: 236,
+                                lineNumber: 237,
                                 columnNumber: 25
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 235,
+                            lineNumber: 236,
                             columnNumber: 22
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 229,
+                    lineNumber: 230,
                     columnNumber: 18
                 }, this)
             ]
@@ -7248,19 +7324,19 @@ function PostCard({ post, isShortVibe = false, collectionName = 'posts' }) {
                                         className: "w-full h-full object-cover"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/PostCard.tsx",
-                                        lineNumber: 250,
+                                        lineNumber: 251,
                                         columnNumber: 44
                                     }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                         className: "text-white",
                                         children: post.displayName?.[0] || 'U'
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/PostCard.tsx",
-                                        lineNumber: 250,
+                                        lineNumber: 251,
                                         columnNumber: 128
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/PostCard.tsx",
-                                    lineNumber: 249,
+                                    lineNumber: 250,
                                     columnNumber: 21
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -7271,13 +7347,13 @@ function PostCard({ post, isShortVibe = false, collectionName = 'posts' }) {
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/PostCard.tsx",
-                                    lineNumber: 252,
+                                    lineNumber: 253,
                                     columnNumber: 21
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 248,
+                            lineNumber: 249,
                             columnNumber: 17
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -7285,7 +7361,7 @@ function PostCard({ post, isShortVibe = false, collectionName = 'posts' }) {
                             children: post.content
                         }, void 0, false, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 254,
+                            lineNumber: 255,
                             columnNumber: 17
                         }, this),
                         post.song && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -7293,7 +7369,7 @@ function PostCard({ post, isShortVibe = false, collectionName = 'posts' }) {
                             children: [
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$react$2d$icons$2f$fa$2f$index$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["FaMusic"], {}, void 0, false, {
                                     fileName: "[project]/src/components/PostCard.tsx",
-                                    lineNumber: 257,
+                                    lineNumber: 258,
                                     columnNumber: 25
                                 }, this),
                                 " ",
@@ -7305,19 +7381,19 @@ function PostCard({ post, isShortVibe = false, collectionName = 'posts' }) {
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/PostCard.tsx",
-                                    lineNumber: 257,
+                                    lineNumber: 258,
                                     columnNumber: 37
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 256,
+                            lineNumber: 257,
                             columnNumber: 21
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 247,
+                    lineNumber: 248,
                     columnNumber: 13
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -7329,12 +7405,12 @@ function PostCard({ post, isShortVibe = false, collectionName = 'posts' }) {
                         onCommentClick: ()=>setShowComments(true)
                     }, void 0, false, {
                         fileName: "[project]/src/components/PostCard.tsx",
-                        lineNumber: 262,
+                        lineNumber: 263,
                         columnNumber: 17
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 261,
+                    lineNumber: 262,
                     columnNumber: 13
                 }, this),
                 showComments && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$CommentModal$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CommentModal"], {
@@ -7345,13 +7421,13 @@ function PostCard({ post, isShortVibe = false, collectionName = 'posts' }) {
                     collectionName: collectionName
                 }, void 0, false, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 264,
+                    lineNumber: 265,
                     columnNumber: 30
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/src/components/PostCard.tsx",
-            lineNumber: 246,
+            lineNumber: 247,
             columnNumber: 9
         }, this);
     }
@@ -7382,7 +7458,7 @@ function PostCard({ post, isShortVibe = false, collectionName = 'posts' }) {
                             size: 14
                         }, void 0, false, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 280,
+                            lineNumber: 281,
                             columnNumber: 15
                         }, this),
                         " Relayed by ",
@@ -7395,13 +7471,13 @@ function PostCard({ post, isShortVibe = false, collectionName = 'posts' }) {
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/PostCard.tsx",
-                            lineNumber: 280,
+                            lineNumber: 281,
                             columnNumber: 47
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 279,
+                    lineNumber: 280,
                     columnNumber: 11
                 }, this),
                 showEdit && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$squad$2f$EditPostModal$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["EditPostModal"], {
@@ -7409,7 +7485,7 @@ function PostCard({ post, isShortVibe = false, collectionName = 'posts' }) {
                     onClose: ()=>setShowEdit(false)
                 }, void 0, false, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 285,
+                    lineNumber: 286,
                     columnNumber: 9
                 }, this),
                 renderPostContent(post),
@@ -7419,7 +7495,7 @@ function PostCard({ post, isShortVibe = false, collectionName = 'posts' }) {
                     collectionName: collectionName
                 }, void 0, false, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 289,
+                    lineNumber: 290,
                     columnNumber: 7
                 }, this),
                 showComments && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$CommentModal$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CommentModal"], {
@@ -7430,13 +7506,13 @@ function PostCard({ post, isShortVibe = false, collectionName = 'posts' }) {
                     collectionName: collectionName
                 }, void 0, false, {
                     fileName: "[project]/src/components/PostCard.tsx",
-                    lineNumber: 291,
+                    lineNumber: 292,
                     columnNumber: 24
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/src/components/PostCard.tsx",
-            lineNumber: 271,
+            lineNumber: 272,
             columnNumber: 5
         }, this)
     }, void 0, false);

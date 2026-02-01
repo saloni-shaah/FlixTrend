@@ -283,6 +283,7 @@ __turbopack_context__.s([
 ]);
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/compiled/react/jsx-dev-runtime.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/compiled/react/index.js [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$navigation$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/navigation.js [app-client] (ecmascript)"); // Import useRouter
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$OptimizedVideo$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/components/OptimizedVideo.tsx [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$render$2f$components$2f$motion$2f$proxy$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/framer-motion/dist/es/render/components/motion/proxy.mjs [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$components$2f$AnimatePresence$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/framer-motion/dist/es/components/AnimatePresence/index.mjs [app-client] (ecmascript)");
@@ -310,6 +311,7 @@ var _s = __turbopack_context__.k.signature();
 ;
 ;
 ;
+;
 const db = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$firebase$2f$firestore$2f$dist$2f$index$2e$esm$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["getFirestore"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$utils$2f$firebaseClient$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["app"]);
 function formatTime(seconds) {
     if (isNaN(seconds)) return "00:00";
@@ -317,29 +319,41 @@ function formatTime(seconds) {
     const secs = Math.floor(seconds % 60);
     return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
-function InFeedVideoPlayer({ mediaUrls, post }) {
+function InFeedVideoPlayer({ mediaUrls, post, navigatesToWatchPage = false }) {
     _s();
+    const router = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$navigation$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRouter"])(); // Initialize useRouter
     const videoUrl = mediaUrls.find((url)=>url.includes('.mp4') || url.includes('.webm') || url.includes('.ogg'));
     const viewCountedRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRef"])(false);
+    // This part remains the same, if it's not a video, it renders an image.
     if (!videoUrl) {
-        if (mediaUrls && mediaUrls.length > 0) {
+        const imageUrl = mediaUrls && mediaUrls.length > 0 ? mediaUrls[0] : null;
+        const content = imageUrl ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$OptimizedImage$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["OptimizedImage"], {
+            src: imageUrl,
+            alt: "Post media"
+        }, void 0, false, {
+            fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
+            lineNumber: 32,
+            columnNumber: 36
+        }, this) : null;
+        if (navigatesToWatchPage && post.id) {
             return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                className: "mt-2 rounded-xl overflow-hidden",
-                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$OptimizedImage$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["OptimizedImage"], {
-                    src: mediaUrls[0],
-                    alt: "Post media"
-                }, void 0, false, {
-                    fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                    lineNumber: 30,
-                    columnNumber: 21
-                }, this)
+                className: "mt-2 rounded-xl overflow-hidden cursor-pointer",
+                onClick: ()=>router.push(`/watch?v=${post.id}`),
+                children: content
             }, void 0, false, {
                 fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                lineNumber: 29,
+                lineNumber: 36,
                 columnNumber: 17
             }, this);
         }
-        return null;
+        return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+            className: "mt-2 rounded-xl overflow-hidden",
+            children: content
+        }, void 0, false, {
+            fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
+            lineNumber: 42,
+            columnNumber: 13
+        }, this);
     }
     const containerRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRef"])(null);
     const videoRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRef"])(null);
@@ -406,7 +420,15 @@ function InFeedVideoPlayer({ mediaUrls, post }) {
         const percentage = clickX / rect.width;
         video.currentTime = video.duration * percentage;
     };
+    // Modified handleContainerClick
     const handleContainerClick = (e)=>{
+        if (navigatesToWatchPage) {
+            if (post.id) {
+                router.push(`/watch?v=${post.id}`);
+            }
+            return;
+        }
+        // Keep original double-tap/single-tap behavior for the watch page itself
         const now = Date.now();
         const DOUBLE_TAP_DELAY = 300;
         if (now - lastTap.current < DOUBLE_TAP_DELAY) {
@@ -425,12 +447,16 @@ function InFeedVideoPlayer({ mediaUrls, post }) {
     };
     const handlePlay = ()=>{
         setIsPlaying(true);
-        incrementViewCount();
+        // Only increment view count if the video is NOT on the watch page (i.e., it's in a feed)
+        // On the watch page, the view will be counted on page load.
+        if (navigatesToWatchPage) {
+            incrementViewCount();
+        }
     };
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
         "InFeedVideoPlayer.useEffect": ()=>{
             const video = videoRef.current;
-            if (!video) return;
+            if (!video || navigatesToWatchPage) return; // Don't add keyboard shortcuts for the feed player
             const handleKeyDown = {
                 "InFeedVideoPlayer.useEffect.handleKeyDown": (e)=>{
                     if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
@@ -468,8 +494,56 @@ function InFeedVideoPlayer({ mediaUrls, post }) {
         }
     }["InFeedVideoPlayer.useEffect"], [
         togglePlay,
-        toggleMute
+        toggleMute,
+        navigatesToWatchPage
     ]);
+    // Simplified view for the feed player
+    if (navigatesToWatchPage) {
+        return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+            className: "w-full h-full relative cursor-pointer bg-black mt-2 rounded-xl overflow-hidden",
+            onClick: handleContainerClick,
+            children: [
+                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$OptimizedVideo$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["OptimizedVideo"], {
+                    ref: videoRef,
+                    src: videoUrl,
+                    className: "w-full h-full object-contain",
+                    muted: true,
+                    loop: true,
+                    playsInline: true,
+                    onPlay: handlePlay
+                }, void 0, false, {
+                    fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
+                    lineNumber: 192,
+                    columnNumber: 17
+                }, this),
+                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$video$2f$Watermark$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Watermark"], {}, void 0, false, {
+                    fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
+                    lineNumber: 201,
+                    columnNumber: 17
+                }, this),
+                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                    className: "absolute inset-0 bg-black/30 flex items-center justify-center pointer-events-none",
+                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$play$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Play$3e$__["Play"], {
+                        size: 64,
+                        className: "text-white/80 drop-shadow-lg"
+                    }, void 0, false, {
+                        fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
+                        lineNumber: 203,
+                        columnNumber: 22
+                    }, this)
+                }, void 0, false, {
+                    fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
+                    lineNumber: 202,
+                    columnNumber: 17
+                }, this)
+            ]
+        }, void 0, true, {
+            fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
+            lineNumber: 188,
+            columnNumber: 14
+        }, this);
+    }
+    // Full player for the watch page
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$video$2f$TheaterModeContainer$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TheaterModeContainer"], {
         isTheaterMode: isTheaterMode,
         setIsTheaterMode: setIsTheaterMode,
@@ -488,17 +562,18 @@ function InFeedVideoPlayer({ mediaUrls, post }) {
                     onLoadedMetadata: handleLoadedMetadata,
                     onPlay: handlePlay,
                     onPause: ()=>setIsPlaying(false),
-                    loop: false
+                    loop: false,
+                    autoPlay: true
                 }, void 0, false, {
                     fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                    lineNumber: 170,
+                    lineNumber: 219,
                     columnNumber: 17
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$video$2f$Watermark$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Watermark"], {
                     isAnimated: isPlaying
                 }, void 0, false, {
                     fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                    lineNumber: 180,
+                    lineNumber: 230,
                     columnNumber: 17
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$framer$2d$motion$2f$dist$2f$es$2f$components$2f$AnimatePresence$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AnimatePresence"], {
@@ -516,7 +591,7 @@ function InFeedVideoPlayer({ mediaUrls, post }) {
                         children: [
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {}, void 0, false, {
                                 fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                lineNumber: 190,
+                                lineNumber: 240,
                                 columnNumber: 25
                             }, this),
                             !isPlaying && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -526,12 +601,12 @@ function InFeedVideoPlayer({ mediaUrls, post }) {
                                     className: "text-white/80 drop-shadow-lg"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                    lineNumber: 194,
+                                    lineNumber: 244,
                                     columnNumber: 29
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                lineNumber: 193,
+                                lineNumber: 243,
                                 columnNumber: 29
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -553,17 +628,17 @@ function InFeedVideoPlayer({ mediaUrls, post }) {
                                                 }
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                                lineNumber: 205,
+                                                lineNumber: 255,
                                                 columnNumber: 37
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                            lineNumber: 204,
+                                            lineNumber: 254,
                                             columnNumber: 33
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                        lineNumber: 199,
+                                        lineNumber: 249,
                                         columnNumber: 29
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -580,23 +655,23 @@ function InFeedVideoPlayer({ mediaUrls, post }) {
                                                                 size: 20
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                                                lineNumber: 210,
+                                                                lineNumber: 260,
                                                                 columnNumber: 108
                                                             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$play$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Play$3e$__["Play"], {
                                                                 size: 20
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                                                lineNumber: 210,
+                                                                lineNumber: 260,
                                                                 columnNumber: 129
                                                             }, this)
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                                            lineNumber: 210,
+                                                            lineNumber: 260,
                                                             columnNumber: 66
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                                        lineNumber: 210,
+                                                        lineNumber: 260,
                                                         columnNumber: 37
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -608,18 +683,18 @@ function InFeedVideoPlayer({ mediaUrls, post }) {
                                                                     size: 20
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                                                    lineNumber: 212,
+                                                                    lineNumber: 262,
                                                                     columnNumber: 81
                                                                 }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$volume$2d$2$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Volume2$3e$__["Volume2"], {
                                                                     size: 20
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                                                    lineNumber: 212,
+                                                                    lineNumber: 262,
                                                                     columnNumber: 104
                                                                 }, this)
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                                                lineNumber: 212,
+                                                                lineNumber: 262,
                                                                 columnNumber: 41
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -638,13 +713,13 @@ function InFeedVideoPlayer({ mediaUrls, post }) {
                                                                 }
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                                                lineNumber: 213,
+                                                                lineNumber: 263,
                                                                 columnNumber: 41
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                                        lineNumber: 211,
+                                                        lineNumber: 261,
                                                         columnNumber: 37
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -655,13 +730,13 @@ function InFeedVideoPlayer({ mediaUrls, post }) {
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                                        lineNumber: 227,
+                                                        lineNumber: 277,
                                                         columnNumber: 37
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                                lineNumber: 209,
+                                                lineNumber: 259,
                                                 columnNumber: 33
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -674,12 +749,12 @@ function InFeedVideoPlayer({ mediaUrls, post }) {
                                                             size: 20
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                                            lineNumber: 230,
+                                                            lineNumber: 280,
                                                             columnNumber: 112
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                                        lineNumber: 230,
+                                                        lineNumber: 280,
                                                         columnNumber: 37
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -689,56 +764,60 @@ function InFeedVideoPlayer({ mediaUrls, post }) {
                                                             size: 18
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                                            lineNumber: 231,
+                                                            lineNumber: 281,
                                                             columnNumber: 96
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                                        lineNumber: 231,
+                                                        lineNumber: 281,
                                                         columnNumber: 37
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                                lineNumber: 229,
+                                                lineNumber: 279,
                                                 columnNumber: 33
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                        lineNumber: 208,
+                                        lineNumber: 258,
                                         columnNumber: 29
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                                lineNumber: 198,
+                                lineNumber: 248,
                                 columnNumber: 25
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                        lineNumber: 184,
+                        lineNumber: 234,
                         columnNumber: 21
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-                    lineNumber: 182,
+                    lineNumber: 232,
                     columnNumber: 17
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-            lineNumber: 163,
+            lineNumber: 212,
             columnNumber: 13
         }, this)
     }, void 0, false, {
         fileName: "[project]/src/components/video/InFeedVideoPlayer.tsx",
-        lineNumber: 162,
+        lineNumber: 211,
         columnNumber: 9
     }, this);
 }
-_s(InFeedVideoPlayer, "0OE6otg0te4r6c/ABgEgozP59Vk=");
+_s(InFeedVideoPlayer, "9GcF4Q42qlJaiQqQgJhRjtedaik=", false, function() {
+    return [
+        __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$navigation$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRouter"]
+    ];
+});
 _c = InFeedVideoPlayer;
 var _c;
 __turbopack_context__.k.register(_c, "InFeedVideoPlayer");

@@ -25,7 +25,7 @@ export default function PostPage() {
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
-                router.replace('/home');
+                router.replace('/vibespace');
             } else {
                 if (postId) {
                     try {

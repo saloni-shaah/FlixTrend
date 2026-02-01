@@ -1,6 +1,6 @@
 
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, CheckCircle, ShieldOff, Calendar as CalendarIcon, Eye } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
@@ -51,15 +51,14 @@ function PostPreview({ postData }: { postData: any }) {
 
                 {(postType === 'media' || postType === 'flash') && mediaUrl && mediaUrl.length > 0 && (
                     <>
-                        <p className="font-bold">{title}</p>
-                        <p className="text-sm text-gray-400">{caption}</p>
-                        <div className="mt-2 grid grid-cols-3 gap-2">
+                        <p className="font-bold">{postData.title || postData.caption}</p>
+                        <div className="mt-2 grid grid-cols-1 gap-2">
                             {mediaUrl.map((url: string, index: number) => {
                                 const isVideo = postData.mediaFiles[index]?.type.startsWith('video/');
                                 if (isVideo) {
-                                    return <video key={index} src={url} className="w-full h-auto rounded-md aspect-square object-cover" />;
+                                    return <video key={index} src={url} className="w-full h-auto rounded-md aspect-video object-cover" controls/>;
                                 }
-                                return <img key={index} src={url} alt="preview" className="w-full h-auto rounded-md aspect-square object-cover" />
+                                return <img key={index} src={url} alt="preview" className="w-full h-auto rounded-md aspect-video object-cover" />
                             })}
                         </div>
                     </>
@@ -90,20 +89,27 @@ function PostPreview({ postData }: { postData: any }) {
 
 
 export default function Step3({ onNext, onBack, postData }: { onNext?: (data: any) => void; onBack: () => void; postData: any }) {
-    const [isScheduling, setIsScheduling] = useState(false);
-    const [scheduleDate, setScheduleDate] = useState<Date | undefined>();
+    const [isScheduling, setIsScheduling] = useState(!!postData.scheduleDate);
+    const [scheduleDate, setScheduleDate] = useState<Date | undefined>(postData.scheduleDate);
     const [scheduleTime, setScheduleTime] = useState('12:00');
     const [isPublishing, setIsPublishing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const router = useRouter();
+    
+    useEffect(() => {
+        // Sync the state if postData changes (e.g. user goes back and forth)
+        setScheduleDate(postData.scheduleDate);
+        setIsScheduling(!!postData.scheduleDate);
+    }, [postData.scheduleDate]);
 
     const uploadMedia = async (files: File[]) => {
         const user = auth.currentUser;
         if (!user) throw new Error("User not logged in");
 
+        const collection = postData.postType === 'flash' ? 'flashes' : 'posts';
         const uploadPromises = files.map(async (file) => {
             const fileName = `${user.uid}-${Date.now()}-${file.name}`;
-            const fileRef = storageRef(storage, `posts/${user.uid}/${fileName}`);
+            const fileRef = storageRef(storage, `${collection}/${user.uid}/${fileName}`);
             const snapshot = await uploadBytes(fileRef, file);
             return getDownloadURL(snapshot.ref);
         });
@@ -122,9 +128,13 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
         }
 
         try {
-            let uploadedMediaUrls: string[] = [];
+            let uploadedMediaUrls: string[] = postData.mediaUrl || [];
             if (postData.mediaFiles && postData.mediaFiles.length > 0) {
-                uploadedMediaUrls = await uploadMedia(postData.mediaFiles);
+                 // Check if the mediaUrl is a blob url, if so, it needs to be uploaded.
+                const filesToUpload = postData.mediaFiles.filter((file: any, index: number) => postData.mediaUrl[index]?.startsWith('blob:'));
+                if (filesToUpload.length > 0) {
+                    uploadedMediaUrls = await uploadMedia(filesToUpload);
+                }
             }
 
             const finalPostData = { ...postData, mediaUrl: uploadedMediaUrls };
@@ -135,22 +145,30 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
             const userData = userDocSnap.data();
 
             const creatorType = userData.creatorType || '';
-            let mainCategory = null;
-            if (mainCategories.includes(creatorType)) {
-                mainCategory = creatorType;
+            let mainCategory = creatorCategoryMap[creatorType] || null;
+
+            let createdAt, expiresAt;
+            if (postData.postType === 'flash' && scheduleDate) {
+                const flashDate = new Date(scheduleDate);
+                flashDate.setHours(0, 0, 0, 0); // Start of the day
+                createdAt = Timestamp.fromDate(flashDate);
+                expiresAt = new Date(flashDate.getTime() + 24 * 60 * 60 * 1000);
+            } else if (postData.postType === 'flash') {
+                createdAt = serverTimestamp();
+                expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
             } else {
-                mainCategory = creatorCategoryMap[creatorType] || null;
+                createdAt = serverTimestamp();
             }
 
             let publishAt;
-            if (isScheduling && scheduleDate && postData.postType !== 'live') {
+            if (isScheduling && scheduleDate && postData.postType !== 'live' && postData.postType !== 'flash') {
                 const [hours, minutes] = scheduleTime.split(':');
                 const finalDate = new Date(scheduleDate);
                 finalDate.setHours(parseInt(hours, 10));
                 finalDate.setMinutes(parseInt(minutes, 10));
                 publishAt = Timestamp.fromDate(finalDate);
             } else {
-                publishAt = serverTimestamp();
+                publishAt = createdAt; // For non-flash posts, publishAt is same as createdAt
             }
 
             const livekitRoomName = postData.postType === 'live' ? `${user.uid}-${Date.now()}` : null;
@@ -165,31 +183,25 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
                 type: postData.postType,
                 content: postData.content || postData.caption || postData.question || postData.title || "",
                 hashtags: hashtags,
-                createdAt: serverTimestamp(),
-                publishAt: publishAt,
+                createdAt: createdAt,
+                publishAt: publishAt, // For regular posts
                 notificationSent: false,
                 location: postData.location || null,
-                mood: postData.mood || null,
-                isPortrait: postData.isPortrait || false,
-                videoDuration: postData.videoDuration || 0,
-                isVideo: postData.isVideo || false,
                 viewCount: 0,
                 creatorType: creatorType,
                 category: mainCategory,
                 ...(postData.postType === 'text' && { 
                     backgroundColor: postData.backgroundColor || null, 
-                    backgroundImage: postData.backgroundImage || null, 
-                    fontStyle: postData.fontStyle || null 
+                    fontStyle: postData.fontStyle || 'font-body' 
                 }),
                 ...(postData.postType === 'media' && { 
                     mediaUrl: finalPostData.mediaUrl && finalPostData.mediaUrl.length > 0 ? (finalPostData.mediaUrl.length > 1 ? finalPostData.mediaUrl : finalPostData.mediaUrl[0]) : null, 
                     title: postData.title || "", 
-                    description: postData.description || "", 
                 }),
                 ...(postData.postType === 'flash' && { 
                     mediaUrl: finalPostData.mediaUrl && finalPostData.mediaUrl.length > 0 ? finalPostData.mediaUrl[0] : null, 
                     song: postData.song || null, 
-                    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), 
+                    expiresAt: expiresAt,
                     caption: postData.caption || "" 
                 }),
                 ...(postData.postType === 'poll' && { pollOptions: postData.options.map((opt:any) => opt.text) }),
@@ -205,7 +217,7 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
             if (postData.postType === 'live' && livekitRoomName) {
                 router.push(`/broadcast/${encodeURIComponent(livekitRoomName)}`);
             } else {
-                router.push('/home');
+                router.push('/vibespace');
             }
 
         } catch (error: any) {
@@ -215,8 +227,17 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
             setIsPublishing(false);
         }
     };
-
-    const shouldShowScheduling = postData.postType !== 'flash' && postData.postType !== 'live';
+    
+    // Scheduling is available for all posts except live ones
+    const shouldShowScheduling = postData.postType !== 'live';
+    const getButtonText = () => {
+        if (isPublishing) return 'Publishing...';
+        if (isScheduling && scheduleDate) {
+            if(postData.postType === 'flash') return 'Schedule Flash';
+            return 'Schedule Post';
+        }
+        return 'Publish Now';
+    }
 
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -270,12 +291,14 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
                                     />
                                     </PopoverContent>
                                 </Popover>
-                                <input 
-                                    type="time"
-                                    value={scheduleTime}
-                                    onChange={(e) => setScheduleTime(e.target.value)}
-                                    className="input-glass"
-                                />
+                                {postData.postType !== 'flash' && (
+                                    <input 
+                                        type="time"
+                                        value={scheduleTime}
+                                        onChange={(e) => setScheduleTime(e.target.value)}
+                                        className="input-glass"
+                                    />
+                                )}
                             </motion.div>
                         )}
                     </div>
@@ -291,7 +314,7 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
                     onClick={handleSubmit}
                     disabled={isPublishing}
                 >
-                    {isPublishing ? 'Publishing...' : (isScheduling && scheduleDate && shouldShowScheduling) ? 'Schedule Post' : 'Publish Now'} <CheckCircle />
+                    {getButtonText()} <CheckCircle />
                 </button>
             </div>
         </motion.div>

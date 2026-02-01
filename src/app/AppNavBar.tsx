@@ -11,7 +11,7 @@ import DropIcon from "../components/icons/DropIcon"
 
 const db = getFirestore(app);
 
-// Custom SVG for VibeSpace (Home)
+// Custom SVG for VibeSpace (VibeSpace)
 const VibeSpaceIcon = ({ className }: { className?: string }) => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
     <g>
@@ -186,7 +186,7 @@ export default function AppNavBar() {
 
   const isAuthPage = pathname === "/login" || pathname === "/signup" || pathname === "/";
   const isSpecialPage = ["/guest", "/about", "/privacy", "/terms", "/contact"].includes(pathname);
-  const hideNav = isAuthPage || isSpecialPage || !!activeCall;
+  const hideNav = isAuthPage || isSpecialPage || !!activeCall || pathname.startsWith('/watch');
   const hideForFlowVideo = pathname.startsWith('/flow') && isFlowVideoPlaying;
 
 
@@ -209,7 +209,7 @@ export default function AppNavBar() {
           </button>
         ) : (
           <>
-            <NavButton href="/home" icon={VibeSpaceIcon} label="VibeSpace" />
+            <NavButton href="/vibespace" icon={VibeSpaceIcon} label="VibeSpace" />
             <NavButton href="/flow" icon={FlowIcon} label="Flow" />
             <NavButton href="/drop" icon={DropIcon} label="Drop" />
             <NavButton href="/squad" icon={SquadIcon} label="Squad" />
