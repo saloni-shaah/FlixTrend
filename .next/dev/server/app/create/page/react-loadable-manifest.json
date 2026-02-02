@@ -1,9 +1,0 @@
-{
-  "[project]/src/utils/AppStateContext.tsx [app-client] (ecmascript, next/dynamic entry)": {
-    "id": "[project]/src/utils/AppStateContext.tsx [app-client] (ecmascript, next/dynamic entry)",
-    "files": [
-      "static/chunks/src_utils_AppStateContext_tsx_211b0917._.js",
-      "static/chunks/src_utils_AppStateContext_tsx_a17054b9._.js"
-    ]
-  }
-}
