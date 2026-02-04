@@ -1,9 +1,5 @@
 {
-  "app": {
-    "[project]/src/app/flix/page": [],
-    "[project]/src/app/page": [],
-    "[project]/src/app/vibespace/page": []
-  },
+  "app": {},
   "appUsingSizeAdjust": false,
   "pages": {},
   "pagesUsingSizeAdjust": false

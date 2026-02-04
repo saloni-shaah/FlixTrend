@@ -189,7 +189,14 @@ export default function FlashModal({ userFlashes, onClose }: { userFlashes: any;
         const audio = new Audio(flash.song.preview_url);
         audioRef.current = audio;
         audio.currentTime = flash.song.snippetStart || 0;
-        audio.play().catch(e => console.error("Audio play failed", e));
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+            playPromise.catch(error => {
+                if (error.name !== 'AbortError') {
+                    console.error("Audio play failed", error);
+                }
+            });
+        }
         audio.addEventListener('ended', goToNext);
     }
 

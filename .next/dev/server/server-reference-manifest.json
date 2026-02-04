@@ -1,28 +1,5 @@
 {
-  "node": {
-    "40036f72bec7ec50b60bf8ccc78ed6bdf6acdbef0a": {
-      "workers": {
-        "app/flix/page": {
-          "moduleId": "[project]/.next-internal/server/app/flix/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "uploadToCloudinary",
-          "filename": "src/app/actions.ts"
-        },
-        "app/vibespace/page": {
-          "moduleId": "[project]/.next-internal/server/app/vibespace/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/app/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
-          "async": false,
-          "exportedName": "uploadToCloudinary",
-          "filename": "src/app/actions.ts"
-        }
-      },
-      "layer": {
-        "app/flix/page": "action-browser",
-        "app/vibespace/page": "action-browser"
-      },
-      "filename": "src/app/actions.ts",
-      "exportedName": "uploadToCloudinary"
-    }
-  },
+  "node": {},
   "edge": {},
   "encryptionKey": "Jo8cGudBl1W8qnlZY2svy3DZbLN/kRG7yezvjfyIE5A="
 }
