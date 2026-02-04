@@ -15,21 +15,12 @@
 # Production build files
 /build
 
-# Vercel
-.vercel
-
 # Static exports
 /dist
 
 # Miscellaneous
 .DS_Store
 *.pem
-
-# Environment Variables
-.env
-.env*.local
-!/.env.example
-!/.env.production
 
 # Debug log files
 npm-debug.log*
