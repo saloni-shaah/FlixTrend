@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -159,7 +158,7 @@ function FinalWelcomeAnimation() {
         variants={textVariants}
         transition={{ delay: 0.2 }}
       >
-        Your journey begins now.
+        Where trend finds you first.
       </motion.p>
     </motion.div>
   );
