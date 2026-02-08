@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, getDoc, updateDoc, writeBatch } from "firebase/firestore";
+import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, getDoc, updateDoc } from "firebase/firestore";
 import { auth, app } from '@/utils/firebaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, ThumbsUp } from 'lucide-react';
@@ -20,7 +20,7 @@ interface Comment {
     avatar_url: string;
     text: string;
     createdAt: any;
-    likes?: string[]; // Made optional to reflect data model
+    likes?: string[];
 }
 
 // --- HELPER: Time Formatting ---
@@ -114,13 +114,14 @@ export function CommentModal({ postId, postAuthorId, onClose, post, collectionNa
         const unsubscribe = onSnapshot(q, async (snapshot) => {
             const commentsData = await Promise.all(snapshot.docs.map(async (commentDoc) => {
                 const commentData = commentDoc.data();
-                const userDoc = await getDoc(doc(db, 'users', commentData.userId));
-                const userData = userDoc.data();
+                // The username/avatar are now stored on the comment, but we keep this for backwards compatibility
+                const username = commentData.displayName || (await getDoc(doc(db, 'users', commentData.userId))).data()?.username || 'anonymous';
+                const avatar_url = commentData.avatar_url || (await getDoc(doc(db, 'users', commentData.userId))).data()?.avatar_url || '';
                 return {
                     id: commentDoc.id,
                     ...commentData,
-                    username: userData?.username || 'anonymous',
-                    avatar_url: userData?.avatar_url || ''
+                    username,
+                    avatar_url
                 } as Comment;
             }));
             setComments(commentsData);
@@ -141,22 +142,19 @@ export function CommentModal({ postId, postAuthorId, onClose, post, collectionNa
             userId: currentUser.uid,
             text: newComment,
             createdAt: serverTimestamp(),
-            likes: []
+            likes: [],
+            displayName: currentUser.displayName,
+            avatar_url: currentUser.photoURL
         };
 
         try {
-            const batch = writeBatch(db);
-            const commentRef = doc(collection(db, collectionName, postId, "comments"));
-            batch.set(commentRef, commentPayload);
-
-            const postRef = doc(db, collectionName, postId);
-            batch.update(postRef, { commentCount: (post.commentCount || 0) + 1 });
-            
-            await batch.commit();
+            // The onNewComment cloud function will handle incrementing the comment count.
+            const commentsColRef = collection(db, collectionName, postId, "comments");
+            await addDoc(commentsColRef, commentPayload);
             setNewComment('');
         } catch (error) {
             console.error("Error submitting comment:", error);
-            alert("Failed to post comment. Check permissions.");
+            alert("Failed to post comment. Please try again.");
         } finally {
             setIsSubmitting(false);
         }

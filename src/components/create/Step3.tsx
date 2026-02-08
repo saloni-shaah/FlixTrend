@@ -185,7 +185,6 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
                 hashtags: hashtags,
                 createdAt: createdAt,
                 publishAt: publishAt, // For regular posts
-                notificationSent: false,
                 location: postData.location || null,
                 viewCount: 0,
                 creatorType: creatorType,

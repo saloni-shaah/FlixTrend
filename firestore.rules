@@ -9,23 +9,15 @@ service cloud.firestore {
 
     // Users: Read any profile, write to your own.
     match /users/{userId} {
-      // Allow signed-in users to get and list user profiles.
       allow get, list: if isSignedIn();
       allow write: if request.auth.uid == userId;
 
-      // This rule manages all subcollections under a user document.
       match /{subcollection}/{docId} {
-        // A user can read their own subcollections.
-        // Any signed-in user can read public subcollections like followers/following.
         allow read: if (request.auth.uid == userId) || 
                     (isSignedIn() && (subcollection == 'followers' || subcollection == 'following'));
 
-        // Allow write access to a user's own subcollections.
-        // Also, allow a user to add/remove themselves from another user's followers list.
-        // Also, allow creation of notifications.
         allow write: if (request.auth.uid == userId) ||
-                     (subcollection == 'followers' && docId == request.auth.uid && (request.method == 'create' || request.method == 'delete')) ||
-                     (subcollection == 'notifications' && request.method == 'create' && request.resource.data.fromUserId == request.auth.uid);
+                     (subcollection == 'followers' && docId == request.auth.uid && (request.method == 'create' || request.method == 'delete'));
       }
     }
 
@@ -40,7 +32,7 @@ service cloud.firestore {
     // Ad Campaigns & Creatives: Public read-only
     match /adCampaigns/{campaignId}/{documents=**} {
         allow get, list: if true;
-        allow write: if false; // Or more specific admin rules
+        allow write: if false;
     }
 
     // Posts: main document
@@ -48,7 +40,7 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create: if request.auth.uid == request.resource.data.userId;
 
-      // Allow update for owner, or for specific, controlled actions like liking or view counts.
+      // Allow update for owner, or for specific, controlled actions like liking, view counts, or comment counts.
       allow update: if isSignedIn() && (
         (request.auth.uid == resource.data.userId) ||
         (
@@ -58,6 +50,10 @@ service cloud.firestore {
         (
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewCount']) &&
           request.resource.data.viewCount == resource.data.viewCount + 1
+        ) ||
+        (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentCount']) &&
+          request.resource.data.commentCount == resource.data.commentCount + 1
         )
       );
 
@@ -75,7 +71,6 @@ service cloud.firestore {
     match /flashes/{flashId} {
       allow read: if isSignedIn();
       allow create: if request.auth.uid == request.resource.data.userId;
-      // Allow update if user is the owner OR if they are just incrementing the view count.
       allow update: if isSignedIn() && (
         (request.auth.uid == resource.data.userId) || 
         (
@@ -95,9 +90,6 @@ service cloud.firestore {
 
     // Chats & Messages
     match /chats/{chatId} {
-      // These rules apply to potential (but non-existent) chat documents. 
-      // They are here for structure but the main logic is in the subcollection.
-      // A function to determine if a user is part of a DM or Group chat.
       function isChatParticipant() {
         let isDmParticipant = request.auth.uid in chatId.split('_');
         let isGroupParticipant = exists(/databases/$(database)/documents/groups/$(chatId)) && 
@@ -105,7 +97,6 @@ service cloud.firestore {
         return isDmParticipant || isGroupParticipant;
       }
 
-      // Messages subcollection
       match /messages/{messageId} {
         allow read, create, update: if isSignedIn() && isChatParticipant();
         allow delete: if isSignedIn() && resource.data.sender == request.auth.uid;
@@ -116,7 +107,7 @@ service cloud.firestore {
     match /songs/{songId} {
         allow read: if isSignedIn();
         allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-        allow update, delete: if false; // Future: allow update/delete for owner or admin
+        allow update, delete: if false;
     }
 
     // Drops: main document
@@ -124,7 +115,6 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create: if request.auth.uid == request.resource.data.userId;
 
-      // Allow update for owner, or for specific, controlled actions like liking.
       allow update: if isSignedIn() && (
         (request.auth.uid == resource.data.userId) ||
         (
@@ -141,7 +131,7 @@ service cloud.firestore {
         allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
 
-    // Prompts: 'current' is for the old system, 'dropPrompts' is the new system.
+    // Prompts
     match /prompts/current {
       allow read: if true;
       allow write: if request.auth.uid == 'x04gu2AkBFVX4y6Iho6J713cJOy2';

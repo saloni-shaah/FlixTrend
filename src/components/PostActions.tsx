@@ -83,30 +83,6 @@ export function PostActions({ post, onCommentClick, isShortVibe = false, collect
             });
             errorEmitter.emit('permission-error', permissionError);
           });
-
-
-        if (!userHasLiked && post.userId !== currentUser.uid) {
-            const notifRef = collection(db, "users", post.userId, "notifications");
-            const notifData = {
-                type: 'like',
-                fromUserId: currentUser.uid,
-                fromUsername: currentUser.displayName,
-                fromAvatarUrl: currentUser.photoURL,
-                postId: post.id,
-                postContent: post.content?.substring(0, 50) || 'your post',
-                createdAt: serverTimestamp(),
-                read: false,
-            };
-            addDoc(notifRef, notifData).catch(e => {
-                console.error("Error sending notification:", e);
-                const permissionError = new FirestorePermissionError({
-                    path: notifRef.path,
-                    operation: 'create',
-                    requestResourceData: notifData,
-                });
-                errorEmitter.emit('permission-error', permissionError);
-            });
-        }
     };
     
     const handleRelay = async (e: React.MouseEvent) => {

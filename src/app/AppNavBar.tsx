@@ -4,9 +4,8 @@ import { useAppState } from "@/utils/AppStateContext";
 import { MessageSquare, ArrowLeft, Flame } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import { getFirestore, collection, query, where, onSnapshot, getDocs } from "firebase/firestore";
+import { getFirestore, collection, query, where, onSnapshot } from "firebase/firestore";
 import { auth, app } from "@/utils/firebaseClient";
-import { getDownloadedPosts } from "@/utils/offline-db";
 import DropIcon from "../components/icons/DropIcon"
 
 const db = getFirestore(app);
@@ -47,7 +46,7 @@ const FlowIcon = ({ className }: { className?: string }) => (
 );
 
 
-function NavButton({ href, icon: Icon, label, notificationCount }: { href: string; icon: React.ElementType; label: string; notificationCount?: number }) {
+function NavButton({ href, icon: Icon, label }: { href: string; icon: React.ElementType; label: string; }) {
   const pathname = usePathname();
   const router = useRouter();
   const isActive = pathname === href || (href === '/squad' && pathname.startsWith('/squad/'));
@@ -66,11 +65,6 @@ function NavButton({ href, icon: Icon, label, notificationCount }: { href: strin
           className="h-[2px] w-full bg-brand-gold rounded-full mt-1"
           layoutId="nav-underline"
         />
-      )}
-      {notificationCount && notificationCount > 0 && (
-        <div className="absolute -top-1 -right-1 w-5 h-5 bg-accent-pink rounded-full flex items-center justify-center text-white text-[10px] font-bold">
-            {notificationCount > 9 ? '9+' : notificationCount}
-        </div>
       )}
     </a>
   );
@@ -107,83 +101,8 @@ export default function AppNavBar() {
     };
   }, []);
 
-  const [totalUnreadMessages, setTotalUnreadMessages] = useState(0);
-  const [hasUnreadNotifs, setHasUnreadNotifs] = useState(false);
   const currentUser = auth.currentUser;
   
-  useEffect(() => {
-    if (currentUser) {
-      // Dynamically import and call the function only on the client-side
-      import('@/utils/firebaseMessaging').then(messagingModule => {
-        messagingModule.requestNotificationPermission(currentUser.uid);
-      }).catch(err => {
-          console.error("Failed to load firebaseMessaging", err);
-      });
-    }
-  }, [currentUser]);
-
-  // Listener for total unread messages
-  useEffect(() => {
-    if (!currentUser || isOffline) {
-        setTotalUnreadMessages(0);
-        return;
-    }
-    
-    // This listener will be complex. It needs to check multiple chat collections.
-    const fetchAllUnreadCounts = async () => {
-        let totalCount = 0;
-        const unsubs: (()=>void)[] = [];
-
-        // 1. Listen to groups
-        const groupsQuery = query(collection(db, "groups"), where("members", "array-contains", currentUser.uid));
-        const unsubGroups = onSnapshot(groupsQuery, (groupsSnap) => {
-            groupsSnap.docs.forEach(groupDoc => {
-                 const q = query(
-                    collection(db, "chats", groupDoc.id, "messages"),
-                    where("readBy", "array-contains", currentUser.uid)
-                );
-                 // This is an approximation. A more robust solution would use Cloud Functions to maintain counts.
-                 // For now, we'll just check if there are any unread messages.
-                 const unsub = onSnapshot(q, (snapshot) => {
-                     // This logic is flawed for a total count. 
-                     // A better approach for this global counter might be a dedicated collection updated by cloud functions.
-                     // Let's simulate by checking for *any* unread message for now to show a badge, not a count.
-                 });
-                 unsubs.push(unsub);
-            });
-        });
-        unsubs.push(unsubGroups);
-        
-        // Let's use a simpler, less-performant but working client-side method for now.
-        // It fetches all message collections the user is a part of and counts.
-        const userChatsRef = collection(db, 'users', currentUser.uid, 'chats'); // Assuming such a collection exists for simplicity
-        
-        // This is a placeholder for a more complex aggregation logic that would be needed for a precise count.
-        // A true implementation often requires cloud functions.
-        // For the purpose of this demo, we'll leave the total count as a placeholder.
-        // The logic on the `signal` page will show the per-chat count correctly.
-
-    };
-    
-    // The total unread count logic is complex and better handled by cloud functions for performance.
-    // For this UI change, we'll focus on the per-chat display on the signal page and a simple notification indicator here.
-
-  }, [currentUser, isOffline]);
-
-  // Listener for general notifications
-  useEffect(() => {
-    if (!currentUser || isOffline) {
-        setHasUnreadNotifs(false);
-        return;
-    }
-    const q = query(collection(db, "users", currentUser.uid, "notifications"), where("read", "==", false));
-    const unsub = onSnapshot(q, (snapshot) => {
-        setHasUnreadNotifs(!snapshot.empty);
-    });
-    return () => unsub();
-  }, [currentUser, isOffline]);
-
-
   const isAuthPage = pathname === "/login" || pathname === "/signup" || pathname === "/";
   const isSpecialPage = ["/guest", "/about", "/privacy", "/terms", "/contact"].includes(pathname);
   const hideNav = isAuthPage || isSpecialPage || !!activeCall || pathname.startsWith('/watch');
@@ -213,7 +132,7 @@ export default function AppNavBar() {
             <NavButton href="/flow" icon={FlowIcon} label="Flow" />
             <NavButton href="/drop" icon={DropIcon} label="Drop" />
             <NavButton href="/squad" icon={SquadIcon} label="Squad" />
-            <NavButton href="/signal" icon={MessageSquare} label="Signal" notificationCount={totalUnreadMessages > 0 ? totalUnreadMessages : undefined} />
+            <NavButton href="/signal" icon={MessageSquare} label="Signal" />
           </>
         )}
       </nav>
