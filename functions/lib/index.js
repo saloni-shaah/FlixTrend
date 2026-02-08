@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateComment = exports.deleteComment = exports.updatePost = exports.deleteMessage = exports.deletePost = exports.deleteUserAccount = exports.checkUsername = exports.updateAccolades = exports.sendScheduledPostNotifications = exports.cleanupExpiredFlashes = exports.onChatDelete = exports.onCallCreated = exports.sendNotification = exports.onUserDelete = exports.onNewUserCreate = void 0;
+exports.updateComment = exports.deleteComment = exports.updatePost = exports.deleteMessage = exports.deletePost = exports.deleteUserAccount = exports.checkUsername = exports.updateAccolades = exports.cleanupExpiredFlashes = exports.onChatDelete = exports.onUserDelete = exports.onNewUserCreate = void 0;
 const app_1 = require("firebase-admin/app");
 const firestore_1 = require("firebase-admin/firestore");
 const admin = require("firebase-admin");
@@ -42,108 +42,6 @@ exports.onUserDelete = v1.auth.user().onDelete(async (user) => {
     firebase_functions_1.logger.info(`User ${user.uid} is being deleted. Cleaning up data.`);
     const userRef = db.collection('users').doc(user.uid);
     await userRef.delete();
-});
-exports.sendNotification = v1.firestore
-    .document('users/{userId}/notifications/{notificationId}')
-    .onCreate(async (snapshot, context) => {
-    var _a;
-    const { userId, notificationId } = context.params;
-    const notification = snapshot.data();
-    if (!notification) {
-        firebase_functions_1.logger.log('No notification data found for', notificationId);
-        return;
-    }
-    const { type, fromUsername, postContent, fromAvatarUrl } = notification;
-    const userDoc = await db.collection('users').doc(userId).get();
-    if (!userDoc.exists) {
-        firebase_functions_1.logger.log('User not found:', userId);
-        return;
-    }
-    const fcmToken = (_a = userDoc.data()) === null || _a === void 0 ? void 0 : _a.fcmToken;
-    if (!fcmToken) {
-        firebase_functions_1.logger.log(`FCM token not found for user ${userId}. Cannot send push notification.`);
-        return;
-    }
-    let notificationTitle = "You have a new notification";
-    let notificationBody = "Someone interacted with you on FlixTrend!";
-    switch (type) {
-        case 'like':
-            notificationTitle = `New Like!`;
-            notificationBody = `${fromUsername || 'Someone'} liked your post.`;
-            break;
-        case 'comment':
-            notificationTitle = `New Comment!`;
-            notificationBody = `${fromUsername || 'Someone'} commented: "${postContent}"`;
-            break;
-        case 'follow':
-            notificationTitle = `New Follower!`;
-            notificationBody = `${fromUsername || 'Someone'} started following you.`;
-            break;
-        case 'missed_call':
-            notificationTitle = `Missed Call`;
-            notificationBody = `You missed a call from ${fromUsername || 'Someone'}.`;
-            break;
-    }
-    const payload = {
-        notification: {
-            title: notificationTitle,
-            body: notificationBody,
-            icon: fromAvatarUrl || '/icon-192x192.png',
-            click_action: 'https://flixtrend.in/home',
-        },
-    };
-    try {
-        await admin.messaging().sendToDevice(fcmToken, payload);
-        firebase_functions_1.logger.info('Successfully sent notification to user:', userId);
-    }
-    catch (error) {
-        firebase_functions_1.logger.error('Error sending notification:', error);
-    }
-});
-exports.onCallCreated = v1.firestore
-    .document('calls/{callId}')
-    .onCreate(async (snap) => {
-    var _a;
-    const callData = snap.data();
-    if (!callData) {
-        firebase_functions_1.logger.log('No call data found');
-        return;
-    }
-    const { calleeId, callerName } = callData;
-    if (!calleeId) {
-        firebase_functions_1.logger.log('calleeId is missing');
-        return;
-    }
-    const userDoc = await db.collection('users').doc(calleeId).get();
-    if (!userDoc.exists) {
-        firebase_functions_1.logger.log('Callee user document not found');
-        return;
-    }
-    const fcmToken = (_a = userDoc.data()) === null || _a === void 0 ? void 0 : _a.fcmToken;
-    if (!fcmToken) {
-        firebase_functions_1.logger.log(`FCM token not found for callee ${calleeId}. Cannot send push notification.`);
-        return;
-    }
-    const payload = {
-        token: fcmToken,
-        data: {
-            type: 'incoming_call',
-            callId: snap.id,
-            callerName: callerName || 'Someone',
-        },
-        notification: {
-            title: 'Incoming Call on FlixTrend',
-            body: `${callerName || 'Someone'} is calling you!`,
-        },
-    };
-    try {
-        // @ts-ignore
-        await admin.messaging().send(payload);
-        firebase_functions_1.logger.info('Successfully sent call notification');
-    }
-    catch (error) {
-        firebase_functions_1.logger.error('Error sending call notification:', error);
-    }
 });
 exports.onChatDelete = v1.firestore
     .document('users/{userId}/deletedChats/{chatId}')
@@ -208,53 +106,6 @@ exports.cleanupExpiredFlashes = v1.pubsub.schedule('every 1 hours').onRun(async 
     deletePromises.push(batch.commit());
     await Promise.all(deletePromises);
     firebase_functions_1.logger.info(`Cleanup complete. Deleted ${expiredFlashesSnap.size} expired flashes.`);
-    return null;
-});
-exports.sendScheduledPostNotifications = v1.pubsub.schedule('every 1 minutes').onRun(async (context) => {
-    var _a;
-    const now = firestore_1.Timestamp.now();
-    const fiveMinutesFromNow = firestore_1.Timestamp.fromMillis(now.toMillis() + 5 * 60 * 1000);
-    const q = db.collection('posts')
-        .where('publishAt', '<=', fiveMinutesFromNow)
-        .where('publishAt', '>', now)
-        .where('notificationSent', '==', false);
-    const scheduledPostsSnap = await q.get();
-    if (scheduledPostsSnap.empty) {
-        return null;
-    }
-    const batch = db.batch();
-    for (const postDoc of scheduledPostsSnap.docs) {
-        const post = postDoc.data();
-        const creatorId = post.userId;
-        const creatorUsername = post.username;
-        const creatorDoc = await db.collection('users').doc(creatorId).get();
-        if (creatorDoc.exists && ((_a = creatorDoc.data()) === null || _a === void 0 ? void 0 : _a.fcmToken)) {
-            const notifRef = db.collection('users').doc(creatorId).collection('notifications');
-            await notifRef.add({
-                type: 'schedule_reminder',
-                fromUsername: 'FlixTrend',
-                postTitle: post.title,
-                createdAt: firestore_1.FieldValue.serverTimestamp(),
-                read: false,
-            });
-        }
-        const followersSnap = await db.collection('users').doc(creatorId).collection('followers').get();
-        followersSnap.forEach(async (followerDoc) => {
-            const notifRef = db.collection('users').doc(followerDoc.id).collection('notifications');
-            await notifRef.add({
-                type: 'live_starting',
-                fromUsername: creatorUsername,
-                fromAvatarUrl: post.avatar_url,
-                postTitle: post.title,
-                postId: postDoc.id,
-                createdAt: firestore_1.FieldValue.serverTimestamp(),
-                read: false,
-            });
-        });
-        batch.update(postDoc.ref, { notificationSent: true });
-    }
-    await batch.commit();
-    firebase_functions_1.logger.info(`Sent notifications for ${scheduledPostsSnap.size} scheduled posts.`);
     return null;
 });
 exports.updateAccolades = v1.pubsub.schedule('every 1 hours').onRun(async (context) => {

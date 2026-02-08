@@ -4,7 +4,7 @@ import 'regenerator-runtime/runtime';
 import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import dynamic from 'next/dynamic';
 import { getFirestore, collection, query, orderBy, getDoc, doc, limit, startAfter, getDocs, where, Timestamp, onSnapshot, or } from "firebase/firestore";
-import { Plus, Bell, Search, Mic, ArrowLeft, Users as UsersIcon, Brush, GraduationCap, Popcorn, Gamepad2 } from "lucide-react";
+import { Plus, Search, Mic, ArrowLeft, Users as UsersIcon, Brush, GraduationCap, Popcorn, Gamepad2 } from "lucide-react";
 import { auth } from "@/utils/firebaseClient";
 import { useAppState } from "@/utils/AppStateContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,7 +21,6 @@ import { FlixFlameIcon } from '@/components/icons/FlixFlameIcon';
 
 const MusicDiscovery = dynamic(() => import('@/components/MusicDiscovery').then(mod => mod.MusicDiscovery), { ssr: false });
 const FlashModal = dynamic(() => import('@/components/FlashModal'), { ssr: false });
-const NotificationPanel = dynamic(() => import('@/components/NotificationPanel'), { ssr: false });
 
 const db = getFirestore(app);
 
@@ -38,7 +37,6 @@ function VibeSpaceContent() {
   const [flashes, setFlashes] = useState<any[]>([]);
   const [selectedFlashUser, setSelectedFlashUser] = useState<any | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [showNotifications, setShowNotifications] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -53,7 +51,6 @@ function VibeSpaceContent() {
   const [showWelcomeAnimation, setShowWelcomeAnimation] = useState(false);
   const POSTS_PER_PAGE = 5;
   const feedEndRef = useRef<HTMLDivElement>(null);
-  const [hasUnreadNotifs, setHasUnreadNotifs] = useState(false);
   const [viewedFlashes, setViewedFlashes] = useState<string[]>([]);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
@@ -160,9 +157,6 @@ function VibeSpaceContent() {
         const unsubscribe = auth.onAuthStateChanged(async user => {
             if (user) {
                 setCurrentUser(user);
-                const q = query(collection(db, "users", user.uid, "notifications"), where("read", "==", false));
-                const unsubNotifs = onSnapshot(q, (snapshot) => setHasUnreadNotifs(!snapshot.empty));
-                return () => unsubNotifs();
             } else {
                 router.replace('/login'); 
             }
@@ -413,20 +407,6 @@ function VibeSpaceContent() {
         </section>
       </div>
       
-      <div className="fixed top-4 right-4 z-30 flex flex-col items-center">
-        <motion.button
-          className="relative inline-flex items-center justify-center bg-white/10 dark:bg-black/20 backdrop-blur-md border border-white/10 dark:border-black/20 w-12 h-12 rounded-full text-white hover:bg-gradient-to-tr hover:from-accent-purple hover:to-accent-cyan transition-all"
-          title="Notifications"
-          onClick={() => setShowNotifications(true)}
-          aria-label="Notifications"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <Bell className="text-xl" />
-          {hasUnreadNotifs && <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-accent-pink rounded-full"></span>}
-        </motion.button>
-      </div>
-      
         <motion.div
             initial={{ scale: 0, y: 100 }}
             animate={{ scale: 1, y: 0 }}
@@ -446,7 +426,6 @@ function VibeSpaceContent() {
 
       <AnimatePresence>
         {selectedFlashUser && <FlashModal userFlashes={selectedFlashUser} onClose={() => handleFlashModalClose(selectedFlashUser?.userId)} />}
-        {showNotifications && <NotificationPanel onClose={() => setShowNotifications(false)} />}
       </AnimatePresence>
     </div>
   );

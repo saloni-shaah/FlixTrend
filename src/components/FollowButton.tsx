@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { getFirestore, doc, onSnapshot, deleteDoc, setDoc, collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { getFirestore, doc, onSnapshot, deleteDoc, setDoc, collection, serverTimestamp } from "firebase/firestore";
 import { app } from "@/utils/firebaseClient";
 
 const db = getFirestore(app);
@@ -30,17 +30,6 @@ export function FollowButton({ profileUser, currentUser }: { profileUser: any; c
     } else {
       await setDoc(followDocRef, { followedAt: serverTimestamp(), userId: currentUser.uid });
       await setDoc(followingDocRef, { followedAt: serverTimestamp(), userId: profileUser.uid });
-      
-      // Create a notification for the user being followed
-      const notifRef = collection(db, "users", profileUser.uid, "notifications");
-      await addDoc(notifRef, {
-        type: 'follow',
-        fromUserId: currentUser.uid,
-        fromUsername: currentUser.displayName,
-        fromAvatarUrl: currentUser.photoURL,
-        createdAt: serverTimestamp(),
-        read: false,
-      });
     }
   };
   
