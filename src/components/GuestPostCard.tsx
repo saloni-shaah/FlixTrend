@@ -9,7 +9,7 @@ import { ShareModal } from './ShareModal';
 import { app } from '@/utils/firebaseClient';
 import { OptimizedImage } from './OptimizedImage';
 import { FlixTrendLogo } from './FlixTrendLogo';
-import { FaMusic, FaPlay } from "react-icons/fa";
+import { FaPlay } from "react-icons/fa";
 import { OptimizedVideo } from './OptimizedVideo';
 import { PlayerModal } from '@/components/video/PlayerModal';
 
@@ -71,7 +71,7 @@ export function GuestPostCard({ post }: { post: any }) {
     
     return (
         <>
-            {showPlayer && contentPost.type === 'media' && <PlayerModal post={contentPost} onClose={() => setShowPlayer(false)} />}
+            {showPlayer && contentPost.isVideo && <PlayerModal post={contentPost} onClose={() => setShowPlayer(false)} />}
             <div className="flex items-center gap-3 mb-2">
                 <div className="flex items-center gap-2 group cursor-pointer" onClick={handleInteraction}>
                     <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green flex items-center justify-center font-bold text-lg overflow-hidden border-2 border-accent-green group-hover:scale-105 transition-transform">
@@ -102,9 +102,7 @@ export function GuestPostCard({ post }: { post: any }) {
                         const mediaUrls = Array.isArray(contentPost.mediaUrl) ? contentPost.mediaUrl : [contentPost.mediaUrl];
                         
                         if (mediaUrls.length === 1) {
-                            const url = mediaUrls[0];
-                            const isVideo = url.includes('.mp4') || url.includes('.webm') || url.includes('.ogg');
-                            if (isVideo) {
+                            if (contentPost.isVideo) {
                                 return (
                                     <div 
                                         className="relative group w-full cursor-pointer bg-black flex items-center justify-center" 
@@ -114,7 +112,7 @@ export function GuestPostCard({ post }: { post: any }) {
                                             maxHeight: '70vh',
                                         }}
                                     >
-                                        <OptimizedVideo src={url} className="w-full h-full object-contain" preload="metadata" />
+                                        <OptimizedVideo src={mediaUrls[0]} className="w-full h-full object-contain" preload="metadata" />
                                         <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                                             <FaPlay className="text-white text-5xl" />
                                         </div>
@@ -124,7 +122,7 @@ export function GuestPostCard({ post }: { post: any }) {
                             }
                             return (
                                 <div className="relative">
-                                    <OptimizedImage src={url} alt="media" className="w-full rounded-xl" />
+                                    <OptimizedImage src={mediaUrls[0]} alt="media" className="w-full rounded-xl" />
                                     <Watermark isAnimated={true} />
                                 </div>
                             );
@@ -133,11 +131,14 @@ export function GuestPostCard({ post }: { post: any }) {
                         return (
                             <div className="grid grid-cols-2 gap-1">
                                 {mediaUrls.slice(0, 4).map((url: string, index: number) => {
-                                    const isVideo = url.includes('.mp4') || url.includes('.webm') || url.includes('.ogg');
+                                    // This part still relies on string matching for multiple files, 
+                                    // a more robust solution would be to have an isVideo array.
+                                    // For now, this is a reasonable fallback.
+                                    const isVideoInGrid = url.includes('.mp4') || url.includes('.webm') || url.includes('.ogg');
                                     return (
                                         <div key={index} className="relative aspect-square">
-                                            {isVideo ? <video src={url} controls className="w-full h-full object-cover" /> : <OptimizedImage src={url} alt="media" className="w-full h-full object-cover" />}
-                                            <Watermark isAnimated={isVideo} />
+                                            {isVideoInGrid ? <video src={url} controls className="w-full h-full object-cover" /> : <OptimizedImage src={url} alt="media" className="w-full h-full object-cover" />}
+                                            <Watermark isAnimated={isVideoInGrid} />
                                             {index === 3 && mediaUrls.length > 4 && (
                                                 <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                                                     <span className="text-white text-2xl font-bold">+{mediaUrls.length - 4}</span>
@@ -207,7 +208,7 @@ export function GuestPostCard({ post }: { post: any }) {
         <ShareModal 
             url={`${window.location.origin}/post/${post.id}`}
             title={post.content}
-            isVideo={post.type === 'media'}
+            isVideo={post.type === 'media' && post.isVideo}
             onSignalShare={() => { setShowShareModal(false); setShowLoginPrompt(true); }}
             onClose={() => setShowShareModal(false)}
         />

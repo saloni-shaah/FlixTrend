@@ -23,9 +23,11 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
         const newMediaFiles = [...(data.mediaFiles || []), file];
 
         const isVideo = file.type.startsWith('video/');
-        const updateData: any = { mediaUrl: newMediaUrls, mediaFiles: newMediaFiles, isVideo };
-        
-        updateData.isVideo = newMediaFiles.some(f => f.type.startsWith('video/'));
+        const updateData: any = { 
+            mediaUrl: newMediaUrls, 
+            mediaFiles: newMediaFiles, 
+            isVideo: newMediaFiles.some(f => f.type.startsWith('video/')) 
+        };
 
         if (isVideo) {
             const video = document.createElement('video');
@@ -35,6 +37,19 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
                 updateData.isPortrait = video.videoHeight > video.videoWidth;
                 updateData.videoDuration = video.duration;
                 onDataChange({ ...data, ...updateData });
+            };
+            video.onerror = () => {
+                window.URL.revokeObjectURL(video.src);
+                setUploadError(`Couldn't process video "${file.name}". It might be corrupt or in an unsupported format.`);
+                // Clean up the failed upload from the state
+                const updatedMediaUrls = newMediaUrls.filter(url => url !== previewUrl);
+                const updatedMediaFiles = newMediaFiles.filter(f => f !== file);
+                onDataChange({
+                    ...data,
+                    mediaUrl: updatedMediaUrls,
+                    mediaFiles: updatedMediaFiles,
+                    isVideo: updatedMediaFiles.some(f => f.type.startsWith('video/'))
+                });
             };
             video.src = previewUrl;
         } else {
