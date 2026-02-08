@@ -97,8 +97,14 @@ service cloud.firestore {
         return isDmParticipant || isGroupParticipant;
       }
 
+      // Messages subcollection
       match /messages/{messageId} {
-        allow read, create, update: if isSignedIn() && isChatParticipant();
+        allow read, create: if isSignedIn() && isChatParticipant();
+        
+        // Allow update for reactions, or if the user is the original sender.
+        allow update: if isSignedIn() && isChatParticipant() &&
+                      (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions']) || request.auth.uid == resource.data.sender);
+
         allow delete: if isSignedIn() && resource.data.sender == request.auth.uid;
       }
     }
