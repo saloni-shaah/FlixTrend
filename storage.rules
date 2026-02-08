@@ -34,5 +34,13 @@ service firebase.storage {
       allow read: if true;
       allow write: if isSignedIn() && request.auth.uid == userId;
     }
+    
+    // Voice Messages
+    match /voice_messages/{userId}/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && request.auth.uid == userId
+                  && request.resource.size < 5 * 1024 * 1024
+                  && request.resource.contentType.matches('audio/.*');
+    }
   }
 }
