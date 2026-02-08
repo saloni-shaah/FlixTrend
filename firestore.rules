@@ -35,10 +35,10 @@ service cloud.firestore {
         allow write: if false;
     }
 
-    // Posts: main document
+    // Posts: main document - now with public read
     match /posts/{postId} {
-      allow read: if isSignedIn();
-      allow create: if request.auth.uid == request.resource.data.userId;
+      allow get, list: if true;
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
 
       // Allow update for owner, or for specific, controlled actions like liking, view counts, or comment counts.
       allow update: if isSignedIn() && (
@@ -61,7 +61,7 @@ service cloud.firestore {
     }
 
 
-    // Posts: subcollections (comments, likes, etc.)
+    // Posts: subcollections (comments, likes, etc.) - still protected
     match /posts/{postId}/{subcollection}/{docId} {
         allow read, create: if isSignedIn();
         allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
@@ -113,7 +113,7 @@ service cloud.firestore {
     // Drops: main document
     match /drops/{dropId} {
       allow read: if isSignedIn();
-      allow create: if request.auth.uid == request.resource.data.userId;
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
 
       allow update: if isSignedIn() && (
         (request.auth.uid == resource.data.userId) ||
