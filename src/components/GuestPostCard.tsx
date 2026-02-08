@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { getFirestore } from "firebase/firestore";
-import { Repeat2, Star, Share, MessageCircle, Bookmark } from "lucide-react";
+import { Repeat2, Star, Share, MessageCircle, Bookmark, X } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ShareModal } from './ShareModal';
@@ -51,14 +51,17 @@ export function GuestPostCard({ post }: { post: any }) {
         <motion.div 
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="glass-card p-8 w-full max-w-sm text-center flex flex-col items-center gap-4"
+            className="glass-card p-8 w-full max-w-sm text-center flex flex-col items-center gap-4 relative"
             onClick={e => e.stopPropagation()}
         >
+            <button onClick={() => setShowLoginPrompt(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors">
+                <X size={24} />
+            </button>
             <h3 className="text-2xl font-headline font-bold text-accent-cyan">Join the Conversation!</h3>
             <p className="text-gray-300">You need to be logged in to like, comment, or share posts.</p>
             <div className="flex gap-4 mt-4">
-                <Link href="/login" className="btn-glass bg-accent-cyan text-black">Log In</Link>
-                <Link href="/signup" className="btn-glass bg-accent-pink text-white">Sign Up</Link>
+                <Link href={`/login?redirect=/post/${post.id}`} className="btn-glass bg-accent-cyan text-black">Log In</Link>
+                <Link href={`/signup?redirect=/post/${post.id}`} className="btn-glass bg-accent-pink text-white">Sign Up</Link>
             </div>
         </motion.div>
     </div>
@@ -131,10 +134,7 @@ export function GuestPostCard({ post }: { post: any }) {
                         return (
                             <div className="grid grid-cols-2 gap-1">
                                 {mediaUrls.slice(0, 4).map((url: string, index: number) => {
-                                    // This part still relies on string matching for multiple files, 
-                                    // a more robust solution would be to have an isVideo array.
-                                    // For now, this is a reasonable fallback.
-                                    const isVideoInGrid = url.includes('.mp4') || url.includes('.webm') || url.includes('.ogg');
+                                    const isVideoInGrid = contentPost.isVideo?.[index] ?? (url.includes('.mp4') || url.includes('.webm') || url.includes('.ogg'));
                                     return (
                                         <div key={index} className="relative aspect-square">
                                             {isVideoInGrid ? <video src={url} controls className="w-full h-full object-cover" /> : <OptimizedImage src={url} alt="media" className="w-full h-full object-cover" />}
