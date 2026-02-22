@@ -3,22 +3,41 @@
 import React, { useState, Suspense, useEffect } from "react";
 import { useSearchParams } from 'next/navigation';
 import Link from "next/link";
-import { auth } from "@/utils/firebaseClient";
-import { 
+import { auth, app } from "@/utils/firebaseClient";
+import {
     signInWithEmailAndPassword,
     sendPasswordResetEmail,
     sendSignInLinkToEmail,
     RecaptchaVerifier,
-    signInWithPhoneNumber 
+    signInWithPhoneNumber
 } from "firebase/auth";
+import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
+import { getFunctions, httpsCallable } from "firebase/functions";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import LoginWithEmail from "./LoginWithEmail";
 import CountrySelector from "@/components/ui/CountrySelector";
 import { Mail, Phone, Eye, EyeOff } from "lucide-react";
 
+const functions = getFunctions(app);
+const checkUserExists = httpsCallable(functions, 'checkUserExists');
+
+async function checkUserExistsByPhone(phoneNumber: string): Promise<boolean> {
+    try {
+        const result = await checkUserExists({ phoneNumber });
+        const data = result.data as { exists: boolean };
+        return data.exists;
+    } catch (error) {
+        console.error("Error checking user existence:", error);
+        // To be safe, we'll assume the user might exist to allow login attempts
+        // but this should be handled based on the specific error.
+        return true; 
+    }
+}
+
+
 function LoginPageContent() {
-  const [loginMethod, setLoginMethod] = useState<'phone' | 'email' | 'magic-link'>('phone');
+  const [loginMethod, setLoginMethod] = useState<'email' | 'phone' | 'magic-link'>('email');
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -31,16 +50,17 @@ function LoginPageContent() {
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [confirmationResult, setConfirmationResult] = useState<any>(null);
   const router = useRouter();
+  const db = getFirestore(app);
 
   useEffect(() => {
     (window as any).initializeRecaptchaVerifier = () => {
-      if (!window.recaptchaVerifier) {
-        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+      if (!(window as any).recaptchaVerifier) {
+        (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
           'size': 'invisible',
           'callback': (response: any) => {},
         });
       }
-      return window.recaptchaVerifier;
+      return (window as any).recaptchaVerifier;
     }
   }, []);
 
@@ -48,12 +68,23 @@ function LoginPageContent() {
     e.preventDefault();
     setError("");
     setLoading(true);
+
+    const fullPhoneNumber = `${countryCode}${phoneNumber}`;
+    
+    const userExists = await checkUserExistsByPhone(fullPhoneNumber);
+
+    if (!userExists) {
+        setError("No account found with this number. Please sign up.");
+        setLoading(false);
+        return;
+    }
+    
     try {
-      const fullPhoneNumber = `${countryCode}${phoneNumber}`;
       const appVerifier = (window as any).initializeRecaptchaVerifier();
       const result = await signInWithPhoneNumber(auth, fullPhoneNumber, appVerifier);
       setConfirmationResult(result);
       setShowOtpInput(true);
+      setSuccess("OTP sent successfully!");
     } catch (err: any) {
       setError("Failed to send OTP. Please check the phone number or try again later.");
       console.error("Phone Sign In Error:", err);
@@ -149,7 +180,7 @@ function LoginPageContent() {
             className="btn-glass mt-4 bg-accent-pink/80"
             disabled={loading}
         >
-            {loading ? "Sending OTP..." : "Send OTP"}
+            {loading ? "Checking..." : "Send OTP"}
         </motion.button>
     </form>
   ) : (
@@ -255,11 +286,11 @@ function LoginPageContent() {
         <h2 className="text-3xl font-headline font-bold text-accent-pink mb-2 text-center">Welcome Back</h2>
         
         <div className="flex bg-black/20 p-1 rounded-full text-sm">
-            <button onClick={() => setLoginMethod('phone')} className={`flex-1 p-2 rounded-full font-bold flex items-center justify-center gap-2 transition-colors ${loginMethod === 'phone' ? 'bg-accent-cyan text-black' : 'text-gray-300'}`}>
-                <Phone size={16}/> Phone
-            </button>
              <button onClick={() => setLoginMethod('email')} className={`flex-1 p-2 rounded-full font-bold flex items-center justify-center gap-2 transition-colors ${loginMethod === 'email' ? 'bg-accent-cyan text-black' : 'text-gray-300'}`}>
                 <Mail size={16}/> Email
+            </button>
+            <button onClick={() => setLoginMethod('phone')} className={`flex-1 p-2 rounded-full font-bold flex items-center justify-center gap-2 transition-colors ${loginMethod === 'phone' ? 'bg-accent-cyan text-black' : 'text-gray-300'}`}>
+                <Phone size={16}/> Phone
             </button>
         </div>
         

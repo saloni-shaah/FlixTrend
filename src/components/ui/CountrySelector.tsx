@@ -1,84 +1,81 @@
 
 "use client";
-import React, { useState, useMemo, useEffect } from 'react';
-import { countries, Country } from '@/lib/countries';
+import * as React from "react";
+import { Check, Search, ChevronsUpDown } from "lucide-react";
 
-interface CountrySelectorProps {
-  onCountrySelect: (dialCode: string) => void;
-}
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { countries } from "@/lib/countries";
 
-// Function to convert country code to flag emoji
-const countryCodeToEmoji = (code: string) => {
-  const OFFSET = 127397;
-  const chars = [...code.toUpperCase()].map(char => String.fromCodePoint(char.charCodeAt(0) + OFFSET));
-  return chars.join('');
+// Helper to convert ISO 3166-1 alpha-2 country code to a flag emoji.
+const countryCodeToFlag = (isoCode: string) => {
+  if (!isoCode || isoCode.length !== 2) return "🏳️";
+  return String.fromCodePoint(
+    ...isoCode.toUpperCase().split('').map(char => 127397 + char.charCodeAt(0))
+  );
 };
 
-export default function CountrySelector({ onCountrySelect }: CountrySelectorProps) {
-  const [selectedCountry, setSelectedCountry] = useState<Country>(countries.find(c => c.code === 'IN')!);
-  const [isOpen, setIsOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
+interface CountrySelectorProps {
+    onCountrySelect: (code: string) => void;
+    initialSelection?: string;
+    className?: string;
+}
 
-  useEffect(() => {
-    // Set default country on initial render
-    onCountrySelect(selectedCountry.dial_code);
-  }, []);
+export default function CountrySelector({ onCountrySelect, initialSelection, className }: CountrySelectorProps) {
+    const [open, setOpen] = React.useState(false);
+    const [value, setValue] = React.useState(() => initialSelection || "+91");
 
-  const filteredCountries = useMemo(() => 
-    countries.filter(country => 
-      country.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      country.dial_code.includes(searchTerm)
-    ), [searchTerm]);
+    const selectedCountry = React.useMemo(() => 
+        countries.find(c => c.dial_code === value) || countries.find(c => c.dial_code === "+91"), 
+    [value]);
 
-  const handleSelect = (country: Country) => {
-    setSelectedCountry(country);
-    onCountrySelect(country.dial_code);
-    setIsOpen(false);
-    setSearchTerm("");
-  };
-
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        className="input-glass w-full flex items-center justify-between p-3"
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <span className="flex items-center gap-2 text-white">
-            <span className="text-xl">{countryCodeToEmoji(selectedCountry.code)}</span>
-            <span>{selectedCountry.dial_code}</span>
-        </span>
-        <svg className={`w-5 h-5 transition-transform text-gray-400 ${isOpen ? 'transform rotate-180' : ''}`} fill="currentColor" viewBox="0 0 20 20">
-          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-        </svg>
-      </button>
-      {isOpen && (
-        <div className="absolute z-20 w-full mt-1 bg-gray-900 border border-gray-700 rounded-md shadow-lg">
-          <div className="p-2">
-            <input 
-              type="text"
-              placeholder="Search country..."
-              className="input-glass w-full bg-gray-800"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              autoFocus
-            />
-          </div>
-          <ul className="max-h-60 overflow-y-auto">
-            {filteredCountries.map((country) => (
-              <li
-                key={country.code}
-                className="px-4 py-2 cursor-pointer hover:bg-gray-700 flex items-center gap-3"
-                onClick={() => handleSelect(country)}
-              >
-                <span className="text-xl">{countryCodeToEmoji(country.code)}</span>
-                <span className="text-gray-300 flex-grow">{country.name}</span>
-                <span className="text-gray-400">{country.dial_code}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
-  );
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={open}
+                    className={cn("w-[120px] justify-between input-glass h-10", className)}
+                >
+                    {selectedCountry ? `${countryCodeToFlag(selectedCountry.code)} ${selectedCountry.dial_code}` : "Select"}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[300px] p-0 bg-gray-800 border-gray-700">
+                <Command>
+                    <CommandInput placeholder="Search country..." className="h-9 text-white border-none focus:ring-0" />
+                    <CommandEmpty>No country found.</CommandEmpty>
+                    <CommandList>
+                        <CommandGroup>
+                            {countries.map((country) => (
+                                <CommandItem
+                                    key={country.code} // Use unique ISO code for key
+                                    value={`${country.name} ${country.dial_code}`}
+                                    onSelect={() => {
+                                        setValue(country.dial_code);
+                                        onCountrySelect(country.dial_code);
+                                        setOpen(false);
+                                    }}
+                                    className="text-white aria-selected:!bg-gray-700 aria-selected:!text-white hover:!bg-gray-700/50"
+                                >
+                                    <span className="mr-2 text-lg">{countryCodeToFlag(country.code)}</span>
+                                    <span className="flex-1 truncate">{country.name}</span>
+                                    <span className="ml-auto text-gray-400">{country.dial_code}</span>
+                                    <Check
+                                        className={cn(
+                                            "ml-2 h-4 w-4",
+                                            value === country.dial_code ? "opacity-100" : "opacity-0"
+                                        )}
+                                    />
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+    );
 }

@@ -11,6 +11,39 @@ import { getStorage } from "firebase-admin/storage";
 initializeApp();
 const db = admin.firestore();
 const storage = getStorage();
+const messaging = admin.messaging();
+
+// --- Helper Functions ---
+
+async function sendPushNotification(userId: string, title: string, body: string, data: any = {}) {
+    try {
+        const userDoc = await db.collection('users').doc(userId).get();
+        const fcmToken = userDoc.data()?.fcmToken;
+
+        if (!fcmToken) {
+            logger.info(`No FCM token found for user ${userId}. Skipping notification.`);
+            return;
+        }
+
+        const message = {
+            token: fcmToken,
+            notification: { title, body },
+            data: { ...data, click_action: "FLIXTREND_NOTIFICATION_CLICK" },
+            android: {
+                priority: "high" as const,
+                notification: {
+                    channelId: "flixtrend_general",
+                    clickAction: "FLIXTREND_NOTIFICATION_CLICK",
+                }
+            }
+        };
+
+        await messaging.send(message);
+        logger.info(`Notification sent to user ${userId}`);
+    } catch (error) {
+        logger.error(`Error sending notification to user ${userId}:`, error);
+    }
+}
 
 // --- V1 Cloud Functions ---
 
@@ -33,7 +66,7 @@ export const onNewUserCreate = v1.auth.user().onCreate(async (user) => {
             isPremium: true,
             premiumUntil: Timestamp.fromDate(premiumUntil)
         }, { merge: true });
-        
+
         const appStatusRef = db.collection('app_status').doc('user_stats');
         await appStatusRef.set({ totalUsers: FieldValue.increment(1) }, { merge: true });
 
@@ -42,6 +75,87 @@ export const onNewUserCreate = v1.auth.user().onCreate(async (user) => {
         logger.error(`Error processing new user ${user.uid}:`, error);
     }
 });
+
+// Trigger: Update post comment count when a new comment is added
+export const onCommentCreate = v1.firestore
+    .document('posts/{postId}/comments/{commentId}')
+    .onCreate(async (snap, context) => {
+        const { postId } = context.params;
+        const postRef = db.collection('posts').doc(postId);
+        try {
+            await postRef.update({ commentCount: FieldValue.increment(1) });
+            logger.info(`Incremented comment count for post ${postId}`);
+        } catch (error) {
+            logger.error(`Error incrementing comment count for post ${postId}:`, error);
+        }
+    });
+
+// Trigger: New message in a chat
+export const onNewMessage = v1.firestore
+    .document('chats/{chatId}/messages/{messageId}')
+    .onCreate(async (snap, context) => {
+        const message = snap.data();
+        const { chatId } = context.params;
+        const senderId = message.sender;
+
+        // For DMs, find the other participant
+        if (chatId.includes('_')) {
+            const recipientId = chatId.split('_').find(id => id !== senderId);
+            if (recipientId) {
+                const senderSnap = await db.collection('users').doc(senderId).get();
+                const senderName = senderSnap.data()?.name || "Someone";
+
+                let body = message.text || "Sent a media message";
+                if (message.type === 'audio') body = "🎙️ Sent a voice message";
+                if (message.type === 'image') body = "📷 Sent an image";
+
+                await sendPushNotification(
+                    recipientId,
+                    senderName,
+                    body,
+                    { type: 'message', targetId: chatId }
+                );
+            }
+        }
+    });
+
+// Trigger: New follower
+export const onNewFollower = v1.firestore
+    .document('users/{userId}/followers/{followerId}')
+    .onCreate(async (snap, context) => {
+        const { userId, followerId } = context.params;
+
+        const followerSnap = await db.collection('users').doc(followerId).get();
+        const followerName = followerSnap.data()?.name || "Someone";
+
+        await sendPushNotification(
+            userId,
+            "New Follower!",
+            `${followerName} is now following your squad.`,
+            { type: 'profile', targetId: followerId }
+        );
+    });
+
+// Trigger: New Drop Prompt
+export const onNewDropPrompt = v1.firestore
+    .document('dropPrompts/{promptId}')
+    .onCreate(async (snap, context) => {
+        const prompt = snap.data();
+
+        // Notify all users (Caution: Scale issues for huge user bases, but fine for now)
+        const usersSnap = await db.collection('users').where('fcmToken', '!=', null).get();
+
+        const notifications = usersSnap.docs.map(userDoc =>
+            sendPushNotification(
+                userDoc.id,
+                "New Drop Challenge!",
+                prompt.text,
+                { type: 'drop', targetId: context.params.promptId }
+            )
+        );
+
+        await Promise.all(notifications);
+    });
 
 export const onUserDelete = v1.auth.user().onDelete(async (user) => {
     logger.info(`User ${user.uid} is being deleted. Cleaning up data.`);
@@ -71,13 +185,13 @@ export const onChatDelete = v1.firestore
 
     if (allDeletedResults.every(Boolean)) {
       logger.info(`All participants have deleted chat ${chatId}. Purging messages.`);
-      
+
       const chatMessagesRef = db.collection('chats').doc(chatId).collection('messages');
       const messagesSnap = await chatMessagesRef.get();
 
       const batch = db.batch();
       messagesSnap.forEach(doc => batch.delete(doc.ref));
-      
+
       await batch.commit();
       logger.info(`Successfully purged messages for chat ${chatId}.`);
     } else {
@@ -89,7 +203,7 @@ export const onChatDelete = v1.firestore
 export const cleanupExpiredFlashes = v1.pubsub.schedule('every 1 hours').onRun(async (context) => {
     logger.info('Running expired flashes cleanup job.');
     const now = Timestamp.now();
-    
+
     const expiredFlashesQuery = db.collection('flashes').where('expiresAt', '<=', now);
     const expiredFlashesSnap = await expiredFlashesQuery.get();
 
@@ -190,6 +304,27 @@ export const checkUsername = onCall(async (request) => {
     return { exists: !snapshot.empty };
 });
 
+export const checkUserExists = onCall(async (request) => {
+  const { phoneNumber } = request.data;
+
+  if (!phoneNumber) {
+    throw new HttpsError(
+      'invalid-argument', 
+      'The function must be called with the "phoneNumber" argument.'
+    );
+  }
+
+  try {
+    const userRecord = await admin.auth().getUserByPhoneNumber(phoneNumber);
+    return { exists: !!userRecord };
+  } catch (error: any) {
+    if (error.code === 'auth/user-not-found') {
+      return { exists: false };
+    }
+    throw new HttpsError('internal', error.message);
+  }
+});
+
 export const deleteUserAccount = onCall(async (request) => {
   const uid = request.auth?.uid;
 
@@ -220,11 +355,11 @@ export const deleteUserAccount = onCall(async (request) => {
       }
       batch.delete(postDoc.ref);
     }
-    
+
     batch.delete(db.collection('users').doc(uid));
     await batch.commit();
     await admin.auth().deleteUser(uid);
-    
+
     logger.info(`Successfully deleted account and all data for user ${uid}.`);
     return { success: true, message: 'Account deleted successfully.' };
 
@@ -241,7 +376,7 @@ export const deletePost = onCall(async (request) => {
     if (!uid) {
         throw new HttpsError("unauthenticated", "You must be logged in to delete a post.");
     }
-    
+
     const postRef = db.collection("posts").doc(postId);
     const postDoc = await postRef.get();
 
@@ -277,13 +412,13 @@ export const deletePost = onCall(async (request) => {
              await subBatch.commit();
              if (snapshot.size === 500) await deleteSubcollection(collectionRef);
         };
-        
+
         await deleteSubcollection(postRef.collection('comments'));
         await deleteSubcollection(postRef.collection('stars'));
         await deleteSubcollection(postRef.collection('relays'));
-        
+
         await postRef.delete();
-        
+
         return { success: true, message: `Post ${postId} deleted successfully.` };
     } catch (error) {
         logger.error("Error deleting post and subcollections:", error);
@@ -366,7 +501,7 @@ export const deleteComment = onCall(async (request) => {
 
     const postRef = db.collection("posts").doc(postId);
     const commentRef = postRef.collection("comments").doc(commentId);
-    
+
     const commentDoc = await commentRef.get();
 
     if (!commentDoc.exists) {
@@ -374,7 +509,7 @@ export const deleteComment = onCall(async (request) => {
     }
 
     const commentData = commentDoc.data()!;
-    
+
     if (uid !== commentData.userId) {
         throw new HttpsError("permission-denied", "You do not have permission to delete this comment.");
     }
