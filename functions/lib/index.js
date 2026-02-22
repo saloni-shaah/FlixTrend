@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateComment = exports.deleteComment = exports.updatePost = exports.deleteMessage = exports.deletePost = exports.deleteUserAccount = exports.checkUsername = exports.updateAccolades = exports.cleanupExpiredFlashes = exports.onChatDelete = exports.onUserDelete = exports.onNewUserCreate = void 0;
+exports.updateComment = exports.deleteComment = exports.updatePost = exports.deleteMessage = exports.deletePost = exports.deleteUserAccount = exports.checkUserExists = exports.checkUsername = exports.updateAccolades = exports.cleanupExpiredFlashes = exports.onChatDelete = exports.onUserDelete = exports.onNewDropPrompt = exports.onNewFollower = exports.onNewMessage = exports.onCommentCreate = exports.onNewUserCreate = void 0;
 const app_1 = require("firebase-admin/app");
 const firestore_1 = require("firebase-admin/firestore");
 const admin = require("firebase-admin");
@@ -12,6 +12,36 @@ const storage_1 = require("firebase-admin/storage");
 (0, app_1.initializeApp)();
 const db = admin.firestore();
 const storage = (0, storage_1.getStorage)();
+const messaging = admin.messaging();
+// --- Helper Functions ---
+async function sendPushNotification(userId, title, body, data = {}) {
+    var _a;
+    try {
+        const userDoc = await db.collection('users').doc(userId).get();
+        const fcmToken = (_a = userDoc.data()) === null || _a === void 0 ? void 0 : _a.fcmToken;
+        if (!fcmToken) {
+            firebase_functions_1.logger.info(`No FCM token found for user ${userId}. Skipping notification.`);
+            return;
+        }
+        const message = {
+            token: fcmToken,
+            notification: { title, body },
+            data: Object.assign(Object.assign({}, data), { click_action: "FLIXTREND_NOTIFICATION_CLICK" }),
+            android: {
+                priority: "high",
+                notification: {
+                    channelId: "flixtrend_general",
+                    clickAction: "FLIXTREND_NOTIFICATION_CLICK",
+                }
+            }
+        };
+        await messaging.send(message);
+        firebase_functions_1.logger.info(`Notification sent to user ${userId}`);
+    }
+    catch (error) {
+        firebase_functions_1.logger.error(`Error sending notification to user ${userId}:`, error);
+    }
+}
 // --- V1 Cloud Functions ---
 exports.onNewUserCreate = v1.auth.user().onCreate(async (user) => {
     const userRef = db.collection('users').doc(user.uid);
@@ -37,6 +67,63 @@ exports.onNewUserCreate = v1.auth.user().onCreate(async (user) => {
     catch (error) {
         firebase_functions_1.logger.error(`Error processing new user ${user.uid}:`, error);
     }
+});
+// Trigger: Update post comment count when a new comment is added
+exports.onCommentCreate = v1.firestore
+    .document('posts/{postId}/comments/{commentId}')
+    .onCreate(async (snap, context) => {
+    const { postId } = context.params;
+    const postRef = db.collection('posts').doc(postId);
+    try {
+        await postRef.update({ commentCount: firestore_1.FieldValue.increment(1) });
+        firebase_functions_1.logger.info(`Incremented comment count for post ${postId}`);
+    }
+    catch (error) {
+        firebase_functions_1.logger.error(`Error incrementing comment count for post ${postId}:`, error);
+    }
+});
+// Trigger: New message in a chat
+exports.onNewMessage = v1.firestore
+    .document('chats/{chatId}/messages/{messageId}')
+    .onCreate(async (snap, context) => {
+    var _a;
+    const message = snap.data();
+    const { chatId } = context.params;
+    const senderId = message.sender;
+    // For DMs, find the other participant
+    if (chatId.includes('_')) {
+        const recipientId = chatId.split('_').find(id => id !== senderId);
+        if (recipientId) {
+            const senderSnap = await db.collection('users').doc(senderId).get();
+            const senderName = ((_a = senderSnap.data()) === null || _a === void 0 ? void 0 : _a.name) || "Someone";
+            let body = message.text || "Sent a media message";
+            if (message.type === 'audio')
+                body = "🎙️ Sent a voice message";
+            if (message.type === 'image')
+                body = "📷 Sent an image";
+            await sendPushNotification(recipientId, senderName, body, { type: 'message', targetId: chatId });
+        }
+    }
+});
+// Trigger: New follower
+exports.onNewFollower = v1.firestore
+    .document('users/{userId}/followers/{followerId}')
+    .onCreate(async (snap, context) => {
+    var _a;
+    const { userId, followerId } = context.params;
+    const followerSnap = await db.collection('users').doc(followerId).get();
+    const followerName = ((_a = followerSnap.data()) === null || _a === void 0 ? void 0 : _a.name) || "Someone";
+    await sendPushNotification(userId, "New Follower!", `${followerName} is now following your squad.`, { type: 'profile', targetId: followerId });
+});
+// Trigger: New Drop Prompt
+exports.onNewDropPrompt = v1.firestore
+    .document('dropPrompts/{promptId}')
+    .onCreate(async (snap, context) => {
+    const prompt = snap.data();
+    // Notify all users (Caution: Scale issues for huge user bases, but fine for now)
+    const usersSnap = await db.collection('users').where('fcmToken', '!=', null).get();
+    const notifications = usersSnap.docs.map(userDoc => sendPushNotification(userDoc.id, "New Drop Challenge!", prompt.text, { type: 'drop', targetId: context.params.promptId }));
+    await Promise.all(notifications);
 });
 exports.onUserDelete = v1.auth.user().onDelete(async (user) => {
     firebase_functions_1.logger.info(`User ${user.uid} is being deleted. Cleaning up data.`);
@@ -158,6 +245,22 @@ exports.checkUsername = (0, https_1.onCall)(async (request) => {
     const { username } = request.data;
     const snapshot = await db.collection('users').where('username', '==', username).get();
     return { exists: !snapshot.empty };
+});
+exports.checkUserExists = (0, https_1.onCall)(async (request) => {
+    const { phoneNumber } = request.data;
+    if (!phoneNumber) {
+        throw new https_1.HttpsError('invalid-argument', 'The function must be called with the "phoneNumber" argument.');
+    }
+    try {
+        const userRecord = await admin.auth().getUserByPhoneNumber(phoneNumber);
+        return { exists: !!userRecord };
+    }
+    catch (error) {
+        if (error.code === 'auth/user-not-found') {
+            return { exists: false };
+        }
+        throw new https_1.HttpsError('internal', error.message);
+    }
 });
 exports.deleteUserAccount = (0, https_1.onCall)(async (request) => {
     var _a, _b;
