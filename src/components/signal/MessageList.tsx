@@ -26,6 +26,7 @@ interface MessageListProps {
     onShowEmojiPicker: (msgId: string | null) => void;
     showEmojiPicker: string | null;
     onShowDeleteConfirm: (msgId: string) => void;
+    setFullScreenImage: (imageUrl: string | null) => void;
 }
 
 export function MessageList({ 
@@ -38,7 +39,8 @@ export function MessageList({
     onClick, 
     onShowEmojiPicker, 
     showEmojiPicker, 
-    onShowDeleteConfirm 
+    onShowDeleteConfirm, 
+    setFullScreenImage 
 }: MessageListProps) {
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -81,6 +83,7 @@ export function MessageList({
                       onShowEmojiPicker={onShowEmojiPicker}
                       showEmojiPicker={showEmojiPicker}
                       onShowDeleteConfirm={() => onShowDeleteConfirm(msg.id)}
+                      setFullScreenImage={setFullScreenImage}
                     />
                 );
             });

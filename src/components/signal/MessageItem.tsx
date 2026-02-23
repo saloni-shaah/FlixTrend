@@ -30,7 +30,7 @@ const useLongPress = (callback: () => void, ms = 300) => {
 };
 
 // --- COMPONENT DEFINITION ---
-export const MessageItem = React.memo(({ msg, isUser, selectedChat, firebaseUser, isSelected, onLongPress, onClick, onShowEmojiPicker, showEmojiPicker, onShowDeleteConfirm, selectionMode }: any) => {
+export const MessageItem = React.memo(({ msg, isUser, selectedChat, firebaseUser, isSelected, onLongPress, onClick, onShowEmojiPicker, showEmojiPicker, onShowDeleteConfirm, selectionMode, setFullScreenImage }: any) => {
     const longPressProps = useLongPress(() => {
         if (selectionMode) { onClick(); } else { onLongPress(); }
     });
@@ -118,7 +118,7 @@ export const MessageItem = React.memo(({ msg, isUser, selectedChat, firebaseUser
                         {!isUser && msg.sender !== 'system' && (
                             <div className="font-bold text-sm text-accent-pink px-1">{displayName}</div>
                         )}
-                        {(msg.type === 'image' || msg.type === 'gif') && <img src={msg.mediaUrl} alt={msg.text || "image"} className="rounded-lg max-w-xs mt-1" />}
+                        {(msg.type === 'image' || msg.type === 'gif') && <img src={msg.mediaUrl} alt={msg.text || "image"} className="rounded-lg max-w-xs mt-1 cursor-pointer" onClick={() => setFullScreenImage(msg.mediaUrl)} />}
                         {msg.type === 'video' && <video src={msg.mediaUrl} controls className="rounded-lg max-w-xs" />}
                         {msg.type === 'audio' && <div className="mt-1"><AudioPlayer src={msg.mediaUrl} isUser={isUser} /></div>}
                         {msg.text && <p className="mt-1 break-words px-1">{msg.text}</p>}

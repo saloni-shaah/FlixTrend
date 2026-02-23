@@ -97,7 +97,7 @@ const EditCommentDialog = ({ comment, postId, collectionName, onOpenChange, onFi
     );
 };
 
-const CommentComponent = ({ comment, postId, currentUser, collectionName, onEdit }: { comment: Comment, postId: string, currentUser: any, collectionName: string, onEdit: () => void }) => {
+export const CommentComponent = ({ comment, postId, currentUser, collectionName, onEdit }: { comment: Comment, postId: string, currentUser: any, collectionName: string, onEdit: () => void }) => {
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 

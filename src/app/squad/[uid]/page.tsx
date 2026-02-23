@@ -9,6 +9,7 @@ import { Star, MapPin, User, Tag, ShieldCheck, Heart, CheckCircle, Trophy, Award
 import { FollowListModal } from "@/components/FollowListModal";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { AccoladeBadge } from "@/components/AccoladeBadge";
+import { FullScreenImageViewer } from "@/components/FullScreenImageViewer";
 
 
 const db = getFirestore(app);
@@ -27,6 +28,7 @@ export default function UserProfilePage() {
   const [starredPosts, setStarredPosts] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("posts");
   const [showFollowList, setShowFollowList] = useState<null | 'followers' | 'following'>(null);
+  const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
 
 
   useEffect(() => {
@@ -93,10 +95,11 @@ export default function UserProfilePage() {
 
   
   return (
+    <>
     <div className="flex flex-col w-full pb-24">
       {showFollowList && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" onClick={() => setShowFollowList(null)} />}
       {/* Banner */}
-      <div className="relative h-40 md:h-60 w-full rounded-2xl overflow-hidden mb-8 glass-card">
+      <div className="relative h-40 md:h-60 w-full rounded-2xl overflow-hidden mb-8 glass-card cursor-pointer" onClick={() => setFullScreenImage(profile.banner_url)}>
         {profile.banner_url ? (
           <img
             src={profile.banner_url}
@@ -109,7 +112,7 @@ export default function UserProfilePage() {
       </div>
       {/* Profile Card */}
       <div className="mx-auto w-full max-w-2xl glass-card p-6 -mt-24 flex flex-col items-center text-center">
-        <div className="w-32 h-32 rounded-full bg-accent-cyan border-4 border-accent-pink shadow-fab-glow mb-4 overflow-hidden -mt-20">
+        <div className="w-32 h-32 rounded-full bg-accent-cyan border-4 border-accent-pink shadow-fab-glow mb-4 overflow-hidden -mt-20 cursor-pointer" onClick={() => setFullScreenImage(profile.avatar_url)}>
           {profile.avatar_url ? (
             <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
           ) : (
@@ -217,5 +220,7 @@ export default function UserProfilePage() {
         />
       )}
     </div>
+    <FullScreenImageViewer imageUrl={fullScreenImage} onClose={() => setFullScreenImage(null)} />
+    </>
   );
 }

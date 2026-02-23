@@ -10,6 +10,7 @@ import { PostActions } from '@/components/PostActions';
 import { CommentModal } from '@/components/CommentModal';
 import { VideoThumbnail } from '@/components/video/VideoThumbnail';
 import { Home, Search, UserPlus, UserCheck, Mic } from 'lucide-react';
+import { CommentComponent } from '@/components/CommentModal';
 
 const db = getFirestore(app);
 
@@ -208,13 +209,7 @@ export default function WatchPage() {
                              <h2 className="text-xl font-bold mb-4">Comments ({post.commentCount || comments.length})</h2>
                              <div className="flex flex-col gap-4">
                                 {comments.map(comment => (
-                                    <div key={comment.id} className="flex items-start gap-3">
-                                        <img src={comment.authorAvatar || 'https://via.placeholder.com/32'} alt="commenter avatar" className="w-8 h-8 rounded-full"/>
-                                        <div>
-                                            <p className="text-sm font-bold">@{comment.authorName || 'user'}</p>
-                                            <p>{comment.text}</p>
-                                        </div>
-                                    </div>
+                                    <CommentComponent key={comment.id} comment={comment} postId={videoId} currentUser={currentUser} collectionName="posts" onEdit={() => {}} />
                                 ))}
                                  <button onClick={() => setShowCommentModal(true)} className="btn-glass mt-4">View all comments</button>
                             </div>
