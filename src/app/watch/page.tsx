@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { doc, getDoc, getFirestore, collection, query, where, getDocs, limit, orderBy, onSnapshot, runTransaction, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { doc, getDoc, getFirestore, collection, query, where, getDocs, limit, orderBy, onSnapshot, runTransaction, arrayUnion, arrayRemove, updateDoc, increment } from 'firebase/firestore';
 import { app, auth } from '@/utils/firebaseClient';
 import Link from 'next/link';
 import { InFeedVideoPlayer } from '@/components/video/InFeedVideoPlayer';
@@ -26,6 +26,7 @@ export default function WatchPage() {
     const [isFollowing, setIsFollowing] = useState(false);
     const [currentUser, setCurrentUser] = useState<any>(null);
     const [currentUserProfile, setCurrentUserProfile] = useState<any>(null);
+    const viewCountedRef = useRef(false);
 
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged(user => {
@@ -35,7 +36,7 @@ export default function WatchPage() {
                     if (doc.exists()) {
                         setCurrentUser(user);
                         setCurrentUserProfile({ uid: user.uid, ...doc.data() });
-                    } 
+                    }
                 });
                 return () => unsub();
             }
@@ -57,13 +58,20 @@ export default function WatchPage() {
 
         const fetchPostData = async () => {
             try {
-                postUnsub = onSnapshot(doc(db, 'posts', videoId), async (postSnap) => {
+                const postRef = doc(db, 'posts', videoId);
+
+                if (!viewCountedRef.current) {
+                    await updateDoc(postRef, { viewCount: increment(1) });
+                    viewCountedRef.current = true;
+                }
+
+                postUnsub = onSnapshot(postRef, async (postSnap) => {
                     if (postSnap.exists()) {
                         const postData = { id: postSnap.id, ...postSnap.data() };
                         setPost(postData);
 
                         if (postData.userId) {
-                            if(authorUnsub) authorUnsub(); // Unsubscribe from old author listener
+                            if(authorUnsub) authorUnsub();
                             authorUnsub = onSnapshot(doc(db, 'users', postData.userId), (userSnap) => {
                                 if (userSnap.exists()) {
                                     const userData = userSnap.data();
@@ -138,7 +146,7 @@ export default function WatchPage() {
     if (!post) return <div className="flex justify-center items-center h-screen">Video not found.</div>;
 
     return (
-        <div className="bg-background text-foreground min-h-screen pb-20"> {/* Add padding to bottom */}
+        <div className="bg-background text-foreground min-h-screen pb-20"> 
             <header className="fixed top-0 left-0 right-0 bg-background/80 backdrop-blur-md z-50 p-4 flex items-center justify-between gap-4">
                  <Link href="/vibespace" className="flex items-center gap-2 text-2xl font-bold text-accent-cyan hover:text-accent-green transition-colors font-logo">
                     Vibespace

@@ -182,11 +182,23 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts' }
             )}
 
             {(contentPost.type === "media" || collectionName === "drops") && mediaUrls.length > 0 && !isShortVibe && (
-                 <InFeedVideoPlayer 
-                    mediaUrls={mediaUrls} 
-                    post={contentPost}
-                    navigatesToWatchPage={true}
-                 />
+                contentPost.isFlow ? (
+                    <Link href={`/flow/${contentPost.id}`}>
+                        <div className="cursor-pointer">
+                            <InFeedVideoPlayer
+                                mediaUrls={mediaUrls}
+                                post={contentPost}
+                                navigatesToWatchPage={false}
+                            />
+                        </div>
+                    </Link>
+                ) : (
+                    <InFeedVideoPlayer
+                        mediaUrls={mediaUrls}
+                        post={contentPost}
+                        navigatesToWatchPage={true}
+                    />
+                )
             )}
 
             {contentPost.type === "poll" && contentPost.pollOptions && (

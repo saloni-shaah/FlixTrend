@@ -18,6 +18,13 @@ interface Song {
   [key: string]: any;
 }
 
+interface UserProfile {
+    uid: string;
+    displayName: string;
+    username: string;
+    avatar_url: string;
+}
+
 interface AppState {
   isCalling: boolean;
   setIsCalling: (isCalling: boolean) => void;
@@ -42,6 +49,7 @@ interface AppState {
   setDraft: (chatId: string, text: string) => void;
   isFlowVideoPlaying: boolean;
   setIsFlowVideoPlaying: React.Dispatch<React.SetStateAction<boolean>>;
+  currentUserProfile: UserProfile | null;
 }
 
 const AppStateContext = createContext<AppState | undefined>(undefined);
@@ -90,10 +98,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [selectedChat, setSelectedChat] = useState<any | null>(null);
   const [drafts, setDrafts] = useState<{ [chatId: string]: string }>({});
   const [isFlowVideoPlaying, setIsFlowVideoPlaying] = useState(false);
+  const [currentUserProfile, setCurrentUserProfile] = useState<UserProfile | null>(null);
 
   useEffect(() => {
     let callUnsubscribe: Unsubscribe | null = null;
     let callDocUnsubscribe: Unsubscribe | null = null;
+    let userProfileUnsubscribe: Unsubscribe | null = null;
     let peerConnection: RTCPeerConnection | null = null;
 
     const managePresence = (user: any) => {
@@ -124,9 +134,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     const authUnsubscribe = auth.onAuthStateChanged(user => {
       if (callUnsubscribe) callUnsubscribe();
       if (callDocUnsubscribe) callDocUnsubscribe();
+      if (userProfileUnsubscribe) userProfileUnsubscribe();
       
       if (user) {
         const userDocRef = doc(db, 'users', user.uid);
+
+        userProfileUnsubscribe = onSnapshot(userDocRef, (snap) => {
+            if(snap.exists()) {
+                setCurrentUserProfile({ uid: snap.id, ...snap.data() } as UserProfile);
+            }
+        });
         
         managePresence(user);
         
@@ -155,6 +172,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         });
       } else {
         closeCall();
+        setCurrentUserProfile(null);
       }
     });
 
@@ -162,6 +180,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         authUnsubscribe();
         if (callUnsubscribe) callUnsubscribe();
         if (callDocUnsubscribe) callDocUnsubscribe();
+        if (userProfileUnsubscribe) userProfileUnsubscribe();
         if(pc) pc.close();
     };
   }, []);
@@ -315,6 +334,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setDraft,
     isFlowVideoPlaying,
     setIsFlowVideoPlaying,
+    currentUserProfile,
   };
   
   return (

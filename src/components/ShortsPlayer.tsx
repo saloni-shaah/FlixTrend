@@ -13,9 +13,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const db = getFirestore(app);
 
-export const ShortsPlayer = forwardRef(({ post, isActive }:{ post: any, isActive: boolean }, ref) => {
+export const ShortsPlayer = forwardRef(({ post, isActive, onCommentClick }: { post: any, isActive: boolean, onCommentClick: (e: React.MouseEvent) => void }, ref) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+    const actionsRef = useRef<HTMLDivElement>(null);
     const { setIsFlowVideoPlaying } = useAppState();
     const [isPlaying, setIsPlaying] = useState(false);
     const [isMuted, setIsMuted] = useState(false);
@@ -27,10 +28,16 @@ export const ShortsPlayer = forwardRef(({ post, isActive }:{ post: any, isActive
         const playPromise = video.play();
         if (playPromise !== undefined) {
             playPromise.catch(error => {
-                if (error.name === 'AbortError') {
-                    return;
+                if (error.name === 'AbortError') return;
+                console.error("Video play failed:", error);
+                if (error.name === 'NotAllowedError') {
+                    console.log("Autoplay was prevented. Muting video and trying again.");
+                    setIsMuted(true);
+                    if (videoRef.current) {
+                        videoRef.current.muted = true;
+                        videoRef.current.play().catch(e => console.error("Second play attempt failed", e));
+                    }
                 }
-                console.error("Video play failed", error);
             });
         }
     }, []);
@@ -47,18 +54,7 @@ export const ShortsPlayer = forwardRef(({ post, isActive }:{ post: any, isActive
         if (!video) return;
 
         if (isActive) {
-            const playPromise = video.play();
-            if (playPromise !== undefined) {
-                playPromise.catch(error => {
-                    if (error.name === 'AbortError') return;
-                    if (error.name === 'NotAllowedError' && !video.muted) {
-                        setIsMuted(true);
-                    } else {
-                        console.error("Autoplay error:", error);
-                    }
-                });
-            }
-
+            safePlay(video);
             if (!viewCountedRef.current) {
                 incrementViewCount();
             }
@@ -66,17 +62,12 @@ export const ShortsPlayer = forwardRef(({ post, isActive }:{ post: any, isActive
             video.pause();
             video.currentTime = 0;
         }
-    }, [isActive, incrementViewCount]);
+    }, [isActive, incrementViewCount, safePlay]);
 
     useEffect(() => {
         const video = videoRef.current;
-        if (video) {
-            video.muted = isMuted;
-            if (isActive && video.paused && isMuted) {
-                safePlay(video);
-            }
-        }
-    }, [isMuted, isActive, safePlay]);
+        if (video) video.muted = isMuted;
+    }, [isMuted]);
 
     useEffect(() => {
         const video = videoRef.current;
@@ -91,35 +82,49 @@ export const ShortsPlayer = forwardRef(({ post, isActive }:{ post: any, isActive
         };
     }, []);
 
-    useEffect(() => {
-        setIsFlowVideoPlaying(isPlaying);
-    }, [isPlaying, setIsFlowVideoPlaying]);
-
     const togglePlayPause = useCallback(() => {
         const video = videoRef.current;
         if (video) {
-            if (video.paused) {
-                safePlay(video);
-            } else {
-                video.pause();
-            }
+            if (video.paused) safePlay(video);
+            else video.pause();
         }
     }, [safePlay]);
 
+    const toggleMute = useCallback(() => {
+        const video = videoRef.current;
+        if (video) {
+            const newMutedState = !video.muted;
+            setIsMuted(newMutedState);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!isActive) return;
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (['TEXTAREA', 'INPUT', 'SELECT'].includes((event.target as HTMLElement).tagName)) return;
+            if (event.code === 'Space') {
+                event.preventDefault();
+                togglePlayPause();
+            }
+            if (event.code === 'KeyM') {
+                event.preventDefault();
+                toggleMute();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isActive, togglePlayPause, toggleMute]);
+
     useImperativeHandle(ref, () => ({
         togglePlayPause,
+        toggleMute,
     }));
 
     const handleManualMuteToggle = (e: React.MouseEvent) => {
         e.stopPropagation();
-        const video = videoRef.current;
-        if(video){
-            const newMutedState = !video.muted;
-            setIsMuted(newMutedState);
-            video.muted = newMutedState;
-        }
+        toggleMute();
     };
-    
+
     const handleDoubleTap = () => {
         setShowHeart(true);
         setTimeout(() => setShowHeart(false), 800);
@@ -130,21 +135,14 @@ export const ShortsPlayer = forwardRef(({ post, isActive }:{ post: any, isActive
     };
 
     const handleSingleTap = () => {
-        const video = videoRef.current;
-        if (video) {
-            if (isMuted) {
-                setIsMuted(false);
-                video.muted = false;
-            } else {
-                togglePlayPause();
-            }
-        }
+        togglePlayPause();
     };
 
     const handleContainerClick = (event: React.MouseEvent<HTMLDivElement>) => {
-        if (event.target !== event.currentTarget) {
+        if (actionsRef.current && actionsRef.current.contains(event.target as Node)) {
             return;
         }
+
         if (tapTimeout.current) {
             clearTimeout(tapTimeout.current);
             tapTimeout.current = null;
@@ -160,8 +158,8 @@ export const ShortsPlayer = forwardRef(({ post, isActive }:{ post: any, isActive
     const videoUrl = Array.isArray(post.mediaUrl) ? post.mediaUrl.find(url => /\.(mp4|webm|ogg)$/i.test(url)) : post.mediaUrl;
 
     return (
-        <div 
-            ref={containerRef} 
+        <div
+            ref={containerRef}
             className="relative w-full h-full bg-black flex items-center justify-center"
             onClick={handleContainerClick}
         >
@@ -220,8 +218,8 @@ export const ShortsPlayer = forwardRef(({ post, isActive }:{ post: any, isActive
                         </div>
                      )}
                 </div>
-                <div className="flex flex-col gap-4 self-end pointer-events-auto">
-                    <PostActions post={post} isShortVibe={true} onCommentClick={(e) => {e.stopPropagation()}} />
+                <div ref={actionsRef} className="flex flex-col gap-4 self-end pointer-events-auto">
+                    <PostActions post={post} isShortVibe={true} onCommentClick={onCommentClick} />
                 </div>
             </div>
         </div>

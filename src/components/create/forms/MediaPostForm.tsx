@@ -19,14 +19,17 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
         setUploadError(null);
 
         const previewUrl = URL.createObjectURL(file);
-        const newMediaUrls = [...(data.mediaUrl || []), previewUrl];
-        const newMediaFiles = [...(data.mediaFiles || []), file];
-
         const isVideo = file.type.startsWith('video/');
-        const updateData: any = { 
-            mediaUrl: newMediaUrls, 
-            mediaFiles: newMediaFiles, 
-            isVideo: newMediaFiles.some(f => f.type.startsWith('video/')) 
+
+        const updateParentState = (fileInfo: any) => {
+            onDataChange({
+                ...data,
+                mediaUrl: [...(data.mediaUrl || []), previewUrl],
+                files: [...(data.files || []), file], 
+                isVideo: isVideo,
+                videoDuration: isVideo ? fileInfo.duration : data.videoDuration,
+                isPortrait: isVideo ? fileInfo.isPortrait : data.isPortrait,
+            });
         };
 
         if (isVideo) {
@@ -34,28 +37,20 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
             video.preload = 'metadata';
             video.onloadedmetadata = () => {
                 window.URL.revokeObjectURL(video.src);
-                updateData.isPortrait = video.videoHeight > video.videoWidth;
-                updateData.videoDuration = video.duration;
-                onDataChange({ ...data, ...updateData });
+                updateParentState({
+                    duration: video.duration,
+                    isPortrait: video.videoHeight > video.videoWidth,
+                });
             };
             video.onerror = () => {
                 window.URL.revokeObjectURL(video.src);
                 setUploadError(`Couldn't process video "${file.name}". It might be corrupt or in an unsupported format.`);
-                // Clean up the failed upload from the state
-                const updatedMediaUrls = newMediaUrls.filter(url => url !== previewUrl);
-                const updatedMediaFiles = newMediaFiles.filter(f => f !== file);
-                onDataChange({
-                    ...data,
-                    mediaUrl: updatedMediaUrls,
-                    mediaFiles: updatedMediaFiles,
-                    isVideo: updatedMediaFiles.some(f => f.type.startsWith('video/'))
-                });
             };
             video.src = previewUrl;
         } else {
-             onDataChange({ ...data, ...updateData });
+            updateParentState({});
         }
-    }
+    };
     
     const processFiles = (files: FileList | null) => {
         if (!files) return;
@@ -75,17 +70,31 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
     };
     
     const removeMedia = (urlToRemove: string) => {
-        const indexToRemove = data.mediaUrl.findIndex((url: string) => url === urlToRemove);
+        const indexToRemove = (data.mediaUrl || []).findIndex((url: string) => url === urlToRemove);
         if (indexToRemove === -1) return;
 
         URL.revokeObjectURL(urlToRemove);
 
-        const newMediaUrls = data.mediaUrl.filter((_: any, index: number) => index !== indexToRemove);
-        const newMediaFiles = data.mediaFiles.filter((_: any, index: number) => index !== indexToRemove);
+        const newMediaUrls = (data.mediaUrl || []).filter((_: any, index: number) => index !== indexToRemove);
+        const newFiles = (data.files || []).filter((_: any, index: number) => index !== indexToRemove);
         
-        const isVideo = newMediaFiles.some(f => f.type.startsWith('video/'));
+        const wasVideo = data.isVideo;
+        const isVideoNow = newFiles.some(f => f.type.startsWith('video/'));
 
-        onDataChange({ ...data, mediaUrl: newMediaUrls, mediaFiles: newMediaFiles, isVideo });
+        const newState: any = { 
+            ...data, 
+            mediaUrl: newMediaUrls, 
+            files: newFiles, 
+            isVideo: isVideoNow,
+        };
+
+        if(wasVideo && !isVideoNow) {
+            newState.videoDuration = undefined;
+            newState.isPortrait = undefined;
+            newState.description = '';
+        }
+
+        onDataChange(newState);
     };
 
     const handleTextChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -101,7 +110,7 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
         setIsDragging(false);
         processFiles(e.dataTransfer.files);
         e.dataTransfer.clearData();
-    }, []);
+    }, [data]);
 
     const handleGetLocation = () => {
         setUploadError(null);
@@ -162,7 +171,7 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
                 
                  <div className="mt-4 grid grid-cols-3 md:grid-cols-4 gap-2">
                     {mediaPreviews.map((url: string, index: number) => {
-                        const file = data.mediaFiles[index];
+                        const file = data.files?.[index];
                         if (!file) return null;
                         const isVideo = file.type.startsWith('video/');
                         return (
