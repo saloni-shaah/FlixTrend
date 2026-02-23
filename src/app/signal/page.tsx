@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Link from 'next/link';
 import { getFirestore, collection, query, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, serverTimestamp, where, writeBatch, getDocs, updateDoc, deleteField, limit } from "firebase/firestore";
 import { auth, app } from "@/utils/firebaseClient";
-import { Users, Bot, Search, CheckSquare, Square, Trash2, X, PlusCircle } from "lucide-react";
+import { Users, Bot, Search, CheckSquare, Square, Trash2, X, PlusCircle, Compass } from "lucide-react";
 import { useAppState } from "@/utils/AppStateContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -205,13 +205,14 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
             ) : (
                 <div className="p-4 border-b border-accent-cyan/10 flex items-center justify-between shrink-0">
                     <h2 className="text-xl font-headline font-bold text-accent-cyan">Signal</h2>
-                    <Link href="/signal/create-group">
+                    <Link href="/squad/explore">
                         <motion.button 
-                            className="btn-glass text-sm"
-                            whileHover={{ scale: 1.05, y: -2 }}
+                            className="btn-glass bg-accent-pink/80 flex items-center gap-3 text-lg"
+                            whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                         >
-                            Create Group
+                            <Compass />
+                            Explore Creators
                         </motion.button>
                     </Link>
                 </div>
