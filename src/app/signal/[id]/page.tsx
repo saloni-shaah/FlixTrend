@@ -12,6 +12,7 @@ import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'fire
 import { ChatHeader } from "@/components/signal/ChatHeader";
 import { MessageList } from "@/components/signal/MessageList";
 import { ChatInput } from "@/components/signal/ChatInput";
+import { FullScreenImageViewer } from "@/components/FullScreenImageViewer";
 
 const db = getFirestore(app);
 const storage = getStorage(app);
@@ -25,6 +26,7 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
     const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
+    const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
 
     useEffect(() => {
         // --- CORRECTED LOGIC ---
@@ -189,6 +191,7 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                 onShowEmojiPicker={setShowEmojiPicker}
                 showEmojiPicker={showEmojiPicker}
                 onShowDeleteConfirm={(msgId) => { setSelectedItems(new Set([msgId])); setShowDeleteConfirm(true); }}
+                setFullScreenImage={setFullScreenImage}
             />
 
             <ChatInput
@@ -209,6 +212,8 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            <FullScreenImageViewer imageUrl={fullScreenImage} onClose={() => setFullScreenImage(null)} />
         </div>
     )
 }

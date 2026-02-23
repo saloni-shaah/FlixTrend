@@ -23,6 +23,7 @@ export function PostActions({ post, onCommentClick, isShortVibe = false, collect
     const [showSignalShare, setShowSignalShare] = React.useState(false);
     const [showCollectionModal, setShowCollectionModal] = React.useState(false);
     const [isDownloaded, setIsDownloaded] = React.useState(false);
+    const [shareCount, setShareCount] = React.useState(post.shareCount || 0);
     const currentUser = auth.currentUser;
 
     React.useEffect(() => {
@@ -133,39 +134,66 @@ export function PostActions({ post, onCommentClick, isShortVibe = false, collect
     }
 
     const textClass = isShortVibe ? 'text-white' : 'text-muted-foreground';
+    const iconSize = isShortVibe ? 30 : 20;
+
+    if (isShortVibe) {
+        return (
+            <>
+                <div className='flex flex-col items-center gap-5'>
+                    <button className={cn('flex flex-col items-center gap-1.5 font-bold text-white transition-all', 'hover:text-brand-gold')} onClick={handleCommentButtonClick}>
+                        <MessageCircle size={iconSize} />
+                        <span className="text-sm font-semibold">{post.commentCount || 0}</span>
+                    </button>
+                    {collectionName !== 'drops' && (
+                        <button className={cn('flex flex-col items-center font-bold transition-all', userHasRelayed ? 'text-green-400' : 'text-white', 'hover:text-green-400')} onClick={handleRelay} >
+                            <Repeat2 size={iconSize} />
+                        </button>
+                    )}
+                    <button data-like-button="true" className={cn('flex flex-col items-center gap-1.5 font-bold transition-all', userHasLiked ? 'text-yellow-400' : 'text-white', 'hover:text-yellow-400')} onClick={handleLike}>
+                        <Star size={iconSize} fill={userHasLiked ? "currentColor" : "none"} />
+                         <span className="text-sm font-semibold">{likes}</span>
+                    </button>
+                    <button className={cn('flex flex-col items-center font-bold text-white transition-all', 'hover:text-accent-cyan')} onClick={(e) => { e.stopPropagation(); setShowShareModal(true); }}>
+                        <Share size={iconSize} />
+                    </button>
+                </div>
+                {showShareModal && <ShareModal url={`${window.location.origin}/post/${post.id}`} title={post.content} isVideo={post.isVideo} onSignalShare={() => { setShowShareModal(false); setShowSignalShare(true); }} onClose={() => setShowShareModal(false)} />}
+                {showSignalShare && <SignalShareModal post={post} onClose={() => setShowSignalShare(false)} />}
+            </>
+        )
+    }
 
     return (
         <>
-            <div className={cn("flex items-center", isShortVibe ? 'flex-col gap-4' : 'justify-between mt-2 pt-2 border-t border-glass-border')}>
-                <div className={cn('flex items-center justify-start', isShortVibe ? 'flex-col gap-4' : 'gap-6')}>
+            <div className="flex items-center justify-between mt-2 pt-2 border-t border-glass-border">
+                <div className="flex items-center justify-start gap-6">
                     <button className={cn('flex items-center gap-1.5 font-bold transition-all text-lg', textClass, 'hover:text-brand-gold')} onClick={handleCommentButtonClick}>
-                        <MessageCircle size={20} />
-                        {!isShortVibe && <span>{post.commentCount || 0}</span>}
+                        <MessageCircle size={iconSize} />
+                        <span>{post.commentCount || 0}</span>
                     </button>
                     {collectionName !== 'drops' && (
                         <button className={cn('flex items-center gap-1.5 font-bold transition-all text-lg', userHasRelayed ? 'text-green-400' : textClass, 'hover:text-green-400')} onClick={handleRelay} >
-                            <Repeat2 size={20} />
-                            {!isShortVibe && <span>{relays}</span>}
+                            <Repeat2 size={iconSize} />
+                            <span>{relays}</span>
                         </button>
                     )}
                     <button data-like-button="true" className={cn('flex items-center gap-1.5 font-bold transition-all text-lg', userHasLiked ? 'text-yellow-400' : textClass, 'hover:text-yellow-400')} onClick={handleLike}>
-                        <Star size={20} fill={userHasLiked ? "currentColor" : "none"} />
-                         {!isShortVibe && <span>{likes}</span>}
+                        <Star size={iconSize} fill={userHasLiked ? "currentColor" : "none"} />
+                         <span>{likes}</span>
                     </button>
                     <button className={cn('flex items-center gap-1.5 font-bold transition-all text-lg', textClass, 'hover:text-accent-cyan')} onClick={(e) => { e.stopPropagation(); setShowShareModal(true); }}>
-                        <Share size={20} />
+                        <Share size={iconSize} />
+                        <span>{shareCount > 0 ? shareCount : ''}</span>
                     </button>
                 </div>
-                {!isShortVibe && (
-                    <div className="flex items-center gap-4">
-                        <button className={cn('flex items-center gap-1.5 font-bold transition-all text-lg', textClass, isDownloaded ? 'text-blue-400' : 'hover:text-blue-400')} onClick={handleDownload} title="Save for Offline">
-                            <Download size={20} />
-                        </button>
-                        <button className={cn('flex items-center gap-1.5 font-bold transition-all text-lg', textClass, 'hover:text-accent-purple')} onClick={(e) => { e.stopPropagation(); setShowCollectionModal(true); }}>
-                            <Bookmark size={20} />
-                        </button>
-                    </div>
-                )}
+                <div className="flex items-center gap-4">
+                    <button className={cn('flex items-center gap-1.5 font-bold transition-all text-lg', textClass, isDownloaded ? 'text-blue-400' : 'hover:text-blue-400')} onClick={handleDownload} title="Save for Offline">
+                        <Download size={20} />
+                    </button>
+                    <button className={cn('flex items-center gap-1.5 font-bold transition-all text-lg', textClass, 'hover:text-accent-purple')} onClick={(e) => { e.stopPropagation(); setShowCollectionModal(true); }}>
+                        <Bookmark size={20} />
+                    </button>
+                </div>
             </div>
             {showShareModal && (
                 <ShareModal 

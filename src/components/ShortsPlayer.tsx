@@ -17,9 +17,11 @@ export const ShortsPlayer = forwardRef(({ post, isActive, onCommentClick }: { po
     const videoRef = useRef<HTMLVideoElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const actionsRef = useRef<HTMLDivElement>(null);
+    const progressBarRef = useRef<HTMLDivElement>(null);
     const { setIsFlowVideoPlaying } = useAppState();
     const [isPlaying, setIsPlaying] = useState(false);
     const [isMuted, setIsMuted] = useState(false);
+    const [progress, setProgress] = useState(0);
     const [showHeart, setShowHeart] = useState(false);
     const viewCountedRef = useRef(false);
     const tapTimeout = useRef<NodeJS.Timeout | null>(null);
@@ -74,11 +76,25 @@ export const ShortsPlayer = forwardRef(({ post, isActive, onCommentClick }: { po
         if (!video) return;
         const handlePlay = () => setIsPlaying(true);
         const handlePause = () => setIsPlaying(false);
+        const handleTimeUpdate = () => {
+            if (video.duration > 0) {
+                setProgress((video.currentTime / video.duration) * 100);
+            }
+        };
+
         video.addEventListener('play', handlePlay);
         video.addEventListener('pause', handlePause);
+        video.addEventListener('timeupdate', handleTimeUpdate);
+        video.addEventListener('ended', () => {
+            video.currentTime = 0;
+            video.play();
+        });
+
+
         return () => {
             video.removeEventListener('play', handlePlay);
             video.removeEventListener('pause', handlePause);
+            video.removeEventListener('timeupdate', handleTimeUpdate);
         };
     }, []);
 
@@ -98,6 +114,18 @@ export const ShortsPlayer = forwardRef(({ post, isActive, onCommentClick }: { po
         }
     }, []);
 
+    const handleScrub = (e: React.MouseEvent<HTMLDivElement>) => {
+        e.stopPropagation();
+        const progressBar = progressBarRef.current;
+        const video = videoRef.current;
+        if (progressBar && video && video.duration > 0) {
+            const rect = progressBar.getBoundingClientRect();
+            const offsetX = e.clientX - rect.left;
+            const newProgress = Math.max(0, Math.min(1, offsetX / rect.width));
+            video.currentTime = newProgress * video.duration;
+        }
+    };
+    
     useEffect(() => {
         if (!isActive) return;
         const handleKeyDown = (event: KeyboardEvent) => {
@@ -139,7 +167,10 @@ export const ShortsPlayer = forwardRef(({ post, isActive, onCommentClick }: { po
     };
 
     const handleContainerClick = (event: React.MouseEvent<HTMLDivElement>) => {
-        if (actionsRef.current && actionsRef.current.contains(event.target as Node)) {
+        if (
+            (actionsRef.current && actionsRef.current.contains(event.target as Node)) ||
+            (progressBarRef.current && progressBarRef.current.contains(event.target as Node))
+        ) {
             return;
         }
 
@@ -167,7 +198,6 @@ export const ShortsPlayer = forwardRef(({ post, isActive, onCommentClick }: { po
                 ref={videoRef}
                 src={videoUrl}
                 className="w-full h-full object-contain"
-                loop
                 playsInline
                 preload="auto"
             />
@@ -199,27 +229,39 @@ export const ShortsPlayer = forwardRef(({ post, isActive, onCommentClick }: { po
                 )}
             </AnimatePresence>
             <div className="absolute top-4 right-4 z-10">
-                <button onClick={handleManualMuteToggle} className="bg-black/40 p-2 rounded-full text-white hover:bg-black/70 transition-colors">
+                <button onClick={handleManualMuteToggle} className="bg-black/40 p-2 rounded-full text-white hover:bg-black/70 transition-colors pointer-events-auto">
                     {isMuted ? <VolumeX size={20}/> : <Volume2 size={20}/>}
                 </button>
             </div>
-            <div className="absolute inset-0 w-full h-full p-4 flex items-end justify-between pointer-events-none bg-gradient-to-t from-black/60 via-transparent to-transparent">
-                <div className="flex-1 flex flex-col gap-2 self-end text-white drop-shadow-lg max-w-[calc(100%-80px)]">
-                    <Link href={`/squad/${post.userId}`} onClick={e => e.stopPropagation()} className="flex items-center gap-2 group cursor-pointer w-fit pointer-events-auto">
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green flex items-center justify-center font-bold text-lg overflow-hidden border-2 border-accent-green group-hover:scale-105 transition-transform">
-                            {post.avatar_url ? <img src={post.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : <span className="text-white">{post.displayName?.[0] || 'U'}</span>}
-                        </div>
-                        <span className="font-headline text-white text-base group-hover:underline">@{post.username || "user"}</span>
-                    </Link>
-                    <p className="text-white text-sm font-body line-clamp-3">{post.content}</p>
-                    {post.song && (
-                        <div className="flex items-center gap-2 text-white text-sm">
-                            <FaMusic /> <span>Original Audio</span>
-                        </div>
-                     )}
+            
+            <div className="absolute inset-x-0 bottom-0 p-4 flex flex-col justify-end bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none">
+                <div className="flex-1 flex items-end justify-between">
+                    <div className="flex flex-col gap-2 text-white drop-shadow-lg max-w-[calc(100%-80px)]">
+                        <Link href={`/squad/${post.userId}`} onClick={e => e.stopPropagation()} className="flex items-center gap-2 group cursor-pointer w-fit pointer-events-auto">
+                            <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green flex items-center justify-center font-bold text-lg overflow-hidden border-2 border-accent-green group-hover:scale-105 transition-transform">
+                                {post.avatar_url ? <img src={post.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : <span className="text-white">{post.displayName?.[0] || 'U'}</span>}
+                            </div>
+                            <span className="font-headline text-white text-base group-hover:underline">@{post.username || "user"}</span>
+                        </Link>
+                        <p className="text-white text-sm font-body line-clamp-3">{post.content}</p>
+                        {post.song && (
+                            <div className="flex items-center gap-2 text-white text-sm">
+                                <FaMusic /> <span>Original Audio</span>
+                            </div>
+                         )}
+                    </div>
+                    <div ref={actionsRef} className="flex flex-col gap-4 self-end pointer-events-auto">
+                        <PostActions post={post} isShortVibe={true} onCommentClick={onCommentClick} />
+                    </div>
                 </div>
-                <div ref={actionsRef} className="flex flex-col gap-4 self-end pointer-events-auto">
-                    <PostActions post={post} isShortVibe={true} onCommentClick={onCommentClick} />
+                <div 
+                    ref={progressBarRef} 
+                    className="w-full h-1 bg-white/30 rounded-full mt-3 cursor-pointer pointer-events-auto group"
+                    onClick={handleScrub}
+                >
+                    <div className="h-full bg-accent-cyan rounded-full relative" style={{ width: `${progress}%` }}>
+                       <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white opacity-0 group-hover:opacity-100 transition-opacity" style={{ transform: 'translateX(50%)' }}/>
+                    </div>
                 </div>
             </div>
         </div>
