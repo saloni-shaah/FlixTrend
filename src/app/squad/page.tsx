@@ -317,19 +317,6 @@ function SquadPageContent() {
         )}
       </div>
         
-      {/* Discover Other Users */}
-      <div className="mt-16 w-full max-w-4xl mx-auto flex justify-center">
-        <Link href="/squad/explore">
-            <motion.button 
-                className="btn-glass bg-accent-pink/80 flex items-center gap-3 text-lg"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-            >
-                <Compass />
-                Explore Creators
-            </motion.button>
-        </Link>
-      </div>
        {showCompleteProfile && profile && (
         <CompleteProfileModal profile={profile} onClose={() => setShowCompleteProfile(false)} />
        )}

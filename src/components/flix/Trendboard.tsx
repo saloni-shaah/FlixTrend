@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { getFirestore, collection, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
 import { app } from '@/utils/firebaseClient';
-import { Flame, Star, Users, Trophy, Loader } from 'lucide-react';
+import { Flame, Star, Trophy } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { InFeedVideoPlayer } from '../video/InFeedVideoPlayer';
@@ -95,32 +95,19 @@ export function Trendboard({ currentPost }: { currentPost: any }) {
 
                 const userStats = await Promise.all(allUsers.map(async (user) => {
                     const followersSnap = await getDocs(collection(db, 'users', user.id, 'followers'));
-                    
                     const userPosts = allPosts.filter(p => p.userId === user.id);
                     const postCount = userPosts.length;
-
                     const starCount = userPosts.reduce((total, p) => {
-                         if (p.likes) {
+                        if (p.likes) {
                             return total + Object.values(p.likes).filter(v => v === true).length;
                         }
                         return total;
                     }, 0);
-
-                    return {
-                        ...user,
-                        followerCount: followersSnap.size,
-                        postCount,
-                        starCount,
-                    };
+                    return { ...user, followerCount: followersSnap.size, postCount, starCount };
                 }));
 
-                // Top 3 Creators by Followers
                 setTopCreators([...userStats].sort((a, b) => b.followerCount - a.followerCount).slice(0, 3));
-                
-                // Top 5 Posters by postCount
                 setTopPosters([...userStats].sort((a, b) => b.postCount - a.postCount).slice(0, 5));
-
-                // Top 3 Liked Users by starCount
                 setTopLikedUsers([...userStats].sort((a, b) => b.starCount - a.starCount).slice(0, 3));
 
             } catch (error) {
@@ -148,13 +135,13 @@ export function Trendboard({ currentPost }: { currentPost: any }) {
                 renderItem={(item, index) => (
                     <motion.div key={item.id} initial={{opacity:0, x: -20}} animate={{opacity:1, x:0}} transition={{delay: index * 0.1}}>
                         <Link href={`/squad/${item.id}`} className="glass-card p-3 flex items-center gap-4 hover:border-accent-green">
-                             <span className="font-bold text-xl text-gray-500 w-6">#{index + 1}</span>
-                             <img src={item.avatar_url} alt={item.username} className="w-12 h-12 rounded-full object-cover"/>
-                             <div className="flex-1">
+                            <span className="font-bold text-xl text-gray-500 w-6">#{index + 1}</span>
+                            <img src={item.avatar_url} alt={item.username} className="w-12 h-12 rounded-full object-cover"/>
+                            <div className="flex-1">
                                 <p className="font-bold text-white">{item.name}</p>
                                 <p className="text-sm text-gray-400">@{item.username}</p>
-                             </div>
-                             <span className="font-bold text-accent-green">{item.followerCount || 0} followers</span>
+                            </div>
+                            <span className="font-bold text-accent-green">{item.followerCount || 0} followers</span>
                         </Link>
                     </motion.div>
                 )}
@@ -168,19 +155,19 @@ export function Trendboard({ currentPost }: { currentPost: any }) {
                 renderItem={(item, index) => (
                     <motion.div key={item.id} initial={{opacity:0, x: -20}} animate={{opacity:1, x:0}} transition={{delay: index * 0.1}}>
                         <Link href={`/squad/${item.id}`} className="glass-card p-3 flex items-center gap-4 hover:border-accent-green">
-                             <span className="font-bold text-xl text-gray-500 w-6">#{index + 1}</span>
-                             <img src={item.avatar_url} alt={item.username} className="w-12 h-12 rounded-full object-cover"/>
-                             <div className="flex-1">
+                            <span className="font-bold text-xl text-gray-500 w-6">#{index + 1}</span>
+                            <img src={item.avatar_url} alt={item.username} className="w-12 h-12 rounded-full object-cover"/>
+                            <div className="flex-1">
                                 <p className="font-bold text-white">{item.name}</p>
                                 <p className="text-sm text-gray-400">@{item.username}</p>
-                             </div>
-                             <span className="font-bold text-accent-green flex items-center gap-1"><Star size={14}/> {item.starCount || 0}</span>
+                            </div>
+                            <span className="font-bold text-accent-green flex items-center gap-1"><Star size={14}/> {item.starCount || 0}</span>
                         </Link>
                     </motion.div>
                 )}
             />
 
-             <LeaderboardSection
+            <LeaderboardSection
                 title="Most Active Posters"
                 icon={<Flame className="text-accent-pink" />}
                 data={topPosters}
@@ -188,13 +175,13 @@ export function Trendboard({ currentPost }: { currentPost: any }) {
                 renderItem={(item, index) => (
                     <motion.div key={item.id} initial={{opacity:0, x: -20}} animate={{opacity:1, x:0}} transition={{delay: index * 0.1}}>
                         <Link href={`/squad/${item.id}`} className="glass-card p-3 flex items-center gap-4 hover:border-accent-green">
-                             <span className="font-bold text-xl text-gray-500 w-6">#{index + 1}</span>
-                             <img src={item.avatar_url} alt={item.username} className="w-12 h-12 rounded-full object-cover"/>
-                             <div className="flex-1">
+                            <span className="font-bold text-xl text-gray-500 w-6">#{index + 1}</span>
+                            <img src={item.avatar_url} alt={item.username} className="w-12 h-12 rounded-full object-cover"/>
+                            <div className="flex-1">
                                 <p className="font-bold text-white">{item.name}</p>
                                 <p className="text-sm text-gray-400">@{item.username}</p>
-                             </div>
-                             <span className="font-bold text-accent-green">{item.postCount || 0} posts</span>
+                            </div>
+                            <span className="font-bold text-accent-green">{item.postCount || 0} posts</span>
                         </Link>
                     </motion.div>
                 )}
@@ -208,15 +195,15 @@ export function Trendboard({ currentPost }: { currentPost: any }) {
                 renderItem={(item, index) => (
                     <motion.div key={item.id} initial={{opacity:0, x: -20}} animate={{opacity:1, x:0}} transition={{delay: index * 0.1}}>
                         <Link href={`/post/${item.id}`} className="glass-card p-3 flex items-center gap-4 hover:border-accent-pink">
-                             <span className="font-bold text-xl text-gray-500 w-6">#{index + 1}</span>
-                             <div className="w-16 h-20 rounded-md bg-black overflow-hidden shrink-0">
-                                 <InFeedVideoPlayer mediaUrls={Array.isArray(item.mediaUrl) ? item.mediaUrl : [item.mediaUrl]} post={item} />
-                             </div>
-                             <div className="flex-1">
+                            <span className="font-bold text-xl text-gray-500 w-6">#{index + 1}</span>
+                            <div className="w-16 h-20 rounded-md bg-black overflow-hidden shrink-0">
+                                <InFeedVideoPlayer mediaUrls={Array.isArray(item.mediaUrl) ? item.mediaUrl : [item.mediaUrl]} post={item} />
+                            </div>
+                            <div className="flex-1">
                                 <p className="font-bold text-white truncate">{item.content || "Video"}</p>
                                 <p className="text-sm text-gray-400">by @{item.username}</p>
-                             </div>
-                             <span className="font-bold text-accent-pink">{item.viewCount || 0} views</span>
+                            </div>
+                            <span className="font-bold text-accent-pink">{item.viewCount || 0} views</span>
                         </Link>
                     </motion.div>
                 )}
