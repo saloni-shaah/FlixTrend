@@ -12,6 +12,13 @@ function getCloudinaryId(url: string): string | null {
 }
 
 export const OptimizedVideo = React.forwardRef<HTMLVideoElement, { src: string; thumbnailUrl?: string; className?: string; preload?: "auto" | "metadata" | "none"; loop?: boolean; muted?: boolean; [key: string]: any; }>(({ src, thumbnailUrl, className, preload, loop, muted, ...props }, ref) => {
+    // Reverted the faulty guard clause. This component now expects a valid src.
+    if (!src) {
+        // This case should ideally be handled by the parent component.
+        // Returning null or a placeholder to avoid a crash.
+        return null; 
+    }
+
     if (!src.startsWith(CLOUDINARY_BASE_URL)) {
         return <video ref={ref} src={src} poster={thumbnailUrl} className={className} preload={preload || "metadata"} loop={loop} muted={muted} {...props} />;
     }

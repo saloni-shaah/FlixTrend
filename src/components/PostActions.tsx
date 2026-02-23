@@ -1,7 +1,7 @@
 
 "use client";
 import React from 'react';
-import { getFirestore, collection, onSnapshot, addDoc, serverTimestamp, deleteDoc, updateDoc, doc, setDoc, runTransaction, deleteField } from "firebase/firestore";
+import { getFirestore, collection, onSnapshot, doc, updateDoc, runTransaction, serverTimestamp } from "firebase/firestore";
 import { Repeat2, Star, Share, MessageCircle, Bookmark, Download } from "lucide-react";
 import { auth, app } from '@/utils/firebaseClient';
 import { ShareModal } from './ShareModal';
@@ -14,12 +14,11 @@ import { errorEmitter } from '@/firebase/error-emitter';
 
 const db = getFirestore(app);
 
-export function PostActions({ post, onCommentClick, isShortVibe = false, collectionName = 'posts' }: { post: any; onCommentClick: () => void; isShortVibe?: boolean, collectionName?: string }) {
-    const [likes, setLikes] = React.useState(0);
+export function PostActions({ post, onCommentClick, isShortVibe = false, collectionName = 'posts' }: { post: any; onCommentClick: (e: React.MouseEvent) => void; isShortVibe?: boolean, collectionName?: string }) {
+    const [likes, setLikes] = React.useState(post.likes ? Object.values(post.likes).filter(v => v === true).length : 0);
     const [userHasLiked, setUserHasLiked] = React.useState(false);
     const [relays, setRelays] = React.useState(0);
     const [userHasRelayed, setUserHasRelayed] = React.useState(false);
-    const [commentsCount, setCommentsCount] = React.useState(0);
     const [showShareModal, setShowShareModal] = React.useState(false);
     const [showSignalShare, setShowSignalShare] = React.useState(false);
     const [showCollectionModal, setShowCollectionModal] = React.useState(false);
@@ -28,33 +27,20 @@ export function PostActions({ post, onCommentClick, isShortVibe = false, collect
 
     React.useEffect(() => {
         if (!post.id) return;
+        if (currentUser) {
+            setUserHasLiked(post.likes && post.likes[currentUser.uid]);
+        }
+    }, [post.likes, currentUser]);
 
-        const postRef = doc(db, collectionName, post.id);
-        const unsubPost = onSnapshot(postRef, (doc) => {
-            const data = doc.data();
-            if (data && data.likes) {
-                const likesMap = data.likes;
-                setLikes(Object.values(likesMap).filter(v => v === true).length);
-                if (currentUser) {
-                    setUserHasLiked(!!likesMap[currentUser.uid]);
-                }
-            } else {
-                setLikes(0);
-                setUserHasLiked(false);
-            }
-        });
-
+    React.useEffect(() => {
+        if (!post.id) return;
         const unsubRelays = onSnapshot(collection(db, collectionName, post.id, "relays"), (snap) => setRelays(snap.size));
-        const unsubComments = onSnapshot(collection(db, collectionName, post.id, "comments"), (snap) => setCommentsCount(snap.size));
-        
         isPostDownloaded(post.id).then(setIsDownloaded);
 
         return () => {
-            unsubPost();
             unsubRelays();
-            unsubComments();
         };
-    }, [post.id, currentUser, collectionName]);
+    }, [post.id, collectionName]);
 
     const handleLike = async (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -67,13 +53,11 @@ export function PostActions({ post, onCommentClick, isShortVibe = false, collect
             [`likes.${userId}`]: !userHasLiked
         };
 
-        // Optimistically update the UI
         setUserHasLiked(!userHasLiked);
         setLikes(l => userHasLiked ? l - 1 : l + 1);
 
         updateDoc(postRef, dataToUpdate)
           .catch(async (serverError) => {
-            // Revert optimistic update on error
             setUserHasLiked(userHasLiked);
             setLikes(l => userHasLiked ? l + 1 : l - 1);
             const permissionError = new FirestorePermissionError({
@@ -143,15 +127,20 @@ export function PostActions({ post, onCommentClick, isShortVibe = false, collect
         }
     };
 
+    const handleCommentButtonClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onCommentClick(e);
+    }
+
     const textClass = isShortVibe ? 'text-white' : 'text-muted-foreground';
 
     return (
         <>
             <div className={cn("flex items-center", isShortVibe ? 'flex-col gap-4' : 'justify-between mt-2 pt-2 border-t border-glass-border')}>
                 <div className={cn('flex items-center justify-start', isShortVibe ? 'flex-col gap-4' : 'gap-6')}>
-                    <button className={cn('flex items-center gap-1.5 font-bold transition-all text-lg', textClass, 'hover:text-brand-gold')} onClick={(e) => { e.stopPropagation(); onCommentClick(); }}>
+                    <button className={cn('flex items-center gap-1.5 font-bold transition-all text-lg', textClass, 'hover:text-brand-gold')} onClick={handleCommentButtonClick}>
                         <MessageCircle size={20} />
-                        {!isShortVibe && <span>{commentsCount}</span>}
+                        {!isShortVibe && <span>{post.commentCount || 0}</span>}
                     </button>
                     {collectionName !== 'drops' && (
                         <button className={cn('flex items-center gap-1.5 font-bold transition-all text-lg', userHasRelayed ? 'text-green-400' : textClass, 'hover:text-green-400')} onClick={handleRelay} >

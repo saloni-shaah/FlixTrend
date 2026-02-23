@@ -21,14 +21,12 @@ const creatorCategoryMap: { [key: string]: string } = {
     'tips': 'learn', 'tech': 'learn', 'study': 'learn', 'explainers': 'learn',
     'music': 'culture', 'movies': 'culture', 'trends': 'culture', 'community': 'culture'
 };
-const mainCategories = ['daily', 'creative', 'play', 'learn', 'culture'];
-
 
 function PostPreview({ postData }: { postData: any }) {
     if (!postData) return null;
     
     const {
-        postType, content, question, pollOptions, mediaUrl, backgroundColor, fontStyle, title, caption,
+        postType, content, mediaUrl, fontStyle, backgroundColor
     } = postData;
 
     return (
@@ -54,11 +52,12 @@ function PostPreview({ postData }: { postData: any }) {
                         <p className="font-bold">{postData.title || postData.caption}</p>
                         <div className="mt-2 grid grid-cols-1 gap-2">
                             {mediaUrl.map((url: string, index: number) => {
-                                const isVideo = postData.mediaFiles[index]?.type.startsWith('video/');
+                                const file = postData.files?.[index];
+                                const isVideo = file?.type.startsWith('video/');
                                 if (isVideo) {
                                     return <video key={index} src={url} className="w-full h-auto rounded-md aspect-video object-cover" controls/>;
                                 }
-                                return <img key={index} src={url} alt="preview" className="w-full h-auto rounded-md aspect-video object-cover" />
+                                return <img key={index} src={url} alt="preview" className="w-full h-auto rounded-md aspect-video object-cover" />;
                             })}
                         </div>
                     </>
@@ -66,7 +65,7 @@ function PostPreview({ postData }: { postData: any }) {
 
                 {postType === 'poll' && (
                     <>
-                        <p className="font-bold mb-2">{question}</p>
+                        <p className="font-bold mb-2">{postData.question}</p>
                         <div className="flex flex-col gap-2">
                             {postData.options?.map((opt: any, idx: number) => (
                                 <div key={idx} className="p-2 border border-glass-border rounded-full text-sm text-center">
@@ -79,7 +78,7 @@ function PostPreview({ postData }: { postData: any }) {
                  {postType === 'live' && (
                     <div className="text-center">
                         <p className="font-bold text-red-500">LIVE</p>
-                        <p>{title || "Live Stream"}</p>
+                        <p>{postData.title || "Live Stream"}</p>
                     </div>
                 )}
             </div>
@@ -88,7 +87,7 @@ function PostPreview({ postData }: { postData: any }) {
 }
 
 
-export default function Step3({ onNext, onBack, postData }: { onNext?: (data: any) => void; onBack: () => void; postData: any }) {
+export default function Step3({ onBack, postData }: { onBack: () => void; postData: any }) {
     const [isScheduling, setIsScheduling] = useState(!!postData.scheduleDate);
     const [scheduleDate, setScheduleDate] = useState<Date | undefined>(postData.scheduleDate);
     const [scheduleTime, setScheduleTime] = useState('12:00');
@@ -97,19 +96,18 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
     const router = useRouter();
     
     useEffect(() => {
-        // Sync the state if postData changes (e.g. user goes back and forth)
         setScheduleDate(postData.scheduleDate);
         setIsScheduling(!!postData.scheduleDate);
     }, [postData.scheduleDate]);
 
-    const uploadMedia = async (files: File[]) => {
+    const uploadMedia = async (mediaToUpload: File[]) => {
         const user = auth.currentUser;
         if (!user) throw new Error("User not logged in");
 
-        const collection = postData.postType === 'flash' ? 'flashes' : 'posts';
-        const uploadPromises = files.map(async (file) => {
+        const collectionName = postData.postType === 'flash' ? 'flashes' : 'posts';
+        const uploadPromises = mediaToUpload.map(async (file) => {
             const fileName = `${user.uid}-${Date.now()}-${file.name}`;
-            const fileRef = storageRef(storage, `${collection}/${user.uid}/${fileName}`);
+            const fileRef = storageRef(storage, `${collectionName}/${user.uid}/${fileName}`);
             const snapshot = await uploadBytes(fileRef, file);
             return getDownloadURL(snapshot.ref);
         });
@@ -128,16 +126,25 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
         }
 
         try {
-            let uploadedMediaUrls: string[] = postData.mediaUrl || [];
-            if (postData.mediaFiles && postData.mediaFiles.length > 0) {
-                 // Check if the mediaUrl is a blob url, if so, it needs to be uploaded.
-                const filesToUpload = postData.mediaFiles.filter((file: any, index: number) => postData.mediaUrl[index]?.startsWith('blob:'));
-                if (filesToUpload.length > 0) {
-                    uploadedMediaUrls = await uploadMedia(filesToUpload);
+            let finalMediaUrls = postData.mediaUrl || [];
+            if (postData.files && postData.files.length > 0) {
+                const filesToUploadInfo = postData.files
+                    .map((file: File, index: number) => ({ file, originalIndex: index }))
+                    .filter((info: { file: File, originalIndex: number }) => postData.mediaUrl[info.originalIndex]?.startsWith('blob:'));
+
+                if (filesToUploadInfo.length > 0) {
+                    const filesToUpload = filesToUploadInfo.map(info => info.file);
+                    const uploadedUrls = await uploadMedia(filesToUpload);
+
+                    finalMediaUrls = postData.mediaUrl.map((url: string, index: number) => {
+                        const uploadInfoIndex = filesToUploadInfo.findIndex(info => info.originalIndex === index);
+                        if (uploadInfoIndex !== -1) {
+                            return uploadedUrls[uploadInfoIndex];
+                        }
+                        return url;
+                    });
                 }
             }
-
-            const finalPostData = { ...postData, mediaUrl: uploadedMediaUrls };
             
             const userDocRef = doc(db, 'users', user.uid);
             const userDocSnap = await getDoc(userDocRef);
@@ -145,12 +152,12 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
             const userData = userDocSnap.data();
 
             const creatorType = userData.creatorType || '';
-            let mainCategory = creatorCategoryMap[creatorType] || null;
+            const mainCategory = creatorCategoryMap[creatorType] || null;
 
             let createdAt, expiresAt;
             if (postData.postType === 'flash' && scheduleDate) {
                 const flashDate = new Date(scheduleDate);
-                flashDate.setHours(0, 0, 0, 0); // Start of the day
+                flashDate.setHours(0, 0, 0, 0); 
                 createdAt = Timestamp.fromDate(flashDate);
                 expiresAt = new Date(flashDate.getTime() + 24 * 60 * 60 * 1000);
             } else if (postData.postType === 'flash') {
@@ -168,13 +175,15 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
                 finalDate.setMinutes(parseInt(minutes, 10));
                 publishAt = Timestamp.fromDate(finalDate);
             } else {
-                publishAt = createdAt; // For non-flash posts, publishAt is same as createdAt
+                publishAt = createdAt;
             }
 
             const livekitRoomName = postData.postType === 'live' ? `${user.uid}-${Date.now()}` : null;
             const collectionName = postData.postType === 'flash' ? 'flashes' : 'posts';
             const hashtags = (postData.hashtags || "").split(' ').map((h:string) => h.replace('#', '')).filter(Boolean);
-            
+
+            const isFlow = postData.isVideo && postData.videoDuration && postData.videoDuration < 240;
+
             const dataToSave: any = {
                 userId: user.uid,
                 displayName: userData.name || user.displayName,
@@ -184,7 +193,7 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
                 content: postData.content || postData.caption || postData.question || postData.title || "",
                 hashtags: hashtags,
                 createdAt: createdAt,
-                publishAt: publishAt, // For regular posts
+                publishAt: publishAt, 
                 location: postData.location || null,
                 viewCount: 0,
                 creatorType: creatorType,
@@ -193,17 +202,26 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
                     backgroundColor: postData.backgroundColor || null, 
                     fontStyle: postData.fontStyle || 'font-body' 
                 }),
-                ...(postData.postType === 'media' && { 
-                    mediaUrl: finalPostData.mediaUrl && finalPostData.mediaUrl.length > 0 ? (finalPostData.mediaUrl.length > 1 ? finalPostData.mediaUrl : finalPostData.mediaUrl[0]) : null, 
-                    title: postData.title || "", 
+                ...(postData.postType === 'media' && {
+                    mediaUrl: postData.isVideo ? (finalMediaUrls?.[0] || null) : (finalMediaUrls || []),
+                    title: postData.title || "",
+                    description: postData.description || "",
+                    isFlow: isFlow,
+                    isVideo: postData.isVideo || false,
+                    videoDuration: postData.videoDuration || null,
+                    isPortrait: postData.isPortrait || false,
                 }),
                 ...(postData.postType === 'flash' && { 
-                    mediaUrl: finalPostData.mediaUrl && finalPostData.mediaUrl.length > 0 ? finalPostData.mediaUrl[0] : null, 
+                    mediaUrl: finalMediaUrls && finalMediaUrls.length > 0 ? finalMediaUrls[0] : null, 
                     song: postData.song || null, 
                     expiresAt: expiresAt,
                     caption: postData.caption || "" 
                 }),
-                ...(postData.postType === 'poll' && { pollOptions: postData.options.map((opt:any) => opt.text) }),
+                ...(postData.postType === 'poll' && { 
+                    question: postData.question,
+                    options: postData.options.map((opt:any) => ({ text: opt.text, votes: 0 })),
+                    correctAnswerIndex: postData.correctAnswerIndex ?? null,
+                 }),
                 ...(postData.postType === 'live' && { 
                     livekitRoom: livekitRoomName, 
                     title: postData.title || "Live Stream", 
@@ -227,7 +245,6 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
         }
     };
     
-    // Scheduling is available for all posts except live ones
     const shouldShowScheduling = postData.postType !== 'live';
     const getButtonText = () => {
         if (isPublishing) return 'Publishing...';
@@ -241,7 +258,7 @@ export default function Step3({ onNext, onBack, postData }: { onNext?: (data: an
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
              <div className="glass-card p-8">
-                <h2 className="text-2xl font-headline text-accent-pink mb-4">Step 2: Publish</h2>
+                <h2 className="text-2xl font-headline text-accent-pink mb-4">Step 3: Publish</h2>
                 
                 <PostPreview postData={postData} />
 

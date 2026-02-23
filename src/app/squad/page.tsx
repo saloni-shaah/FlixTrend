@@ -1,7 +1,7 @@
-"use client";
+'use client';
 import React, { useEffect, useState, useRef, Suspense } from "react";
 import { auth, app } from "@/utils/firebaseClient";
-import { getFirestore, doc, onSnapshot, collection, query, where, getCountFromServer, getDocs, orderBy, writeBatch, deleteDoc, arrayUnion, arrayRemove, serverTimestamp } from "firebase/firestore";
+import { getFirestore, doc, onSnapshot, collection, query, where, getCountFromServer, getDocs, orderBy, writeBatch, deleteDoc, arrayUnion, arrayRemove, serverTimestamp, setDoc } from "firebase/firestore";
 import { Cog, Compass, MapPin, User, Tag, ShieldCheck, Music, Bookmark, Heart, Folder, Download, CheckCircle, Search, Users as UsersIcon, Phone, Trophy, Award, Sparkles, Image, BarChart3, AlignLeft, Radio, Zap } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -36,6 +36,7 @@ function SquadPageContent() {
   const [starredPosts, setStarredPosts] = useState<any[]>([]);
   const [showFollowList, setShowFollowList] = useState<null | 'followers' | 'following' | 'friends'>(null);
   const [showCompleteProfile, setShowCompleteProfile] = useState(false);
+  const [isCreator, setIsCreator] = useState(false);
   const router = useRouter();
 
 
@@ -48,6 +49,9 @@ function SquadPageContent() {
             if (docSnap.exists()) {
                 const data = docSnap.data();
                 setProfile({ uid: docSnap.id, ...data });
+                if (data.accountType === 'creator') {
+                    setIsCreator(true);
+                }
                 // Only show the completion modal if the flag is explicitly false.
                 if (data.profileComplete === false) {
                    setShowCompleteProfile(true);
@@ -138,6 +142,21 @@ function SquadPageContent() {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col w-full items-center pb-24">
+        {isCreator && (
+            <Link href="/studio">
+                <motion.button
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                  className="fixed top-4 right-4 z-30 btn-glass-icon bg-purple-500/50 text-white"
+                  aria-label="Creator Studio"
+                  whileHover={{ scale: 1.1, rotate: -15 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  <BarChart3 />
+                </motion.button>
+            </Link>
+        )}
         {showFollowList && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" onClick={() => setShowFollowList(null)} />}
         <Link href="/settings">
             <motion.button

@@ -7,6 +7,10 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function canLikeComment() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes']);
+    }
+
     // Users: Read any profile, write to your own.
     match /users/{userId} {
       allow get, list: if isSignedIn();
@@ -60,11 +64,14 @@ service cloud.firestore {
       allow delete: if isSignedIn() && request.auth.uid == resource.data.userId;
     }
 
-
-    // Posts: subcollections (comments, likes, etc.) - still protected
+    // Posts: subcollections (comments, likes, etc.)
     match /posts/{postId}/{subcollection}/{docId} {
         allow read, create: if isSignedIn();
-        allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+        allow update: if isSignedIn() && (
+            resource.data.userId == request.auth.uid ||
+            (subcollection == 'comments' && canLikeComment())
+        );
+        allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
 
     // Flashes: main document
@@ -134,7 +141,11 @@ service cloud.firestore {
     // Drops: subcollections
     match /drops/{dropId}/{subcollection}/{docId} {
         allow read, create: if isSignedIn();
-        allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+        allow update: if isSignedIn() && (
+            resource.data.userId == request.auth.uid ||
+            (subcollection == 'comments' && canLikeComment())
+        );
+        allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
 
     // Prompts
