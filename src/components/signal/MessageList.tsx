@@ -21,11 +21,11 @@ interface MessageListProps {
     selectedChat: any;
     selectedItems: Set<string>;
     selectionMode: 'messages' | null;
-    onLongPress: (msgId: string) => void;
-    onClick: (msgId: string) => void;
-    onShowEmojiPicker: (msgId: string | null) => void;
+    handleLongPress: (event: React.MouseEvent | React.TouchEvent, msgId: string) => void;
+    handleMessageClick: (msgId: string) => void;
+    setShowEmojiPicker: (msgId: string | null) => void;
     showEmojiPicker: string | null;
-    onShowDeleteConfirm: (msgId: string) => void;
+    openDeleteConfirmation: (msgId?: string) => void;
     setFullScreenImage: (imageUrl: string | null) => void;
 }
 
@@ -35,18 +35,17 @@ export function MessageList({
     selectedChat, 
     selectedItems, 
     selectionMode, 
-    onLongPress, 
-    onClick, 
-    onShowEmojiPicker, 
+    handleLongPress, 
+    handleMessageClick, 
+    setShowEmojiPicker, 
     showEmojiPicker, 
-    onShowDeleteConfirm, 
+    openDeleteConfirmation, 
     setFullScreenImage 
 }: MessageListProps) {
     const scrollableContainerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (scrollableContainerRef.current) {
-            // Use a timeout to ensure the DOM has updated before scrolling
             setTimeout(() => {
                 if(scrollableContainerRef.current) {
                    scrollableContainerRef.current.scrollTop = scrollableContainerRef.current.scrollHeight;
@@ -85,11 +84,11 @@ export function MessageList({
                       firebaseUser={firebaseUser}
                       isSelected={selectedItems.has(msg.id)}
                       selectionMode={selectionMode}
-                      onLongPress={() => onLongPress(msg.id)}
-                      onClick={() => onClick(msg.id)}
-                      onShowEmojiPicker={onShowEmojiPicker}
+                      onLongPress={handleLongPress}
+                      onClick={handleMessageClick}
+                      onShowEmojiPicker={setShowEmojiPicker}
                       showEmojiPicker={showEmojiPicker}
-                      onShowDeleteConfirm={() => onShowDeleteConfirm(msg.id)}
+                      onShowDeleteConfirm={openDeleteConfirmation}
                       setFullScreenImage={setFullScreenImage}
                     />
                 );
@@ -98,7 +97,7 @@ export function MessageList({
     };
 
     return (
-        <div ref={scrollableContainerRef} className="flex-1 overflow-y-auto p-4 flex flex-col gap-1">
+        <div ref={scrollableContainerRef} className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
             {renderMessagesWithSeparators()}
         </div>
     );
