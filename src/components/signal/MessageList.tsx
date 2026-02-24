@@ -42,10 +42,17 @@ export function MessageList({
     onShowDeleteConfirm, 
     setFullScreenImage 
 }: MessageListProps) {
-    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const scrollableContainerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        if (scrollableContainerRef.current) {
+            // Use a timeout to ensure the DOM has updated before scrolling
+            setTimeout(() => {
+                if(scrollableContainerRef.current) {
+                   scrollableContainerRef.current.scrollTop = scrollableContainerRef.current.scrollHeight;
+                }
+            }, 100);
+        }
     }, [messages]);
 
     const renderMessagesWithSeparators = () => {
@@ -91,9 +98,8 @@ export function MessageList({
     };
 
     return (
-        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-1">
+        <div ref={scrollableContainerRef} className="flex-1 overflow-y-auto p-4 flex flex-col gap-1">
             {renderMessagesWithSeparators()}
-            <div ref={messagesEndRef} />
         </div>
     );
 }

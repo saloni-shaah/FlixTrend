@@ -42,17 +42,14 @@ export const MessageItem = React.memo(({ msg, isUser, selectedChat, firebaseUser
     const handleReact = async (emoji: string) => {
         if (!firebaseUser?.uid) return;
 
-        // --- FIX: Construct the correct chatId for DMs ---
         const getCorrectChatId = () => {
             if (selectedChat.isGroup) {
                 return selectedChat.id;
             } else {
-                // For DMs, the ID must be the combination of both UIDs, sorted.
                 return [firebaseUser.uid, selectedChat.id].sort().join('_');
             }
         };
         const correctChatId = getCorrectChatId();
-        // --- END FIX ---
         
         const messageRef = doc(db, 'chats', correctChatId, 'messages', msg.id);
 
@@ -98,15 +95,32 @@ export const MessageItem = React.memo(({ msg, isUser, selectedChat, firebaseUser
         }
     };
 
-
     const getSeenStatus = () => {
         if (!isUser || msg.sender === 'system') return 'none';
-        const otherParticipantIds = selectedChat.isGroup ? selectedChat.members.filter((id: string) => id !== firebaseUser.uid) : [selectedChat.id];
+
         const readers = msg.readBy || [];
-        const allOthersHaveRead = otherParticipantIds.every((id: string) => readers.includes(id));
-        if (allOthersHaveRead) return 'all_seen';
-        if (readers.length > 0) return 'delivered';
-        return 'sent';
+        
+        if (selectedChat.isGroup) {
+            const otherParticipantIds = selectedChat.members.filter((id) => id !== firebaseUser.uid);
+            if (otherParticipantIds.length === 0) return 'sent';
+
+            const allOthersHaveRead = otherParticipantIds.every((id) => readers.includes(id));
+
+            if (allOthersHaveRead) {
+                return 'all_seen';
+            } 
+            const otherReaders = readers.filter(id => id !== firebaseUser.uid);
+            if (otherReaders.length > 0) {
+                return 'delivered';
+            }
+            return 'sent';
+        } else { // DM
+            const otherParticipantId = selectedChat.id;
+            if (readers.includes(otherParticipantId)) {
+                return 'all_seen';
+            }
+            return 'sent';
+        }
     };
     const seenStatus = getSeenStatus();
 
@@ -127,7 +141,7 @@ export const MessageItem = React.memo(({ msg, isUser, selectedChat, firebaseUser
                             {seenStatus !== 'none' && (
                                 <span className="relative flex items-center">
                                     <Eye size={14} className={cn('transition-colors', seenStatus === 'all_seen' ? 'text-blue-400' : 'text-gray-500')} />
-                                    {seenStatus === 'all_seen' && <Eye size={14} className="absolute -right-1.5 text-blue-400" />}
+                                    {(seenStatus === 'all_seen' || seenStatus === 'delivered') && <Eye size={14} className={cn("absolute -right-1.5 transition-colors", seenStatus === 'all_seen' ? 'text-blue-400' : 'text-gray-500')} />}
                                 </span>
                             )}
                         </div>
