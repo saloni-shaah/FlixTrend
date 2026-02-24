@@ -3,7 +3,29 @@ import withPWA from 'next-pwa';
 
 const isDev = process.env.NODE_ENV === 'development';
 
-export default withPWA({
+const nextConfig = {
+  pwa: {
+    dest: 'public',
+    register: true,
+    skipWaiting: true,
+    disable: isDev,
+    runtimeCaching: [
+      {
+        urlPattern: /.*/i,
+        handler: 'StaleWhileRevalidate',
+        options: {
+          cacheName: 'all-content-cache',
+          expiration: {
+            maxEntries: 60,
+            maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
+          },
+          cacheableResponse: {
+            statuses: [0, 200],
+          },
+        },
+      },
+    ],
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: '50mb', // Increase upload limit for music files
@@ -37,26 +59,6 @@ export default withPWA({
     ];
   },
   turbopack: {},
-  pwa: {
-    dest: 'public',
-    register: true,
-    skipWaiting: true,
-    disable: isDev,
-    runtimeCaching: [
-      {
-        urlPattern: /.*/i,
-        handler: 'StaleWhileRevalidate',
-        options: {
-          cacheName: 'all-content-cache',
-          expiration: {
-            maxEntries: 60,
-            maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
-          },
-          cacheableResponse: {
-            statuses: [0, 200],
-          },
-        },
-      },
-    ],
-  },
-});
+};
+
+export default withPWA(nextConfig);
