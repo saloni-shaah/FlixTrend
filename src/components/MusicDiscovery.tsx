@@ -7,9 +7,62 @@ import { getFirestore, collection, addDoc, serverTimestamp, query, onSnapshot, o
 import { auth, app } from '@/utils/firebaseClient';
 import { useAppState } from '@/utils/AppStateContext';
 import AdModal from './AdModal';
-import { uploadToCloudinary } from '@/app/actions';
 
 const db = getFirestore(app);
+
+// Helper to generate the signature from our secure API route
+async function getCloudinarySignature(paramsToSign: any) {
+  const response = await fetch('/api/sign-cloudinary-params', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ paramsToSign }),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(`Failed to get signature: ${error.error}`);
+  }
+  const { signature } = await response.json();
+  return signature;
+}
+
+// Helper to upload the file directly to Cloudinary
+async function uploadToCloudinary(file: File) {
+    const timestamp = Math.round((new Date).getTime() / 1000); 
+    const paramsToSign = {
+        timestamp: timestamp,
+        // Add other parameters you want to include in the signature if needed
+        // For example, if you have a specific upload preset:
+        // upload_preset: 'your_preset_name'
+    };
+
+    const signature = await getCloudinarySignature(paramsToSign);
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("timestamp", timestamp.toString());
+    // IMPORTANT: Replace with your Cloudinary cloud name and API key
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME; 
+    const apiKey = process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY;
+    if (!cloudName || !apiKey) {
+        throw new Error("Cloudinary environment variables are not set.");
+    }
+    formData.append("api_key", apiKey); 
+    formData.append("signature", signature);
+
+    const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {
+        method: "POST",
+        body: formData,
+    });
+
+    if (!response.ok) {
+        const errorResult = await response.json();
+        throw new Error(`Cloudinary upload failed: ${errorResult.error.message}`);
+    }
+
+    const result = await response.json();
+    return { success: true, url: result.secure_url };
+}
+
 
 function AddMusicModal({ onClose }: { onClose: () => void }) {
     const [form, setForm] = useState({
@@ -54,25 +107,15 @@ function AddMusicModal({ onClose }: { onClose: () => void }) {
             const user = auth.currentUser;
             if (!user) throw new Error("You must be logged in to upload music.");
 
-            // --- Step 1: Upload Audio File ---
-            const audioFormData = new FormData();
-            audioFormData.append('file', audioFile);
-            const audioUploadResult = await uploadToCloudinary(audioFormData);
-            if (!audioUploadResult.success || !audioUploadResult.url) {
-                throw new Error(`Audio upload failed: ${audioUploadResult.error || 'Unknown reason'}`);
+            // --- Upload files directly to Cloudinary ---
+            const audioUploadResult = await uploadToCloudinary(audioFile);
+            const artUploadResult = await uploadToCloudinary(albumArtFile);
+
+            if (!audioUploadResult.success || !artUploadResult.success) {
+                throw new Error("One of the file uploads failed.");
             }
 
-            // --- Step 2: Upload Album Art File ---
-            const artFormData = new FormData();
-            artFormData.append('file', albumArtFile);
-            const artUploadResult = await uploadToCloudinary(artFormData);
-            if (!artUploadResult.success || !artUploadResult.url) {
-                // Note: If this fails, the audio is already on Cloudinary.
-                // In a production app, you might want to delete it.
-                throw new Error(`Album art upload failed: ${artUploadResult.error || 'Unknown reason'}`);
-            }
-
-            // --- Step 3: Add Song to Firestore ---
+            // --- Add Song to Firestore ---
             await addDoc(collection(db, 'songs'), {
                 ...form,
                 audioUrl: audioUploadResult.url,
@@ -85,7 +128,7 @@ function AddMusicModal({ onClose }: { onClose: () => void }) {
 
             onClose(); // Success!
         } catch (err: any) {
-            setError(err.message); // Display the specific error from the try block
+            setError(err.message);
         } finally {
             setLoading(false);
         }
@@ -133,6 +176,7 @@ function AddMusicModal({ onClose }: { onClose: () => void }) {
         </div>
     );
 }
+
 
 function AddToPlaylistModal({ song, onClose }: { song: any; onClose: () => void }) {
     const [playlists, setPlaylists] = useState<any[]>([]);
