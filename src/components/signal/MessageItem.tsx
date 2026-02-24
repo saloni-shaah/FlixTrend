@@ -99,7 +99,7 @@ export const MessageItem = React.memo(({ msg, isUser, selectedChat, firebaseUser
         <div onClick={() => onClick(msg.id)} {...longPressProps} className={cn("group flex w-full items-end gap-2", isUser ? "justify-end" : msg.sender === 'system' ? 'justify-center' : "justify-start", selectionMode === 'messages' && "cursor-pointer")}>
             <div className={cn("flex items-end gap-2 max-w-[80%] md:max-w-[70%]", isSelected && "bg-accent-cyan/20 rounded-xl")}>
                 <div className={`relative flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
-                    <div className={`px-3 py-2 rounded-2xl transition-all duration-300 ${isUser ? "bg-[var(--accent-cyan)] text-white rounded-br-none" : msg.sender === 'system' ? "bg-gray-800 text-gray-400 text-xs italic" : "bg-gray-700 text-white rounded-bl-none"}`}>
+                    <div className={`px-3 py-2 rounded-2xl transition-all duration-300 ${isUser ? "bg-[#bdb2ff] text-black rounded-br-none" : msg.sender === 'system' ? "bg-gray-800 text-gray-400 text-xs italic" : "bg-gray-700 text-white rounded-bl-none"}`}>
                         {!isUser && msg.sender !== 'system' && <div className="font-bold text-sm text-accent-pink px-1">{displayName}</div>}
                         
                         {(msg.type === 'image' || msg.type === 'gif') && <img src={msg.mediaUrl} alt={msg.text || "image"} className="rounded-lg max-w-xs mt-1 cursor-pointer" onClick={(e) => { e.stopPropagation(); setFullScreenImage(msg.mediaUrl);}} />}
