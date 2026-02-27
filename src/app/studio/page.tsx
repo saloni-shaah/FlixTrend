@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { BarChart3, Film, Users, MessageSquare, Settings, Home, LogOut } from 'lucide-react';
 import { auth, app } from "@/utils/firebaseClient";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
@@ -11,67 +11,75 @@ import { Dashboard } from '@/components/studio/Dashboard';
 import { Analytics } from '@/components/studio/Analytics';
 import { Community } from '@/components/studio/Community';
 import { StudioSettings } from '@/components/studio/StudioSettings'; // Import the final component
+import { signInWithCustomToken } from 'firebase/auth';
 
 const db = getFirestore(app);
 
 const StudioPage = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
-    const handleAuthRedirect = async () => {
-      const searchParams = new URLSearchParams(window.location.search);
-      if (searchParams.has('auth')) {
+    const token = searchParams.get('token');
+
+    const signIn = async () => {
+      if (token) {
         try {
-          const user = auth.currentUser;
-          if (user) {
-            const token = await user.getIdToken();
-            const response = await fetch('/api/create-session-token', {
-              headers: { Authorization: `Bearer ${token}` }
-            });
-            const { sessionToken } = await response.json();
-            await auth.signInWithCustomToken(sessionToken);
-          }
-        } catch (error) {
-          console.error("Error during auth redirect:", error);
-        } finally {
+          await signInWithCustomToken(auth, token);
           // Clean up the URL
-          const newUrl = window.location.pathname;
-          window.history.replaceState({}, document.title, newUrl);
+          window.history.replaceState(null, '', window.location.pathname);
+        } catch (error) { 
+          console.error("Custom token sign-in failed:", error);
+          setAuthError("Authentication failed. Please try again.");
+          setLoading(false);
+          return;
         }
       }
-    };
-
-    handleAuthRedirect();
-  }, []);
-
-  useEffect(() => {
-    const checkAuthAndCreatorStatus = async () => {
-      auth.onAuthStateChanged(async (user) => {
-          if (user) {
-            try {
-              const userDocRef = doc(db, "users", user.uid);
-              const userDoc = await getDoc(userDocRef);
-              if (userDoc.exists() && userDoc.data().accountType === 'creator') {
-                setLoading(false); // User is a creator, so we can show the page
-              } else {
-                router.push('/'); // Redirect if not a creator
-              }
-            } catch (error) {
-              console.error("Error checking creator status:", error);
-              router.push('/'); // Redirect on error
+      // If there's no token, we still need to check auth state.
+      const unsubscribe = auth.onAuthStateChanged(async (user) => {
+        if (user) {
+          try {
+            const userDocRef = doc(db, "users", user.uid);
+            const userDoc = await getDoc(userDocRef);
+            if (userDoc.exists() && userDoc.data().accountType === 'creator') {
+              setLoading(false); // User is a creator, so we can show the page
+            } else {
+              setAuthError("You do not have creator access.");
+              setLoading(false);
             }
-          } else {
-             router.push('/');
+          } catch (error) {
+            console.error("Error checking creator status:", error);
+            setAuthError("Error verifying your access.");
+            setLoading(false);
           }
+        } else {
+          // If no user is signed in (and no token was provided), they need to sign in normally.
+          setAuthError("Please sign in to access the studio.");
+          setLoading(false);
+        }
       });
+
+      return () => unsubscribe();
     };
-    checkAuthAndCreatorStatus();
-  }, [router]);
+
+    signIn();
+  }, [searchParams, router]);
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">Verifying creator access...</div>;
+  }
+
+  if (authError) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white">
+        <h2 className="text-2xl font-bold mb-4">Access Denied</h2>
+        <p className="text-red-400 mb-8">{authError}</p>
+        <button onClick={() => router.push('/')} className="btn-primary">Go to Homepage</button>
+      </div>
+    );
   }
 
   const renderContent = () => {
@@ -84,9 +92,9 @@ const StudioPage = () => {
       default: return <Dashboard />;
     }
   };
-  
+
   const NavItem = ({ name, icon: Icon, tabName }: { name: string, icon: React.ElementType, tabName: string }) => (
-    <button 
+    <button
       onClick={() => setActiveTab(tabName)}
       className={`flex items-center space-x-4 p-3 rounded-lg w-full text-left transition-colors ${activeTab === tabName ? 'bg-purple-600 text-white shadow-lg' : 'hover:bg-gray-700'}`}>
       <Icon className="h-6 w-6" />
@@ -96,32 +104,29 @@ const StudioPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white flex">
-      {/* Sidebar */}
       <aside className="w-64 bg-gray-800 p-6 flex flex-col justify-between shadow-2xl">
         <div>
-            <div className="flex items-center space-x-2 mb-10">
-                <BarChart3 className="h-8 w-8 text-purple-400"/>
-                <h1 className="text-2xl font-bold">Creator Studio</h1>
-            </div>
-            <nav className="space-y-4">
-              <NavItem name="Dashboard" icon={Home} tabName="dashboard" />
-              <NavItem name="Content" icon={Film} tabName="content" />
-              <NavItem name="Analytics" icon={BarChart3} tabName="analytics" />
-              <NavItem name="Community" icon={Users} tabName="community" />
-              <NavItem name="Settings" icon={Settings} tabName="settings" />
-            </nav>
+          <div className="flex items-center space-x-2 mb-10">
+            <BarChart3 className="h-8 w-8 text-purple-400" />
+            <h1 className="text-2xl font-bold">Creator Studio</h1>
+          </div>
+          <nav className="space-y-4">
+            <NavItem name="Dashboard" icon={Home} tabName="dashboard" />
+            <NavItem name="Content" icon={Film} tabName="content" />
+            <NavItem name="Analytics" icon={BarChart3} tabName="analytics" />
+            <NavItem name="Community" icon={Users} tabName="community" />
+            <NavItem name="Settings" icon={Settings} tabName="settings" />
+          </nav>
         </div>
         <div>
-            <button 
-              onClick={() => auth.signOut().then(() => router.push('/'))} 
-              className="flex items-center space-x-4 p-3 rounded-lg w-full text-left transition-colors hover:bg-red-600">
-               <LogOut className="h-6 w-6" />
-               <span className="font-semibold text-lg">Logout</span>
-            </button>
+          <button
+            onClick={() => auth.signOut().then(() => router.push('/'))}
+            className="flex items-center space-x-4 p-3 rounded-lg w-full text-left transition-colors hover:bg-red-600">
+            <LogOut className="h-6 w-6" />
+            <span className="font-semibold text-lg">Logout</span>
+          </button>
         </div>
       </aside>
-      
-      {/* Main Content */}
       <main className="flex-1 bg-gray-900 overflow-auto">
         <AnimatePresence mode="wait">
           {renderContent()}
