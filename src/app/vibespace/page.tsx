@@ -383,7 +383,9 @@ function VibeSpaceContent() {
                 {filteredPosts.length > 0 ? filteredPosts.map((post, index) => (
                   <React.Fragment key={post.id}>
                     <PostCard post={post} />
-                    {(index + 1) % 5 === 0 && <AdBanner key={`ad-${post.id}`} />}
+                    {(index + 1) % 5 === 0 && (
+                      <AdBanner key={`ad-${post.id}`} id={`ad-slot-${post.id}`} />
+                    )}
                   </React.Fragment>
                 )) : (
                     <div className="text-center text-gray-400 p-8 glass-card">No posts found in this category yet.</div>
