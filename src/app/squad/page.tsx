@@ -143,7 +143,7 @@ function SquadPageContent() {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col w-full items-center pb-24">
         {isCreator && (
-            <Link href="/studio">
+            <Link href={`http://studio.flixtrend.in?auth=true`} target="_blank" rel="noopener noreferrer">
                 <motion.button
                   initial={{ scale: 0.8, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
@@ -279,7 +279,7 @@ function SquadPageContent() {
                     <button onClick={() => setPostTypeFilter('media')} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'media' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><Image size={14} className="inline"/></button>
                     <button onClick={() => setPostTypeFilter('poll')} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'poll' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><BarChart3 size={14} className="inline"/></button>
                     <button onClick={() => setPostTypeFilter('flash')} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'flash' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><Zap size={14} className="inline"/></button>
-                    <button onClick={() => setPostTypeFilter('live')} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'live' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><Radio size={14} className="inline"/></button>
+                    <button onClick={() => setPostType.filter('live')} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'live' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><Radio size={14} className="inline"/></button>
                 </div>
                  {filteredUserPosts.length > 0 ? (
                     filteredUserPosts.map((post) => <PostCard key={post.id} post={post} />)

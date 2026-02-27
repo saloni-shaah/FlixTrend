@@ -20,6 +20,33 @@ const StudioPage = () => {
   const router = useRouter();
 
   useEffect(() => {
+    const handleAuthRedirect = async () => {
+      const searchParams = new URLSearchParams(window.location.search);
+      if (searchParams.has('auth')) {
+        try {
+          const user = auth.currentUser;
+          if (user) {
+            const token = await user.getIdToken();
+            const response = await fetch('/api/create-session-token', {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            const { sessionToken } = await response.json();
+            await auth.signInWithCustomToken(sessionToken);
+          }
+        } catch (error) {
+          console.error("Error during auth redirect:", error);
+        } finally {
+          // Clean up the URL
+          const newUrl = window.location.pathname;
+          window.history.replaceState({}, document.title, newUrl);
+        }
+      }
+    };
+
+    handleAuthRedirect();
+  }, []);
+
+  useEffect(() => {
     const checkAuthAndCreatorStatus = async () => {
       auth.onAuthStateChanged(async (user) => {
           if (user) {
