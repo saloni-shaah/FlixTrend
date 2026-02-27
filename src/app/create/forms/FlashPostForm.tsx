@@ -1,5 +1,4 @@
 
-
 "use client";
 import React, { useState, useRef, useEffect } from 'react';
 import { X, UploadCloud, Music as MusicIcon, MapPin, Smile, Camera, Image as ImageIcon, Zap } from 'lucide-react';
@@ -9,7 +8,6 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { app } from '@/utils/firebaseClient';
 import { Wand2, Loader } from 'lucide-react';
 
-
 const db = getFirestore(app);
 const storage = getStorage(app);
 
@@ -18,6 +16,7 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
     const [mediaPreview, setMediaPreview] = useState<string | null>(data.mediaPreviews?.[0] || null);
     const [showSongPicker, setShowSongPicker] = useState(false);
     const [appSongs, setAppSongs] = useState<any[]>([]);
+    const [uploadError, setUploadError] = useState<string | null>(null);
     
     const [showCamera, setShowCamera] = useState(false);
     const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
@@ -81,14 +80,11 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
             
             const dataUrl = canvas.toDataURL('image/jpeg');
             
-            // Convert data URI to file and set it
             fetch(dataUrl)
                 .then(res => res.blob())
                 .then(blob => {
                     const file = new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
-                    setMediaFile(file);
-                    setMediaPreview(URL.createObjectURL(file));
-                    onDataChange({ ...data, mediaFiles: [file], mediaPreviews: [URL.createObjectURL(file)] });
+                    handleFileSelection(file);
                 });
 
             stopCamera();
@@ -96,13 +92,22 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
         }
     };
 
+    const handleFileSelection = (file: File) => {
+        if (file.size > 50 * 1024 * 1024) { // 50MB limit
+            setUploadError(`File ${file.name} is too large (max 50MB).`);
+            return;
+        }
+        setUploadError(null);
+
+        const url = URL.createObjectURL(file);
+        setMediaFile(file);
+        setMediaPreview(url);
+        onDataChange({ ...data, mediaFiles: [file], mediaPreviews: [url] });
+    };
+
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            const url = URL.createObjectURL(file);
-            setMediaFile(file);
-            setMediaPreview(url);
-            onDataChange({ ...data, mediaFiles: [file], mediaPreviews: [url] });
+            handleFileSelection(e.target.files[0]);
         }
     };
     
@@ -163,13 +168,16 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
 
             <div className="p-4 border-2 border-dashed border-accent-cyan/30 rounded-2xl text-center min-h-[200px] flex flex-col items-center justify-center">
                 {!mediaPreview ? (
-                    <div className="grid grid-cols-2 gap-2 w-full max-w-sm">
-                        <button type="button" className="btn-glass flex items-center justify-center gap-2" onClick={() => fileInputRef.current?.click()}>
-                            <ImageIcon /> Gallery
-                        </button>
-                        <button type="button" className="btn-glass flex items-center justify-center gap-2" onClick={() => setShowCamera(true)}>
-                            <Camera /> Camera
-                        </button>
+                    <div className="flex flex-col items-center gap-2">
+                         <div className="grid grid-cols-2 gap-2 w-full max-w-sm">
+                            <button type="button" className="btn-glass flex items-center justify-center gap-2" onClick={() => fileInputRef.current?.click()}>
+                                <ImageIcon /> Gallery
+                            </button>
+                            <button type="button" className="btn-glass flex items-center justify-center gap-2" onClick={() => setShowCamera(true)}>
+                                <Camera /> Camera
+                            </button>
+                        </div>
+                        {uploadError && <p className="text-red-400 text-xs mt-2">{uploadError}</p>}
                     </div>
                 ) : (
                      <div className="relative group aspect-video">

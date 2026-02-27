@@ -37,6 +37,11 @@ export function EditProfileModal({ profile, onClose }: { profile: any; onClose: 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'banner') => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
+            if (file.size > 10 * 1024 * 1024) { // 10MB limit
+                setError(`File ${file.name} is too large (max 10MB).`);
+                return;
+            }
+            setError("");
             const previewUrl = URL.createObjectURL(file);
             if (type === 'avatar') {
                 setAvatarFile(file);
@@ -117,13 +122,13 @@ export function EditProfileModal({ profile, onClose }: { profile: any; onClose: 
                              <input type="file" ref={bannerInputRef} onChange={(e) => handleFileChange(e, 'banner')} accept="image/*" className="hidden"/>
                         </div>
                     </div>
+                    {error && <p className="text-red-400 text-xs my-2 text-center">{error}</p>}
                     <input type="text" name="name" placeholder="Full Name" className="input-glass w-full" value={formData.name} onChange={handleTextChange} required />
                     <input type="text" name="username" placeholder="Username" className="input-glass w-full bg-gray-800/50" value={formData.username} readOnly />
                     <textarea name="bio" placeholder="Your Bio" className="input-glass w-full rounded-2xl min-h-[100px]" value={formData.bio} onChange={handleTextChange} />
                     <input type="text" name="location" placeholder="Location" className="input-glass w-full" value={formData.location} onChange={handleTextChange} />
                     <input type="text" name="interests" placeholder="Interests (comma-separated)" className="input-glass w-full" value={formData.interests} onChange={handleTextChange} />
 
-                    {error && <p className="text-red-400 text-sm mt-2 text-center">{error}</p>}
                     <div className="flex justify-end gap-3 mt-4">
                         <button type="button" className="btn-glass" onClick={onClose}>Cancel</button>
                         <button type="submit" className="btn-glass bg-accent-pink text-white" disabled={loading}>

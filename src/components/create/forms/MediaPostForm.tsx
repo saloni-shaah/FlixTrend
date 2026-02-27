@@ -12,8 +12,8 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
     const mediaPreviews = data.mediaUrl || [];
 
     const handleFileSelection = (file: File) => {
-        if (file.size > 200 * 1024 * 1024) { // 200MB limit
-            setUploadError(`File ${file.name} is too large (max 200MB).`);
+        if (file.size > 250 * 1024 * 1024) { // 250MB limit
+            setUploadError(`File ${file.name} is too large (max 250MB).`);
             return;
         }
         setUploadError(null);
