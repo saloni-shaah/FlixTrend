@@ -2,71 +2,54 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { BarChart3, Film, Users, MessageSquare, Settings, Home, LogOut } from 'lucide-react';
-import { auth, app } from "@/utils/firebaseClient";
-import { getFirestore, doc, getDoc } from "firebase/firestore";
+import { BarChart3, Film, Users, Settings, Home, LogOut } from 'lucide-react';
+import { auth } from "@/utils/firebaseClient";
 import { motion, AnimatePresence } from "framer-motion";
 import { ContentManagement } from '@/components/studio/ContentManagement';
 import { Dashboard } from '@/components/studio/Dashboard';
 import { Analytics } from '@/components/studio/Analytics';
 import { Community } from '@/components/studio/Community';
-import { StudioSettings } from '@/components/studio/StudioSettings'; // Import the final component
-import { signInWithCustomToken } from 'firebase/auth';
-
-const db = getFirestore(app);
+import { StudioSettings } from '@/components/studio/StudioSettings';
+import { signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
 
 const StudioPage = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [user, setUser] = useState<any>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
 
   useEffect(() => {
     const token = searchParams.get('token');
 
-    const signIn = async () => {
-      if (token) {
-        try {
-          await signInWithCustomToken(auth, token);
-          // Clean up the URL
+    if (token) {
+      signInWithCustomToken(auth, token)
+        .then(() => {
+          // Clean up the URL for security
           window.history.replaceState(null, '', window.location.pathname);
-        } catch (error) { 
+        })
+        .catch((error) => {
           console.error("Custom token sign-in failed:", error);
-          setAuthError("Authentication failed. Please try again.");
+          setAuthError("Invalid authentication token.");
           setLoading(false);
-          return;
-        }
+        });
+    }
+
+    const unsubscribe = onAuthStateChanged(auth, (authUser) => {
+      if (authUser) {
+        setUser(authUser);
+        setLoading(false); // User is authenticated, show the page
+        setAuthError(null);
+      } else if (!token) {
+        // If there is no user and we are not currently trying to sign in with a token
+        setAuthError("You must be signed in to access the studio.");
+        setLoading(false);
       }
-      // If there's no token, we still need to check auth state.
-      const unsubscribe = auth.onAuthStateChanged(async (user) => {
-        if (user) {
-          try {
-            const userDocRef = doc(db, "users", user.uid);
-            const userDoc = await getDoc(userDocRef);
-            if (userDoc.exists() && userDoc.data().accountType === 'creator') {
-              setLoading(false); // User is a creator, so we can show the page
-            } else {
-              setAuthError("You do not have creator access.");
-              setLoading(false);
-            }
-          } catch (error) {
-            console.error("Error checking creator status:", error);
-            setAuthError("Error verifying your access.");
-            setLoading(false);
-          }
-        } else {
-          // If no user is signed in (and no token was provided), they need to sign in normally.
-          setAuthError("Please sign in to access the studio.");
-          setLoading(false);
-        }
-      });
+    });
 
-      return () => unsubscribe();
-    };
-
-    signIn();
-  }, [searchParams, router]);
+    return () => unsubscribe();
+  }, [searchParams]);
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">Verifying creator access...</div>;
