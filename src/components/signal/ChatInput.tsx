@@ -3,15 +3,14 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Paperclip, Smile, Mic, Send, Trash2, Pause, Play, X } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import Picker from 'emoji-picker-react';
-import { GiphyPicker } from './GiphyPicker'; // Import the new GiphyPicker component
+import { GiphyPicker } from './GiphyPicker';
 import { IGif } from '@giphy/js-types';
 
-// Props definition for the ChatInput component
 interface ChatInputProps {
     chatId: string;
     draft: string;
     setDraft: (text: string) => void;
-    onSendMessage: (text: string, type?: 'text' | 'gif') => void; // Allow message type
+    onSendMessage: (text: string, type?: 'text' | 'gif') => void;
     onSendFile: (file: File, type: 'image' | 'audio') => void;
 }
 
@@ -27,6 +26,7 @@ export function ChatInput({ chatId, draft, setDraft, onSendMessage, onSendFile }
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const [uploadError, setUploadError] = useState<string | null>(null);
 
     useEffect(() => { setText(draft); }, [draft]);
 
@@ -34,6 +34,7 @@ export function ChatInput({ chatId, draft, setDraft, onSendMessage, onSendFile }
         const newText = e.target.value;
         setText(newText);
         setDraft(newText);
+        setUploadError(null);
         if (textareaRef.current) {
             textareaRef.current.style.height = 'auto';
             textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
@@ -48,7 +49,6 @@ export function ChatInput({ chatId, draft, setDraft, onSendMessage, onSendFile }
     };
 
     const handleGifClick = (gif: IGif) => {
-        // Send the GIF URL as a special message type
         onSendMessage(gif.images.original.url, 'gif');
         setShowGiphyPicker(false);
     };
@@ -63,8 +63,8 @@ export function ChatInput({ chatId, draft, setDraft, onSendMessage, onSendFile }
         }
     };
 
-    // --- Voice Recording Logic (omitted for brevity, no changes here) ---
     const startRecording = async () => {
+        setUploadError(null);
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaRecorderRef.current = new MediaRecorder(stream);
@@ -77,7 +77,9 @@ export function ChatInput({ chatId, draft, setDraft, onSendMessage, onSendFile }
                 if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
                 
                 const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-                if (audioBlob.size > 0) {
+                 if (audioBlob.size > 25 * 1024 * 1024) { // 25MB limit
+                    setUploadError(`Voice message is too large (max 25MB).`);
+                } else if (audioBlob.size > 0) {
                      const audioFile = new File([audioBlob], `voice-message-${Date.now()}.webm`, { type: 'audio/webm' });
                      onSendFile(audioFile, 'audio');
                 }
@@ -91,7 +93,7 @@ export function ChatInput({ chatId, draft, setDraft, onSendMessage, onSendFile }
 
         } catch (err) {
             console.error("Audio recording failed:", err);
-            alert("Microphone access denied. Please enable it in your browser settings.");
+            setUploadError("Microphone access denied. Please enable it in your browser settings.");
         }
     };
 
@@ -119,16 +121,22 @@ export function ChatInput({ chatId, draft, setDraft, onSendMessage, onSendFile }
 
     const cancelRecording = () => {
         if (mediaRecorderRef.current) {
-            mediaRecorderRef.current.onstop = null; // Prevent onstop from firing and sending
+            mediaRecorderRef.current.onstop = null; 
             mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
         }
         if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
         setRecordingState('idle');
+        setUploadError(null);
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (file) {
+          if (file.size > 25 * 1024 * 1024) { // 25MB limit
+            setUploadError(`File is too large (max 25MB).`);
+            return;
+          }
+          setUploadError(null);
           onSendFile(file, 'image');
       }
       if (e.target) e.target.value = ''; // Reset input
@@ -138,6 +146,7 @@ export function ChatInput({ chatId, draft, setDraft, onSendMessage, onSendFile }
 
     return (
         <footer className="shrink-0 p-2 border-t border-accent-cyan/10 bg-black/60 relative">
+            {uploadError && <p className="text-red-400 text-xs text-center pb-2">{uploadError}</p>}
             {showGiphyPicker && (
                 <div className="absolute bottom-full right-0 left-0 z-10">
                      <GiphyPicker onGifClick={handleGifClick} />
@@ -157,7 +166,7 @@ export function ChatInput({ chatId, draft, setDraft, onSendMessage, onSendFile }
             <form onSubmit={handleSendText} className="flex items-end gap-2">
                 {recordingState === 'idle' && (
                     <div className="flex items-center">
-                        <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2 text-gray-400 hover:text-accent-cyan shrink-0">
+                        <button type="button" onClick={() => { setUploadError(null); fileInputRef.current?.click(); }} className="p-2 text-gray-400 hover:text-accent-cyan shrink-0">
                             <Paperclip size={20}/>
                         </button>
                          <button type="button" onClick={() => setShowEmojiPicker(v => !v)} className="p-2 text-gray-400 hover:text-accent-cyan shrink-0">
@@ -192,7 +201,7 @@ export function ChatInput({ chatId, draft, setDraft, onSendMessage, onSendFile }
                     )}
                 </div>
 
-                <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
+                <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*,video/*" />
                 
                  {showSendButton ? (
                     <button 

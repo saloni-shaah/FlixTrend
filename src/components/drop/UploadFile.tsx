@@ -7,10 +7,18 @@ export default function UploadFile() {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
     if (selectedFile) {
+      if (selectedFile.size > 75 * 1024 * 1024) { // 75MB limit
+        setUploadError(`File is too large (max 75MB).`);
+        setFile(null);
+        setPreviewUrl(null);
+        return;
+      }
+      setUploadError(null);
       setFile(selectedFile);
       const reader = new FileReader();
       reader.onload = () => {
@@ -50,11 +58,12 @@ export default function UploadFile() {
             <Button onClick={handleRemoveFile} className="absolute top-2 right-2">Remove</Button>
           </div>
         ) : (
-          <div className="w-full h-48 border-2 border-dashed rounded-lg flex items-center justify-center">
+          <div className="w-full h-48 border-2 border-dashed rounded-lg flex flex-col items-center justify-center">
             <input ref={fileInputRef} type="file" onChange={handleFileChange} className="hidden" id="file-upload" />
             <label htmlFor="file-upload" className="cursor-pointer">
                 <p className="text-center text-muted-foreground">Click to select a file</p>
             </label>
+            {uploadError && <p className="text-red-500 text-sm mt-2">{uploadError}</p>}
           </div>
         )}
       </div>

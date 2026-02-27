@@ -104,6 +104,8 @@ function CreateDropPage() {
         promptText: prompt?.text,
         content: details,
         mediaUrl: [imageUrl],
+        rawMediaUrl: [imageUrl],
+        processingComplete: false,
         createdAt: serverTimestamp(),
         publishAt: serverTimestamp(),
         likes: {},

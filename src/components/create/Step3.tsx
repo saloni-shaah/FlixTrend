@@ -127,12 +127,16 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
 
         try {
             let finalMediaUrls = postData.mediaUrl || [];
+            let rawMediaUrls = postData.mediaUrl || [];
+            let hasMediaToProcess = false;
+
             if (postData.files && postData.files.length > 0) {
                 const filesToUploadInfo = postData.files
                     .map((file: File, index: number) => ({ file, originalIndex: index }))
                     .filter((info: { file: File, originalIndex: number }) => postData.mediaUrl[info.originalIndex]?.startsWith('blob:'));
 
                 if (filesToUploadInfo.length > 0) {
+                    hasMediaToProcess = true;
                     const filesToUpload = filesToUploadInfo.map(info => info.file);
                     const uploadedUrls = await uploadMedia(filesToUpload);
 
@@ -143,6 +147,7 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                         }
                         return url;
                     });
+                    rawMediaUrls = finalMediaUrls;
                 }
             }
             
@@ -198,12 +203,14 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                 viewCount: 0,
                 creatorType: creatorType,
                 category: mainCategory,
+                processingComplete: !hasMediaToProcess,
                 ...(postData.postType === 'text' && { 
                     backgroundColor: postData.backgroundColor || null, 
                     fontStyle: postData.fontStyle || 'font-body' 
                 }),
                 ...(postData.postType === 'media' && {
                     mediaUrl: postData.isVideo ? (finalMediaUrls?.[0] || null) : (finalMediaUrls || []),
+                    rawMediaUrl: postData.isVideo ? (rawMediaUrls?.[0] || null) : (rawMediaUrls || []),
                     title: postData.title || "",
                     description: postData.description || "",
                     isFlow: isFlow,
@@ -213,6 +220,7 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                 }),
                 ...(postData.postType === 'flash' && { 
                     mediaUrl: finalMediaUrls && finalMediaUrls.length > 0 ? finalMediaUrls[0] : null, 
+                    rawMediaUrl: rawMediaUrls && rawMediaUrls.length > 0 ? rawMediaUrls[0] : null, 
                     song: postData.song || null, 
                     expiresAt: expiresAt,
                     caption: postData.caption || "" 
