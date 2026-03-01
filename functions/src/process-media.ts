@@ -1,18 +1,18 @@
 
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import { getStorage } from "firebase-admin/storage";
-import { getFirestore } from "firebase-admin/firestore";
+import { getFirestore } from "firebase-admin/firestore"; // Keep for future use if needed, but address unused var for now.
 import * as logger from "firebase-functions/logger";
 import * as path from "path";
 import * as os from "os";
 import * as fs from "fs";
-import ffmpeg from "fluent-ffmpeg";
+import * as ffmpeg from "fluent-ffmpeg";
 import { path as ffmpegPath } from "@ffmpeg-installer/ffmpeg";
 
 // Set the path for the ffmpeg binary
 ffmpeg.setFfmpegPath(ffmpegPath);
 
-const db = getFirestore();
+// const db = getFirestore(); // Removed as it's unused
 const storage = getStorage();
 
 export const processVideoPost = onDocumentCreated({
@@ -48,12 +48,9 @@ export const processVideoPost = onDocumentCreated({
     let originalFilePath: string;
     try {
         const url = new URL(rawUrl);
-        // The pathname is /v0/b/bucket-name.appspot.com/o/path%2Fto%2Ffile.mp4
-        // We need to decode and slice it to get "path/to/file.mp4"
         originalFilePath = decodeURIComponent(url.pathname.split('/o/')[1]);
     } catch (e) {
         logger.error("Invalid rawMediaUrl:", rawUrl, e);
-        // Update the post to mark it as failed
         await snapshot.ref.update({ processingComplete: true, processingError: "Invalid URL" });
         return;
     }
@@ -73,15 +70,15 @@ export const processVideoPost = onDocumentCreated({
             ffmpeg(tempFilePath)
                 .outputOptions([
                     "-vcodec libx264",
-                    "-crf 28", // Good balance of compression and quality
-                    "-preset slow", // Better compression efficiency
-                    "-vf", "scale=1080:-2", // Scale to 1080p width
+                    "-crf 28",
+                    "-preset slow",
+                    "-vf", "scale=1080:-2",
                     "-acodec aac",
                     "-b:a 128k",
-                    "-movflags +faststart" // Optimize for web streaming
+                    "-movflags +faststart"
                 ])
-                .on("start", (cmd) => logger.log("FFmpeg command:", cmd))
-                .on("error", (err, stdout, stderr) => {
+                .on("start", (cmd: string) => logger.log("FFmpeg command:", cmd))
+                .on("error", (err: any, stdout: any, stderr: any) => {
                     logger.error("FFmpeg error:", err.message);
                     logger.error("FFmpeg stderr:", stderr);
                     reject(err);
@@ -110,7 +107,7 @@ export const processVideoPost = onDocumentCreated({
 
         // 7. Update the Firestore document
         await snapshot.ref.update({
-            mediaUrl: [signedUrl], // Update with the new, working URL
+            mediaUrl: [signedUrl],
             processingComplete: true
         });
         logger.log(`Successfully updated Firestore document ${postId}.`);
@@ -121,7 +118,6 @@ export const processVideoPost = onDocumentCreated({
 
     } catch (error) {
         logger.error(`Media processing failed for post ${postId}:`, error);
-        // Update the post to mark it as failed
         await snapshot.ref.update({
             processingComplete: true,
             processingError: "Processing failed. Please see function logs."
