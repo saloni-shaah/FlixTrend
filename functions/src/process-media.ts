@@ -1,129 +1,137 @@
 
-import { onDocumentCreated } from "firebase-functions/v2/firestore";
+import { onObjectFinalized } from "firebase-functions/v2/storage";
 import { getStorage } from "firebase-admin/storage";
+import { getFirestore, Timestamp } from "firebase-admin/firestore";
 import * as logger from "firebase-functions/logger";
 import * as path from "path";
 import * as os from "os";
 import * as fs from "fs";
 import * as ffmpeg from "fluent-ffmpeg";
 import { path as ffmpegPath } from "@ffmpeg-installer/ffmpeg";
+import { v4 as uuidv4 } from "uuid";
 
-// Set the path for the ffmpeg binary
 ffmpeg.setFfmpegPath(ffmpegPath);
 
+const db = getFirestore();
 const storage = getStorage();
 
-export const processVideoPost = onDocumentCreated({
-    document: "posts/{postId}",
-    region: "asia-south1",
-    cpu: 2,
-    timeoutSeconds: 300,
-    memory: "1GiB"
-}, async (event) => {
-    logger.log("Function triggered by post creation.");
+// A helper function to find the correct post to update
+async function findPostToUpdate(userId: string) {
+    const postsRef = db.collection("posts");
+    // SIMPLIFIED QUERY: This does not require a custom composite index.
+    const q = postsRef.where("userId", "==", userId)
+                      .where("processingComplete", "==", false);
+    
+    const querySnapshot = await q.get();
 
-    const snapshot = event.data;
-    if (!snapshot) {
-        logger.log("No data associated with the event. Exiting.");
+    if (querySnapshot.empty) {
+        logger.warn(`Query for unprocessed posts for user ${userId} returned no results.`);
+        return null;
+    }
+
+    // Sort in memory to find the most recent one. This is robust and avoids indexing issues.
+    const posts = querySnapshot.docs.sort((a, b) => {
+        const timeA = (a.data().createdAt as Timestamp).toMillis();
+        const timeB = (b.data().createdAt as Timestamp).toMillis();
+        return timeB - timeA; // Descending order
+    });
+
+    return posts[0];
+}
+
+
+export const processMedia = onObjectFinalized({ region: "asia-south1", cpu: 2, timeoutSeconds: 300, memory: "1GiB" }, async (event) => {
+    const { bucket, name, contentType } = event.data;
+
+    if (!name || !contentType || !contentType.startsWith("video/") || !name.startsWith("posts/") || path.basename(name).startsWith("processed_")) {
+        logger.log(`Skipping file ${name} as it does not meet processing criteria.`);
         return;
     }
 
-    const postData = snapshot.data();
-    const postId = event.params.postId;
-
-    // 1. Validate the Post Data
-    if (postData.mediaType !== 'video' || !postData.rawMediaUrl || postData.processingComplete) {
-        logger.log(`Post ${postId} is not a new video post requiring processing. Exiting.`);
+    const pathParts = name.split('/');
+    if (pathParts.length < 3 || pathParts[0] !== 'posts') {
+        logger.error(`Invalid file path structure: ${name}. Could not extract userId.`);
         return;
     }
+    const userId = pathParts[1];
+    logger.log(`Extracted userId: ${userId} from path: ${name}`);
 
-    logger.log(`Starting video processing for post: ${postId}`);
+    const storageBucket = storage.bucket(bucket);
+    const originalFile = storageBucket.file(name);
+    const tempFilePath = path.join(os.tmpdir(), path.basename(name));
+    const tempProcessedPath = path.join(os.tmpdir(), `processed_${path.basename(name)}`);
+    let uploadedFile: any; // Define here to access in catch block
 
-    const rawUrl = postData.rawMediaUrl[0]; // Assuming rawMediaUrl is an array
-    const bucket = storage.bucket();
-
-    // 2. Extract File Path from URL
-    let originalFilePath: string;
     try {
-        const url = new URL(rawUrl);
-        originalFilePath = decodeURIComponent(url.pathname.split('/o/')[1]);
-    } catch (e) {
-        logger.error("Invalid rawMediaUrl:", rawUrl, e);
-        await snapshot.ref.update({ processingComplete: true, processingError: "Invalid URL" });
-        return;
-    }
-
-    const originalFile = bucket.file(originalFilePath);
-    const tempFilePath = path.join(os.tmpdir(), path.basename(originalFilePath));
-    const processedFileName = `processed_${path.basename(originalFilePath)}`;
-    const tempProcessedPath = path.join(os.tmpdir(), processedFileName);
-
-    try {
-        // 3. Download the original file
         await originalFile.download({ destination: tempFilePath });
         logger.log(`Downloaded file to: ${tempFilePath}`);
 
-        // 4. Process the video with ffmpeg
         await new Promise<void>((resolve, reject) => {
             ffmpeg(tempFilePath)
                 .outputOptions([
-                    "-vcodec libx264",
-                    "-crf 28",
-                    "-preset slow",
-                    "-vf", "scale=1080:-2",
-                    "-acodec aac",
-                    "-b:a 128k",
-                    "-movflags +faststart"
+                    "-vcodec libx264", "-crf 28", "-preset veryfast",
+                    "-profile:v high", "-level 4.0", "-pix_fmt yuv420p",
+                    "-vf scale=720:-2", "-movflags +faststart",
+                    "-acodec aac", "-b:a 96k"
                 ])
-                .on("start", (cmd: string) => logger.log("FFmpeg command:", cmd))
-                .on("error", (err: any, stdout: any, stderr: any) => {
-                    logger.error("FFmpeg error:", err.message);
-                    logger.error("FFmpeg stderr:", stderr);
-                    reject(err);
-                })
-                .on("end", () => {
-                    logger.log("FFmpeg processing finished successfully.");
-                    resolve();
-                })
+                .on("start", (cmd) => logger.log("FFmpeg command:", cmd))
+                .on("error", (err) => { logger.error("FFmpeg error:", err); reject(err); })
+                .on("end", () => { logger.log("FFmpeg processing finished successfully."); resolve(); })
                 .save(tempProcessedPath);
         });
 
-        // 5. Upload the processed file
-        const processedFilePath = path.join(path.dirname(originalFilePath), processedFileName);
-        const [uploadedFile] = await bucket.upload(tempProcessedPath, {
+        const newFileName = `processed_${path.basename(name, path.extname(name))}.mp4`;
+        const processedFilePath = path.join(path.dirname(name), newFileName);
+        const accessToken = uuidv4();
+
+        [uploadedFile] = await storageBucket.upload(tempProcessedPath, {
             destination: processedFilePath,
-            metadata: { contentType: "video/mp4" },
+            metadata: {
+                contentType: "video/mp4",
+                metadata: { firebaseStorageDownloadTokens: accessToken },
+            },
         });
         logger.log(`Uploaded processed file to: ${processedFilePath}`);
 
-        // 6. Generate a long-lived signed URL
-        const [signedUrl] = await uploadedFile.getSignedUrl({
-            action: "read",
-            expires: "01-01-3024", // ~1000 years
-        });
-        logger.log("Generated signed URL successfully.");
+        const downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${storageBucket.name}/o/${encodeURIComponent(processedFilePath)}?alt=media&token=${accessToken}`;
+        logger.log(`Generated download URL: ${downloadUrl}`);
 
-        // 7. Update the Firestore document
-        await snapshot.ref.update({
-            mediaUrl: [signedUrl],
-            processingComplete: true
-        });
-        logger.log(`Successfully updated Firestore document ${postId}.`);
+        const postDoc = await findPostToUpdate(userId);
 
-        // 8. Delete the original large file
+        if (!postDoc) {
+            logger.error(`FINAL ATTEMPT FAILED: Could not find a matching Firestore document for user ${userId}. Deleting processed file.`);
+            await uploadedFile.delete();
+            throw new Error("Orphaned processed file deleted due to no matching database entry.");
+        }
+
+        logger.log(`Found matching document ${postDoc.id}. Updating...`);
+        await postDoc.ref.update({
+            mediaUrl: downloadUrl,
+            processingComplete: true,
+            storagePath: processedFilePath // Also update storage path to processed file
+        });
+        logger.log(`Successfully updated Firestore document ${postDoc.id}.`);
+
         await originalFile.delete();
-        logger.log(`Deleted original file: ${originalFilePath}`);
+        logger.log(`Deleted original file: ${name}`);
 
     } catch (error) {
-        logger.error(`Media processing failed for post ${postId}:`, error);
-        await snapshot.ref.update({
-            processingComplete: true,
-            processingError: "Processing failed. Please see function logs."
-        });
+        logger.error(`Media processing failed for ${name}:`, error);
+        
+        const postDoc = await findPostToUpdate(userId);
+        if (postDoc) {
+            logger.log(`Marking post ${postDoc.id} as failed.`);
+            await postDoc.ref.update({ processingError: "Media processing failed." });
+        }
+        
+        if (uploadedFile) {
+            logger.log(`An error occurred. Deleting potentially orphaned processed file: ${uploadedFile.name}`);
+            await uploadedFile.delete();
+        }
+
     } finally {
-        // 9. Clean up temporary files
         if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
         if (fs.existsSync(tempProcessedPath)) fs.unlinkSync(tempProcessedPath);
-        logger.log("Cleaned up temporary files.");
+        logger.log(`Cleaned up temporary files for ${name}.`);
     }
 });
