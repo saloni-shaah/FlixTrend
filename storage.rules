@@ -46,7 +46,7 @@ service firebase.storage {
     match /voice_messages/{userId}/{fileName} {
       allow read: if isSignedIn();
       allow write: if isSignedIn() && request.auth.uid == userId
-                  && request.resource.size < 25 * 1024 * 1024; // 25MB limit
+                  && request.resource.size < 10 * 1024 * 1024; // 10MB limit
     }
   }
 }

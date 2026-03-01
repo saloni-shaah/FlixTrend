@@ -6,9 +6,9 @@ import { auth, app } from "@/utils/firebaseClient";
 import { Loader, X, Trash2, Smile } from "lucide-react";
 import { useAppState } from "@/utils/AppStateContext";
 import { motion, AnimatePresence } from "framer-motion";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 import { ChatHeader } from "@/components/signal/ChatHeader";
 import { MessageList } from "@/components/signal/MessageList";
@@ -62,19 +62,24 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
         return () => { unsubPromise.then(unsub => unsub && unsub()); };
     }, [chatId, firebaseUser.uid]);
 
-    const handleSendMessage = async (text: string, mediaUrl: string | null = null, type: 'text' | 'image' | 'audio' | 'gif' = 'text') => {
+    const handleSendMessage = async (text: string, mediaUrl: string | null = null, type: 'text' | 'image' | 'audio' | 'gif' | 'video' = 'text') => {
         if ((!text.trim() && !mediaUrl) || !selectedChat) return;
         await addDoc(collection(db, "chats", chatId, "messages"), { sender: firebaseUser.uid, createdAt: serverTimestamp(), type, readBy: [firebaseUser.uid], reactions: {}, deletedFor: [], text: text.trim(), ...(mediaUrl && { mediaUrl }) });
     };
     
     const handleInputSend = (content: string, type: 'text' | 'gif' = 'text') => handleSendMessage(content, type === 'gif' ? content : null, type);
 
-    const handleSendFile = async (file: File, type: 'image' | 'audio') => {
-        if (file.size > 5 * 1024 * 1024) return alert(`File size cannot exceed 5MB.`);
+    const handleSendFile = async (file: File, type: 'image' | 'audio' | 'video') => {
+        const sizeLimit = type === 'audio' ? 10 * 1024 * 1024 : 25 * 1024 * 1024; // 10MB for audio, 25MB for others
+        if (file.size > sizeLimit) {
+            return alert(`File size cannot exceed ${sizeLimit / 1024 / 1024}MB.`);
+        }
+
         try {
             const path = type === 'audio' ? `voice_messages/${firebaseUser.uid}` : `chat_media/${firebaseUser.uid}`;
-            const fileRef = storageRef(storage, `${path}/${Date.now()}-${file.name}`);
-            const downloadURL = await getDownloadURL(await uploadBytes(fileRef, file));
+            const fileRef = ref(storage, `${path}/${Date.now()}-${file.name}`);
+            await uploadBytes(fileRef, file);
+            const downloadURL = await getDownloadURL(fileRef);
             await handleSendMessage("", downloadURL, type);
         } catch (error) { console.error("Upload failed:", error); alert("Upload failed. Please try again."); }
     };
@@ -167,7 +172,12 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
 
             <AlertDialog open={showDeleteConfirm} onOpenChange={(open) => !open && cancelSelectionMode()}>
                 <AlertDialogContent>
-                    <AlertDialogHeader><AlertDialogTitle>Delete Message?</AlertDialogTitle></AlertDialogHeader>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Message?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. Selecting &quot;Delete for Everyone&quot; will permanently delete this message for all participants. &quot;Delete for Me&quot; will only remove it from your view.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction onClick={() => handleDeleteMessages('me')} className="bg-yellow-600 hover:bg-yellow-700">Delete for Me</AlertDialogAction>

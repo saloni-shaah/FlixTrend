@@ -2,6 +2,7 @@
 "use client";
 import React, { useState, useRef, useCallback } from 'react';
 import { UploadCloud, X, MapPin, Smile, Hash, Loader, Locate } from 'lucide-react';
+import imageCompression from 'browser-image-compression';
 
 export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange: (data: any) => void }) {
     const [isDragging, setIsDragging] = useState(false);
@@ -11,21 +12,38 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
 
     const mediaPreviews = data.mediaUrl || [];
 
-    const handleFileSelection = (file: File) => {
+    const handleFileSelection = async (file: File) => {
         if (file.size > 250 * 1024 * 1024) { // 250MB limit
             setUploadError(`File ${file.name} is too large (max 250MB).`);
             return;
         }
         setUploadError(null);
 
-        const previewUrl = URL.createObjectURL(file);
         const isVideo = file.type.startsWith('video/');
+        let processedFile = file;
+
+        if (!isVideo) {
+            try {
+                const options = {
+                    maxSizeMB: 0.75,
+                    maxWidthOrHeight: 1920,
+                    useWebWorker: true,
+                }
+                processedFile = await imageCompression(file, options);
+            } catch (error) {
+                console.error("Image compression error: ", error);
+                setUploadError("Could not compress the image.");
+                return;
+            }
+        }
+
+        const previewUrl = URL.createObjectURL(processedFile);
 
         const updateParentState = (fileInfo: any) => {
             onDataChange({
                 ...data,
                 mediaUrl: [...(data.mediaUrl || []), previewUrl],
-                files: [...(data.files || []), file], 
+                files: [...(data.files || []), processedFile],
                 isVideo: isVideo,
                 videoDuration: isVideo ? fileInfo.duration : data.videoDuration,
                 isPortrait: isVideo ? fileInfo.isPortrait : data.isPortrait,
@@ -54,8 +72,8 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
     
     const processFiles = (files: FileList | null) => {
         if (!files) return;
-        const filesToProcess = Array.from(files).filter(file => 
-            file.type.startsWith('image/') || 
+        const filesToProcess = Array.from(files).filter(file =>
+            file.type.startsWith('image/') ||
             file.type.startsWith('video/')
         );
         if (filesToProcess.length === 0) return;
@@ -81,10 +99,10 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
         const wasVideo = data.isVideo;
         const isVideoNow = newFiles.some(f => f.type.startsWith('video/'));
 
-        const newState: any = { 
-            ...data, 
-            mediaUrl: newMediaUrls, 
-            files: newFiles, 
+        const newState: any = {
+            ...data,
+            mediaUrl: newMediaUrls,
+            files: newFiles,
             isVideo: isVideoNow,
         };
 
@@ -150,7 +168,7 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
         <div className="flex flex-col gap-4">
             <input type="text" name="content" placeholder="Write a caption..." className="input-glass text-lg" value={data.content || ''} onChange={handleTextChange} />
 
-            <div 
+            <div
                 className={`p-4 border-2 border-dashed rounded-2xl text-center transition-colors duration-300 ${isDragging ? 'border-accent-pink bg-accent-pink/10' : 'border-accent-cyan/30'}`}
                 onDragEnter={handleDragEnter}
                 onDragLeave={handleDragLeave}
