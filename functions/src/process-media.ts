@@ -27,7 +27,6 @@ export const processMedia = onObjectFinalized({ region: "asia-south1", cpu: 2, t
         return;
     }
 
-    // Only process video posts
     if (!name.startsWith("posts/") || !contentType.startsWith("video/")) {
         logger.log(`File ${name} is not a video post. Skipping.`);
         return;
@@ -44,19 +43,17 @@ export const processMedia = onObjectFinalized({ region: "asia-south1", cpu: 2, t
         await originalFile.download({ destination: tempFilePath });
         logger.log(`Downloaded file to: ${tempFilePath}`);
 
-        const command = ffmpeg(tempFilePath);
-        const newContentType = "video/mp4";
-        const newFileName = processedFileName.replace(/(\.[^/.]+)$/, ".mp4");
-
-        logger.log("Processing as 'post' video.");
-        command.outputOptions([
-            "-vcodec libx264", "-crf 23", "-preset medium",
-            "-vf", "scale=1080:-2", "-acodec aac", "-b:a 128k",
-            "-movflags +faststart"
-        ]);
-
         await new Promise<void>((resolve, reject) => {
-            command
+            ffmpeg(tempFilePath)
+                .outputOptions([
+                    "-vcodec libx264",
+                    "-crf 28",         // More aggressive compression for smaller file size
+                    "-preset slow",      // Slower preset for better compression efficiency
+                    "-vf", "scale=1080:-2", // Scale to 1080p width, maintaining aspect ratio
+                    "-acodec aac",
+                    "-b:a 128k",       // Standard audio bitrate
+                    "-movflags +faststart" // Optimize for web streaming
+                ])
                 .on("start", (cmd) => logger.log("FFmpeg command:", cmd))
                 .on("error", (err, stdout, stderr) => {
                     logger.error("FFmpeg error:", err.message);
@@ -70,14 +67,21 @@ export const processMedia = onObjectFinalized({ region: "asia-south1", cpu: 2, t
                 .save(tempProcessedPath);
         });
 
+        const newContentType = "video/mp4";
+        const newFileName = `processed_${path.basename(name, path.extname(name))}.mp4`;
         const processedFilePath = path.join(path.dirname(name), newFileName);
+
         const [uploadedFile] = await storageBucket.upload(tempProcessedPath, {
             destination: processedFilePath,
             metadata: { contentType: newContentType },
         });
         logger.log(`Uploaded processed file to: ${processedFilePath}`);
 
-        const publicUrl = uploadedFile.publicUrl();
+        const [signedUrl] = await uploadedFile.getSignedUrl({
+            action: "read",
+            expires: "01-01-3024", // Set expiration date 1000 years in the future
+        });
+        logger.log(`Generated signed URL: ${signedUrl}`);
 
         const pathParts = name.split("/");
         const collectionName = pathParts[0];
@@ -94,30 +98,31 @@ export const processMedia = onObjectFinalized({ region: "asia-south1", cpu: 2, t
 
             querySnapshot.forEach(doc => {
                 const data = doc.data();
-                const rawUrls = Array.isArray(data.rawMediaUrl) ? data.rawMediaUrl : [data.rawMediaUrl];
                 const searchPath = encodeURIComponent(name);
-
-                if(rawUrls.some(url => url && url.includes(searchPath))) {
-                    docToUpdate = doc;
+                if (data.rawMediaUrl) {
+                    const rawUrls = Array.isArray(data.rawMediaUrl) ? data.rawMediaUrl : [data.rawMediaUrl];
+                    if (rawUrls.some(url => url && url.includes(searchPath))) {
+                        docToUpdate = doc;
+                    }
                 }
             });
 
             if (docToUpdate) {
                 logger.log(`Found matching document ${docToUpdate.id} to update.`);
                 const data = docToUpdate.data();
-                let newMediaUrl: string | string[] = publicUrl;
+                let newMediaUrl: string | string[] = signedUrl;
 
-                if (Array.isArray(data.rawMediaUrl)) {
-                    newMediaUrl = [publicUrl];
+                if (Array.isArray(data.mediaUrl)) {
+                    newMediaUrl = [signedUrl];
                 }
 
                 await docToUpdate.ref.update({
                     mediaUrl: newMediaUrl,
-                    processingComplete: true
+                    processingComplete: true,
                 });
                 logger.log(`Successfully updated Firestore document ${docToUpdate.id}.`);
             } else {
-                 logger.warn(`Could not find a Firestore document to update for file: ${name}`);
+                logger.warn(`Could not find a Firestore document to update for file: ${name}`);
             }
         }
 
