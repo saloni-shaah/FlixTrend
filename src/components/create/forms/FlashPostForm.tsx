@@ -9,6 +9,7 @@ import { auth, app } from '@/utils/firebaseClient';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
+import imageCompression from 'browser-image-compression';
 
 const db = getFirestore(app);
 const storage = getStorage(app);
@@ -100,17 +101,37 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
 
         setIsUploading(true);
         setUploadError('');
-        const previewUrl = URL.createObjectURL(file);
+
+        let processedFile = file;
+        const isVideo = file.type.startsWith('video/');
+
+        if (!isVideo) {
+            try {
+                const options = {
+                    maxSizeMB: 0.5,
+                    maxWidthOrHeight: 1920,
+                    useWebWorker: true,
+                };
+                processedFile = await imageCompression(file, options);
+            } catch (error) {
+                console.error("Image compression error: ", error);
+                setUploadError("Could not compress the image.");
+                setIsUploading(false);
+                return;
+            }
+        }
+
+        const previewUrl = URL.createObjectURL(processedFile);
         setMediaPreview(previewUrl);
 
         try {
-            const fileName = `${user.uid}-${Date.now()}-${file.name}`;
+            const fileName = `${user.uid}-${Date.now()}-${processedFile.name}`;
             const fileRef = storageRef(storage, `flashes/${user.uid}/${fileName}`);
             
-            const snapshot = await uploadBytes(fileRef, file);
+            const snapshot = await uploadBytes(fileRef, processedFile);
             const downloadURL = await getDownloadURL(snapshot.ref);
 
-            onDataChange({ ...data, mediaUrl: [downloadURL], mediaFiles: [file] });
+            onDataChange({ ...data, mediaUrl: [downloadURL], mediaFiles: [processedFile] });
             setMediaPreview(downloadURL);
 
         } catch (error: any) {

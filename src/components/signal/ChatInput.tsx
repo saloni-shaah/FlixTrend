@@ -1,17 +1,18 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
-import { Paperclip, Smile, Mic, Send, Trash2, Pause, Play, X } from 'lucide-react';
+import { Paperclip, Smile, Mic, Send, Trash2, Pause, Play, X, Loader } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import Picker from 'emoji-picker-react';
 import { GiphyPicker } from './GiphyPicker';
 import { IGif } from '@giphy/js-types';
+import imageCompression from 'browser-image-compression';
 
 interface ChatInputProps {
     chatId: string;
     draft: string;
     setDraft: (text: string) => void;
     onSendMessage: (text: string, type?: 'text' | 'gif') => void;
-    onSendFile: (file: File, type: 'image' | 'audio') => void;
+    onSendFile: (file: File, type: 'image' | 'audio' | 'video') => void;
 }
 
 export function ChatInput({ chatId, draft, setDraft, onSendMessage, onSendFile }: ChatInputProps) {
@@ -27,6 +28,7 @@ export function ChatInput({ chatId, draft, setDraft, onSendMessage, onSendFile }
     const audioChunksRef = useRef<Blob[]>([]);
     const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
     const [uploadError, setUploadError] = useState<string | null>(null);
+    const [isCompressing, setIsCompressing] = useState(false);
 
     useEffect(() => { setText(draft); }, [draft]);
 
@@ -67,7 +69,8 @@ export function ChatInput({ chatId, draft, setDraft, onSendMessage, onSendFile }
         setUploadError(null);
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorderRef.current = new MediaRecorder(stream);
+            // Lower the bitrate for smaller audio files
+            mediaRecorderRef.current = new MediaRecorder(stream, { audioBitsPerSecond: 64000 }); 
             audioChunksRef.current = [];
 
             mediaRecorderRef.current.ondataavailable = (event) => audioChunksRef.current.push(event.data);
@@ -77,8 +80,8 @@ export function ChatInput({ chatId, draft, setDraft, onSendMessage, onSendFile }
                 if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
                 
                 const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-                 if (audioBlob.size > 25 * 1024 * 1024) { // 25MB limit
-                    setUploadError(`Voice message is too large (max 25MB).`);
+                 if (audioBlob.size > 10 * 1024 * 1024) { // 10MB limit
+                    setUploadError(`Voice message is too large (max 10MB).`);
                 } else if (audioBlob.size > 0) {
                      const audioFile = new File([audioBlob], `voice-message-${Date.now()}.webm`, { type: 'audio/webm' });
                      onSendFile(audioFile, 'audio');
@@ -129,7 +132,7 @@ export function ChatInput({ chatId, draft, setDraft, onSendMessage, onSendFile }
         setUploadError(null);
     };
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (file) {
           if (file.size > 25 * 1024 * 1024) { // 25MB limit
@@ -137,7 +140,29 @@ export function ChatInput({ chatId, draft, setDraft, onSendMessage, onSendFile }
             return;
           }
           setUploadError(null);
-          onSendFile(file, 'image');
+          
+          if (file.type.startsWith('image/')) {
+              setIsCompressing(true);
+              try {
+                  const options = {
+                      maxSizeMB: 0.4,
+                      maxWidthOrHeight: 1280,
+                      useWebWorker: true,
+                  }
+                  const compressedFile = await imageCompression(file, options);
+                  onSendFile(compressedFile, 'image');
+              } catch (error) {
+                  console.error("Image compression error: ", error);
+                  setUploadError("Could not compress the image.");
+              } finally {
+                  setIsCompressing(false);
+              }
+          } else if (file.type.startsWith('video/')){
+              onSendFile(file, 'video');
+          } else {
+              // Potentially handle other file types here in the future
+              setUploadError(`Unsupported file type: ${file.type}`);
+          }
       }
       if (e.target) e.target.value = ''; // Reset input
     };
@@ -146,6 +171,9 @@ export function ChatInput({ chatId, draft, setDraft, onSendMessage, onSendFile }
 
     return (
         <footer className="shrink-0 p-2 border-t border-accent-cyan/10 bg-black/60 relative">
+            {isCompressing && (
+                <div className="absolute top-0 left-0 right-0 h-1 bg-accent-pink animate-pulse"></div>
+            )}
             {uploadError && <p className="text-red-400 text-xs text-center pb-2">{uploadError}</p>}
             {showGiphyPicker && (
                 <div className="absolute bottom-full right-0 left-0 z-10">
@@ -166,8 +194,8 @@ export function ChatInput({ chatId, draft, setDraft, onSendMessage, onSendFile }
             <form onSubmit={handleSendText} className="flex items-end gap-2">
                 {recordingState === 'idle' && (
                     <div className="flex items-center">
-                        <button type="button" onClick={() => { setUploadError(null); fileInputRef.current?.click(); }} className="p-2 text-gray-400 hover:text-accent-cyan shrink-0">
-                            <Paperclip size={20}/>
+                         <button type="button" onClick={() => { setUploadError(null); fileInputRef.current?.click(); }} className={`p-2 text-gray-400 hover:text-accent-cyan shrink-0 ${isCompressing ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={isCompressing}>
+                            {isCompressing ? <Loader className="animate-spin" size={20} /> : <Paperclip size={20} />}
                         </button>
                          <button type="button" onClick={() => setShowEmojiPicker(v => !v)} className="p-2 text-gray-400 hover:text-accent-cyan shrink-0">
                             <Smile size={20}/>

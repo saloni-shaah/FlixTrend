@@ -8,6 +8,7 @@ import { auth, app } from '@/utils/firebaseClient';
 import { User } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Image as ImageIcon, Loader, CheckCircle } from 'lucide-react';
+import imageCompression from 'browser-image-compression';
 
 const db = getFirestore(app);
 const storage = getStorage(app);
@@ -22,6 +23,7 @@ function CreateDropPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasAlreadyDropped, setHasAlreadyDropped] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -74,11 +76,26 @@ function CreateDropPage() {
 
   }, [promptId]);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setImage(file);
-      setImagePreview(URL.createObjectURL(file));
+        setUploadError(null);
+
+        try {
+            const options = {
+                maxSizeMB: 0.5,
+                maxWidthOrHeight: 1920,
+                useWebWorker: true,
+            }
+            const compressedFile = await imageCompression(file, options);
+            setImage(compressedFile);
+            setImagePreview(URL.createObjectURL(compressedFile));
+        } catch (error) {
+            console.error("Image compression error: ", error);
+            setUploadError("Could not compress the image.");
+            setImage(null);
+            setImagePreview(null);
+        }
     }
   };
 
@@ -173,6 +190,8 @@ function CreateDropPage() {
           </label>
           <input id="image-upload" type="file" accept="image/*" className="sr-only" onChange={handleImageChange} />
         </div>
+
+        {uploadError && <p className="text-red-500 text-xs mt-2">{uploadError}</p>}
 
         <Button onClick={handleSubmit} disabled={isSubmitting || !image} className="w-full bg-accent-pink hover:bg-accent-pink/80 text-lg font-bold py-6">
           {isSubmitting ? (
