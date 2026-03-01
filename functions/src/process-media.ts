@@ -1,7 +1,6 @@
 
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import { getStorage } from "firebase-admin/storage";
-import { getFirestore } from "firebase-admin/firestore"; // Keep for future use if needed, but address unused var for now.
 import * as logger from "firebase-functions/logger";
 import * as path from "path";
 import * as os from "os";
@@ -12,7 +11,6 @@ import { path as ffmpegPath } from "@ffmpeg-installer/ffmpeg";
 // Set the path for the ffmpeg binary
 ffmpeg.setFfmpegPath(ffmpegPath);
 
-// const db = getFirestore(); // Removed as it's unused
 const storage = getStorage();
 
 export const processVideoPost = onDocumentCreated({
