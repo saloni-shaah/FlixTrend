@@ -4,7 +4,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { getFirestore, collection, query, onSnapshot, doc as fsDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { FaMusic } from "react-icons/fa";
-import { Repeat2, MapPin, Smile, MoreVertical, Edit, Trash, Eye, Sparkles, Zap } from "lucide-react";
+import { Repeat2, MapPin, Smile, MoreVertical, Edit, Trash, Eye, Sparkles, Zap, PlayCircle } from "lucide-react";
 import { auth, app } from '@/utils/firebaseClient';
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -52,6 +52,7 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts' }
   const [pollVotes, setPollVotes] = React.useState<{ [optionIdx: number]: { count: number, voters: string[] } }>({});
   const [userPollVote, setUserPollVote] = React.useState<number | null>(null);
   const [viewCount, setViewCount] = useState(post.viewCount || 0);
+  const [playVideo, setPlayVideo] = useState(false);
 
   const currentUser = auth.currentUser;
   const deletePostCallable = httpsCallable(functions, 'deletePost');
@@ -120,6 +121,7 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts' }
     const contentPost = p.type === 'relay' ? p.originalPost : p;
     const initials = contentPost.displayName?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || contentPost.username?.slice(0, 2).toUpperCase() || "U";
     const mediaUrls = Array.isArray(contentPost.mediaUrl) ? contentPost.mediaUrl : (contentPost.mediaUrl ? [contentPost.mediaUrl] : []);
+    const mediaContent = (contentPost.type === "media" || collectionName === "drops") && mediaUrls.length > 0 && !isShortVibe;
 
     return (
         <>
@@ -181,7 +183,14 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts' }
                 </div>
             )}
 
-            {(contentPost.type === "media" || collectionName === "drops") && mediaUrls.length > 0 && !isShortVibe && (
+            {mediaContent && contentPost.thumbnailUrl && !playVideo ? (
+              <div className="cursor-pointer relative rounded-xl overflow-hidden group" onClick={() => setPlayVideo(true)}>
+                <img src={contentPost.thumbnailUrl} alt={contentPost.content || 'post thumbnail'} className="w-full h-auto object-cover transition-transform group-hover:scale-105" />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/40 transition-colors group-hover:bg-black/20">
+                  <PlayCircle size={64} className="text-white/80 group-hover:text-white" />
+                </div>
+              </div>
+            ) : mediaContent ? (
                 contentPost.isFlow ? (
                     <Link href={`/flow/${contentPost.id}`}>
                         <div className="cursor-pointer">
@@ -189,6 +198,7 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts' }
                                 mediaUrls={mediaUrls}
                                 post={contentPost}
                                 navigatesToWatchPage={false}
+                                startPlaying={playVideo}
                             />
                         </div>
                     </Link>
@@ -197,9 +207,10 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts' }
                         mediaUrls={mediaUrls}
                         post={contentPost}
                         navigatesToWatchPage={true}
+                        startPlaying={playVideo}
                     />
                 )
-            )}
+            ) : null}
 
             {contentPost.type === "poll" && contentPost.pollOptions && (
                 <div className="flex flex-col gap-2.5 p-4">

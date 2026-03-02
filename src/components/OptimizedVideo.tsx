@@ -12,35 +12,43 @@ function getCloudinaryId(url: string): string | null {
 }
 
 export const OptimizedVideo = React.forwardRef<HTMLVideoElement, { src: string; thumbnailUrl?: string; className?: string; preload?: "auto" | "metadata" | "none"; loop?: boolean; muted?: boolean; [key: string]: any; }>(({ src, thumbnailUrl, className, preload, loop, muted, ...props }, ref) => {
-    // Reverted the faulty guard clause. This component now expects a valid src.
     if (!src) {
-        // This case should ideally be handled by the parent component.
-        // Returning null or a placeholder to avoid a crash.
         return null; 
     }
 
-    if (!src.startsWith(CLOUDINARY_BASE_URL)) {
-        return <video ref={ref} src={src} poster={thumbnailUrl} className={className} preload={preload || "metadata"} loop={loop} muted={muted} {...props} />;
-    }
+    const handleContextMenu = (e: React.MouseEvent) => {
+        e.preventDefault();
+    };
 
-    const publicId = getCloudinaryId(src);
-    if (!publicId) {
-        return <video ref={ref} src={src} poster={thumbnailUrl} className={className} preload={preload || "metadata"} loop={loop} muted={muted} {...props} />;
-    }
+    const videoProps = {
+        ref: ref,
+        poster: thumbnailUrl,
+        className: `${className} pointer-events-none`,
+        preload: preload || "metadata",
+        loop: loop,
+        muted: muted,
+        style: { userSelect: 'none' },
+        ...props,
+    };
 
-    const transformedVideoUrl = `${CLOUDINARY_BASE_URL}/video/upload/f_auto,q_auto,w_800,c_limit/${publicId}`;
+    const isCloudinaryUrl = src.startsWith(CLOUDINARY_BASE_URL);
+    const publicId = isCloudinaryUrl ? getCloudinaryId(src) : null;
+
+    if (publicId) {
+        const transformedVideoUrl = `${CLOUDINARY_BASE_URL}/video/upload/f_auto,q_auto,w_800,c_limit/${publicId}`;
+        return (
+            <div className="relative w-full h-full" onContextMenu={handleContextMenu}>
+                <video {...videoProps} src={transformedVideoUrl} />
+                <div className="absolute inset-0"></div>
+            </div>
+        );
+    }
 
     return (
-        <video
-            ref={ref}
-            src={transformedVideoUrl}
-            poster={thumbnailUrl}
-            className={className}
-            preload={preload || "metadata"}
-            loop={loop}
-            muted={muted}
-            {...props}
-        />
+        <div className="relative w-full h-full" onContextMenu={handleContextMenu}>
+            <video {...videoProps} src={src} />
+            <div className="absolute inset-0"></div>
+        </div>
     );
 });
 

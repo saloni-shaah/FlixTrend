@@ -10,6 +10,7 @@ import { TheaterModeContainer } from './TheaterModeContainer';
 import { OptimizedImage } from '../OptimizedImage';
 import { doc, updateDoc, increment, getFirestore } from 'firebase/firestore';
 import { app } from '@/utils/firebaseClient';
+import { FullScreenImageViewer } from '../FullScreenImageViewer';
 
 const db = getFirestore(app);
 
@@ -20,10 +21,10 @@ function formatTime(seconds: number) {
     return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
-export function InFeedVideoPlayer({ mediaUrls, post, navigatesToWatchPage = false }: { mediaUrls: string[]; post: any; navigatesToWatchPage?: boolean }) {
+export function InFeedVideoPlayer({ mediaUrls, post, navigatesToWatchPage = false, startPlaying = false }: { mediaUrls: string[]; post: any; navigatesToWatchPage?: boolean; startPlaying?: boolean; }) {
     const router = useRouter();
+    const [fullScreenImageUrl, setFullScreenImageUrl] = useState<string | null>(null);
     const videoUrl = mediaUrls.find(url => url.includes('.mp4') || url.includes('.webm') || url.includes('.ogg'));
-    const viewCountedRef = useRef(false);
 
     const handleNavigation = () => {
         if (!post.id) return;
@@ -34,17 +35,20 @@ export function InFeedVideoPlayer({ mediaUrls, post, navigatesToWatchPage = fals
     if (!videoUrl) {
         const imageUrl = mediaUrls && mediaUrls.length > 0 ? mediaUrls[0] : null;
         return (
-            <div className="mt-2 rounded-xl overflow-hidden cursor-pointer" onClick={handleNavigation}>
-                {imageUrl ? <OptimizedImage src={imageUrl} alt="Post media" /> : null}
-            </div>
+            <>
+                <div className="mt-2 rounded-xl overflow-hidden cursor-pointer" onClick={() => imageUrl && setFullScreenImageUrl(imageUrl)}>
+                    {imageUrl ? <OptimizedImage src={imageUrl} alt="Post media" /> : null}
+                </div>
+                <FullScreenImageViewer imageUrl={fullScreenImageUrl} onClose={() => setFullScreenImageUrl(null)} />
+            </>
         );
     }
 
     const containerRef = useRef<HTMLDivElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
     const progressRef = useRef<HTMLDivElement>(null);
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [isMuted, setIsMuted] = useState(true);
+    const [isPlaying, setIsPlaying] = useState(startPlaying);
+    const [isMuted, setIsMuted] = useState(!startPlaying);
     const [progress, setProgress] = useState(0);
     const [duration, setDuration] = useState(0);
     const [currentTime, setCurrentTime] = useState(0);
@@ -52,10 +56,23 @@ export function InFeedVideoPlayer({ mediaUrls, post, navigatesToWatchPage = fals
     const lastTap = useRef(0);
 
     const incrementViewCount = useCallback(() => {
-        if (viewCountedRef.current || !post.id) return;
-        viewCountedRef.current = true;
-        const postRef = doc(db, 'posts', post.id);
-        updateDoc(postRef, { viewCount: increment(1) }).catch(error => console.error("Error incrementing view count:", error));
+        if (!post.id || typeof window === 'undefined') return;
+
+        try {
+            const viewedPosts = JSON.parse(window.localStorage.getItem('viewedPosts') || '[]');
+            if (viewedPosts.includes(post.id)) {
+                return; // Already viewed
+            }
+
+            const postRef = doc(db, 'posts', post.id);
+            updateDoc(postRef, { viewCount: increment(1) }).then(() => {
+                const updatedViewedPosts = [...viewedPosts, post.id];
+                window.localStorage.setItem('viewedPosts', JSON.stringify(updatedViewedPosts));
+            }).catch(error => console.error("Error incrementing view count:", error));
+
+        } catch (error) {
+            console.error("Could not process view count:", error);
+        }
     }, [post.id]);
 
     const togglePlay = useCallback((e?: React.MouseEvent) => {
@@ -79,6 +96,12 @@ export function InFeedVideoPlayer({ mediaUrls, post, navigatesToWatchPage = fals
             videoRef.current.muted = isMuted;
         }
     }, [isMuted]);
+
+    useEffect(() => {
+        if (startPlaying && videoRef.current) {
+            videoRef.current.play().catch(console.error);
+        }
+    }, [startPlaying]);
 
     const handleTimeUpdate = () => {
         const video = videoRef.current;
@@ -130,9 +153,7 @@ export function InFeedVideoPlayer({ mediaUrls, post, navigatesToWatchPage = fals
 
     const handlePlay = () => {
         setIsPlaying(true);
-        if (navigatesToWatchPage) {
-            incrementViewCount();
-        }
+        incrementViewCount();
     };
 
     useEffect(() => {
@@ -162,15 +183,16 @@ export function InFeedVideoPlayer({ mediaUrls, post, navigatesToWatchPage = fals
                     ref={videoRef}
                     src={videoUrl}
                     className="w-full h-full object-contain"
-                    muted
+                    muted={isMuted}
                     loop
                     playsInline
                     onPlay={handlePlay}
+                    autoPlay={startPlaying}
                 />
                 <Watermark />
-                <div className="absolute inset-0 bg-black/30 flex items-center justify-center pointer-events-none">
+                {!isPlaying && <div className="absolute inset-0 bg-black/30 flex items-center justify-center pointer-events-none">
                     <Play size={64} className="text-white/80 drop-shadow-lg" />
-                </div>
+                </div>}
             </div>
         );
     }
@@ -191,8 +213,8 @@ export function InFeedVideoPlayer({ mediaUrls, post, navigatesToWatchPage = fals
                     onPlay={handlePlay}
                     onPause={() => setIsPlaying(false)}
                     loop={false}
-                    autoPlay
-                    muted
+                    autoPlay={startPlaying}
+                    muted={isMuted}
                 />
                 <Watermark isAnimated={isPlaying} />
 
