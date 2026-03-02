@@ -4,13 +4,14 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { auth, app, storage } from "@/utils/firebaseClient";
 import {
-    createUserWithEmailAndPassword,
     sendEmailVerification,
     updateProfile,
     RecaptchaVerifier,
     signInWithPhoneNumber,
     PhoneAuthProvider,
-    ConfirmationResult
+    ConfirmationResult,
+    EmailAuthProvider,
+    linkWithCredential
 } from "firebase/auth";
 import { getFirestore, doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import { getFunctions, httpsCallable } from "firebase/functions";
@@ -204,8 +205,14 @@ export default function SignupPage() {
         }
         setLoading(true);
         try {
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            const user = userCredential.user;
+            const user = auth.currentUser;
+
+            if (!user) {
+                throw new Error("No authenticated user found. Please restart the signup process.");
+            }
+
+            const credential = EmailAuthProvider.credential(email, password);
+            await linkWithCredential(user, credential);
 
             let avatarUrl = `https://api.dicebear.com/8.x/bottts-neutral/svg?seed=${username}`;
             let bannerUrl = "";
@@ -231,7 +238,7 @@ export default function SignupPage() {
                 bio,
                 photoURL: avatarUrl,
                 bannerURL: bannerUrl,
-                phoneNumber: `${countryCode}${phoneNumber}`,
+                phoneNumber: user.phoneNumber,
                 accountType,
                 creatorType: accountType === 'creator' ? creatorType : null,
                 createdAt: serverTimestamp(),
@@ -247,8 +254,8 @@ export default function SignupPage() {
 
         } catch (err: any) {
             console.error("Final signup error:", err);
-            if(err.code === 'auth/email-already-in-use') {
-                setError("This email is already registered. Please log in.");
+            if(err.code === 'auth/email-already-in-use' || err.code === 'auth/credential-already-in-use') {
+                setError("This email is already registered or linked. Please log in or use a different email.");
                 setStep(1);
             } else {
                 setError("An unexpected error occurred. Please try again.");
