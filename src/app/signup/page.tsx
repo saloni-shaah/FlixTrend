@@ -130,6 +130,7 @@ export default function SignupPage() {
 
     const nextStep = () => {
         setError("");
+        setSuccess("");
         if (step === 1 && (!email || password.length < 6 || isUsernameValid !== true)) {
             setError("Please fill all fields correctly.");
             return;
@@ -186,9 +187,6 @@ export default function SignupPage() {
             await confirmationResult.confirm(otp);
             setSuccess("Phone number verified successfully!");
             setIsPhoneVerified(true);
-            setTimeout(() => {
-                nextStep();
-            }, 1000);
         } catch (err) {
             setError("Invalid OTP. Please try again.");
             setOtp("");
