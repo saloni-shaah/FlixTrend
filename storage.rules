@@ -21,6 +21,14 @@ service firebase.storage {
                   && request.resource.size < 250 * 1024 * 1024; // 250MB limit
     }
 
+    // Thumbnails for video posts
+    match /thumbnails/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if isSignedIn() && request.auth.uid == userId
+                  && request.resource.size < 5 * 1024 * 1024 // 5MB limit
+                  && request.resource.contentType.matches('image/.*');
+    }
+
     // Flashes (Stories)
     match /flashes/{userId}/{allPaths=**} {
        allow read: if isSignedIn();
