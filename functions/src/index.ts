@@ -47,34 +47,14 @@ async function sendPushNotification(userId: string, title: string, body: string,
 
 // --- V1 Cloud Functions ---
 
-export const onNewUserCreate = v1.auth.user().onCreate(async (user) => {
-    const userRef = db.collection('users').doc(user.uid);
-    try {
-        const postSnap = await db.collection('posts').where('userId', '==', user.uid).limit(1).get();
-        const accolades = [];
-        if(!postSnap.empty) {
-            accolades.push('vibe_starter');
-        }
+/**
+ * @description This function is intentionally disabled. It was creating a race condition
+ * with the client-side signup process. The logic for creating a new user document,
+ * including setting premium status, has been moved to the signup page (`src/app/signup/page.tsx`)
+ * where it is handled in a single, atomic Firestore batch write.
+ */
+// export const onNewUserCreate = v1.auth.user().onCreate(async (user) => { ... });
 
-        const premiumUntil = new Date();
-        premiumUntil.setMonth(premiumUntil.getMonth() + 1);
-
-        await userRef.set({
-            createdAt: FieldValue.serverTimestamp(),
-            profileComplete: false,
-            accolades: accolades,
-            isPremium: true,
-            premiumUntil: Timestamp.fromDate(premiumUntil)
-        }, { merge: true });
-
-        const appStatusRef = db.collection('app_status').doc('user_stats');
-        await appStatusRef.set({ totalUsers: FieldValue.increment(1) }, { merge: true });
-
-        logger.info(`User document created for ${user.uid}`);
-    } catch (error) {
-        logger.error(`Error processing new user ${user.uid}:`, error);
-    }
-});
 
 // Trigger: Update post comment count when a new comment is added
 export const onCommentCreate = v1.firestore
@@ -142,7 +122,6 @@ export const onNewDropPrompt = v1.firestore
     .onCreate(async (snap, context) => {
         const prompt = snap.data();
 
-        // Notify all users (Caution: Scale issues for huge user bases, but fine for now)
         const usersSnap = await db.collection('users').where('fcmToken', '!=', null).get();
 
         const notifications = usersSnap.docs.map(userDoc =>
@@ -300,8 +279,11 @@ export const updateAccolades = v1.pubsub.schedule('every 1 hours').onRun(async (
 
 export const checkUsername = onCall(async (request) => {
     const { username } = request.data;
-    const snapshot = await db.collection('users').where('username', '==', username).get();
-    return { exists: !snapshot.empty };
+    if (!username || typeof username !== 'string') {
+        throw new HttpsError("invalid-argument", "A valid username must be provided.");
+    }
+    const snapshot = await db.collection('usernames').doc(username.toLowerCase()).get();
+    return { exists: snapshot.exists };
 });
 
 export const checkUserExists = onCall(async (request) => {

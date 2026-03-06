@@ -1,4 +1,4 @@
-# FlixTrend
+pm aduit# FlixTrend
 
 **FlixTrend** is a modern, feature-rich social media platform designed to connect people and build communities. Our goal is to provide a seamless and engaging user experience, allowing users to share their moments, connect with friends, and discover new content.
 
