@@ -26,7 +26,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateComment = exports.deleteComment = exports.updatePost = exports.deleteMessage = exports.deletePost = exports.deleteUserAccount = exports.checkUserExists = exports.checkUsername = exports.updateAccolades = exports.cleanupExpiredFlashes = exports.onChatDelete = exports.onUserDelete = exports.onNewDropPrompt = exports.onNewFollower = exports.onNewMessage = exports.onCommentCreate = exports.onNewUserCreate = void 0;
+exports.updateComment = exports.deleteComment = exports.updatePost = exports.deleteMessage = exports.deletePost = exports.deleteUserAccount = exports.checkUserExists = exports.checkUsername = exports.updateAccolades = exports.cleanupExpiredFlashes = exports.onChatDelete = exports.onUserDelete = exports.onNewDropPrompt = exports.onNewFollower = exports.onNewMessage = exports.onCommentCreate = void 0;
 const app_1 = require("firebase-admin/app");
 const firestore_1 = require("firebase-admin/firestore");
 const admin = __importStar(require("firebase-admin"));
@@ -69,31 +69,13 @@ async function sendPushNotification(userId, title, body, data = {}) {
     }
 }
 // --- V1 Cloud Functions ---
-exports.onNewUserCreate = v1.auth.user().onCreate(async (user) => {
-    const userRef = db.collection('users').doc(user.uid);
-    try {
-        const postSnap = await db.collection('posts').where('userId', '==', user.uid).limit(1).get();
-        const accolades = [];
-        if (!postSnap.empty) {
-            accolades.push('vibe_starter');
-        }
-        const premiumUntil = new Date();
-        premiumUntil.setMonth(premiumUntil.getMonth() + 1);
-        await userRef.set({
-            createdAt: firestore_1.FieldValue.serverTimestamp(),
-            profileComplete: false,
-            accolades: accolades,
-            isPremium: true,
-            premiumUntil: firestore_1.Timestamp.fromDate(premiumUntil)
-        }, { merge: true });
-        const appStatusRef = db.collection('app_status').doc('user_stats');
-        await appStatusRef.set({ totalUsers: firestore_1.FieldValue.increment(1) }, { merge: true });
-        firebase_functions_1.logger.info(`User document created for ${user.uid}`);
-    }
-    catch (error) {
-        firebase_functions_1.logger.error(`Error processing new user ${user.uid}:`, error);
-    }
-});
+/**
+ * @description This function is intentionally disabled. It was creating a race condition
+ * with the client-side signup process. The logic for creating a new user document,
+ * including setting premium status, has been moved to the signup page (`src/app/signup/page.tsx`)
+ * where it is handled in a single, atomic Firestore batch write.
+ */
+// export const onNewUserCreate = v1.auth.user().onCreate(async (user) => { ... });
 // Trigger: Update post comment count when a new comment is added
 exports.onCommentCreate = v1.firestore
     .document('posts/{postId}/comments/{commentId}')
@@ -146,7 +128,6 @@ exports.onNewDropPrompt = v1.firestore
     .document('dropPrompts/{promptId}')
     .onCreate(async (snap, context) => {
     const prompt = snap.data();
-    // Notify all users (Caution: Scale issues for huge user bases, but fine for now)
     const usersSnap = await db.collection('users').where('fcmToken', '!=', null).get();
     const notifications = usersSnap.docs.map(userDoc => sendPushNotification(userDoc.id, "New Drop Challenge!", prompt.text, { type: 'drop', targetId: context.params.promptId }));
     await Promise.all(notifications);
@@ -269,8 +250,11 @@ exports.updateAccolades = v1.pubsub.schedule('every 1 hours').onRun(async (conte
 // --- V2 Callable Functions ---
 exports.checkUsername = (0, https_1.onCall)(async (request) => {
     const { username } = request.data;
-    const snapshot = await db.collection('users').where('username', '==', username).get();
-    return { exists: !snapshot.empty };
+    if (!username || typeof username !== 'string') {
+        throw new https_1.HttpsError("invalid-argument", "A valid username must be provided.");
+    }
+    const snapshot = await db.collection('usernames').doc(username.toLowerCase()).get();
+    return { exists: snapshot.exists };
 });
 exports.checkUserExists = (0, https_1.onCall)(async (request) => {
     const { phoneNumber } = request.data;
