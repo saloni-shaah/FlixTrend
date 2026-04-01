@@ -122,6 +122,7 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts' }
     const initials = contentPost.displayName?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || contentPost.username?.slice(0, 2).toUpperCase() || "U";
     const mediaUrls = Array.isArray(contentPost.mediaUrl) ? contentPost.mediaUrl : (contentPost.mediaUrl ? [contentPost.mediaUrl] : []);
     const mediaContent = (contentPost.type === "media" || collectionName === "drops") && mediaUrls.length > 0 && !isShortVibe;
+    const defaultFontStyle = (contentPost.type === 'media' || contentPost.type === 'video') ? 'font-courgette' : 'font-body';
 
     return (
         <>
@@ -167,7 +168,7 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts' }
             )}
 
             {contentPost.content && (
-                 <div className={`whitespace-pre-line mb-2 px-4 py-3 rounded-xl ${isShortVibe ? 'text-white text-base line-clamp-2 text-left' : 'text-[1.15rem]'} ${contentPost.fontStyle || 'font-body'}`} style={{ backgroundColor: contentPost.backgroundColor && !isShortVibe ? contentPost.backgroundColor : 'transparent', color: contentPost.backgroundColor && contentPost.backgroundColor !== '#ffffff' && !isShortVibe ? 'hsl(var(--foreground))' : 'inherit', textShadow: isShortVibe ? "0 1px 4px #000" : "none" }}>
+                 <div className={`whitespace-pre-line mb-2 px-4 py-3 rounded-xl ${isShortVibe ? 'text-white text-base line-clamp-2 text-left' : 'text-[1.15rem]'} ${contentPost.fontStyle || defaultFontStyle}`} style={{ backgroundColor: contentPost.backgroundColor && !isShortVibe ? contentPost.backgroundColor : 'transparent', color: contentPost.backgroundColor && contentPost.backgroundColor !== '#ffffff' && !isShortVibe ? 'hsl(var(--foreground))' : 'inherit', textShadow: isShortVibe ? "0 1px 4px #000" : "none" }}>
                     {contentPost.content}
                 </div>
             )}
