@@ -107,6 +107,7 @@ export function InFeedVideoPlayer({
 
   // 🔥 PERFECT TAP SYSTEM
   const handleTap = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
 
     if (tapTimeout.current) {
@@ -114,8 +115,8 @@ export function InFeedVideoPlayer({
       tapTimeout.current = null;
 
       // ❤️ DOUBLE TAP = LIKE
-      setShowHeart(true);
-      setTimeout(() => setShowHeart(false), 800);
+     setShowHeart(true);
+     setTimeout(()=>setShowHeart(false),800);
 
       return;
     }
