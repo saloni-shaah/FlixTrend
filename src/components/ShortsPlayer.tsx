@@ -18,11 +18,13 @@ export const ShortsPlayer = forwardRef(({ post, isActive, onCommentClick }: { po
     const videoRef = useRef<HTMLVideoElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const actionsRef = useRef<HTMLDivElement>(null);
-    const progressBarRef = useRef<HTMLDivElement>(null);
     const { setIsFlowVideoPlaying } = useAppState();
     const [isPlaying, setIsPlaying] = useState(false);
     const [isMuted, setIsMuted] = useState(false);
     const [progress, setProgress] = useState(0);
+    const [currentTime, setCurrentTime] = useState(0);
+    const [duration, setDuration] = useState(0);
+    const [isScrubbing, setIsScrubbing] = useState(false);
     const [showHeart, setShowHeart] = useState(false);
     const viewCountedRef = useRef(false);
     const tapTimeout = useRef<NodeJS.Timeout | null>(null);
@@ -78,14 +80,19 @@ export const ShortsPlayer = forwardRef(({ post, isActive, onCommentClick }: { po
         const handlePlay = () => setIsPlaying(true);
         const handlePause = () => setIsPlaying(false);
         const handleTimeUpdate = () => {
-            if (video.duration > 0) {
+            if (!isScrubbing && video.duration > 0) {
                 setProgress((video.currentTime / video.duration) * 100);
+                setCurrentTime(video.currentTime);
             }
+        };
+        const handleLoadedMetadata = () => {
+            setDuration(video.duration);
         };
 
         video.addEventListener('play', handlePlay);
         video.addEventListener('pause', handlePause);
         video.addEventListener('timeupdate', handleTimeUpdate);
+        video.addEventListener('loadedmetadata', handleLoadedMetadata);
         video.addEventListener('ended', () => {
             video.currentTime = 0;
             video.play();
@@ -96,8 +103,9 @@ export const ShortsPlayer = forwardRef(({ post, isActive, onCommentClick }: { po
             video.removeEventListener('play', handlePlay);
             video.removeEventListener('pause', handlePause);
             video.removeEventListener('timeupdate', handleTimeUpdate);
+            video.removeEventListener('loadedmetadata', handleLoadedMetadata);
         };
-    }, []);
+    }, [isScrubbing]);
 
     const togglePlayPause = useCallback(() => {
         const video = videoRef.current;
@@ -115,15 +123,25 @@ export const ShortsPlayer = forwardRef(({ post, isActive, onCommentClick }: { po
         }
     }, []);
 
-    const handleScrub = (e: React.MouseEvent<HTMLDivElement>) => {
-        e.stopPropagation();
-        const progressBar = progressBarRef.current;
+    const handleScrubStart = () => {
+        setIsScrubbing(true);
+        videoRef.current?.pause();
+    };
+
+    const handleScrubEnd = () => {
+        setIsScrubbing(false);
+        if (isActive) {
+            videoRef.current?.play().catch(() => {});
+        }
+    };
+
+    const handleScrub = (newProgress: number) => {
         const video = videoRef.current;
-        if (progressBar && video && video.duration > 0) {
-            const rect = progressBar.getBoundingClientRect();
-            const offsetX = e.clientX - rect.left;
-            const newProgress = Math.max(0, Math.min(1, offsetX / rect.width));
-            video.currentTime = newProgress * video.duration;
+        if (video && video.duration) {
+            const newTime = (newProgress / 100) * video.duration;
+            video.currentTime = newTime;
+            setProgress(newProgress);
+            setCurrentTime(newTime);
         }
     };
     
@@ -169,8 +187,7 @@ export const ShortsPlayer = forwardRef(({ post, isActive, onCommentClick }: { po
 
     const handleContainerClick = (event: React.MouseEvent<HTMLDivElement>) => {
         if (
-            (actionsRef.current && actionsRef.current.contains(event.target as Node)) ||
-            (progressBarRef.current && progressBarRef.current.contains(event.target as Node))
+            (actionsRef.current && actionsRef.current.contains(event.target as Node))
         ) {
             return;
         }
@@ -255,7 +272,15 @@ export const ShortsPlayer = forwardRef(({ post, isActive, onCommentClick }: { po
                         <PostActions post={post} isShortVibe={true} onCommentClick={onCommentClick} />
                     </div>
                 </div>
-                <ProgressBar progress={progress} onScrub={handleScrub} variant="flow" progressBarRef={progressBarRef} />
+                <ProgressBar 
+                    progress={progress} 
+                    onScrub={handleScrub} 
+                    onScrubStart={handleScrubStart}
+                    onScrubEnd={handleScrubEnd}
+                    variant="flow" 
+                    currentTime={currentTime} 
+                    duration={duration} 
+                />
             </div>
         </div>
     );
