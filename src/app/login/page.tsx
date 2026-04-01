@@ -9,7 +9,8 @@ import {
     sendPasswordResetEmail,
     sendSignInLinkToEmail,
     RecaptchaVerifier,
-    signInWithPhoneNumber
+    signInWithPhoneNumber,
+    fetchSignInMethodsForEmail
 } from "firebase/auth";
 import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
@@ -75,6 +76,12 @@ function LoginPageContent() {
     setError("");
     setLoading(true);
     try {
+        const methods = await fetchSignInMethodsForEmail(auth, email);
+        if (methods.length === 0) {
+            setError("No account found with this email. Please sign up.");
+            setLoading(false);
+            return;
+        }
         await signInWithEmailAndPassword(auth, email, password);
         router.push("/vibespace");
     } catch (err: any) {
@@ -107,6 +114,12 @@ function LoginPageContent() {
       setSuccess("");
       setLoading(true);
       try {
+          const methods = await fetchSignInMethodsForEmail(auth, email);
+          if (methods.length === 0) {
+              setError("No account found with this email.");
+              setLoading(false);
+              return;
+          }
           await sendPasswordResetEmail(auth, email);
           setSuccess("Password reset email sent! Check your inbox.");
       } catch(err: any) {
@@ -125,11 +138,20 @@ function LoginPageContent() {
     setError("");
     setSuccess("");
     setLoading(true);
-    const actionCodeSettings = {
-      url: `${window.location.origin}/login?finish=true`,
-      handleCodeInApp: true,
-    };
+
     try {
+        const methods = await fetchSignInMethodsForEmail(auth, email);
+        if (methods.length === 0) {
+            setError("No account found with this email. Please sign up.");
+            setLoading(false);
+            return;
+        }
+
+        const actionCodeSettings = {
+          url: `${window.location.origin}/login?finish=true`,
+          handleCodeInApp: true,
+        };
+
         await sendSignInLinkToEmail(auth, email, actionCodeSettings);
         window.localStorage.setItem('emailForSignIn', email);
         setSuccess(`Sign-in link sent to ${email}! Please check your inbox.`);
@@ -158,7 +180,7 @@ function LoginPageContent() {
             className="btn-glass mt-4 bg-accent-pink/80"
             disabled={loading}
         >
-            {loading ? "Sending OTP..." : "Send OTP"}
+            {loading ? "Checking..." : "Send OTP"}
         </motion.button>
     </form>
   ) : (
