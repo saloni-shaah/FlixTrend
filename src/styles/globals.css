@@ -98,7 +98,7 @@
   background-color: hsl(var(--background));
   background-image: 
     radial-gradient(at 15% 15%, hsla(160, 100%, 50%, 0.3) 0px, transparent 50%),
-    radial-gradient(at 85% 20%, hsla(330, 100%, 71%, 0.3) 0px, transparent 50%),
+    radial-gradient(at 85% 20%, hsla(330, 100%, 71%, .3) 0px, transparent 50%),
     radial-gradient(at 50% 85%, hsla(250, 100%, 70%, 0.3) 0px, transparent 50%),
     radial-gradient(at 5% 90%, hsla(42, 100%, 50%, 0.2) 0px, transparent 50%);
   background-attachment: fixed;
@@ -107,7 +107,7 @@
 
 body {
   color: hsl(var(--foreground));
-  font-family: 'Inter', sans-serif;
+  font-family: 'Kalam', cursive;
 }
 
 .simple body {
@@ -234,3 +234,7 @@ body {
 .font-cursive { font-family: 'Dancing Script', cursive; }
 .font-calligraphy { font-family: 'Great Vibes', cursive; }
 .font-italiano { font-family: 'Italianno', cursive; }
+.font-kalam { font-family: 'Kalam', cursive; }
+.font-courgette { font-family: 'Courgette', cursive; }
+.font-handlee { font-family: 'Handlee', cursive; }
+.font-patrick-hand { font-family: 'Patrick Hand', cursive; }

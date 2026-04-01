@@ -203,7 +203,7 @@ export default function WatchPage() {
                         </div>
                         <div className="mt-4 p-4 rounded-lg bg-black/20">
                             <h2 className="font-bold mb-2">Description</h2>
-                            <p className="text-gray-300 whitespace-pre-line">{post.content || "No description provided."}</p>
+                            <p className="text-gray-300 whitespace-pre-line font-courgette">{post.content || "No description provided."}</p>
                         </div>
                         <div className="mt-8">
                              <h2 className="text-xl font-bold mb-4">Comments ({post.commentCount || comments.length})</h2>
