@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { doc, getDoc, getFirestore, collection, query, where, getDocs, limit, orderBy, onSnapshot, runTransaction, arrayUnion, arrayRemove, updateDoc, increment } from 'firebase/firestore';
+import { doc, getDoc, getFirestore, collection, query, where, getDocs, limit, orderBy, onSnapshot, runTransaction, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { app, auth } from '@/utils/firebaseClient';
 import Link from 'next/link';
 import { InFeedVideoPlayer } from '@/components/video/InFeedVideoPlayer';
@@ -27,7 +27,6 @@ export default function WatchPage() {
     const [isFollowing, setIsFollowing] = useState(false);
     const [currentUser, setCurrentUser] = useState<any>(null);
     const [currentUserProfile, setCurrentUserProfile] = useState<any>(null);
-    const viewCountedRef = useRef(false);
 
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged(user => {
@@ -60,12 +59,6 @@ export default function WatchPage() {
         const fetchPostData = async () => {
             try {
                 const postRef = doc(db, 'posts', videoId);
-
-                if (!viewCountedRef.current) {
-                    await updateDoc(postRef, { viewCount: increment(1) });
-                    viewCountedRef.current = true;
-                }
-
                 postUnsub = onSnapshot(postRef, async (postSnap) => {
                     if (postSnap.exists()) {
                         const postData = { id: postSnap.id, ...postSnap.data() };
@@ -110,9 +103,9 @@ export default function WatchPage() {
 
         fetchPostData();
         return () => {
-            postUnsub && postUnsub();
-            authorUnsub && authorUnsub();
-            commentsUnsub && commentsUnsub();
+            postUnsub?.();
+            authorUnsub?.();
+            commentsUnsub?.();
         };
     }, [videoId, currentUser?.uid]);
 
