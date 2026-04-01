@@ -16,6 +16,8 @@ module.exports = {
         softGray: "#C0C0C0", // Soft Gray
         card: "#151515",
         glassWhite: "rgba(255,255,255,0.07)", // Glassmorphism
+        lavender: "#E6E6FA",
+        'light-purple': "#D8BFD8",
       },
       boxShadow: {
         'fab-glow': '0 0 20px #BF00FF, 0 0 40px #FF3CAC',

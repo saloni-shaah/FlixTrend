@@ -1,52 +1,117 @@
-
-"use client";
-import React from 'react';
+import React, { useRef, useCallback, useEffect, useState } from "react";
 
 interface ProgressBarProps {
-    progress: number;
-    onScrub?: (e: React.MouseEvent<HTMLDivElement> | React.ChangeEvent<HTMLInputElement>) => void;
-    variant: 'feed' | 'watch' | 'flow';
-    progressBarRef?: React.RefObject<HTMLDivElement>;
+  progress: number;
+  onScrub?: (percentage: number) => void;
+  onScrubStart?: () => void;
+  onScrubEnd?: () => void;
+  variant?: "feed" | "watch" | "flow";
+  currentTime?: number;
+  duration?: number;
 }
 
-export const ProgressBar: React.FC<ProgressBarProps> = ({ progress, onScrub, variant, progressBarRef }) => {
-    if (variant === 'feed') {
-        return (
-            <div className="absolute bottom-0 left-0 w-full h-1 bg-white/20">
-                <div
-                    className="h-full bg-accent-pink transition-all duration-100"
-                    style={{ width: `${progress}%` }}
-                />
-            </div>
-        );
-    }
+const formatTime = (timeInSeconds: number) => {
+  if (isNaN(timeInSeconds) || timeInSeconds < 0) return "00:00";
+  const minutes = Math.floor(timeInSeconds / 60);
+  const seconds = Math.floor(timeInSeconds % 60);
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+};
 
-    if (variant === 'watch') {
-        return (
-            <input
-                type="range"
-                min="0"
-                max="100"
-                value={progress}
-                onChange={onScrub as (e: React.ChangeEvent<HTMLInputElement>) => void}
-                className="w-full h-1 accent-red-500 cursor-pointer"
-            />
-        );
-    }
+export const ProgressBar: React.FC<ProgressBarProps> = ({
+  progress,
+  onScrub,
+  onScrubStart,
+  onScrubEnd,
+  variant = "feed",
+  currentTime = 0,
+  duration = 0,
+}) => {
+  const barRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
-    if (variant === 'flow') {
-        return (
+  const updateProgress = useCallback(
+    (clientX: number) => {
+      if (!barRef.current || !onScrub) return;
+      const rect = barRef.current.getBoundingClientRect();
+      const percentage = ((clientX - rect.left) / rect.width) * 100;
+      onScrub(Math.max(0, Math.min(100, percentage)));
+    },
+    [onScrub]
+  );
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    updateProgress(e.clientX);
+  }, [updateProgress]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+    onScrubEnd?.();
+  }, [onScrubEnd]);
+
+  // Handle Touch for Mobile
+  const handleTouchMove = useCallback((e: TouchEvent) => {
+    updateProgress(e.touches[0].clientX);
+  }, [updateProgress]);
+
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
+      window.addEventListener("touchmove", handleTouchMove);
+      window.addEventListener("touchend", handleMouseUp);
+    }
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("touchend", handleMouseUp);
+    };
+  }, [isDragging, handleMouseMove, handleMouseUp, handleTouchMove]);
+
+  const onMouseDown = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevents video play/pause
+    setIsDragging(true);
+    onScrubStart?.();
+    updateProgress(e.clientX);
+  };
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    setIsDragging(true);
+    onScrubStart?.();
+    updateProgress(e.touches[0].clientX);
+  };
+
+  return (
+    <div className="w-full flex items-center gap-3 group select-none pointer-events-auto py-2">
+      {variant === "flow" && (
+        <span className="text-[10px] font-mono text-white/80 w-8">{formatTime(currentTime)}</span>
+      )}
+      
+      <div
+        ref={barRef}
+        onMouseDown={onMouseDown}
+        onTouchStart={onTouchStart}
+        className="relative flex-1 h-1.5 bg-white/20 rounded-full cursor-pointer"
+      >
+        <div
+          className="absolute top-0 left-0 h-full bg-purple-500 rounded-full flex items-center justify-end"
+          style={{ width: `${progress}%` }}
+        >
+          {variant !== "feed" && (
             <div 
-                ref={progressBarRef} 
-                className="w-full h-1 bg-white/30 rounded-full mt-3 cursor-pointer pointer-events-auto group"
-                onClick={onScrub as (e: React.MouseEvent<HTMLDivElement>) => void}
-            >
-                <div className="h-full bg-accent-cyan rounded-full relative" style={{ width: `${progress}%` }}>
-                   <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white opacity-0 group-hover:opacity-100 transition-opacity" style={{ transform: 'translateX(50%)' }}/>
-                </div>
-            </div>
-        );
-    }
+              className={`w-3 h-3 bg-white rounded-full shadow-xl border border-purple-400 transition-transform ${
+                isDragging ? "scale-150" : "scale-100"
+              } ${variant === 'watch' ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'}`} 
+              style={{ marginRight: '-6px' }} 
+            />
+          )}
+        </div>
+      </div>
 
-    return null;
+      {variant === "flow" && (
+        <span className="text-[10px] font-mono text-white/80 w-8 text-right">{formatTime(duration)}</span>
+      )}
+    </div>
+  );
 };
