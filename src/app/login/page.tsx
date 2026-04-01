@@ -4,15 +4,15 @@ import React, { useState, Suspense, useEffect } from "react";
 import { useSearchParams } from 'next/navigation';
 import Link from "next/link";
 import { auth, app } from "@/utils/firebaseClient";
+import { getFunctions, httpsCallable } from "firebase/functions";
 import {
     signInWithEmailAndPassword,
     sendPasswordResetEmail,
     sendSignInLinkToEmail,
     RecaptchaVerifier,
-    signInWithPhoneNumber,
-    fetchSignInMethodsForEmail
+    signInWithPhoneNumber
 } from "firebase/auth";
-import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
+import { getFirestore } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import LoginWithEmail from "./LoginWithEmail";
@@ -33,7 +33,7 @@ function LoginPageContent() {
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [confirmationResult, setConfirmationResult] = useState<any>(null);
   const router = useRouter();
-  const db = getFirestore(app);
+  const functions = getFunctions(app);
 
   useEffect(() => {
     (window as any).initializeRecaptchaVerifier = () => {
@@ -47,12 +47,31 @@ function LoginPageContent() {
     }
   }, []);
 
+  const checkUserExists = async (field: 'email' | 'phone', value: string) => {
+      const checkFunction = httpsCallable(functions, field === 'email' ? 'checkEmail' : 'checkPhone');
+      try {
+          const result = await checkFunction({ [field === 'email' ? 'email' : 'phoneNumber']: value });
+          return (result.data as { exists: boolean }).exists;
+      } catch (err) {
+          console.error(`Error checking ${field}:`, err);
+          setError(`An error occurred while verifying the ${field}. Please try again.`);
+          return false;
+      }
+  };
+
   const handlePhoneSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
     const fullPhoneNumber = `${countryCode}${phoneNumber}`;
+    const userExists = await checkUserExists('phone', fullPhoneNumber);
+
+    if (!userExists) {
+        setError("No account found with this number. Please sign up.");
+        setLoading(false);
+        return;
+    }
     
     try {
       const appVerifier = (window as any).initializeRecaptchaVerifier();
@@ -61,11 +80,7 @@ function LoginPageContent() {
       setShowOtpInput(true);
       setSuccess("OTP sent successfully!");
     } catch (err: any) {
-        if (err.code === 'auth/user-not-found') {
-            setError("No account found with this number. Please sign up.");
-        } else {
-            setError("Failed to send OTP. Please check the phone number or try again later.");
-        }
+        setError("Failed to send OTP. Please check the phone number or try again later.");
         console.error("Phone Sign In Error:", err);
     }
     setLoading(false);
@@ -75,13 +90,15 @@ function LoginPageContent() {
     e.preventDefault();
     setError("");
     setLoading(true);
+
+    const userExists = await checkUserExists('email', email);
+    if (!userExists) {
+        setError("No account found with this email. Please sign up.");
+        setLoading(false);
+        return;
+    }
+
     try {
-        const methods = await fetchSignInMethodsForEmail(auth, email);
-        if (methods.length === 0) {
-            setError("No account found with this email. Please sign up.");
-            setLoading(false);
-            return;
-        }
         await signInWithEmailAndPassword(auth, email, password);
         router.push("/vibespace");
     } catch (err: any) {
@@ -113,13 +130,13 @@ function LoginPageContent() {
       setError("");
       setSuccess("");
       setLoading(true);
+      const userExists = await checkUserExists('email', email);
+      if (!userExists) {
+          setError("No account found with this email.");
+          setLoading(false);
+          return;
+      }
       try {
-          const methods = await fetchSignInMethodsForEmail(auth, email);
-          if (methods.length === 0) {
-              setError("No account found with this email.");
-              setLoading(false);
-              return;
-          }
           await sendPasswordResetEmail(auth, email);
           setSuccess("Password reset email sent! Check your inbox.");
       } catch(err: any) {
@@ -139,14 +156,14 @@ function LoginPageContent() {
     setSuccess("");
     setLoading(true);
 
-    try {
-        const methods = await fetchSignInMethodsForEmail(auth, email);
-        if (methods.length === 0) {
-            setError("No account found with this email. Please sign up.");
-            setLoading(false);
-            return;
-        }
+    const userExists = await checkUserExists('email', email);
+    if (!userExists) {
+        setError("No account found with this email. Please sign up.");
+        setLoading(false);
+        return;
+    }
 
+    try {
         const actionCodeSettings = {
           url: `${window.location.origin}/login?finish=true`,
           handleCodeInApp: true,
