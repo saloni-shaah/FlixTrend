@@ -1,11 +1,12 @@
+
 "use client";
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { doc, getDoc, getFirestore, collection, query, where, getDocs, limit, orderBy, onSnapshot, runTransaction, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { app, auth } from '@/utils/firebaseClient';
 import Link from 'next/link';
-import { InFeedVideoPlayer } from '@/components/video/InFeedVideoPlayer';
+import { LongFormVideoPlayer } from './LongFormVideoPlayer';
 import { PostActions } from '@/components/PostActions';
 import { CommentModal } from '@/components/CommentModal';
 import { VideoThumbnail } from '@/components/video/VideoThumbnail';
@@ -135,6 +136,11 @@ export default function WatchPage() {
         return typeof url === 'string' && (url.includes('.mp4') || url.includes('.webm')) ? url : '';
     }
 
+    const getFirstImageUrl = (mediaUrl: any): string => {
+        const url = Array.isArray(mediaUrl) ? mediaUrl.find(u => u.includes('.jpg') || u.includes('.png')) : mediaUrl;
+        return typeof url === 'string' && (url.includes('.jpg') || url.includes('.png')) ? url : '';
+    }
+
     if (loading) return <div className="flex justify-center items-center h-screen"><div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-accent-cyan"></div></div>;
     if (error) return <div className="flex justify-center items-center h-screen text-red-500">{error}</div>;
     if (!post) return <div className="flex justify-center items-center h-screen">Video not found.</div>;
@@ -167,7 +173,7 @@ export default function WatchPage() {
                 <div className="flex flex-col lg:flex-row gap-8">
                     <div className="flex-grow">
                         <div className="aspect-video bg-black rounded-xl overflow-hidden shadow-lg">
-                            <InFeedVideoPlayer mediaUrls={Array.isArray(post.mediaUrl) ? post.mediaUrl : [post.mediaUrl]} post={post} />
+                           <LongFormVideoPlayer videoUrl={getFirstVideoUrl(post.mediaUrl)} thumbnailUrl={getFirstImageUrl(post.mediaUrl)} />
                         </div>
                          <div className="mt-4 flex flex-col sm:flex-row justify-between items-start gap-4">
                             <div>
