@@ -6,7 +6,7 @@ import { app } from '@/utils/firebaseClient';
 import { Flame, Star, Trophy } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { InFeedVideoPlayer } from '../app/vibespace/InFeedVideoPlayer';
+import { InFeedVideoPlayer } from '@/app/vibespace/InFeedVideoPlayer';
 
 const db = getFirestore(app);
 
