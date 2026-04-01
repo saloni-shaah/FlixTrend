@@ -4,7 +4,7 @@ import { Providers } from "./providers";
 import BodyStyling from "./BodyStyling";
 import MainLayout from './MainLayout'; // Import the new MainLayout
 import Script from 'next/script'; // Import the Script component
-import { VideoProvider } from "@/components/video/VideoContext"; // Import the VideoProvider
+
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://flixtrend.in';
 
@@ -101,10 +101,8 @@ export default function RootLayout({
       </head>
       <body className="relative min-h-screen">
         <Providers>
-          <VideoProvider>
             <BodyStyling />
             <MainLayout>{children}</MainLayout>
-          </VideoProvider>
         </Providers>
       </body>
     </html>

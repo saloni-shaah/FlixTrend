@@ -15,7 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { InFeedVideoPlayer } from './video/InFeedVideoPlayer';
+import { InFeedVideoPlayer } from '../app/vibespace/InFeedVideoPlayer';
 import { PostActions } from './PostActions';
 import { StreamViewer } from './StreamViewer';
 import { EditPostModal } from './squad/EditPostModal';

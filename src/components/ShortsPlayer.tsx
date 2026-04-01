@@ -10,6 +10,7 @@ import { PostActions } from './PostActions';
 import Link from 'next/link';
 import { FaMusic } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ProgressBar } from './video/ProgressBar';
 
 const db = getFirestore(app);
 
@@ -254,15 +255,7 @@ export const ShortsPlayer = forwardRef(({ post, isActive, onCommentClick }: { po
                         <PostActions post={post} isShortVibe={true} onCommentClick={onCommentClick} />
                     </div>
                 </div>
-                <div 
-                    ref={progressBarRef} 
-                    className="w-full h-1 bg-white/30 rounded-full mt-3 cursor-pointer pointer-events-auto group"
-                    onClick={handleScrub}
-                >
-                    <div className="h-full bg-accent-cyan rounded-full relative" style={{ width: `${progress}%` }}>
-                       <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white opacity-0 group-hover:opacity-100 transition-opacity" style={{ transform: 'translateX(50%)' }}/>
-                    </div>
-                </div>
+                <ProgressBar progress={progress} onScrub={handleScrub} variant="flow" progressBarRef={progressBarRef} />
             </div>
         </div>
     );
