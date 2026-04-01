@@ -306,6 +306,39 @@ export const checkUsername = onCall(async (request) => {
     return { exists: snapshot.exists };
 });
 
+export const checkPhone = onCall(async (request) => {
+    const { phoneNumber } = request.data;
+    if (!phoneNumber || typeof phoneNumber !== 'string') {
+        throw new HttpsError("invalid-argument", "A valid phone number must be provided.");
+    }
+    try {
+        const user = await admin.auth().getUserByPhoneNumber(phoneNumber);
+        return { exists: !!user };
+    } catch (error: any) {
+        if (error.code === 'auth/user-not-found') {
+            return { exists: false };
+        }
+        throw new HttpsError("internal", "An error occurred while checking the phone number.");
+    }
+});
+
+export const checkEmail = onCall(async (request) => {
+    const { email } = request.data;
+    if (!email || typeof email !== 'string') {
+        throw new HttpsError("invalid-argument", "A valid email must be provided.");
+    }
+    try {
+        const user = await admin.auth().getUserByEmail(email);
+        return { exists: !!user };
+    } catch (error: any) {
+        if (error.code === 'auth/user-not-found') {
+            return { exists: false };
+        }
+        throw new HttpsError("internal", "An error occurred while checking the email.");
+    }
+});
+
+
 export const deleteUserAccount = onCall(async (request) => {
   const uid = request.auth?.uid;
 

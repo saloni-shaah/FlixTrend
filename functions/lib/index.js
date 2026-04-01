@@ -26,7 +26,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateComment = exports.deleteComment = exports.updatePost = exports.deleteMessage = exports.deletePost = exports.deleteUserAccount = exports.checkUsername = exports.updateAccolades = exports.cleanupExpiredFlashes = exports.onChatDelete = exports.onUserDelete = exports.onNewDropPrompt = exports.onNewFollower = exports.onNewMessage = exports.onCommentCreate = exports.onNewUserCreate = void 0;
+exports.updateComment = exports.deleteComment = exports.updatePost = exports.deleteMessage = exports.deletePost = exports.deleteUserAccount = exports.checkEmail = exports.checkPhone = exports.checkUsername = exports.updateAccolades = exports.cleanupExpiredFlashes = exports.onChatDelete = exports.onUserDelete = exports.onNewDropPrompt = exports.onNewFollower = exports.onNewMessage = exports.onCommentCreate = exports.onNewUserCreate = void 0;
 const app_1 = require("firebase-admin/app");
 const firestore_1 = require("firebase-admin/firestore");
 const admin = __importStar(require("firebase-admin"));
@@ -273,6 +273,38 @@ exports.checkUsername = (0, https_1.onCall)(async (request) => {
     }
     const snapshot = await db.collection('usernames').doc(username.toLowerCase()).get();
     return { exists: snapshot.exists };
+});
+exports.checkPhone = (0, https_1.onCall)(async (request) => {
+    const { phoneNumber } = request.data;
+    if (!phoneNumber || typeof phoneNumber !== 'string') {
+        throw new https_1.HttpsError("invalid-argument", "A valid phone number must be provided.");
+    }
+    try {
+        const user = await admin.auth().getUserByPhoneNumber(phoneNumber);
+        return { exists: !!user };
+    }
+    catch (error) {
+        if (error.code === 'auth/user-not-found') {
+            return { exists: false };
+        }
+        throw new https_1.HttpsError("internal", "An error occurred while checking the phone number.");
+    }
+});
+exports.checkEmail = (0, https_1.onCall)(async (request) => {
+    const { email } = request.data;
+    if (!email || typeof email !== 'string') {
+        throw new https_1.HttpsError("invalid-argument", "A valid email must be provided.");
+    }
+    try {
+        const user = await admin.auth().getUserByEmail(email);
+        return { exists: !!user };
+    }
+    catch (error) {
+        if (error.code === 'auth/user-not-found') {
+            return { exists: false };
+        }
+        throw new https_1.HttpsError("internal", "An error occurred while checking the email.");
+    }
 });
 exports.deleteUserAccount = (0, https_1.onCall)(async (request) => {
     var _a, _b;
