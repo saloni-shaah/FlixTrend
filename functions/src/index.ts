@@ -47,14 +47,34 @@ async function sendPushNotification(userId: string, title: string, body: string,
 
 // --- V1 Cloud Functions ---
 
-/**
- * @description This function is intentionally disabled. It was creating a race condition
- * with the client-side signup process. The logic for creating a new user document,
- * including setting premium status, has been moved to the signup page (`src/app/signup/page.tsx`)
- * where it is handled in a single, atomic Firestore batch write.
- */
-// export const onNewUserCreate = v1.auth.user().onCreate(async (user) => { ... });
+export const onNewUserCreate = v1.auth.user().onCreate(async (user) => {
+    const userRef = db.collection('users').doc(user.uid);
+    try {
+        const postSnap = await db.collection('posts').where('userId', '==', user.uid).limit(1).get();
+        const accolades = [];
+        if(!postSnap.empty) {
+            accolades.push('vibe_starter');
+        }
 
+        const premiumUntil = new Date();
+        premiumUntil.setMonth(premiumUntil.getMonth() + 1);
+
+        await userRef.set({
+            createdAt: FieldValue.serverTimestamp(),
+            profileComplete: false,
+            accolades: accolades,
+            isPremium: true,
+            premiumUntil: Timestamp.fromDate(premiumUntil)
+        }, { merge: true });
+
+        const appStatusRef = db.collection('app_status').doc('user_stats');
+        await appStatusRef.set({ totalUsers: FieldValue.increment(1) }, { merge: true });
+
+        logger.info(`User document created for ${user.uid}`);
+    } catch (error) {
+        logger.error(`Error processing new user ${user.uid}:`, error);
+    }
+});
 
 // Trigger: Update post comment count when a new comment is added
 export const onCommentCreate = v1.firestore
@@ -284,27 +304,6 @@ export const checkUsername = onCall(async (request) => {
     }
     const snapshot = await db.collection('usernames').doc(username.toLowerCase()).get();
     return { exists: snapshot.exists };
-});
-
-export const checkUserExists = onCall(async (request) => {
-  const { phoneNumber } = request.data;
-
-  if (!phoneNumber) {
-    throw new HttpsError(
-      'invalid-argument', 
-      'The function must be called with the "phoneNumber" argument.'
-    );
-  }
-
-  try {
-    const userRecord = await admin.auth().getUserByPhoneNumber(phoneNumber);
-    return { exists: !!userRecord };
-  } catch (error: any) {
-    if (error.code === 'auth/user-not-found') {
-      return { exists: false };
-    }
-    throw new HttpsError('internal', error.message);
-  }
 });
 
 export const deleteUserAccount = onCall(async (request) => {

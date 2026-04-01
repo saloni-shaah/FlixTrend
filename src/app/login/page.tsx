@@ -12,29 +12,11 @@ import {
     signInWithPhoneNumber
 } from "firebase/auth";
 import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
-import { getFunctions, httpsCallable } from "firebase/functions";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import LoginWithEmail from "./LoginWithEmail";
 import CountrySelector from "@/components/ui/CountrySelector";
 import { Mail, Phone, Eye, EyeOff } from "lucide-react";
-
-const functions = getFunctions(app);
-const checkUserExists = httpsCallable(functions, 'checkUserExists');
-
-async function checkUserExistsByPhone(phoneNumber: string): Promise<boolean> {
-    try {
-        const result = await checkUserExists({ phoneNumber });
-        const data = result.data as { exists: boolean };
-        return data.exists;
-    } catch (error) {
-        console.error("Error checking user existence:", error);
-        // To be safe, we'll assume the user might exist to allow login attempts
-        // but this should be handled based on the specific error.
-        return true; 
-    }
-}
-
 
 function LoginPageContent() {
   const [loginMethod, setLoginMethod] = useState<'email' | 'phone' | 'magic-link'>('email');
@@ -71,14 +53,6 @@ function LoginPageContent() {
 
     const fullPhoneNumber = `${countryCode}${phoneNumber}`;
     
-    const userExists = await checkUserExistsByPhone(fullPhoneNumber);
-
-    if (!userExists) {
-        setError("No account found with this number. Please sign up.");
-        setLoading(false);
-        return;
-    }
-    
     try {
       const appVerifier = (window as any).initializeRecaptchaVerifier();
       const result = await signInWithPhoneNumber(auth, fullPhoneNumber, appVerifier);
@@ -86,8 +60,12 @@ function LoginPageContent() {
       setShowOtpInput(true);
       setSuccess("OTP sent successfully!");
     } catch (err: any) {
-      setError("Failed to send OTP. Please check the phone number or try again later.");
-      console.error("Phone Sign In Error:", err);
+        if (err.code === 'auth/user-not-found') {
+            setError("No account found with this number. Please sign up.");
+        } else {
+            setError("Failed to send OTP. Please check the phone number or try again later.");
+        }
+        console.error("Phone Sign In Error:", err);
     }
     setLoading(false);
   };
@@ -180,7 +158,7 @@ function LoginPageContent() {
             className="btn-glass mt-4 bg-accent-pink/80"
             disabled={loading}
         >
-            {loading ? "Checking..." : "Send OTP"}
+            {loading ? "Sending OTP..." : "Send OTP"}
         </motion.button>
     </form>
   ) : (
