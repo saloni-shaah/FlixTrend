@@ -173,7 +173,12 @@ export default function WatchPage() {
                 <div className="flex flex-col lg:flex-row gap-8">
                     <div className="flex-grow">
                         <div className="aspect-video bg-black rounded-xl overflow-hidden shadow-lg">
-                           <LongFormVideoPlayer videoUrl={getFirstVideoUrl(post.mediaUrl)} thumbnailUrl={getFirstImageUrl(post.mediaUrl)} />
+                           <LongFormVideoPlayer 
+                                videoUrl={getFirstVideoUrl(post.mediaUrl)} 
+                                thumbnailUrl={getFirstImageUrl(post.mediaUrl)}
+                                postId={videoId as string}
+                                title={post.title}
+                           />
                         </div>
                          <div className="mt-4 flex flex-col sm:flex-row justify-between items-start gap-4">
                             <div>
@@ -189,7 +194,7 @@ export default function WatchPage() {
                                         </div>
                                          {currentUser && currentUser.uid !== post.userId && (
                                             <button onClick={handleFollow} className={`btn-glass flex items-center gap-2 ${isFollowing ? 'bg-accent-green/20 text-accent-green' : 'bg-accent-cyan text-black'}`}>
-                                                {isFollowing ? <UserCheck size={16} /> : <UserPlus size={16} />}
+                                                {isFollowing ? <UserCheck size={16} /> : <UserPlus size={16} /> }
                                                 {isFollowing ? 'Following' : 'Follow'}
                                             </button>
                                         )}
@@ -208,7 +213,7 @@ export default function WatchPage() {
                              <h2 className="text-xl font-bold mb-4">Comments ({post.commentCount || comments.length})</h2>
                              <div className="flex flex-col gap-4">
                                 {comments.map(comment => (
-                                    <CommentComponent key={comment.id} comment={comment} postId={videoId} currentUser={currentUser} collectionName="posts" onEdit={() => {}} />
+                                    <CommentComponent key={comment.id} comment={comment} postId={videoId as string} currentUser={currentUser} collectionName="posts" onEdit={() => {}} />
                                 ))}
                                  <button onClick={() => setShowCommentModal(true)} className="btn-glass mt-4">View all comments</button>
                             </div>
@@ -233,7 +238,7 @@ export default function WatchPage() {
                     </aside>
                 </div>
             </main>
-            {showCommentModal && currentUser && videoId && <CommentModal postId={videoId} postAuthorId={post.userId} onClose={() => setShowCommentModal(false)} post={post} collectionName="posts" />}
+            {showCommentModal && currentUser && videoId && <CommentModal postId={videoId as string} postAuthorId={post.userId} onClose={() => setShowCommentModal(false)} post={post} collectionName="posts" />}
         </div>
     );
 }

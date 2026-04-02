@@ -184,32 +184,44 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts' }
                 </div>
             )}
 
-            {mediaContent && contentPost.thumbnailUrl && !playVideo ? (
-              <div className="cursor-pointer relative rounded-xl overflow-hidden group" onClick={() => setPlayVideo(true)}>
-                <img src={contentPost.thumbnailUrl} alt={contentPost.content || 'post thumbnail'} className="w-full h-auto object-cover transition-transform group-hover:scale-105" />
-                <div className="absolute inset-0 flex items-center justify-center bg-black/40 transition-colors group-hover:bg-black/20">
-                  <PlayCircle size={64} className="text-white/80 group-hover:text-white" />
-                </div>
-              </div>
-            ) : mediaContent ? (
-                contentPost.isFlow ? (
-                    <Link href={`/flow/${contentPost.id}`}>
-                        <div className="cursor-pointer">
+            {mediaContent ? (
+                contentPost.isVideo ? (
+                    contentPost.thumbnailUrl && !playVideo ? (
+                    <div className="cursor-pointer relative rounded-xl overflow-hidden group" onClick={() => setPlayVideo(true)}>
+                        <img src={contentPost.thumbnailUrl} alt={contentPost.content || 'post thumbnail'} className="w-full h-auto object-cover transition-transform group-hover:scale-105" />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 transition-colors group-hover:bg-black/20">
+                        <PlayCircle size={64} className="text-white/80 group-hover:text-white" />
+                        </div>
+                    </div>
+                    ) : (
+                        contentPost.isFlow ? (
+                            <Link href={`/flow/${contentPost.id}`}>
+                                <div className="cursor-pointer">
+                                    <InFeedVideoPlayer
+                                        mediaUrls={mediaUrls}
+                                        post={contentPost}
+                                        navigatesToWatchPage={false}
+                                        startPlaying={playVideo}
+                                    />
+                                </div>
+                            </Link>
+                        ) : (
                             <InFeedVideoPlayer
                                 mediaUrls={mediaUrls}
                                 post={contentPost}
-                                navigatesToWatchPage={false}
+                                navigatesToWatchPage={true}
                                 startPlaying={playVideo}
                             />
-                        </div>
-                    </Link>
+                        )
+                    )
                 ) : (
-                    <InFeedVideoPlayer
-                        mediaUrls={mediaUrls}
-                        post={contentPost}
-                        navigatesToWatchPage={true}
-                        startPlaying={playVideo}
-                    />
+                    <div className={`mt-2 rounded-xl overflow-hidden w-full h-auto grid ${mediaUrls.length > 1 ? 'grid-cols-2' : 'grid-cols-1'} gap-1`}>
+                        {mediaUrls.map((url: string, index: number) => (
+                        <div key={index} className="w-full h-full aspect-square overflow-hidden rounded-lg">
+                            <img src={url} alt={`post image ${index + 1}`} className="w-full h-full object-cover transition-transform hover:scale-105" />
+                        </div>
+                        ))}
+                    </div>
                 )
             ) : null}
 
