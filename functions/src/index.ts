@@ -565,3 +565,31 @@ export const updateComment = onCall(async (request) => {
 });
 
 export * from "./process-media";
+
+// Trigger: Increment likesCount when a new like is added
+export const incrementLikes = v1.firestore
+    .document('posts/{postId}/likes/{userId}')
+    .onCreate(async (snap, context) => {
+        const { postId } = context.params;
+        const postRef = db.collection('posts').doc(postId);
+        try {
+            await postRef.update({ likesCount: FieldValue.increment(1) });
+            logger.info(`Incremented likesCount for post ${postId}`);
+        } catch (error) {
+            logger.error(`Error incrementing likesCount for post ${postId}:`, error);
+        }
+    });
+
+// Trigger: Decrement likesCount when a like is removed
+export const decrementLikes = v1.firestore
+    .document('posts/{postId}/likes/{userId}')
+    .onDelete(async (snap, context) => {
+        const { postId } = context.params;
+        const postRef = db.collection('posts').doc(postId);
+        try {
+            await postRef.update({ likesCount: FieldValue.increment(-1) });
+            logger.info(`Decremented likesCount for post ${postId}`);
+        } catch (error) {
+            logger.error(`Error decrementing likesCount for post ${postId}:`, error);
+        }
+    });

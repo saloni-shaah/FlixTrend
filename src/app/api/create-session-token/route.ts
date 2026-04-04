@@ -1,13 +1,16 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth as adminAuth, firestore } from 'firebase-admin';
+import admin, { auth as adminAuth, firestore } from 'firebase-admin';
 import { initAdmin } from '@/utils/firebaseAdmin';
 
 // Initialize Firebase Admin
 initAdmin();
-const db = firestore();
 
 export async function GET(req: NextRequest) {
+  if (!admin.apps.length) {
+    return NextResponse.json({ error: 'Firebase not initialized' }, { status: 500 });
+  }
+  const db = firestore();
   const idToken = req.headers.get('authorization')?.split('Bearer ')[1];
 
   if (!idToken) {

@@ -15,6 +15,7 @@ import { UserCollections } from "@/components/squad/UserCollections";
 import { UserDownloads } from "@/components/squad/UserDownloads";
 import { AccoladeBadge } from "@/components/AccoladeBadge";
 import { CreatePostPrompt } from "@/components/CreatePostPrompt";
+import LikedPostsTab from "@/components/squad/LikedPostsTab";
 
 const db = getFirestore(app);
 
@@ -47,7 +48,6 @@ function SquadPageContent() {
   const [postTypeFilter, setPostTypeFilter] = useState('all');
   const [sortBy, setSortBy] = useState('latest');
   const [userPosts, setUserPosts] = useState<any[]>([]);
-  const [starredPosts, setStarredPosts] = useState<any[]>([]);
   const [showFollowList, setShowFollowList] = useState<null | 'followers' | 'following' | 'friends'>(null);
   const [showCompleteProfile, setShowCompleteProfile] = useState(false);
   const [isCreator, setIsCreator] = useState(false);
@@ -131,11 +131,6 @@ function SquadPageContent() {
     const unsubFollowers = onSnapshot(collection(db, "users", uid, "followers"), snap => setFollowers(snap.size));
     const unsubFollowing = onSnapshot(collection(db, "users", uid, "following"), snap => setFollowing(snap.size));
 
-    const q = query(collection(db, "users", uid, "starredPosts"), orderBy("starredAt", "desc"));
-    const unsubStarred = onSnapshot(q, (snapshot) => {
-      setStarredPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
-
     const fetchFriends = async () => {
       const followersSnap = await getDocs(collection(db, "users", uid, "followers"));
       const followingSnap = await getDocs(collection(db, "users", uid, "following"));
@@ -150,7 +145,6 @@ function SquadPageContent() {
       unsubPosts();
       unsubFollowers();
       unsubFollowing();
-      unsubStarred();
     };
   }, [firebaseUser]);
 
@@ -341,19 +335,7 @@ function SquadPageContent() {
             )}
           </div>
         )}
-        {activeTab === "likes" && (
-          starredPosts.length > 0 ? (
-            <div className="w-full max-w-xl flex flex-col gap-6">
-              {starredPosts.map((post) => <PostCard key={post.id} post={post} />)}
-            </div>
-          ) : (
-            <div className="text-gray-400 text-center mt-16">
-              <div className="text-4xl mb-2"><Heart /></div>
-              <div className="text-lg font-semibold">No liked posts</div>
-              <div className="text-sm">Your liked posts will appear here.</div>
-            </div>
-          )
-        )}
+        {activeTab === "likes" && firebaseUser && <LikedPostsTab userId={firebaseUser.uid} />}
         {activeTab === "playlists" && firebaseUser && <UserPlaylists userId={firebaseUser.uid} />}
         {activeTab === "collections" && firebaseUser && <UserCollections userId={firebaseUser.uid} />}
         {activeTab === "downloads" && <UserDownloads />}
