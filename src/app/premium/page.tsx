@@ -16,39 +16,6 @@ const premiumFeatures = [
     { icon: <ShieldCheck className="text-accent-cyan"/>, text: "Premium badge on your profile" },
 ];
 
-function RewardsSection() {
-    const [rewardStatus, setRewardStatus] = useState<'idle' | 'loading' | 'watched'>('idle');
-
-    const handleWatchAd = () => {
-        setRewardStatus('loading');
-        // Simulate watching an ad
-        setTimeout(() => {
-            setRewardStatus('watched');
-            // In a real app, you would now grant the user AI credits or temporary access.
-        }, 2000);
-    }
-
-    if (rewardStatus === 'watched') {
-        return (
-            <div className="text-center bg-green-500/10 p-4 rounded-xl">
-                <CheckCircle className="mx-auto text-green-400 mb-2" size={32}/>
-                <h4 className="font-bold text-green-400">Ad Watched!</h4>
-                <p className="text-xs text-gray-300">You've earned some rewards!</p>
-            </div>
-        )
-    }
-
-    return (
-        <button 
-            onClick={handleWatchAd}
-            disabled={rewardStatus === 'loading'}
-            className="w-full px-8 py-3 rounded-full bg-accent-green text-black font-bold text-lg shadow-lg hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-wait"
-        >
-            {rewardStatus === 'loading' ? "Loading Ad..." : "Watch Ad for Rewards"}
-        </button>
-    )
-}
-
 export default function PremiumPage() {
     const [isPremium, setIsPremium] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -102,7 +69,7 @@ export default function PremiumPage() {
                     </div>
                     <h1 className="text-4xl font-headline font-bold text-accent-cyan mb-4">Go Premium</h1>
                     <p className="text-gray-300 mb-8">
-                        Elevate your experience or watch a quick ad for rewards.
+                        Elevate your experience with an ad-free subscription.
                     </p>
 
                     <div className="bg-black/20 p-6 rounded-2xl mb-8 text-left">
@@ -131,14 +98,6 @@ export default function PremiumPage() {
                     >
                         Upgrade with UPI
                     </button>
-                    
-                    <div className="flex items-center gap-4 my-4">
-                        <hr className="flex-1 border-glass-border"/>
-                        <span className="text-gray-400 font-bold">OR</span>
-                        <hr className="flex-1 border-glass-border"/>
-                    </div>
-                    
-                    <RewardsSection />
                 </>
             )}
         </motion.div>

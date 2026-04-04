@@ -1,19 +1,32 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { getFirestore, doc, getDoc, collection, query, where, getDocs, onSnapshot, orderBy } from "firebase/firestore";
 import { auth, app } from "@/utils/firebaseClient";
 import { PostCard } from "@/components/PostCard";
 import { FollowButton } from "@/components/FollowButton";
-import { Star, MapPin, User, Tag, ShieldCheck, Heart, CheckCircle, Trophy, Award, Sparkles, Users as UsersIcon } from "lucide-react";
+import { Star, MapPin, User, Tag, ShieldCheck, Heart, CheckCircle, Trophy, Award, Sparkles, Users as UsersIcon, Edit2, AlignLeft, Image, BarChart3, Video, ArrowUp, ArrowDown, TrendingUp } from "lucide-react";
 import { FollowListModal } from "@/components/FollowListModal";
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { AccoladeBadge } from "@/components/AccoladeBadge";
 import { FullScreenImageViewer } from "@/components/FullScreenImageViewer";
 
-
 const db = getFirestore(app);
 
+const FlowIcon = ({ className }: { className?: string }) => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+        <defs>
+            <linearGradient id="flowGradient" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="var(--accent-pink)" />
+                <stop offset="100%" stopColor="var(--accent-cyan)" />
+            </linearGradient>
+        </defs>
+        <circle cx="12" cy="12" r="12" fill="url(#flowGradient)" className="group-hover:opacity-80 transition-opacity">
+             <animate attributeName="opacity" values="0.7;1;0.7" dur="2s" repeatCount="indefinite" />
+        </circle>
+        <path d="M9.5 16V8L16.5 12L9.5 16Z" fill="white"/>
+    </svg>
+);
 
 export default function UserProfilePage() {
   const params = useParams();
@@ -27,9 +40,10 @@ export default function UserProfilePage() {
   const [userPosts, setUserPosts] = useState<any[]>([]);
   const [starredPosts, setStarredPosts] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("posts");
+  const [postTypeFilter, setPostTypeFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('latest');
   const [showFollowList, setShowFollowList] = useState<null | 'followers' | 'following'>(null);
   const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
-
 
   useEffect(() => {
     const unsub = auth.onAuthStateChanged((user) => {
@@ -51,7 +65,7 @@ export default function UserProfilePage() {
         setLoading(false);
     });
 
-    const postsQuery = query(collection(db, "posts"), where("userId", "==", uid), orderBy("createdAt", "desc"));
+    const postsQuery = query(collection(db, "posts"), where("userId", "==", uid));
     const unsubPosts = onSnapshot(postsQuery, (snap) => {
         setUserPosts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         setPostCount(snap.size);
@@ -68,18 +82,58 @@ export default function UserProfilePage() {
     const unsubFollowers = onSnapshot(collection(db, "users", uid, "followers"), snap => setFollowers(snap.size));
     const unsubFollowing = onSnapshot(collection(db, "users", uid, "following"), snap => setFollowing(snap.size));
     
-    // Fetch starred posts
-    const q = query(collection(db, "users", uid, "starredPosts"), orderBy("starredAt", "desc"));
-    const unsubStarred = onSnapshot(q, (snapshot) => {
-        setStarredPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
+    let unsubStarred = () => {};
+
+    if (firebaseUser?.uid === uid) {
+      const q = query(collection(db, "users", uid, "starredPosts"), orderBy("starredAt", "desc"));
+      unsubStarred = onSnapshot(q, async (snapshot) => {
+          const starred = await Promise.all(snapshot.docs.map(async docSnap => {
+              const postData = docSnap.data();
+              const postDoc = await getDoc(doc(db, postData.postCollection, postData.postId));
+              return postDoc.exists() ? { ...postDoc.data(), id: postDoc.id, collectionName: postData.postCollection } : null;
+          }));
+          setStarredPosts(starred.filter(p => p !== null));
+      });
+    } else {
+      setStarredPosts([]);
+    }
 
     return () => {
       unsubFollowers();
       unsubFollowing();
       unsubStarred();
     }
-  }, [uid])
+  }, [uid, firebaseUser]);
+
+  const sortedAndFilteredPosts = userPosts
+    .filter(post => {
+        const postToCheck = post.type === 'relay' ? post.originalPost : post;
+        if (!postToCheck) return false;
+        switch (postTypeFilter) {
+            case 'all': return true;
+            case 'text': return postToCheck.type === 'text';
+            case 'image': return postToCheck.type === 'media' && !postToCheck.isVideo;
+            case 'video': return postToCheck.type === 'media' && postToCheck.isVideo;
+            case 'poll': return postToCheck.type === 'poll';
+            case 'flow': return postToCheck.isFlow === true;
+            default: return true;
+        }
+    })
+    .sort((a, b) => {
+        const postA = a.type === 'relay' ? a.originalPost : a;
+        const postB = b.type === 'relay' ? b.originalPost : b;
+
+        switch (sortBy) {
+            case 'latest':
+                return (postB.createdAt?.toDate() || 0) - (postA.createdAt?.toDate() || 0);
+            case 'oldest':
+                return (postA.createdAt?.toDate() || 0) - (postB.createdAt?.toDate() || 0);
+            case 'popular':
+                return (postB.likes?.length || 0) - (postA.likes?.length || 0);
+            default:
+                return 0;
+        }
+    });
 
   if (loading) {
     return <div className="flex flex-col min-h-screen items-center justify-center text-accent-cyan">Loading profile...</div>;
@@ -92,13 +146,13 @@ export default function UserProfilePage() {
   const isPremium = profile.isPremium && (!profile.premiumUntil || profile.premiumUntil.toDate() > new Date());
   const isDeveloper = Array.isArray(profile.role) && (profile.role.includes('developer') || profile.role.includes('founder'));
   const accolades = profile.accolades || [];
+  const isOwnProfile = firebaseUser?.uid === uid;
 
   
   return (
     <>
     <div className="flex flex-col w-full pb-24">
       {showFollowList && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" onClick={() => setShowFollowList(null)} />}
-      {/* Banner */}
       <div className="relative h-40 md:h-60 w-full rounded-2xl overflow-hidden mb-8 glass-card cursor-pointer" onClick={() => setFullScreenImage(profile.banner_url)}>
         {profile.banner_url ? (
           <img
@@ -110,7 +164,6 @@ export default function UserProfilePage() {
           <div className="absolute inset-0 w-full h-full bg-gradient-to-tr from-accent-pink/40 to-accent-cyan/40" />
         )}
       </div>
-      {/* Profile Card */}
       <div className="mx-auto w-full max-w-2xl glass-card p-6 -mt-24 flex flex-col items-center text-center">
         <div className="w-32 h-32 rounded-full bg-accent-cyan border-4 border-accent-pink shadow-fab-glow mb-4 overflow-hidden -mt-20 cursor-pointer" onClick={() => setFullScreenImage(profile.avatar_url)}>
           {profile.avatar_url ? (
@@ -132,15 +185,10 @@ export default function UserProfilePage() {
         
         {accolades.length > 0 && (
             <div className="flex flex-wrap items-center justify-center gap-2 my-4">
-                {accolades.includes('top_1_follower') && <AccoladeBadge type="top_1_follower" />}
-                {accolades.includes('top_2_follower') && <AccoladeBadge type="top_2_follower" />}
-                {accolades.includes('top_3_follower') && <AccoladeBadge type="top_3_follower" />}
-                {accolades.includes('social_butterfly') && <AccoladeBadge type="social_butterfly" />}
-                {accolades.includes('vibe_starter') && <AccoladeBadge type="vibe_starter" />}
+                {accolades.map((acc:string, i:number) => <AccoladeBadge key={i} type={acc} />)}
             </div>
         )}
 
-        {/* Stats */}
         <div className="flex justify-center gap-8 my-4 w-full">
           <div className="text-center">
             <span className="font-bold text-lg text-accent-cyan">{postCount}</span>
@@ -156,7 +204,6 @@ export default function UserProfilePage() {
           </button>
         </div>
 
-        {/* Bio and Details */}
         <div className="mt-4 w-full max-w-lg">
             <p className="text-gray-400 text-center mb-4 text-sm">{profile.bio || "This user hasn't set a bio yet."}</p>
             <div className="flex justify-center flex-wrap gap-x-4 gap-y-2 text-xs text-gray-500">
@@ -166,47 +213,84 @@ export default function UserProfilePage() {
             </div>
         </div>
 
-        {/* Follow/Unfollow button for other users */}
-        {firebaseUser && firebaseUser.uid !== uid && (
+        {!isOwnProfile && firebaseUser && (
           <div className="mt-6">
             <FollowButton profileUser={profile} currentUser={firebaseUser} />
           </div>
         )}
       </div>
-      {/* Tabs */}
       <div className="flex justify-center gap-4 my-8">
         <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "posts" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("posts")}>Posts</button>
-        <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "likes" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("likes")}>Likes</button>
+        {isOwnProfile && <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "likes" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("likes")}>Likes</button>}
       </div>
-      {/* Tab Content */}
       <div className="flex-1 flex flex-col items-center justify-center w-full">
         {activeTab === "posts" && (
-          userPosts.length > 0 ? (
-            <div className="w-full max-w-xl flex flex-col gap-6">
-              {userPosts.map((post) => (
-                <PostCard key={post.id} post={post} />
-              ))}
+          <div className="w-full max-w-xl flex flex-col gap-6">
+             <div className="flex justify-center gap-2 p-1 rounded-full bg-black/30">
+                <button onClick={() => { setPostTypeFilter('all'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'all' ? 'bg-white/10 text-white' : 'text-gray-400'}`}>All</button>
+                <button onClick={() => { setPostTypeFilter('text'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'text' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><AlignLeft size={14} className="inline" /></button>
+                <button onClick={() => { setPostTypeFilter('image'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'image' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><Image size={14} className="inline" /></button>
+                <button onClick={() => { setPostTypeFilter('video'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'video' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><Video size={14} className="inline" /></button>
+                <button onClick={() => { setPostTypeFilter('poll'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'poll' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><BarChart3 size={14} className="inline" /></button>
+                <button onClick={() => { setPostTypeFilter('flow'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'flow' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><FlowIcon className="w-4 h-4 inline" /></button>
             </div>
-          ) : (
-            <div className="text-gray-400 text-center mt-16">
-              <div className="text-4xl mb-2">🪐</div>
-              <div className="text-lg font-semibold">No posts yet</div>
-              <div className="text-sm">Their posts will appear here!</div>
+
+            {postTypeFilter !== 'all' && (
+                <div className="flex justify-center gap-2 p-1 rounded-full bg-black/20 text-xs">
+                    {['text', 'image', 'poll'].includes(postTypeFilter) && (
+                        <>
+                            <button onClick={() => setSortBy('latest')} className={`px-3 py-1 rounded-full font-bold transition-colors flex items-center gap-1 ${sortBy === 'latest' ? 'bg-accent-cyan/20 text-accent-cyan' : 'text-gray-400'}`}><ArrowUp size={12}/>Latest</button>
+                            <button onClick={() => setSortBy('oldest')} className={`px-3 py-1 rounded-full font-bold transition-colors flex items-center gap-1 ${sortBy === 'oldest' ? 'bg-accent-cyan/20 text-accent-cyan' : 'text-gray-400'}`}><ArrowDown size={12}/>Oldest</button>
+                        </>
+                    )}
+                    {['video', 'flow'].includes(postTypeFilter) && (
+                        <>
+                            <button onClick={() => setSortBy('latest')} className={`px-3 py-1 rounded-full font-bold transition-colors flex items-center gap-1 ${sortBy === 'latest' ? 'bg-accent-cyan/20 text-accent-cyan' : 'text-gray-400'}`}><ArrowUp size={12}/>Latest</button>
+                            <button onClick={() => setSortBy('oldest')} className={`px-3 py-1 rounded-full font-bold transition-colors flex items-center gap-1 ${sortBy === 'oldest' ? 'bg-accent-cyan/20 text-accent-cyan' : 'text-gray-400'}`}><ArrowDown size={12}/>Oldest</button>
+                            <button onClick={() => setSortBy('popular')} className={`px-3 py-1 rounded-full font-bold transition-colors flex items-center gap-1 ${sortBy === 'popular' ? 'bg-accent-cyan/20 text-accent-cyan' : 'text-gray-400'}`}><TrendingUp size={12}/>Popular</button>
+                        </>
+                    )}
+                </div>
+            )}
+
+            {sortedAndFilteredPosts.length > 0 ? (
+              sortedAndFilteredPosts.map((post) => (
+                <PostCard key={post.id} post={post} collectionName="posts"/>
+              )))
+             : (
+            <div className="text-gray-400 text-center mt-16 flex flex-col items-center">
+                <div className="text-4xl mb-4">📝</div>
+                <div className="text-lg font-semibold mb-2">No Posts Yet</div>
+                {isOwnProfile ? (
+                    <>
+                        <p className="text-sm mb-6">Your creative journey starts here. What will you share?</p>
+                        <Link href="/create" className="btn btn-primary btn-cta">
+                            Create Your First Post
+                        </Link>
+                    </>
+                ) : (
+                    <p className>Check back later to see what {profile.name} shares!</p>
+                )}
             </div>
-          )
+          )}
+          </div>
         )}
-        {activeTab === "likes" && (
+        {activeTab === "likes" && isOwnProfile && (
             starredPosts.length > 0 ? (
                 <div className="w-full max-w-xl flex flex-col gap-6">
-                    {starredPosts.map((post) => (
-                        <PostCard key={post.id} post={post} />
+                    {starredPosts.map((post: any) => (
+                        <PostCard key={post.id} post={post} collectionName={post.collectionName} />
                     ))}
                 </div>
             ) : (
-                <div className="text-gray-400 text-center mt-16">
-                    <div className="text-4xl mb-2"><Heart/></div>
-                    <div className="text-lg font-semibold">No liked posts</div>
-                    <div className="text-sm">Their liked posts will appear here.</div>
+                <div className="text-gray-400 text-center mt-16 flex flex-col items-center">
+                    <div className="text-4xl mb-4"><Heart/></div>
+                    <div className="text-lg font-semibold mb-2">No Liked Posts</div>
+                    {isOwnProfile ? (
+                        <p className="text-sm">Posts you like will appear here. Go on, spread the love!</p>
+                    ) : (
+                        <p className="text-sm">{profile.name} hasn't liked any posts yet.</p>
+                    )}
                 </div>
             )
         )}

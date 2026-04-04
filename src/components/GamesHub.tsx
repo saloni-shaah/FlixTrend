@@ -9,7 +9,6 @@ import { Game2048 } from './games/2048';
 import { Match3 } from './games/Match3';
 import { BrickBreaker } from './games/BrickBreaker';
 import { CricketChallenge } from './games/CricketChallenge';
-import AdModal from './AdModal';
 
 const games = [
     {
@@ -52,20 +51,9 @@ const games = [
 
 export function GamesHub() {
     const [activeGame, setActiveGame] = useState<any>(null);
-    const [showAd, setShowAd] = useState(false);
-    const [gameToStart, setGameToStart] = useState<any>(null);
 
     const handleSelectGame = (game: any) => {
-        setGameToStart(game);
-        setShowAd(true);
-    }
-    
-    const startGame = () => {
-        setShowAd(false);
-        if(gameToStart) {
-            setActiveGame(gameToStart);
-            setGameToStart(null);
-        }
+        setActiveGame(game);
     }
 
     if (activeGame) {
@@ -82,9 +70,6 @@ export function GamesHub() {
 
     return (
         <div className="w-full flex flex-col items-center">
-             {showAd && (
-                <AdModal onComplete={startGame} />
-            )}
             <h2 className="text-3xl font-headline bg-gradient-to-r from-accent-pink to-accent-green bg-clip-text text-transparent mb-8">
                 Community Games
             </h2>
