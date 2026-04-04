@@ -1,7 +1,6 @@
-
 "use client";
-import React from 'react';
-import { getFirestore, collection, onSnapshot, doc, updateDoc, runTransaction, serverTimestamp } from "firebase/firestore";
+import React, { useState, useEffect } from 'react';
+import { getFirestore, collection, onSnapshot, doc, runTransaction, serverTimestamp, arrayUnion, arrayRemove, writeBatch, getDoc, FieldValue } from "firebase/firestore";
 import { Repeat2, Star, Share, MessageCircle, Bookmark, Download } from "lucide-react";
 import { auth, app } from '@/utils/firebaseClient';
 import { ShareModal } from './ShareModal';
@@ -11,12 +10,19 @@ import { savePostForOffline, isPostDownloaded, removeDownloadedPost } from '@/ut
 import { cn } from "@/lib/utils";
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
+import { useUserLikes } from '@/context/UserLikesContext';
 
 const db = getFirestore(app);
 
 export function PostActions({ post, onCommentClick, isShortVibe = false, collectionName = 'posts' }: { post: any; onCommentClick: (e: React.MouseEvent) => void; isShortVibe?: boolean, collectionName?: string }) {
-    const [likes, setLikes] = React.useState(post.likes ? Object.values(post.likes).filter(v => v === true).length : 0);
-    const [userHasLiked, setUserHasLiked] = React.useState(false);
+    const [likes, setLikes] = React.useState(post.likesCount || 0);
+    
+    // --- New Like Logic State ---
+    const { likedPosts: currentYearLikes, loading: likesLoading } = useUserLikes();
+    const [isLiked, setIsLiked] = useState(false);
+    const [isLoadingLike, setIsLoadingLike] = useState(true);
+    // --- End New Like Logic State ---
+
     const [relays, setRelays] = React.useState(0);
     const [userHasRelayed, setUserHasRelayed] = React.useState(false);
     const [showShareModal, setShowShareModal] = React.useState(false);
@@ -26,50 +32,100 @@ export function PostActions({ post, onCommentClick, isShortVibe = false, collect
     const [shareCount, setShareCount] = React.useState(post.shareCount || 0);
     const currentUser = auth.currentUser;
 
-    React.useEffect(() => {
-        if (!post.id) return;
-        if (currentUser) {
-            setUserHasLiked(post.likes && post.likes[currentUser.uid]);
+    // --- New Like Logic Effect ---
+    const postDate = post.createdAt ? new Date(post.createdAt.seconds * 1000) : new Date();
+    const postYear = postDate.getFullYear();
+    const currentYear = new Date().getFullYear();
+
+    useEffect(() => {
+        if (!currentUser || likesLoading) {
+            setIsLoadingLike(true);
+            return;
         }
-    }, [post.likes, currentUser]);
+
+        setIsLoadingLike(true);
+
+        const checkLikeStatus = async () => {
+            if (postYear === currentYear) {
+                // For current year posts, the context is the source of truth.
+                setIsLiked(currentYearLikes.includes(post.id));
+                setIsLoadingLike(false);
+            } else {
+                // For posts from previous years, do a specific document read.
+                const yearlyLikesDocRef = doc(db, 'users', currentUser.uid, 'likedPosts', postYear.toString());
+                try {
+                    const docSnap = await getDoc(yearlyLikesDocRef);
+                    setIsLiked(docSnap.exists() && docSnap.data().postIds?.includes(post.id));
+                } catch (error) {
+                    console.error(`Error fetching like status for year ${postYear}:`, error);
+                    setIsLiked(false);
+                }
+                setIsLoadingLike(false);
+            }
+        };
+
+        checkLikeStatus();
+
+    }, [post.id, currentUser, currentYearLikes, likesLoading, postYear, currentYear]);
+    // --- End New Like Logic Effect ---
 
     React.useEffect(() => {
         if (!post.id) return;
+
+        const postRef = doc(db, collectionName, post.id);
+        const unsubPost = onSnapshot(postRef, (doc) => {
+            if (doc.exists()) {
+                setLikes(doc.data().likesCount || 0);
+            }
+        });
+
         const unsubRelays = onSnapshot(collection(db, collectionName, post.id, "relays"), (snap) => setRelays(snap.size));
         isPostDownloaded(post.id).then(setIsDownloaded);
 
         return () => {
+            unsubPost();
             unsubRelays();
         };
     }, [post.id, collectionName]);
 
+    // --- New Handle Like Function ---
     const handleLike = async (e: React.MouseEvent) => {
         e.stopPropagation();
         if (!currentUser) return;
-        
-        const postRef = doc(db, collectionName, post.id);
-        const userId = currentUser.uid;
 
-        const dataToUpdate = {
-            [`likes.${userId}`]: !userHasLiked
-        };
+        const optimisticLikeState = !isLiked;
+        setIsLiked(optimisticLikeState);
+        // Optimistically update the like count for immediate UI feedback
+        setLikes(likes + (optimisticLikeState ? 1 : -1));
 
-        setUserHasLiked(!userHasLiked);
-        setLikes(l => userHasLiked ? l - 1 : l + 1);
+        try {
+            const batch = writeBatch(db);
+            const yearlyLikesDocRef = doc(db, 'users', currentUser.uid, 'likedPosts', postYear.toString());
 
-        updateDoc(postRef, dataToUpdate)
-          .catch(async (serverError) => {
-            setUserHasLiked(userHasLiked);
-            setLikes(l => userHasLiked ? l + 1 : l - 1);
-            const permissionError = new FirestorePermissionError({
-              path: postRef.path,
-              operation: 'update',
-              requestResourceData: dataToUpdate,
-            });
-            errorEmitter.emit('permission-error', permissionError);
-          });
+            if (optimisticLikeState) {
+                batch.set(yearlyLikesDocRef, { 
+                    postIds: arrayUnion(post.id)
+                }, { merge: true });
+            } else {
+                batch.update(yearlyLikesDocRef, { 
+                    postIds: arrayRemove(post.id)
+                });
+            }
+
+            // Note: The logic for atomically updating the post's main likeCount 
+            // should be handled by a Cloud Function to be perfectly accurate.
+            
+            await batch.commit();
+
+        } catch (error) {
+            console.error('Error updating like status:', error);
+            // Revert UI on failure
+            setIsLiked(!optimisticLikeState);
+            setLikes(likes); // Revert the count
+        }
     };
-    
+    // --- End New Handle Like Function ---
+
     const handleRelay = async (e: React.MouseEvent) => {
         e.stopPropagation();
         if (!currentUser) return;
@@ -149,8 +205,8 @@ export function PostActions({ post, onCommentClick, isShortVibe = false, collect
                             <Repeat2 size={iconSize} />
                         </button>
                     )}
-                    <button data-like-button="true" className={cn('flex flex-col items-center gap-1.5 font-bold transition-all', userHasLiked ? 'text-yellow-400' : 'text-white', 'hover:text-yellow-400')} onClick={handleLike}>
-                        <Star size={iconSize} fill={userHasLiked ? "currentColor" : "none"} />
+                    <button data-like-button="true" disabled={isLoadingLike} className={cn('flex flex-col items-center gap-1.5 font-bold transition-all', isLiked ? 'text-yellow-400' : 'text-white', 'hover:text-yellow-400')} onClick={handleLike}>
+                        <Star size={iconSize} fill={isLiked ? "currentColor" : "none"} />
                          <span className="text-sm font-semibold">{likes}</span>
                     </button>
                     <button className={cn('flex flex-col items-center font-bold text-white transition-all', 'hover:text-accent-cyan')} onClick={(e) => { e.stopPropagation(); setShowShareModal(true); }}>
@@ -177,8 +233,8 @@ export function PostActions({ post, onCommentClick, isShortVibe = false, collect
                             <span>{relays}</span>
                         </button>
                     )}
-                    <button data-like-button="true" className={cn('flex items-center gap-1.5 font-bold transition-all text-lg', userHasLiked ? 'text-yellow-400' : textClass, 'hover:text-yellow-400')} onClick={handleLike}>
-                        <Star size={iconSize} fill={userHasLiked ? "currentColor" : "none"} />
+                    <button data-like-button="true" disabled={isLoadingLike} className={cn('flex items-center gap-1.5 font-bold transition-all text-lg', isLiked ? 'text-yellow-400' : textClass, 'hover:text-yellow-400')} onClick={handleLike}>
+                        <Star size={iconSize} fill={isLiked ? "currentColor" : "none"} />
                          <span>{likes}</span>
                     </button>
                     <button className={cn('flex items-center gap-1.5 font-bold transition-all text-lg', textClass, 'hover:text-accent-cyan')} onClick={(e) => { e.stopPropagation(); setShowShareModal(true); }}>

@@ -26,7 +26,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateComment = exports.deleteComment = exports.updatePost = exports.deleteMessage = exports.deletePost = exports.deleteUserAccount = exports.checkEmail = exports.checkPhone = exports.checkUsername = exports.updateAccolades = exports.cleanupExpiredFlashes = exports.onChatDelete = exports.onUserDelete = exports.onNewDropPrompt = exports.onNewFollower = exports.onNewMessage = exports.onCommentCreate = exports.onNewUserCreate = void 0;
+exports.decrementLikes = exports.incrementLikes = exports.updateComment = exports.deleteComment = exports.updatePost = exports.deleteMessage = exports.deletePost = exports.deleteUserAccount = exports.checkEmail = exports.checkPhone = exports.checkUsername = exports.updateAccolades = exports.cleanupExpiredFlashes = exports.onChatDelete = exports.onUserDelete = exports.onNewDropPrompt = exports.onNewFollower = exports.onNewMessage = exports.onCommentCreate = exports.onNewUserCreate = void 0;
 const app_1 = require("firebase-admin/app");
 const firestore_1 = require("firebase-admin/firestore");
 const admin = __importStar(require("firebase-admin"));
@@ -504,4 +504,32 @@ exports.updateComment = (0, https_1.onCall)(async (request) => {
     return { success: true, message: "Comment updated. Thank you!" };
 });
 __exportStar(require("./process-media"), exports);
+// Trigger: Increment likesCount when a new like is added
+exports.incrementLikes = v1.firestore
+    .document('posts/{postId}/likes/{userId}')
+    .onCreate(async (snap, context) => {
+    const { postId } = context.params;
+    const postRef = db.collection('posts').doc(postId);
+    try {
+        await postRef.update({ likesCount: firestore_1.FieldValue.increment(1) });
+        firebase_functions_1.logger.info(`Incremented likesCount for post ${postId}`);
+    }
+    catch (error) {
+        firebase_functions_1.logger.error(`Error incrementing likesCount for post ${postId}:`, error);
+    }
+});
+// Trigger: Decrement likesCount when a like is removed
+exports.decrementLikes = v1.firestore
+    .document('posts/{postId}/likes/{userId}')
+    .onDelete(async (snap, context) => {
+    const { postId } = context.params;
+    const postRef = db.collection('posts').doc(postId);
+    try {
+        await postRef.update({ likesCount: firestore_1.FieldValue.increment(-1) });
+        firebase_functions_1.logger.info(`Decremented likesCount for post ${postId}`);
+    }
+    catch (error) {
+        firebase_functions_1.logger.error(`Error decrementing likesCount for post ${postId}:`, error);
+    }
+});
 //# sourceMappingURL=index.js.map
