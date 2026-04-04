@@ -6,7 +6,6 @@ import { Play, Pause, Plus, Music, Search } from 'lucide-react';
 import { getFirestore, collection, addDoc, serverTimestamp, query, onSnapshot, orderBy, where, updateDoc, arrayUnion, doc } from 'firebase/firestore';
 import { auth, app } from '@/utils/firebaseClient';
 import { useAppState } from '@/utils/AppStateContext';
-import AdModal from './AdModal';
 
 const db = getFirestore(app);
 
@@ -266,16 +265,6 @@ export function MusicDiscovery() {
     const [showPlaylistModal, setShowPlaylistModal] = useState<any | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const { activeSong, isPlaying, playSong, pauseSong } = useAppState();
-    const [showAd, setShowAd] = useState(false);
-    const songChangeCounter = useRef(0);
-    const listeningTimer = useRef<NodeJS.Timeout | null>(null);
-
-    const startListeningTimer = () => {
-        if (listeningTimer.current) clearTimeout(listeningTimer.current);
-        listeningTimer.current = setTimeout(() => {
-            setShowAd(true);
-        }, 20 * 60 * 1000); // 20 minutes
-    };
 
     useEffect(() => {
         const q = query(collection(db, "songs"), orderBy("createdAt", "desc"));
@@ -287,27 +276,12 @@ export function MusicDiscovery() {
     }, []);
     
     const handlePlayPause = (song: any, index: number) => {
-        if (activeSong?.id !== song.id) { // This is a new song
-            songChangeCounter.current += 1;
-            if (songChangeCounter.current >= 3) {
-                setShowAd(true);
-                songChangeCounter.current = 0;
-            }
-        }
-        
         if (activeSong?.id === song.id && isPlaying) {
             pauseSong();
-            if(listeningTimer.current) clearTimeout(listeningTimer.current);
         } else {
             playSong(song, filteredSongs, index);
-            startListeningTimer();
         }
     };
-    
-    const onAdComplete = () => {
-        setShowAd(false);
-        startListeningTimer(); // Restart timer after ad
-    }
 
     const filteredSongs = searchTerm
         ? songs.filter(song =>
@@ -321,7 +295,6 @@ export function MusicDiscovery() {
 
     return (
         <div className="w-full flex flex-col items-center relative">
-            {showAd && <AdModal onComplete={onAdComplete} />}
             <h2 className="text-3xl font-headline bg-gradient-to-r from-accent-pink to-accent-green bg-clip-text text-transparent mb-6">Community Music</h2>
             
              <div className="relative mb-8 w-full max-w-lg mx-auto">

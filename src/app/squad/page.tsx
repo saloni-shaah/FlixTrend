@@ -1,8 +1,8 @@
 'use client';
-import React, { useEffect, useState, useRef, Suspense } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import { auth, app } from "@/utils/firebaseClient";
-import { getFirestore, doc, onSnapshot, collection, query, where, getCountFromServer, getDocs, orderBy, writeBatch, deleteDoc, arrayUnion, arrayRemove, serverTimestamp, setDoc } from "firebase/firestore";
-import { Cog, Compass, MapPin, User, Tag, ShieldCheck, Music, Bookmark, Heart, Folder, Download, CheckCircle, Search, Users as UsersIcon, Phone, Trophy, Award, Sparkles, Image, BarChart3, AlignLeft, Radio, Zap } from "lucide-react";
+import { getFirestore, doc, onSnapshot, collection, query, where, getDocs, orderBy, serverTimestamp, setDoc } from "firebase/firestore";
+import { Cog, MapPin, User, Tag, ShieldCheck, Heart, CheckCircle, Users as UsersIcon, Image, BarChart3, AlignLeft, Video, ArrowUp, ArrowDown, TrendingUp } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -18,6 +18,21 @@ import { CreatePostPrompt } from "@/components/CreatePostPrompt";
 
 const db = getFirestore(app);
 
+const FlowIcon = ({ className }: { className?: string }) => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+        <defs>
+            <linearGradient id="flowGradient" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="var(--accent-pink)" />
+                <stop offset="100%" stopColor="var(--accent-cyan)" />
+            </linearGradient>
+        </defs>
+        <circle cx="12" cy="12" r="12" fill="url(#flowGradient)" className="group-hover:opacity-80 transition-opacity">
+             <animate attributeName="opacity" values="0.7;1;0.7" dur="2s" repeatCount="indefinite" />
+        </circle>
+        <path d="M9.5 16V8L16.5 12L9.5 16Z" fill="white"/>
+    </svg>
+);
+
 function SquadPageContent() {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -30,6 +45,7 @@ function SquadPageContent() {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'posts');
   const [postTypeFilter, setPostTypeFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('latest');
   const [userPosts, setUserPosts] = useState<any[]>([]);
   const [starredPosts, setStarredPosts] = useState<any[]>([]);
   const [showFollowList, setShowFollowList] = useState<null | 'followers' | 'following' | 'friends'>(null);
@@ -45,10 +61,7 @@ function SquadPageContent() {
     }
 
     try {
-      // 1. Get the user's ID token.
       const idToken = await user.getIdToken();
-
-      // 2. Use the ID token to get a custom sign-in token from our API.
       const response = await fetch('/api/create-session-token', {
         headers: { Authorization: `Bearer ${idToken}` },
       });
@@ -58,14 +71,11 @@ function SquadPageContent() {
       }
 
       const { customToken } = await response.json();
-
-      // 3. Open the studio with the custom token.
       window.open(`http://studio.flixtrend.in?token=${customToken}`, '_blank');
     } catch (error) {
       console.error("Error navigating to creator studio:", error);
     }
   };
-
 
   useEffect(() => {
     const unsubAuth = auth.onAuthStateChanged(async (user) => {
@@ -111,10 +121,8 @@ function SquadPageContent() {
 
   useEffect(() => {
     if (!firebaseUser) return;
-
     const uid = firebaseUser.uid;
-
-    const postsQuery = query(collection(db, "posts"), where("userId", "==", uid), orderBy("createdAt", "desc"));
+    const postsQuery = query(collection(db, "posts"), where("userId", "==", uid));
     const unsubPosts = onSnapshot(postsQuery, (snapshot) => {
       setUserPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setPostCount(snapshot.size);
@@ -146,10 +154,35 @@ function SquadPageContent() {
     };
   }, [firebaseUser]);
 
-  const filteredUserPosts = userPosts.filter(post => {
-    if (postTypeFilter === 'all') return true;
-    return post.type === postTypeFilter;
-  });
+  const sortedAndFilteredPosts = userPosts
+    .filter(post => {
+        const postToCheck = post.type === 'relay' ? post.originalPost : post;
+        if (!postToCheck) return false;
+        switch (postTypeFilter) {
+            case 'all': return true;
+            case 'text': return postToCheck.type === 'text';
+            case 'image': return postToCheck.type === 'media' && !postToCheck.isVideo;
+            case 'video': return postToCheck.type === 'media' && postToCheck.isVideo;
+            case 'poll': return postToCheck.type === 'poll';
+            case 'flow': return postToCheck.isFlow === true;
+            default: return true;
+        }
+    })
+    .sort((a, b) => {
+        const postA = a.type === 'relay' ? a.originalPost : a;
+        const postB = b.type === 'relay' ? b.originalPost : b;
+
+        switch (sortBy) {
+            case 'latest':
+                return (postB.createdAt?.toDate() || 0) - (postA.createdAt?.toDate() || 0);
+            case 'oldest':
+                return (postA.createdAt?.toDate() || 0) - (postB.createdAt?.toDate() || 0);
+            case 'popular':
+                return (postB.likes?.length || 0) - (postA.likes?.length || 0);
+            default:
+                return 0;
+        }
+    });
 
   if (loading) {
     return <div className="flex flex-col min-h-screen items-center justify-center text-accent-cyan">Loading profile...</div>;
@@ -272,15 +305,34 @@ function SquadPageContent() {
         {activeTab === "posts" && (
           <div className="w-full max-w-xl flex flex-col gap-6">
             <div className="flex justify-center gap-2 p-1 rounded-full bg-black/30">
-              <button onClick={() => setPostTypeFilter('all')} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'all' ? 'bg-white/10 text-white' : 'text-gray-400'}`}>All</button>
-              <button onClick={() => setPostTypeFilter('text')} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'text' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><AlignLeft size={14} className="inline" /></button>
-              <button onClick={() => setPostTypeFilter('media')} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'media' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><Image size={14} className="inline" /></button>
-              <button onClick={() => setPostTypeFilter('poll')} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'poll' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><BarChart3 size={14} className="inline" /></button>
-              <button onClick={() => setPostTypeFilter('flash')} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'flash' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><Zap size={14} className="inline" /></button>
-              <button onClick={() => setPostTypeFilter('live')} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'live' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><Radio size={14} className="inline" /></button>
+                <button onClick={() => { setPostTypeFilter('all'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'all' ? 'bg-white/10 text-white' : 'text-gray-400'}`}>All</button>
+                <button onClick={() => { setPostTypeFilter('text'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'text' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><AlignLeft size={14} className="inline" /></button>
+                <button onClick={() => { setPostTypeFilter('image'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'image' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><Image size={14} className="inline" /></button>
+                <button onClick={() => { setPostTypeFilter('video'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'video' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><Video size={14} className="inline" /></button>
+                <button onClick={() => { setPostTypeFilter('poll'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'poll' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><BarChart3 size={14} className="inline" /></button>
+                <button onClick={() => { setPostTypeFilter('flow'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'flow' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><FlowIcon className="w-4 h-4 inline" /></button>
             </div>
-            {filteredUserPosts.length > 0 ? (
-              filteredUserPosts.map((post) => <PostCard key={post.id} post={post} />)
+
+            {postTypeFilter !== 'all' && (
+                <div className="flex justify-center gap-2 p-1 rounded-full bg-black/20 text-xs">
+                    {['text', 'image', 'poll'].includes(postTypeFilter) && (
+                        <>
+                            <button onClick={() => setSortBy('latest')} className={`px-3 py-1 rounded-full font-bold transition-colors flex items-center gap-1 ${sortBy === 'latest' ? 'bg-accent-cyan/20 text-accent-cyan' : 'text-gray-400'}`}><ArrowUp size={12}/>Latest</button>
+                            <button onClick={() => setSortBy('oldest')} className={`px-3 py-1 rounded-full font-bold transition-colors flex items-center gap-1 ${sortBy === 'oldest' ? 'bg-accent-cyan/20 text-accent-cyan' : 'text-gray-400'}`}><ArrowDown size={12}/>Oldest</button>
+                        </>
+                    )}
+                    {['video', 'flow'].includes(postTypeFilter) && (
+                        <>
+                            <button onClick={() => setSortBy('latest')} className={`px-3 py-1 rounded-full font-bold transition-colors flex items-center gap-1 ${sortBy === 'latest' ? 'bg-accent-cyan/20 text-accent-cyan' : 'text-gray-400'}`}><ArrowUp size={12}/>Latest</button>
+                            <button onClick={() => setSortBy('oldest')} className={`px-3 py-1 rounded-full font-bold transition-colors flex items-center gap-1 ${sortBy === 'oldest' ? 'bg-accent-cyan/20 text-accent-cyan' : 'text-gray-400'}`}><ArrowDown size={12}/>Oldest</button>
+                            <button onClick={() => setSortBy('popular')} className={`px-3 py-1 rounded-full font-bold transition-colors flex items-center gap-1 ${sortBy === 'popular' ? 'bg-accent-cyan/20 text-accent-cyan' : 'text-gray-400'}`}><TrendingUp size={12}/>Popular</button>
+                        </>
+                    )}
+                </div>
+            )}
+
+            {sortedAndFilteredPosts.length > 0 ? (
+              sortedAndFilteredPosts.map((post) => <PostCard key={post.id} post={post} />)
             ) : (
               <div className="text-gray-400 text-center mt-16">
                 <div className="text-4xl mb-2">🪐</div>

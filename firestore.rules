@@ -33,12 +33,6 @@ service cloud.firestore {
       allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
     }
 
-    // Ad Campaigns & Creatives: Public read-only
-    match /adCampaigns/{campaignId}/{documents=**} {
-        allow get, list: if true;
-        allow write: if false;
-    }
-
     // Posts: main document - now with public read
     match /posts/{postId} {
       allow get, list: if true;

@@ -11,7 +11,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { PostCard } from "@/components/PostCard";
 import { app } from "@/utils/firebaseClient";
 import { VibeSpaceLoader } from "@/components/VibeSpaceLoader";
-import AdBanner from "@/components/AdBanner";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { WelcomeAnimation } from "@/components/WelcomeAnimation";
@@ -381,12 +380,7 @@ function VibeSpaceContent() {
             ) : (
               <div className="w-full max-w-xl flex flex-col gap-4">
                 {filteredPosts.length > 0 ? filteredPosts.map((post, index) => (
-                  <React.Fragment key={post.id}>
-                    <PostCard post={post} />
-                    {(index + 1) % 5 === 0 && (
-                      <AdBanner key={`ad-${post.id}`} id={`ad-slot-${post.id}`} />
-                    )}
-                  </React.Fragment>
+                    <PostCard key={post.id} post={post} />
                 )) : (
                     <div className="text-center text-gray-400 p-8 glass-card">No posts found in this category yet.</div>
                 )}

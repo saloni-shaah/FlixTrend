@@ -3,8 +3,6 @@ import type { Metadata } from "next";
 import { Providers } from "./providers";
 import BodyStyling from "./BodyStyling";
 import MainLayout from './MainLayout'; // Import the new MainLayout
-import Script from 'next/script'; // Import the Script component
-
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://flixtrend.in';
 
@@ -93,11 +91,6 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Courgette&family=Kalam&family=Handlee&family=Patrick+Hand&family=Inter:wght@400;700&family=Space+Grotesk:wght@700&family=Italianno&family=Dancing+Script:wght@400..700&family=Great+Vibes&display=swap" rel="stylesheet" />
-        <Script
-            async
-            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT_ID}`}
-            crossOrigin="anonymous"
-        />
       </head>
       <body className="relative min-h-screen">
         <Providers>
