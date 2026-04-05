@@ -11,7 +11,6 @@
 *   **Gaming Hub:** Play a variety of mini-games directly within the platform.
 *   **Music Discovery:** Discover and listen to new music without leaving the app.
 *   **Premium Features:** Unlock exclusive features and content with a premium subscription.
-*   **Admin Dashboard:** A dedicated dashboard for administrators to manage the platform and its users.
 
 ## Getting Started
 
