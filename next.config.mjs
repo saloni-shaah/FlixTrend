@@ -1,4 +1,3 @@
-
 import withPWA from "next-pwa";
 
 const pwaConfig = {
@@ -66,12 +65,13 @@ const nextConfig = {
       bodySizeLimit: '50mb',
     },
   },
-  allowedDevOrigins: ['3000-firebase-studio-1771359278488.cluster-w5vd22whf5gmav2vgkomwtc4go.cloudworkstations.dev'],
+  allowedDevOrigins: [
+    '3000-firebase-studio-1771359278488.cluster-w5vd22whf5gmav2vgkomwtc4go.cloudworkstations.dev',
+    '9000-firebase-studio-1771359278488.cluster-w5vd22whf5gmav2vgkomwtc4go.cloudworkstations.dev',
+    '9002-firebase-studio-1771359278488.cluster-w5vd22whf5gmav2vgkomwtc4go.cloudworkstations.dev'
+  ],
   typescript: {
     ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
   },
   images: {
     remotePatterns: [
@@ -106,8 +106,6 @@ const nextConfig = {
 
 const pwaWrapper = withPWA(pwaConfig);
 
-// When PWA is disabled (e.g., in development), the pwaWrapper might not be a function.
-// This check makes the config robust for both development and production.
 const finalConfig = typeof pwaWrapper === 'function' ? pwaWrapper(nextConfig) : nextConfig;
 
 export default finalConfig;
