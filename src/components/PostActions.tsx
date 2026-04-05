@@ -16,7 +16,7 @@ const db = getFirestore(app);
 
 export function PostActions({ post, onCommentClick, isShortVibe = false, collectionName = 'posts' }: { post: any; onCommentClick: (e: React.MouseEvent) => void; isShortVibe?: boolean, collectionName?: string }) {
     const [likes, setLikes] = React.useState(post.likesCount || 0);
-    
+
     // --- New Like Logic State ---
     const { likedPosts: currentYearLikes, loading: likesLoading } = useUserLikes();
     const [isLiked, setIsLiked] = useState(false);
@@ -88,43 +88,55 @@ export function PostActions({ post, onCommentClick, isShortVibe = false, collect
         };
     }, [post.id, collectionName]);
 
-    // --- New Handle Like Function ---
+    // --- UPDATED Handle Like Function ---
     const handleLike = async (e: React.MouseEvent) => {
         e.stopPropagation();
         if (!currentUser) return;
 
         const optimisticLikeState = !isLiked;
         setIsLiked(optimisticLikeState);
-        // Optimistically update the like count for immediate UI feedback
+        // Optimistically update the like count for immediate UI feedback.
+        // The backend function provides the final source of truth via the onSnapshot listener.
         setLikes(likes + (optimisticLikeState ? 1 : -1));
 
         try {
             const batch = writeBatch(db);
+
+            // Ref to trigger the Cloud Function (increment/decrement likesCount)
+            const postLikeRef = doc(db, collectionName, post.id, 'likes', currentUser.uid);
+
+            // Ref for the user's personal list of liked posts
             const yearlyLikesDocRef = doc(db, 'users', currentUser.uid, 'likedPosts', postYear.toString());
 
             if (optimisticLikeState) {
-                batch.set(yearlyLikesDocRef, { 
+                // Create a doc in the `likes` subcollection to trigger the increment function.
+                batch.set(postLikeRef, {
+                    userId: currentUser.uid,
+                    createdAt: serverTimestamp()
+                });
+                // Add the post to the user's aggregated list of likes.
+                batch.set(yearlyLikesDocRef, {
                     postIds: arrayUnion(post.id)
                 }, { merge: true });
             } else {
-                batch.update(yearlyLikesDocRef, { 
+                // Delete the doc in the `likes` subcollection to trigger the decrement function.
+                batch.delete(postLikeRef);
+                // Remove the post from the user's aggregated list of likes.
+                batch.update(yearlyLikesDocRef, {
                     postIds: arrayRemove(post.id)
                 });
             }
 
-            // Note: The logic for atomically updating the post's main likeCount 
-            // should be handled by a Cloud Function to be perfectly accurate.
-            
             await batch.commit();
 
         } catch (error) {
             console.error('Error updating like status:', error);
-            // Revert UI on failure
+            // Revert optimistic UI updates on failure
             setIsLiked(!optimisticLikeState);
-            setLikes(likes); // Revert the count
+            setLikes(likes); // Revert to the original count from the listener
         }
     };
-    // --- End New Handle Like Function ---
+    // --- End UPDATED Handle Like Function ---
 
     const handleRelay = async (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -195,7 +207,7 @@ export function PostActions({ post, onCommentClick, isShortVibe = false, collect
     if (isShortVibe) {
         return (
             <>
-                <div className='flex flex-col items-center gap-5'>
+                <div class='flex flex-col items-center gap-5'>
                     <button className={cn('flex flex-col items-center gap-1.5 font-bold text-white transition-all', 'hover:text-brand-gold')} onClick={handleCommentButtonClick}>
                         <MessageCircle size={iconSize} />
                         <span className="text-sm font-semibold">{post.commentCount || 0}</span>
