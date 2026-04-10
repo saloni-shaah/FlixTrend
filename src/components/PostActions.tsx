@@ -1,4 +1,4 @@
-"use client";
+'use client';
 import React, { useState, useEffect } from 'react';
 import { getFirestore, collection, onSnapshot, doc, runTransaction, serverTimestamp, arrayUnion, arrayRemove, writeBatch, getDoc, FieldValue } from "firebase/firestore";
 import { Repeat2, Star, Share, MessageCircle, Bookmark, Download } from "lucide-react";
@@ -14,7 +14,7 @@ import { useUserLikes } from '@/context/UserLikesContext';
 
 const db = getFirestore(app);
 
-export function PostActions({ post, onCommentClick, isShortVibe = false, collectionName = 'posts' }: { post: any; onCommentClick: (e: React.MouseEvent) => void; isShortVibe?: boolean, collectionName?: string }) {
+export function PostActions({ post, onCommentClick, isShortVibe = false }: { post: any; onCommentClick: (e: React.MouseEvent) => void; isShortVibe?: boolean }) {
     const [likes, setLikes] = React.useState(post.likesCount || 0);
 
     // --- New Like Logic State ---
@@ -72,21 +72,21 @@ export function PostActions({ post, onCommentClick, isShortVibe = false, collect
     React.useEffect(() => {
         if (!post.id) return;
 
-        const postRef = doc(db, collectionName, post.id);
+        const postRef = doc(db, "posts", post.id);
         const unsubPost = onSnapshot(postRef, (doc) => {
             if (doc.exists()) {
                 setLikes(doc.data().likesCount || 0);
             }
         });
 
-        const unsubRelays = onSnapshot(collection(db, collectionName, post.id, "relays"), (snap) => setRelays(snap.size));
+        const unsubRelays = onSnapshot(collection(db, "posts", post.id, "relays"), (snap) => setRelays(snap.size));
         isPostDownloaded(post.id).then(setIsDownloaded);
 
         return () => {
             unsubPost();
             unsubRelays();
         };
-    }, [post.id, collectionName]);
+    }, [post.id]);
 
     // --- UPDATED Handle Like Function ---
     const handleLike = async (e: React.MouseEvent) => {
@@ -103,7 +103,7 @@ export function PostActions({ post, onCommentClick, isShortVibe = false, collect
             const batch = writeBatch(db);
 
             // Ref to trigger the Cloud Function (increment/decrement likesCount)
-            const postLikeRef = doc(db, collectionName, post.id, 'likes', currentUser.uid);
+            const postLikeRef = doc(db, "posts", post.id, 'likes', currentUser.uid);
 
             // Ref for the user's personal list of liked posts
             const yearlyLikesDocRef = doc(db, 'users', currentUser.uid, 'likedPosts', postYear.toString());
@@ -144,7 +144,7 @@ export function PostActions({ post, onCommentClick, isShortVibe = false, collect
         
         runTransaction(db, async (transaction) => {
             const userRelayRef = doc(db, 'users', currentUser.uid, 'relayedPosts', post.id);
-            const postRelayRef = doc(db, collectionName, post.id, 'relays', currentUser.uid);
+            const postRelayRef = doc(db, "posts", post.id, 'relays', currentUser.uid);
             
             const userRelayDoc = await transaction.get(userRelayRef);
 
@@ -212,11 +212,9 @@ export function PostActions({ post, onCommentClick, isShortVibe = false, collect
                         <MessageCircle size={iconSize} />
                         <span className="text-sm font-semibold">{post.commentCount || 0}</span>
                     </button>
-                    {collectionName !== 'drops' && (
-                        <button className={cn('flex flex-col items-center font-bold transition-all', userHasRelayed ? 'text-green-400' : 'text-white', 'hover:text-green-400')} onClick={handleRelay} >
-                            <Repeat2 size={iconSize} />
-                        </button>
-                    )}
+                    <button className={cn('flex flex-col items-center font-bold transition-all', userHasRelayed ? 'text-green-400' : 'text-white', 'hover:text-green-400')} onClick={handleRelay} >
+                        <Repeat2 size={iconSize} />
+                    </button>
                     <button data-like-button="true" disabled={isLoadingLike} className={cn('flex flex-col items-center gap-1.5 font-bold transition-all', isLiked ? 'text-yellow-400' : 'text-white', 'hover:text-yellow-400')} onClick={handleLike}>
                         <Star size={iconSize} fill={isLiked ? "currentColor" : "none"} />
                          <span className="text-sm font-semibold">{likes}</span>
@@ -239,12 +237,10 @@ export function PostActions({ post, onCommentClick, isShortVibe = false, collect
                         <MessageCircle size={iconSize} />
                         <span>{post.commentCount || 0}</span>
                     </button>
-                    {collectionName !== 'drops' && (
-                        <button className={cn('flex items-center gap-1.5 font-bold transition-all text-lg', userHasRelayed ? 'text-green-400' : textClass, 'hover:text-green-400')} onClick={handleRelay} >
-                            <Repeat2 size={iconSize} />
-                            <span>{relays}</span>
-                        </button>
-                    )}
+                    <button className={cn('flex items-center gap-1.5 font-bold transition-all text-lg', userHasRelayed ? 'text-green-400' : textClass, 'hover:text-green-400')} onClick={handleRelay} >
+                        <Repeat2 size={iconSize} />
+                        <span>{relays}</span>
+                    </button>
                     <button data-like-button="true" disabled={isLoadingLike} className={cn('flex items-center gap-1.5 font-bold transition-all text-lg', isLiked ? 'text-yellow-400' : textClass, 'hover:text-yellow-400')} onClick={handleLike}>
                         <Star size={iconSize} fill={isLiked ? "currentColor" : "none"} />
                          <span>{likes}</span>

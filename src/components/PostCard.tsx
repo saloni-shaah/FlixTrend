@@ -20,6 +20,7 @@ import { PostActions } from './PostActions';
 import { StreamViewer } from './StreamViewer';
 import { EditPostModal } from './squad/EditPostModal';
 import { CommentModal } from './CommentModal';
+import { useMediaViewer } from '@/context/MediaViewerContext';
 
 const db = getFirestore(app);
 const functions = getFunctions(app);
@@ -46,13 +47,14 @@ const timeAgo = (timestamp: any): string => {
     return date.toLocaleDateString('en-US', options);
 };
 
-export function PostCard({ post, isShortVibe = false, collectionName = 'posts' }: { post: any; isShortVibe?: boolean, collectionName?: string }) {
+export function PostCard({ post, isShortVibe = false, collectionName = 'posts', allPosts, postIndex }: { post: any; isShortVibe?: boolean, collectionName?: string, allPosts?: any[], postIndex?: number }) {
   const [showComments, setShowComments] = React.useState(false);
   const [showEdit, setShowEdit] = React.useState(false);
   const [pollVotes, setPollVotes] = React.useState<{ [optionIdx: number]: { count: number, voters: string[] } }>({});
   const [userPollVote, setUserPollVote] = React.useState<number | null>(null);
   const [viewCount, setViewCount] = useState(post.viewCount || 0);
   const [playVideo, setPlayVideo] = useState(false);
+  const { openViewer } = useMediaViewer();
 
   const currentUser = auth.currentUser;
   const deletePostCallable = httpsCallable(functions, 'deletePost');
@@ -121,7 +123,7 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts' }
     const contentPost = p.type === 'relay' ? p.originalPost : p;
     const initials = contentPost.displayName?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || contentPost.username?.slice(0, 2).toUpperCase() || "U";
     const mediaUrls = Array.isArray(contentPost.mediaUrl) ? contentPost.mediaUrl : (contentPost.mediaUrl ? [contentPost.mediaUrl] : []);
-    const mediaContent = (contentPost.type === "media" || collectionName === "drops") && mediaUrls.length > 0 && !isShortVibe;
+    const mediaContent = contentPost.type === "media" && mediaUrls.length > 0 && !isShortVibe;
     const defaultFontStyle = (contentPost.type === 'media' || contentPost.type === 'video') ? 'font-courgette' : 'font-body';
 
     return (
@@ -153,13 +155,6 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts' }
                     )}
                 </div>
             </div>
-
-            {contentPost.type === 'drop' && (
-                <div className="text-xs text-accent-cyan font-bold mb-2 flex items-center gap-2 p-2 bg-accent-cyan/10 rounded-lg">
-                <Sparkles size={16} />
-                <span>DROP IN RESPONSE TO: "{contentPost.promptText}"</span>
-                </div>
-            )}
 
             {contentPost.type === "live" && contentPost.livekitRoom && contentPost.status === 'live' && (
                 <div className="w-full aspect-video rounded-xl overflow-hidden mt-2">
@@ -217,7 +212,7 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts' }
                 ) : (
                     <div className={`mt-2 rounded-xl overflow-hidden w-full h-auto grid ${mediaUrls.length > 1 ? 'grid-cols-2' : 'grid-cols-1'} gap-1`}>
                         {mediaUrls.map((url: string, index: number) => (
-                        <div key={index} className="w-full h-full aspect-square overflow-hidden rounded-lg">
+                        <div key={index} className="w-full h-full aspect-square overflow-hidden rounded-lg cursor-pointer" onClick={() => openViewer(allPosts, postIndex, index)}>
                             <img src={url} alt={`post image ${index + 1}`} className="w-full h-full object-cover transition-transform hover:scale-105" />
                         </div>
                         ))}

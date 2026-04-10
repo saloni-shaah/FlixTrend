@@ -159,6 +159,14 @@ service cloud.firestore {
         allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
 
+    // Drop Polls
+    match /drop_polls/{pollId} {
+        allow read, create: if isSignedIn();
+        match /votes/{voteId} {
+            allow read, create: if isSignedIn();
+        }
+    }
+
     // Prompts
     match /prompts/current {
       allow read: if true;
