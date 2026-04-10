@@ -56,3 +56,4 @@ We welcome contributions from the community! If you'd like to contribute, please
 Thank you for your interest in FlixTrend! We're excited to see what you'll build with us. If you have any questions or feedback, feel free to reach out to our team.
 
 The future of social media is here.
+
