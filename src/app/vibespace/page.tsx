@@ -17,6 +17,7 @@ import { WelcomeAnimation } from "@/components/WelcomeAnimation";
 import { redisClient } from '@/utils/redis';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import { FlixFlameIcon } from '@/components/icons/FlixFlameIcon';
+import { MediaViewerProvider } from '@/context/MediaViewerContext';
 
 const MusicDiscovery = dynamic(() => import('@/components/MusicDiscovery').then(mod => mod.MusicDiscovery), { ssr: false });
 const FlashModal = dynamic(() => import('@/components/FlashModal'), { ssr: false });
@@ -380,7 +381,7 @@ function VibeSpaceContent() {
             ) : (
               <div className="w-full max-w-xl flex flex-col gap-4">
                 {filteredPosts.length > 0 ? filteredPosts.map((post, index) => (
-                    <PostCard key={post.id} post={post} />
+                    <PostCard key={post.id} post={post} allPosts={filteredPosts} postIndex={index} />
                 )) : (
                     <div className="text-center text-gray-400 p-8 glass-card">No posts found in this category yet.</div>
                 )}
@@ -430,7 +431,9 @@ function VibeSpaceContent() {
 export default function VibeSpacePage() {
   return (
     <Suspense fallback={<VibeSpaceLoader />}>
-      <VibeSpaceContent />
+      <MediaViewerProvider>
+        <VibeSpaceContent />
+      </MediaViewerProvider>
     </Suspense>
   );
 }

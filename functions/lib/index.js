@@ -26,7 +26,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.decrementLikes = exports.incrementLikes = exports.updateComment = exports.deleteComment = exports.updatePost = exports.deleteMessage = exports.deletePost = exports.deleteUserAccount = exports.checkEmail = exports.checkPhone = exports.checkUsername = exports.updateAccolades = exports.cleanupExpiredFlashes = exports.onChatDelete = exports.onUserDelete = exports.onNewDropPrompt = exports.onNewFollower = exports.onNewMessage = exports.onCommentCreate = exports.onNewUserCreate = void 0;
+exports.decrementLikes = exports.incrementLikes = exports.updateComment = exports.deleteComment = exports.updatePost = exports.deleteMessage = exports.deletePost = exports.deleteUserAccount = exports.checkEmail = exports.checkPhone = exports.checkUsername = exports.cleanupStaleDocuments = exports.cleanupOldDrops = exports.selectNextPrompt = exports.updateAccolades = exports.cleanupExpiredFlashes = exports.onChatDelete = exports.onUserDelete = exports.onNewDropPrompt = exports.onNewFollower = exports.onNewMessage = exports.onCommentCreate = exports.onNewUserCreate = void 0;
 const app_1 = require("firebase-admin/app");
 const firestore_1 = require("firebase-admin/firestore");
 const admin = __importStar(require("firebase-admin"));
@@ -68,6 +68,18 @@ async function sendPushNotification(userId, title, body, data = {}) {
         firebase_functions_1.logger.error(`Error sending notification to user ${userId}:`, error);
     }
 }
+async function deleteSubcollection(collectionRef) {
+    const snapshot = await collectionRef.limit(500).get();
+    if (snapshot.empty) {
+        return;
+    }
+    const batch = collectionRef.firestore.batch();
+    snapshot.docs.forEach(doc => batch.delete(doc.ref));
+    await batch.commit();
+    if (snapshot.size === 500) {
+        await deleteSubcollection(collectionRef);
+    }
+}
 // --- V1 Cloud Functions ---
 exports.onNewUserCreate = v1.auth.user().onCreate(async (user) => {
     const userRef = db.collection('users').doc(user.uid);
@@ -94,7 +106,6 @@ exports.onNewUserCreate = v1.auth.user().onCreate(async (user) => {
         firebase_functions_1.logger.error(`Error processing new user ${user.uid}:`, error);
     }
 });
-// Trigger: Update post comment count when a new comment is added
 exports.onCommentCreate = v1.firestore
     .document('posts/{postId}/comments/{commentId}')
     .onCreate(async (snap, context) => {
@@ -108,7 +119,6 @@ exports.onCommentCreate = v1.firestore
         firebase_functions_1.logger.error(`Error incrementing comment count for post ${postId}:`, error);
     }
 });
-// Trigger: New message in a chat
 exports.onNewMessage = v1.firestore
     .document('chats/{chatId}/messages/{messageId}')
     .onCreate(async (snap, context) => {
@@ -116,7 +126,6 @@ exports.onNewMessage = v1.firestore
     const message = snap.data();
     const { chatId } = context.params;
     const senderId = message.sender;
-    // For DMs, find the other participant
     if (chatId.includes('_')) {
         const recipientId = chatId.split('_').find(id => id !== senderId);
         if (recipientId) {
@@ -131,7 +140,6 @@ exports.onNewMessage = v1.firestore
         }
     }
 });
-// Trigger: New follower
 exports.onNewFollower = v1.firestore
     .document('users/{userId}/followers/{followerId}')
     .onCreate(async (snap, context) => {
@@ -141,7 +149,6 @@ exports.onNewFollower = v1.firestore
     const followerName = ((_a = followerSnap.data()) === null || _a === void 0 ? void 0 : _a.name) || "Someone";
     await sendPushNotification(userId, "New Follower!", `${followerName} is now following your squad.`, { type: 'profile', targetId: followerId });
 });
-// Trigger: New Drop Prompt
 exports.onNewDropPrompt = v1.firestore
     .document('dropPrompts/{promptId}')
     .onCreate(async (snap, context) => {
@@ -174,10 +181,7 @@ exports.onChatDelete = v1.firestore
     if (allDeletedResults.every(Boolean)) {
         firebase_functions_1.logger.info(`All participants have deleted chat ${chatId}. Purging messages.`);
         const chatMessagesRef = db.collection('chats').doc(chatId).collection('messages');
-        const messagesSnap = await chatMessagesRef.get();
-        const batch = db.batch();
-        messagesSnap.forEach(doc => batch.delete(doc.ref));
-        await batch.commit();
+        await deleteSubcollection(chatMessagesRef);
         firebase_functions_1.logger.info(`Successfully purged messages for chat ${chatId}.`);
     }
     else {
@@ -196,7 +200,6 @@ exports.cleanupExpiredFlashes = v1.pubsub.schedule('every 1 hours').onRun(async 
     const batch = db.batch();
     const deletePromises = [];
     expiredFlashesSnap.forEach(docSnap => {
-        firebase_functions_1.logger.info(`Processing expired flash: ${docSnap.id}`);
         const flashData = docSnap.data();
         batch.delete(docSnap.ref);
         if (flashData.mediaUrl) {
@@ -205,9 +208,7 @@ exports.cleanupExpiredFlashes = v1.pubsub.schedule('every 1 hours').onRun(async 
                 const filePath = decodeURIComponent(fileUrl.pathname.split('/').pop() || '');
                 if (filePath) {
                     const fileRef = storage.bucket().file(filePath);
-                    deletePromises.push(fileRef.delete().catch(err => {
-                        firebase_functions_1.logger.error(`Failed to delete storage file ${filePath} for flash ${docSnap.id}:`, err);
-                    }));
+                    deletePromises.push(fileRef.delete().catch(err => firebase_functions_1.logger.error(`Failed to delete storage file ${filePath}:`, err)));
                 }
             }
             catch (error) {
@@ -232,6 +233,7 @@ exports.updateAccolades = v1.pubsub.schedule('every 1 hours').onRun(async (conte
                 followerCount: followersSnap.size,
             };
         }));
+        // Top follower accolades
         usersWithFollowerCount.sort((a, b) => b.followerCount - a.followerCount);
         const top3 = usersWithFollowerCount.slice(0, 3);
         const topIds = top3.map(u => u.id);
@@ -250,6 +252,7 @@ exports.updateAccolades = v1.pubsub.schedule('every 1 hours').onRun(async (conte
             await db.collection('users').doc(top3[1].id).update({ accolades: firestore_1.FieldValue.arrayUnion('top_2_follower') });
         if (top3[2])
             await db.collection('users').doc(top3[2].id).update({ accolades: firestore_1.FieldValue.arrayUnion('top_3_follower') });
+        // Other accolades
         for (const user of usersWithFollowerCount) {
             const userRef = db.collection('users').doc(user.id);
             const currentAccolades = user.data.accolades || [];
@@ -264,6 +267,116 @@ exports.updateAccolades = v1.pubsub.schedule('every 1 hours').onRun(async (conte
         firebase_functions_1.logger.error("Error updating accolades:", error);
         return null;
     }
+});
+exports.selectNextPrompt = v1.pubsub.schedule('0 23 * * *').timeZone('Asia/Kolkata').onRun(async (context) => {
+    firebase_functions_1.logger.info("Running daily prompt selection function.");
+    const now = admin.firestore.Timestamp.now();
+    const yesterday = new admin.firestore.Timestamp(now.seconds - 86400, now.nanoseconds);
+    const activePromptQuery = db.collection('dropPrompts').where('expiresAt', '>', yesterday).orderBy('expiresAt', 'desc').limit(1);
+    const activePromptSnap = await activePromptQuery.get();
+    if (activePromptSnap.empty) {
+        firebase_functions_1.logger.info("No active prompt found. Cannot determine poll to process.");
+        return;
+    }
+    const activePrompt = activePromptSnap.docs[0];
+    const pollQuery = db.collection('drop_polls').where('promptId', '==', activePrompt.id).limit(1);
+    const pollSnap = await pollQuery.get();
+    if (pollSnap.empty) {
+        firebase_functions_1.logger.warn("No poll found for the active prompt. No new prompt will be created.");
+        return;
+    }
+    const pollDoc = pollSnap.docs[0];
+    const poll = pollDoc.data();
+    const votesSnap = await pollDoc.ref.collection('votes').get();
+    let winnerText = poll.options[0].text; // Default to first option
+    if (!votesSnap.empty) {
+        const voteCounts = new Map();
+        votesSnap.forEach(voteDoc => {
+            const vote = voteDoc.data();
+            voteCounts.set(vote.optionIdx, (voteCounts.get(vote.optionIdx) || 0) + 1);
+        });
+        const winnerIdx = [...voteCounts.entries()].reduce((a, e) => e[1] > a[1] ? e : a)[0];
+        winnerText = poll.options[winnerIdx].text;
+    }
+    await createNewPrompt(winnerText);
+    firebase_functions_1.logger.info(`Cleaning up poll ${pollDoc.id} and its votes.`);
+    await deleteSubcollection(pollDoc.ref.collection('votes'));
+    const batch = db.batch();
+    batch.delete(activePrompt.ref);
+    batch.delete(pollDoc.ref);
+    await batch.commit();
+    firebase_functions_1.logger.info("Successfully selected new prompt and cleaned up old documents.");
+});
+async function createNewPrompt(text) {
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    await db.collection('dropPrompts').add({
+        text: text,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        expiresAt: admin.firestore.Timestamp.fromDate(expiresAt),
+    });
+    firebase_functions_1.logger.info(`New prompt created: "${text}"`);
+}
+exports.cleanupOldDrops = v1.pubsub.schedule('0 23 * * *').timeZone('Asia/Kolkata').onRun(async (context) => {
+    firebase_functions_1.logger.info("Running weekly cleanup of old drops.");
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const timestamp = admin.firestore.Timestamp.fromDate(sevenDaysAgo);
+    const oldDropsQuery = db.collection('drops').where('createdAt', '<=', timestamp);
+    const oldDropsSnap = await oldDropsQuery.get();
+    if (oldDropsSnap.empty) {
+        firebase_functions_1.logger.info("No old drops to clean up.");
+        return;
+    }
+    const bucket = storage.bucket();
+    const deletePromises = [];
+    oldDropsSnap.forEach(doc => {
+        const drop = doc.data();
+        if (drop.mediaUrl && Array.isArray(drop.mediaUrl)) {
+            drop.mediaUrl.forEach((url) => {
+                var _a;
+                try {
+                    const filePath = (_a = new URL(url).pathname.split('/').pop()) === null || _a === void 0 ? void 0 : _a.split('?')[0];
+                    if (filePath) {
+                        deletePromises.push(bucket.file(decodeURIComponent(filePath)).delete().catch(err => firebase_functions_1.logger.error("Failed to delete storage file:", err)));
+                    }
+                }
+                catch (e) {
+                    firebase_functions_1.logger.warn(`Could not parse or delete storage URL ${url}:`, e);
+                }
+            });
+        }
+        deletePromises.push(doc.ref.delete());
+    });
+    await Promise.all(deletePromises);
+    firebase_functions_1.logger.info(`Cleanup complete. Deleted ${oldDropsSnap.size} old drops.`);
+});
+exports.cleanupStaleDocuments = v1.pubsub.schedule('30 23 * * *').timeZone('Asia/Kolkata').onRun(async (context) => {
+    firebase_functions_1.logger.info("Running cleanup for documents older than 48 hours.");
+    const fortyEightHoursAgo = new Date();
+    fortyEightHoursAgo.setHours(fortyEightHoursAgo.getHours() - 48);
+    const timestamp = admin.firestore.Timestamp.fromDate(fortyEightHoursAgo);
+    // Cleanup old drop prompts
+    const oldPromptsQuery = db.collection('dropPrompts').where('createdAt', '<=', timestamp);
+    const oldPromptsSnap = await oldPromptsQuery.get();
+    if (!oldPromptsSnap.empty) {
+        const batch = db.batch();
+        oldPromptsSnap.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+        firebase_functions_1.logger.info(`Deleted ${oldPromptsSnap.size} old drop prompts.`);
+    }
+    // Cleanup old drop polls
+    const oldPollsQuery = db.collection('drop_polls').where('createdAt', '<=', timestamp);
+    const oldPollsSnap = await oldPollsQuery.get();
+    if (!oldPollsSnap.empty) {
+        const deletePromises = oldPollsSnap.docs.map(doc => deleteSubcollection(doc.ref.collection('votes')));
+        await Promise.all(deletePromises);
+        const batch = db.batch();
+        oldPollsSnap.docs.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+        firebase_functions_1.logger.info(`Deleted ${oldPollsSnap.size} old drop polls.`);
+    }
+    return null;
 });
 // --- V2 Callable Functions ---
 exports.checkUsername = (0, https_1.onCall)(async (request) => {
@@ -376,16 +489,6 @@ exports.deletePost = (0, https_1.onCall)(async (request) => {
         throw new https_1.HttpsError("permission-denied", "You do not have permission to delete this post.");
     }
     try {
-        const deleteSubcollection = async (collectionRef) => {
-            const snapshot = await collectionRef.limit(500).get();
-            if (snapshot.empty)
-                return;
-            const subBatch = db.batch();
-            snapshot.docs.forEach(doc => subBatch.delete(doc.ref));
-            await subBatch.commit();
-            if (snapshot.size === 500)
-                await deleteSubcollection(collectionRef);
-        };
         await deleteSubcollection(postRef.collection('comments'));
         await deleteSubcollection(postRef.collection('stars'));
         await deleteSubcollection(postRef.collection('relays'));
@@ -503,8 +606,6 @@ exports.updateComment = (0, https_1.onCall)(async (request) => {
     await commentRef.update({ text: newText.trim() });
     return { success: true, message: "Comment updated. Thank you!" };
 });
-__exportStar(require("./process-media"), exports);
-// Trigger: Increment likesCount when a new like is added
 exports.incrementLikes = v1.firestore
     .document('posts/{postId}/likes/{userId}')
     .onCreate(async (snap, context) => {
@@ -518,7 +619,6 @@ exports.incrementLikes = v1.firestore
         firebase_functions_1.logger.error(`Error incrementing likesCount for post ${postId}:`, error);
     }
 });
-// Trigger: Decrement likesCount when a like is removed
 exports.decrementLikes = v1.firestore
     .document('posts/{postId}/likes/{userId}')
     .onDelete(async (snap, context) => {
@@ -532,4 +632,5 @@ exports.decrementLikes = v1.firestore
         firebase_functions_1.logger.error(`Error decrementing likesCount for post ${postId}:`, error);
     }
 });
+__exportStar(require("./process-media"), exports);
 //# sourceMappingURL=index.js.map

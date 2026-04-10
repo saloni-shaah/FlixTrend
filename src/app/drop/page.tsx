@@ -4,11 +4,11 @@ import { useRouter } from 'next/navigation';
 import { getFirestore, collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { auth, app } from '@/utils/firebaseClient';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { Sparkles, Clock, ArrowLeft, Archive } from 'lucide-react';
+import { Sparkles, Clock, CircleDollarSign } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { PostCard } from '@/components/PostCard';
+import { DropCard } from '@/components/drop/DropCard';
+import { DropPollCard } from '@/components/drop/DropPollCard';
 import { VibeSpaceLoader } from '@/components/VibeSpaceLoader';
-import Link from 'next/link';
 
 const db = getFirestore(app);
 
@@ -20,7 +20,6 @@ function CountdownTimer({ expiryDate }: { expiryDate: Date }) {
       const newTimeLeft = expiryDate.getTime() - Date.now();
       if (newTimeLeft <= 0) {
         clearInterval(timer);
-        // Optionally, trigger a refresh or state update here
       }
       setTimeLeft(newTimeLeft);
     }, 1000);
@@ -47,6 +46,7 @@ function CountdownTimer({ expiryDate }: { expiryDate: Date }) {
 function DropPageContent() {
   const [prompt, setPrompt] = useState<{ id: string; text: string; expiresAt: Date } | null>(null);
   const [drops, setDrops] = useState<any[]>([]);
+  const [poll, setPoll] = useState<any | null>(null);
   const [userHasPosted, setUserHasPosted] = useState(false);
   const [loading, setLoading] = useState(true);
   
@@ -81,16 +81,25 @@ function DropPageContent() {
             };
             setPrompt(currentPrompt);
 
+            // Check for a poll for this prompt
+            const pollQuery = query(collection(db, 'drop_polls'), where('promptId', '==', currentPrompt.id), limit(1));
+            const pollSnap = await getDocs(pollQuery);
+            if (!pollSnap.empty) {
+                setPoll({ id: pollSnap.docs[0].id, ...pollSnap.docs[0].data() });
+            } else {
+                setPoll(null);
+            }
+
+            // Check if user has posted
             const dropQuery = query(
                 collection(db, 'drops'), 
                 where('userId', '==', user.uid),
                 where('promptId', '==', currentPrompt.id)
             );
             const dropSnap = await getDocs(dropQuery);
-            const hasPosted = !dropSnap.empty;
-            setUserHasPosted(hasPosted);
+            setUserHasPosted(!dropSnap.empty);
             
-            // Always fetch all drops for the current prompt to show the feed
+            // Fetch all drops
             const allDropsQuery = query(
                 collection(db, 'drops'), 
                 where('promptId', '==', currentPrompt.id),
@@ -111,7 +120,7 @@ function DropPageContent() {
 
   const handleCreateDrop = () => {
     if (prompt) {
-      router.push(`/create/drop?promptId=${prompt.id}`);
+      router.push(`/drop/create?promptId=${prompt.id}`);
     }
   };
 
@@ -145,10 +154,26 @@ function DropPageContent() {
             <CountdownTimer expiryDate={prompt.expiresAt} />
         </div>
 
+        {poll && (
+            <div className="mb-6">
+                <DropPollCard poll={poll} />
+            </div>
+        )}
+
         {userHasPosted ? (
             <div className="flex flex-col gap-6">
+                {!poll && (
+                    <div className="mb-6 text-center">
+                         <button
+                            onClick={() => router.push(`/drop/create?promptId=${prompt.id}&type=poll`)}
+                            className="btn-glass bg-accent-green/90 font-bold py-3 px-8 rounded-full transition-transform hover:scale-105 text-lg flex items-center gap-2 mx-auto"
+                         >
+                            <CircleDollarSign size={20}/> Conduct Tomorrow's Poll
+                         </button>
+                    </div>
+                )}
                 {drops.length > 0 ? (
-                    drops.map(drop => <PostCard key={drop.id} post={drop} collectionName="drops" />)
+                    drops.map(drop => <DropCard key={drop.id} post={drop} />)
                 ) : (
                      <div className="text-center text-gray-400 p-8 glass-card">
                         <p>No drops have been submitted yet.</p>
