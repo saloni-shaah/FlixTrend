@@ -1,4 +1,4 @@
-"use client";
+'use client';
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -38,7 +38,6 @@ export default function UserProfilePage() {
   const [followers, setFollowers] = useState(0);
   const [following, setFollowing] = useState(0);
   const [userPosts, setUserPosts] = useState<any[]>([]);
-  const [starredPosts, setStarredPosts] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("posts");
   const [postTypeFilter, setPostTypeFilter] = useState('all');
   const [sortBy, setSortBy] = useState('latest');
@@ -81,27 +80,10 @@ export default function UserProfilePage() {
     if (!uid) return;
     const unsubFollowers = onSnapshot(collection(db, "users", uid, "followers"), snap => setFollowers(snap.size));
     const unsubFollowing = onSnapshot(collection(db, "users", uid, "following"), snap => setFollowing(snap.size));
-    
-    let unsubStarred = () => {};
-
-    if (firebaseUser?.uid === uid) {
-      const q = query(collection(db, "users", uid, "starredPosts"), orderBy("starredAt", "desc"));
-      unsubStarred = onSnapshot(q, async (snapshot) => {
-          const starred = await Promise.all(snapshot.docs.map(async docSnap => {
-              const postData = docSnap.data();
-              const postDoc = await getDoc(doc(db, postData.postCollection, postData.postId));
-              return postDoc.exists() ? { ...postDoc.data(), id: postDoc.id, collectionName: postData.postCollection } : null;
-          }));
-          setStarredPosts(starred.filter(p => p !== null));
-      });
-    } else {
-      setStarredPosts([]);
-    }
 
     return () => {
       unsubFollowers();
       unsubFollowing();
-      unsubStarred();
     }
   }, [uid, firebaseUser]);
 
@@ -221,7 +203,6 @@ export default function UserProfilePage() {
       </div>
       <div className="flex justify-center gap-4 my-8">
         <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "posts" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("posts")}>Posts</button>
-        {isOwnProfile && <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "likes" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("likes")}>Likes</button>}
       </div>
       <div className="flex-1 flex flex-col items-center justify-center w-full">
         {activeTab === "posts" && (
@@ -274,25 +255,6 @@ export default function UserProfilePage() {
             </div>
           )}
           </div>
-        )}
-        {activeTab === "likes" && isOwnProfile && (
-            starredPosts.length > 0 ? (
-                <div className="w-full max-w-xl flex flex-col gap-6">
-                    {starredPosts.map((post: any) => (
-                        <PostCard key={post.id} post={post} collectionName={post.collectionName} />
-                    ))}
-                </div>
-            ) : (
-                <div className="text-gray-400 text-center mt-16 flex flex-col items-center">
-                    <div className="text-4xl mb-4"><Heart/></div>
-                    <div className="text-lg font-semibold mb-2">No Liked Posts</div>
-                    {isOwnProfile ? (
-                        <p className="text-sm">Posts you like will appear here. Go on, spread the love!</p>
-                    ) : (
-                        <p className="text-sm">{profile.name} hasn't liked any posts yet.</p>
-                    )}
-                </div>
-            )
         )}
       </div>
       {showFollowList && uid && firebaseUser && (
