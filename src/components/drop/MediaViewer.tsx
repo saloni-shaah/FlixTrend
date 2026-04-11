@@ -78,6 +78,7 @@ export function MediaViewer({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
+        onContextMenu={(e) => e.preventDefault()} // Prevent right-click context menu
       >
         {/* Main Content Area */}
         <div className="relative w-full h-full flex items-center justify-center" onDoubleClick={handleDoubleClick}>
@@ -108,6 +109,7 @@ export function MediaViewer({
                 <video
                   src={currentMediaUrl}
                   controls
+                  controlsList="nodownload" // Prevent download option in controls
                   autoPlay
                   playsInline
                   preload="metadata"
@@ -119,6 +121,7 @@ export function MediaViewer({
                   src={currentMediaUrl}
                   className="max-h-[85vh] w-auto object-contain shadow-2xl rounded-lg"
                   alt={`Media ${currentMediaIndex + 1} of ${media.length}`}
+                  draggable={false} // Prevent dragging image
                 />
               )}
               <AnimatePresence>

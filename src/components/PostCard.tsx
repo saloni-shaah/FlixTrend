@@ -20,7 +20,7 @@ import { PostActions } from './PostActions';
 import { StreamViewer } from './StreamViewer';
 import { EditPostModal } from './squad/EditPostModal';
 import { CommentModal } from './CommentModal';
-import { useMediaViewer } from '@/context/MediaViewerContext';
+import { FullScreenImageViewer } from './FullScreenImageViewer';
 
 const db = getFirestore(app);
 const functions = getFunctions(app);
@@ -54,7 +54,7 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
   const [userPollVote, setUserPollVote] = React.useState<number | null>(null);
   const [viewCount, setViewCount] = useState(post.viewCount || 0);
   const [playVideo, setPlayVideo] = useState(false);
-  const { openViewer } = useMediaViewer();
+  const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
 
   const currentUser = auth.currentUser;
   const deletePostCallable = httpsCallable(functions, 'deletePost');
@@ -212,8 +212,9 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
                 ) : (
                     <div className={`mt-2 rounded-xl overflow-hidden w-full h-auto grid ${mediaUrls.length > 1 ? 'grid-cols-2' : 'grid-cols-1'} gap-1`}>
                         {mediaUrls.map((url: string, index: number) => (
-                        <div key={index} className="w-full h-full aspect-square overflow-hidden rounded-lg cursor-pointer" onClick={() => openViewer(allPosts, postIndex, index)}>
-                            <img src={url} alt={`post image ${index + 1}`} className="w-full h-full object-cover transition-transform hover:scale-105" />
+                        <div key={index} className="group relative w-full h-full aspect-square overflow-hidden rounded-lg cursor-pointer" onClick={() => setFullScreenImage(url)}>
+                            <img src={url} alt={`post image ${index + 1}`} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                             <div className="absolute inset-0" onContextMenu={(e) => e.preventDefault()}></div>
                         </div>
                         ))}
                     </div>
@@ -341,6 +342,7 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
       {showComments && <CommentModal postId={post.id} postAuthorId={post.userId} onClose={() => setShowComments(false)} post={post} collectionName={collectionName} />}
 
     </motion.div>
+    <FullScreenImageViewer imageUrl={fullScreenImage} onClose={() => setFullScreenImage(null)} />
     </>
   );
 }

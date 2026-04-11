@@ -47,6 +47,7 @@ export function PlayerModal({ post, onClose }: { post: any; onClose: () => void 
                 exit={{ opacity: 0 }}
                 className="fixed inset-0 z-[110] bg-black/90 flex flex-col items-center justify-center"
                 onClick={onClose}
+                onContextMenu={(e) => e.preventDefault()} // Prevent right-click
             >
                  <button onClick={onClose} className="absolute top-4 right-4 z-20 p-2 text-white bg-black/50 rounded-full">
                     <X size={24} />
@@ -60,6 +61,7 @@ export function PlayerModal({ post, onClose }: { post: any; onClose: () => void 
                                 className="w-full h-full object-contain" 
                                 autoPlay
                                 controls={false} // Hide default controls
+                                controlsList="nodownload" // Prevent download option in controls
                             />
                         )}
                         {!isPlaying && (

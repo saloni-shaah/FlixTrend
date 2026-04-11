@@ -17,7 +17,6 @@ import { WelcomeAnimation } from "@/components/WelcomeAnimation";
 import { redisClient } from '@/utils/redis';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import { FlixFlameIcon } from '@/components/icons/FlixFlameIcon';
-import { MediaViewerProvider } from '@/context/MediaViewerContext';
 
 const MusicDiscovery = dynamic(() => import('@/components/MusicDiscovery').then(mod => mod.MusicDiscovery), { ssr: false });
 const FlashModal = dynamic(() => import('@/components/FlashModal'), { ssr: false });
@@ -431,9 +430,7 @@ function VibeSpaceContent() {
 export default function VibeSpacePage() {
   return (
     <Suspense fallback={<VibeSpaceLoader />}>
-      <MediaViewerProvider>
-        <VibeSpaceContent />
-      </MediaViewerProvider>
+      <VibeSpaceContent />
     </Suspense>
   );
 }
