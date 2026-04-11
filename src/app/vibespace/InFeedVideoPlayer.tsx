@@ -152,6 +152,7 @@ export function InFeedVideoPlayer({
 
   // 🔊 mute toggle
   const toggleMute = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
 
     const video = videoRef.current;
