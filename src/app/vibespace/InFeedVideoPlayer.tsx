@@ -168,6 +168,7 @@ export function InFeedVideoPlayer({
   return (
     <div
       onClick={handleTap}
+      onContextMenu={(e) => e.preventDefault()} // Prevent right-click
       className="w-full h-[75vh] relative bg-black mt-2 rounded-xl overflow-hidden"
     >
       <OptimizedVideo
@@ -187,6 +188,7 @@ export function InFeedVideoPlayer({
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
         onEnded={() => setIsPlaying(false)}
+        controlsList="nodownload" // Prevent download option in controls
       />
 
       {/* ❤️ DOUBLE TAP LIKE */}

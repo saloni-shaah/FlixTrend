@@ -211,6 +211,12 @@ export const ShortsPlayer = forwardRef(({ post, isActive, onCommentClick }: { po
             ref={containerRef}
             className="relative w-full h-full bg-black flex items-center justify-center"
             onClick={handleContainerClick}
+            onContextMenu={(e) => e.preventDefault()} // Prevent right-click menu
+            style={{
+                WebkitTouchCallout: 'none', // Disable callout, shortcuts, etc.
+                WebkitUserSelect: 'none',   // Disable selection
+                userSelect: 'none',         // Standard property
+            }}
         >
             <OptimizedVideo
                 ref={videoRef}
@@ -218,6 +224,7 @@ export const ShortsPlayer = forwardRef(({ post, isActive, onCommentClick }: { po
                 className="w-full h-full object-contain"
                 playsInline
                 preload="auto"
+                controlsList="nodownload" // Prevent download option in controls
             />
             <AnimatePresence>
                 {showHeart && (

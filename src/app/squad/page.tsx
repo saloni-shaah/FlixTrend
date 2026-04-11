@@ -16,7 +16,6 @@ import { UserDownloads } from "@/components/squad/UserDownloads";
 import { AccoladeBadge } from "@/components/AccoladeBadge";
 import { CreatePostPrompt } from "@/components/CreatePostPrompt";
 import LikedPostsTab from "@/components/squad/LikedPostsTab";
-import { MediaViewerProvider } from "@/context/MediaViewerContext";
 
 const db = getFirestore(app);
 
@@ -358,9 +357,7 @@ function SquadPageContent() {
 export default function SquadPage() {
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <MediaViewerProvider>
-        <SquadPageContent />
-      </MediaViewerProvider>
+      <SquadPageContent />
     </Suspense>
   );
 }

@@ -49,7 +49,7 @@ const MediaItem = ({ url, ...props }: { url: string, [key: string]: any }) => {
                 {isVideo(url) ? (
                     <video src={url} muted playsInline preload="metadata" className="w-full h-full object-cover" />
                 ) : (
-                    <img src={url} alt="Drop media" className="w-full h-full object-cover" />
+                    <img src={url} alt="Drop media" className="w-full h-full object-cover" draggable={false} />
                 )}
             </div>
         </div>
@@ -69,15 +69,19 @@ export function DropCard({ post }: { post: any }) {
   const renderMediaCollage = () => {
     if (!mediaUrls || mediaUrls.length === 0) return null;
 
+    const handleContextMenu = (e: React.MouseEvent) => {
+        e.preventDefault();
+    };
+
     // Single item
     if (mediaUrls.length === 1) {
-        return <div className="mt-2 rounded-xl overflow-hidden cursor-pointer" onClick={() => { setSelectedIndex(0); setViewerOpen(true); }}><MediaItem url={mediaUrls[0]} className="relative pt-[100%]" /></div>;
+        return <div className="mt-2 rounded-xl overflow-hidden cursor-pointer" onClick={() => { setSelectedIndex(0); setViewerOpen(true); }} onContextMenu={handleContextMenu}><MediaItem url={mediaUrls[0]} className="relative pt-[100%]" /></div>;
     }
 
     // 2 items
     if (mediaUrls.length === 2) {
         return (
-            <div className="mt-2 grid grid-cols-2 gap-1 rounded-xl overflow-hidden">
+            <div className="mt-2 grid grid-cols-2 gap-1 rounded-xl overflow-hidden" onContextMenu={handleContextMenu}>
                 <div className="cursor-pointer" onClick={() => { setSelectedIndex(0); setViewerOpen(true); }}><MediaItem url={mediaUrls[0]} className="relative pt-[100%]" /></div>
                 <div className="cursor-pointer" onClick={() => { setSelectedIndex(1); setViewerOpen(true); }}><MediaItem url={mediaUrls[1]} className="relative pt-[100%]" /></div>
             </div>
@@ -87,7 +91,7 @@ export function DropCard({ post }: { post: any }) {
     // 3 items
     if (mediaUrls.length === 3) {
         return (
-            <div className="mt-2 grid grid-cols-2 grid-rows-2 gap-1 rounded-xl overflow-hidden aspect-square">
+            <div className="mt-2 grid grid-cols-2 grid-rows-2 gap-1 rounded-xl overflow-hidden aspect-square" onContextMenu={handleContextMenu}>
                 <div className="row-span-2 cursor-pointer" onClick={() => { setSelectedIndex(0); setViewerOpen(true); }}><MediaItem url={mediaUrls[0]} className="relative h-full" /></div>
                 <div className="cursor-pointer" onClick={() => { setSelectedIndex(1); setViewerOpen(true); }}><MediaItem url={mediaUrls[1]} className="relative pt-[100%]" /></div>
                 <div className="cursor-pointer" onClick={() => { setSelectedIndex(2); setViewerOpen(true); }}><MediaItem url={mediaUrls[2]} className="relative pt-[100%]" /></div>
@@ -98,7 +102,7 @@ export function DropCard({ post }: { post: any }) {
     // 4 items
     if (mediaUrls.length === 4) {
         return (
-            <div className="mt-2 grid grid-cols-2 grid-rows-2 gap-1 rounded-xl overflow-hidden aspect-square">
+            <div className="mt-2 grid grid-cols-2 grid-rows-2 gap-1 rounded-xl overflow-hidden aspect-square" onContextMenu={handleContextMenu}>
                 <div className="cursor-pointer" onClick={() => { setSelectedIndex(0); setViewerOpen(true); }}><MediaItem url={mediaUrls[0]} className="relative pt-[100%]" /></div>
                 <div className="cursor-pointer" onClick={() => { setSelectedIndex(1); setViewerOpen(true); }}><MediaItem url={mediaUrls[1]} className="relative pt-[100%]" /></div>
                 <div className="cursor-pointer" onClick={() => { setSelectedIndex(2); setViewerOpen(true); }}><MediaItem url={mediaUrls[2]} className="relative pt-[100%]" /></div>
@@ -109,7 +113,7 @@ export function DropCard({ post }: { post: any }) {
 
     // 5+ items
     return (
-        <div className="mt-2 grid grid-cols-2 grid-rows-2 gap-1 rounded-xl overflow-hidden aspect-square">
+        <div className="mt-2 grid grid-cols-2 grid-rows-2 gap-1 rounded-xl overflow-hidden aspect-square" onContextMenu={handleContextMenu}>
             <div className="cursor-pointer" onClick={() => { setSelectedIndex(0); setViewerOpen(true); }}><MediaItem url={mediaUrls[0]} className="relative pt-[100%]" /></div>
             <div className='cursor-pointer' onClick={() => { setSelectedIndex(1); setViewerOpen(true); }}><MediaItem url={mediaUrls[1]} className="relative pt-[100%]" /></div>
             <div className='cursor-pointer' onClick={() => { setSelectedIndex(2); setViewerOpen(true); }}><MediaItem url={mediaUrls[2]} className="relative pt-[100%]" /></div>
