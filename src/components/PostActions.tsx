@@ -207,7 +207,7 @@ export function PostActions({ post, onCommentClick, isShortVibe = false }: { pos
     if (isShortVibe) {
         return (
             <>
-                <div class='flex flex-col items-center gap-5'>
+                <div className='flex flex-col items-center gap-5'>
                     <button className={cn('flex flex-col items-center gap-1.5 font-bold text-white transition-all', 'hover:text-brand-gold')} onClick={handleCommentButtonClick}>
                         <MessageCircle size={iconSize} />
                         <span className="text-sm font-semibold">{post.commentCount || 0}</span>
