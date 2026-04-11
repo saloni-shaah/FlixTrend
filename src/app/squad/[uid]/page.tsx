@@ -34,9 +34,6 @@ export default function UserProfilePage() {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [firebaseUser, setFirebaseUser] = useState<any>(null);
-  const [postCount, setPostCount] = useState(0);
-  const [followers, setFollowers] = useState(0);
-  const [following, setFollowing] = useState(0);
   const [userPosts, setUserPosts] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("posts");
   const [postTypeFilter, setPostTypeFilter] = useState('all');
@@ -67,7 +64,6 @@ export default function UserProfilePage() {
     const postsQuery = query(collection(db, "posts"), where("userId", "==", uid));
     const unsubPosts = onSnapshot(postsQuery, (snap) => {
         setUserPosts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        setPostCount(snap.size);
     });
     
     return () => {
@@ -75,17 +71,6 @@ export default function UserProfilePage() {
         unsubPosts();
     };
   }, [uid]);
-
-  useEffect(() => {
-    if (!uid) return;
-    const unsubFollowers = onSnapshot(collection(db, "users", uid, "followers"), snap => setFollowers(snap.size));
-    const unsubFollowing = onSnapshot(collection(db, "users", uid, "following"), snap => setFollowing(snap.size));
-
-    return () => {
-      unsubFollowers();
-      unsubFollowing();
-    }
-  }, [uid, firebaseUser]);
 
   const sortedAndFilteredPosts = userPosts
     .filter(post => {
@@ -173,15 +158,15 @@ export default function UserProfilePage() {
 
         <div className="flex justify-center gap-8 my-4 w-full">
           <div className="text-center">
-            <span className="font-bold text-lg text-accent-cyan">{postCount}</span>
+            <span className="font-bold text-lg text-accent-cyan">{profile.Posts_Count || 0}</span>
             <span className="text-xs text-gray-400 block">Posts</span>
           </div>
           <button className="text-center" onClick={() => setShowFollowList('followers')}>
-            <span className="font-bold text-lg text-accent-cyan">{followers}</span>
+            <span className="font-bold text-lg text-accent-cyan">{profile.Follower_Count || 0}</span>
             <span className="text-xs text-gray-400 block hover:underline">Followers</span>
           </button>
           <button className="text-center" onClick={() => setShowFollowList('following')}>
-            <span className="font-bold text-lg text-accent-cyan">{following}</span>
+            <span className="font-bold text-lg text-accent-cyan">{profile.Following_Count || 0}</span>
             <span className="text-xs text-gray-400 block hover:underline">Following</span>
           </button>
         </div>
