@@ -1,4 +1,4 @@
-"use client";
+'use client';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   Play, Pause, Volume2, VolumeX, Maximize, Minimize, 
@@ -7,8 +7,8 @@ import {
 import { OptimizedVideo } from '@/components/OptimizedVideo';
 import { Watermark } from '@/components/video/Watermark';
 import { TheaterModeContainer } from '@/components/video/TheaterModeContainer';
-import { doc, updateDoc, increment, getFirestore } from 'firebase/firestore';
-import { app } from '@/utils/firebaseClient';
+import { doc, updateDoc, increment, getFirestore, setDoc } from 'firebase/firestore';
+import { app, auth } from '@/utils/firebaseClient';
 
 const db = getFirestore(app);
 const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
@@ -24,6 +24,7 @@ export function LongFormVideoPlayer({ videoUrl, thumbnailUrl, postId, title }: L
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastHistoryUpdateRef = useRef<number>(0);
 
   // --- States ---
   const [isPlaying, setIsPlaying] = useState(false);
@@ -96,6 +97,37 @@ export function LongFormVideoPlayer({ videoUrl, thumbnailUrl, postId, title }: L
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
+
+    const updateWatchHistory = useCallback(async () => {
+        const user = auth.currentUser;
+        if (!user || !videoRef.current) return;
+
+        const { currentTime, duration } = videoRef.current;
+        if (duration <= 0) return;
+
+        // Update every 15 seconds or on completion
+        const now = Date.now();
+        const isComplete = currentTime >= duration - 5; // Mark complete if within 5s of the end
+        if (!isComplete && now - lastHistoryUpdateRef.current < 15000) return;
+
+        lastHistoryUpdateRef.current = now;
+
+        const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+        const historyRef = doc(db, 'users', user.uid, 'watchHistory', today);
+
+        const historyData = {
+            [postId]: {
+                lastPosition: currentTime,
+                watched: isComplete,
+                title: title,
+                videoUrl: videoUrl,
+                thumbnailUrl: thumbnailUrl,
+            }
+        };
+        await setDoc(historyRef, historyData, { merge: true });
+
+    }, [postId, title, videoUrl, thumbnailUrl]);
+
 
   // --- Effects & Listeners ---
   useEffect(() => {
@@ -197,7 +229,10 @@ export function LongFormVideoPlayer({ videoUrl, thumbnailUrl, postId, title }: L
           className="w-full h-full object-contain"
           onPlay={() => { setIsPlaying(true); logView(); }}
           onPause={() => setIsPlaying(false)}
-          onTimeUpdate={() => setCurrentTime(videoRef.current?.currentTime || 0)}
+          onTimeUpdate={() => {
+            setCurrentTime(videoRef.current?.currentTime || 0);
+            updateWatchHistory();
+          }}
           onLoadedMetadata={() => { setDuration(videoRef.current?.duration || 0); setIsLoading(false); }}
           onWaiting={() => setIsLoading(true)}
           onPlaying={() => { setIsLoading(false); setIsSeeking(false); }}

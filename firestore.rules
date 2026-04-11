@@ -177,5 +177,10 @@ service cloud.firestore {
       allow read: if true;
       allow write: if request.auth.uid == 'x04gu2AkBFVX4y6Iho6J713cJOy2';
     }
+    
+    match /playlists/{playlistId} {
+      allow list: if request.query.where.ownerId == request.auth.uid;
+      allow get, create, update, delete: if request.auth.uid == resource.data.ownerId;
+    }
   }
 }
