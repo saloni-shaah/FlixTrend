@@ -23,6 +23,13 @@ service cloud.firestore {
         allow write: if (request.auth.uid == userId) ||
                      (subcollection == 'followers' && docId == request.auth.uid && (request.method == 'create' || request.method == 'delete'));
       }
+
+      // Playlists are a subcollection of users
+      match /playlists/{playlistId} {
+        allow read: if isSignedIn();
+        allow create: if request.auth.uid == userId;
+        allow update, delete: if request.auth.uid == userId;
+      }
     }
 
     // Usernames: Enforce uniqueness and allow checking for signup.
@@ -176,11 +183,6 @@ service cloud.firestore {
     match /dropPrompts/{promptId} {
       allow read: if true;
       allow write: if request.auth.uid == 'x04gu2AkBFVX4y6Iho6J713cJOy2';
-    }
-    
-    match /playlists/{playlistId} {
-      allow list: if request.query.where.ownerId == request.auth.uid;
-      allow get, create, update, delete: if request.auth.uid == resource.data.ownerId;
     }
   }
 }

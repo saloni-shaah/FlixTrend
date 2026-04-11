@@ -130,6 +130,7 @@ export function TicTacToe() {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           className="w-full max-w-md glass-card p-8 flex flex-col items-center gap-6"
+          style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
         >
             <h2 className="text-3xl font-headline text-accent-pink">Tic-Tac-Toe</h2>
             <OfflineGame />

@@ -73,6 +73,7 @@ export default function ExploreCreatorsPage() {
                                 <motion.div 
                                     className="glass-card p-4 flex flex-col items-center gap-4 hover:border-accent-cyan transition-all cursor-pointer h-full"
                                     whileHover={{ y: -5 }}
+                                    style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
                                 >
                                     <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white font-bold text-4xl overflow-hidden shrink-0">
                                         {user.avatar_url ? (
