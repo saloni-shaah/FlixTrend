@@ -69,7 +69,7 @@ export default function ExploreCreatorsPage() {
                         animate={{ opacity: 1 }}
                     >
                         {filteredUsers.map(user => (
-                            <Link key={user.uid} href={`/squad/${user.uid}`} className="block">
+                            <Link key={user.uid} href={`/squad/${user.username}`} className="block">
                                 <motion.div 
                                     className="glass-card p-4 flex flex-col items-center gap-4 hover:border-accent-cyan transition-all cursor-pointer h-full"
                                     whileHover={{ y: -5 }}

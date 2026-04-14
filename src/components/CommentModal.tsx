@@ -166,13 +166,13 @@ export const CommentComponent = ({ comment, postId, currentUser, collectionName,
 
     return (
         <div className="flex items-start gap-3 group py-3">
-            <Link href={`/squad/${comment.userId}`} className="flex-shrink-0">
+            <Link href={`/squad/${userProfile.username}`} className="flex-shrink-0">
                 <img src={userProfile.avatar_url || '/img/default-avatar.png'} alt={userProfile.username} className="w-10 h-10 rounded-full object-cover" />
             </Link>
             <div className="flex-1">
                 <div className="flex items-start justify-between">
                     <div>
-                        <Link href={`/squad/${comment.userId}`} className="font-bold text-sm hover:underline">@{userProfile.username}</Link>
+                        <Link href={`/squad/${userProfile.username}`} className="font-bold text-sm hover:underline">@{userProfile.username}</Link>
                         <p className="text-base whitespace-pre-wrap mt-1">{comment.text}</p>
                     </div>
                     {isOwner && (
