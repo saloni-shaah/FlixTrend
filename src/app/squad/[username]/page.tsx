@@ -32,7 +32,8 @@ const POSTS_PER_PAGE = 10;
 
 export default function UserProfilePage() {
   const params = useParams();
-  const uid = typeof params?.uid === 'string' ? params.uid : Array.isArray(params?.uid) ? params.uid[0] : null;
+  const username = typeof params?.username === 'string' ? params.username : null;
+  const [uid, setUid] = useState<string | null>(null);
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [firebaseUser, setFirebaseUser] = useState<any>(null);
@@ -66,26 +67,53 @@ export default function UserProfilePage() {
     return () => unsub();
   }, []);
 
-  useEffect(() => {
-    if (uid) {
-        const docRef = doc(db, "users", uid);
-        const unsubProfile = onSnapshot(docRef, (docSnap) => {
-            setProfile(docSnap.exists() ? { uid: docSnap.id, ...docSnap.data() } : null);
-        });
-        return () => unsubProfile();
+ useEffect(() => {
+    if (!username) {
+        setLoading(false);
+        setProfile(null);
+        return;
     }
-  }, [uid]);
+
+    setLoading(true);
+    const usersCollection = collection(db, 'users');
+    const q = query(usersCollection, where('username', '==', username), limit(1));
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        if (!querySnapshot.empty) {
+            const userDoc = querySnapshot.docs[0];
+            const userData = { uid: userDoc.id, ...userDoc.data() };
+            setProfile(userData);
+            setUid(userDoc.id); // Make sure to set UID for other hooks
+        } else {
+            setProfile(null); // No user found with that username
+            setUid(null);
+        }
+        setLoading(false);
+    }, (error) => {
+        console.error("Error fetching user profile:", error);
+        setProfile(null);
+        setUid(null);
+        setLoading(false);
+    });
+
+    return () => unsubscribe(); // Cleanup listener on component unmount
+}, [username]);
 
 
   useEffect(() => {
     if (!uid) {
-        setLoading(false);
+        setUserPosts([]);
+        setHasMorePosts(false);
+        if (profile !== null) {
+            setLoading(false);
+        }
         return;
     }
     fetchInitialPosts();
   }, [uid, postTypeFilter, sortBy]);
 
   const getQuery = () => {
+    if (!uid) return null;
     let q = query(collection(db, "posts"), where("userId", "==", uid));
 
     if (postTypeFilter !== 'all') {
@@ -111,11 +139,13 @@ export default function UserProfilePage() {
   }
 
   const fetchInitialPosts = async () => {
+    const q = getQuery();
+    if (!q) return;
+
     setLoading(true);
     setUserPosts([]);      // Explicitly clear posts
     setLastVisible(null);  // Explicitly clear cursor
 
-    const q = getQuery();
     const finalQuery = query(q, limit(POSTS_PER_PAGE));
 
     try {
@@ -132,10 +162,11 @@ export default function UserProfilePage() {
   }
 
   const fetchMorePosts = async () => {
-    if (!lastVisible) return;
+    const q = getQuery();
+    if (!q || !lastVisible) return;
+
     setLoadingMore(true);
 
-    const q = getQuery();
     const finalQuery = query(q, startAfter(lastVisible), limit(POSTS_PER_PAGE));
 
     try {
@@ -153,24 +184,25 @@ export default function UserProfilePage() {
   }
 
 
-  if (loading && userPosts.length === 0) {
+  if (loading) {
     return <div className="flex flex-col min-h-screen items-center justify-center text-accent-cyan">Loading profile...</div>;
   }
+
   if (!profile) {
     return <div className="flex flex-col min-h-screen items-center justify-center text-red-400">User not found.</div>;
   }
-  
+
   const initials = profile.name?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || profile.username?.slice(0, 2).toUpperCase() || "U";
   const isPremium = profile.isPremium && (!profile.premiumUntil || profile.premiumUntil.toDate() > new Date());
   const isDeveloper = Array.isArray(profile.role) && (profile.role.includes('developer') || profile.role.includes('founder'));
   const accolades = profile.accolades || [];
   const isOwnProfile = firebaseUser?.uid === uid;
 
-  
+
   return (
     <>
     <div className="flex flex-col w-full pb-24">
-      {showFollowList && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" onClick={() => setShowFollowList(null)} />}
+      {showFollowList && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" onClick={() => setShowFollowList(null)} />} 
       <div className="relative h-40 md:h-60 w-full rounded-2xl overflow-hidden mb-8 glass-card cursor-pointer" onClick={() => setFullScreenImage(profile.banner_url)}>
         {profile.banner_url ? (
           <img
@@ -207,7 +239,7 @@ export default function UserProfilePage() {
             </div>
             <p className="text-accent-cyan font-semibold mb-1">@{profile.username || "username"}</p>
         </div>
-        
+
         <div className="w-full">
             {accolades.length > 0 && (
                 <div className="flex flex-wrap items-center justify-center gap-2 my-4">
@@ -286,7 +318,7 @@ export default function UserProfilePage() {
                         </Link>
                     </>
                 ) : (
-                    <p className>Check back later to see what {profile.name} shares!</p>
+                    <p className="text-sm">Check back later to see what {profile.name} shares!</p>
                 )}
             </div>
             )}

@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { getFirestore, collection, query, onSnapshot, doc as fsDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { getFirestore, collection, query, onSnapshot, doc as fsDoc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import { FaMusic } from "react-icons/fa";
 import { Repeat2, MapPin, Smile, MoreVertical, Edit, Trash, Eye, Sparkles, Zap, PlayCircle } from "lucide-react";
 import { auth, app } from '@/utils/firebaseClient';
@@ -55,9 +55,22 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
   const [viewCount, setViewCount] = useState(post.viewCount || 0);
   const [playVideo, setPlayVideo] = useState(false);
   const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
+  const [author, setAuthor] = useState<any>(null);
 
   const currentUser = auth.currentUser;
   const deletePostCallable = httpsCallable(functions, 'deletePost');
+
+  useEffect(() => {
+    if (post.userId) {
+        const userRef = fsDoc(db, "users", post.userId);
+        const unsubscribe = onSnapshot(userRef, (doc) => {
+            if (doc.exists()) {
+                setAuthor({ uid: doc.id, ...doc.data() });
+            }
+        });
+        return () => unsubscribe();
+    }
+  }, [post.userId]);
 
   const { totalVotes, maxVotes, maxVoteIndex } = useMemo(() => {
     if (post.type !== 'poll') return { totalVotes: 0, maxVotes: 0, maxVoteIndex: -1 };
@@ -121,7 +134,9 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
   
   const renderPostContent = (p: any) => {
     const contentPost = p.type === 'relay' ? p.originalPost : p;
-    const initials = contentPost.displayName?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || contentPost.username?.slice(0, 2).toUpperCase() || "U";
+    if (!author) return <div>Loading author...</div>; // Or a more sophisticated skeleton loader
+    
+    const initials = author.displayName?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || author.username?.slice(0, 2).toUpperCase() || "U";
     const mediaUrls = Array.isArray(contentPost.mediaUrl) ? contentPost.mediaUrl : (contentPost.mediaUrl ? [contentPost.mediaUrl] : []);
     const mediaContent = contentPost.type === "media" && mediaUrls.length > 0 && !isShortVibe;
     const defaultFontStyle = (contentPost.type === 'media' || contentPost.type === 'video') ? 'font-courgette' : 'font-body';
@@ -129,11 +144,11 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
     return (
         <>
             <div className="flex items-center gap-3 mb-2">
-                <Link href={`/squad/${contentPost.userId}`} className="flex items-center gap-2 group cursor-pointer">
+                <Link href={`/squad/${author.username}`} className="flex items-center gap-2 group cursor-pointer">
                     <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green flex items-center justify-center font-bold text-lg overflow-hidden border-2 border-accent-green group-hover:scale-105 transition-transform">
-                        {contentPost.avatar_url ? <img src={contentPost.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : <span className="text-white">{initials}</span>}
+                        {author.avatar_url ? <img src={author.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : <span className="text-white">{initials}</span>}
                     </div>
-                    <span className="font-headline text-accent-green text-sm group-hover:underline">@{contentPost.username || "user"}</span>
+                    <span className="font-headline text-accent-green text-sm group-hover:underline">@{author.username || "user"}</span>
                 </Link>
                 <div className="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
                     <span>{timeAgo(contentPost.createdAt)}</span>
@@ -292,15 +307,16 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
     )
   }
 
-  if (isShortVibe) {
+ if (isShortVibe) {
+    if (!author) return null; // Don't render if author info isn't loaded
     return (
         <div className="absolute inset-0 w-full h-full p-4 pr-8 flex items-end justify-between pointer-events-none bg-gradient-to-t from-black/60 via-black/20 to-transparent">
             <div className="flex-1 flex flex-col gap-2 self-end text-white drop-shadow-lg max-w-[calc(100%-80px)] pointer-events-auto">
-                <Link href={`/squad/${post.userId}`} className="flex items-center gap-2 group cursor-pointer w-fit">
+                <Link href={`/squad/${author.username}`} className="flex items-center gap-2 group cursor-pointer w-fit">
                     <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green flex items-center justify-center font-bold text-lg overflow-hidden border-2 border-accent-green group-hover:scale-105 transition-transform">
-                        {post.avatar_url ? <img src={post.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : <span className="text-white">{post.displayName?.[0] || 'U'}</span>}
+                        {author.avatar_url ? <img src={author.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : <span className="text-white">{author.displayName?.[0] || 'U'}</span>}
                     </div>
-                    <span className="font-headline text-white text-base group-hover:underline">@{post.username || "user"}</span>
+                    <span className="font-headline text-white text-base group-hover:underline">@{author.username || "user"}</span>
                 </Link>
                 <p className={`text-white text-sm line-clamp-3 ${post.fontStyle || 'font-body'}`}>{post.content || post.question}</p>
                  {post.song && (
@@ -326,11 +342,11 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
       viewport={{ once: true, amount: 0.2 }}
       transition={{ duration: 0.5, ease: "easeOut" }}
     >
-      {post.type === 'relay' && (
-          <div className="text-xs text-muted-foreground font-bold mb-2 flex items-center gap-2">
-              <Repeat2 size={14}/> Relayed by <Link href={`/squad/${post.userId}`} className="text-accent-cyan hover:underline">@{post.username}</Link>
-          </div>
-      )}
+        {post.type === 'relay' && author && (
+            <div className="text-xs text-muted-foreground font-bold mb-2 flex items-center gap-2">
+                <Repeat2 size={14}/> Relayed by <Link href={`/squad/${author.username}`} className="text-accent-cyan hover:underline">@{author.username}</Link>
+            </div>
+        )}
 
       {showEdit && (
         <EditPostModal post={post} onClose={() => setShowEdit(false)} />

@@ -49,7 +49,7 @@ const FlowIcon = ({ className }: { className?: string }) => (
 function NavButton({ href, icon: Icon, label }: { href: string; icon: React.ElementType; label: string; }) {
   const pathname = usePathname();
   const router = useRouter();
-  const isActive = pathname === href || (href === '/squad' && pathname.startsWith('/squad/'));
+  const isActive = pathname === href || (href.startsWith('/squad') && pathname.startsWith('/squad'));
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -72,7 +72,7 @@ function NavButton({ href, icon: Icon, label }: { href: string; icon: React.Elem
 
 export default function AppNavBar() {
   const pathname = usePathname();
-  const { activeCall, selectedChat, setSelectedChat, isFlowVideoPlaying } = useAppState();
+  const { activeCall, selectedChat, setSelectedChat, isFlowVideoPlaying, currentUserProfile } = useAppState();
   const [hasMounted, setHasMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
@@ -101,17 +101,15 @@ export default function AppNavBar() {
     };
   }, []);
 
-  const currentUser = auth.currentUser;
-  
   const isAuthPage = pathname === "/login" || pathname === "/signup" || pathname === "/";
   const isSpecialPage = ["/guest", "/about", "/privacy", "/terms", "/contact"].includes(pathname);
   const hideNav = isAuthPage || isSpecialPage || !!activeCall || pathname.startsWith('/watch');
   const hideForFlowVideo = pathname.startsWith('/flow') && isFlowVideoPlaying;
 
-
   if (!hasMounted || hideNav || hideForFlowVideo) return null;
 
   const isSignalChatView = isMobile && pathname.startsWith('/signal/') && selectedChat;
+  const squadHref = currentUserProfile ? `/squad/${currentUserProfile.username}` : '/squad';
 
   return (
     <>
@@ -131,7 +129,7 @@ export default function AppNavBar() {
             <NavButton href="/vibespace" icon={VibeSpaceIcon} label="VibeSpace" />
             <NavButton href="/flow" icon={FlowIcon} label="Flow" />
             <NavButton href="/drop" icon={DropIcon} label="Drop" />
-            <NavButton href="/squad" icon={SquadIcon} label="Squad" />
+            <NavButton href={squadHref} icon={SquadIcon} label="Squad" />
             <NavButton href="/signal" icon={MessageSquare} label="Signal" />
           </>
         )}
