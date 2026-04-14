@@ -26,7 +26,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.decrementLikes = exports.incrementLikes = exports.updateComment = exports.deleteComment = exports.updatePost = exports.deleteMessage = exports.deletePost = exports.deleteUserAccount = exports.checkEmail = exports.checkPhone = exports.checkUsername = exports.cleanupStaleDocuments = exports.cleanupOldDrops = exports.selectNextPrompt = exports.updateAccolades = exports.cleanupExpiredFlashes = exports.onChatDelete = exports.onUserDelete = exports.onNewDropPrompt = exports.onNewFollower = exports.onNewMessage = exports.onCommentCreate = exports.onNewUserCreate = void 0;
+exports.onPostDelete = exports.onPostCreate = exports.onUnfollow = exports.onFollow = exports.decrementLikes = exports.incrementLikes = exports.updateComment = exports.deleteComment = exports.updatePost = exports.deleteMessage = exports.deleteUserAccount = exports.checkEmail = exports.checkPhone = exports.checkUsername = exports.cleanupStaleDocuments = exports.cleanupOldDrops = exports.selectNextPrompt = exports.updateAccolades = exports.cleanupExpiredFlashes = exports.onChatDelete = exports.onUserDelete = exports.onNewDropPrompt = exports.onNewFollower = exports.onNewMessage = exports.onCommentCreate = exports.onNewUserCreate = void 0;
 const app_1 = require("firebase-admin/app");
 const firestore_1 = require("firebase-admin/firestore");
 const admin = __importStar(require("firebase-admin"));
@@ -84,23 +84,17 @@ async function deleteSubcollection(collectionRef) {
 exports.onNewUserCreate = v1.auth.user().onCreate(async (user) => {
     const userRef = db.collection('users').doc(user.uid);
     try {
+        // Set initial data, including the vibe_starter accolade if they have posts.
         const postSnap = await db.collection('posts').where('userId', '==', user.uid).limit(1).get();
         const accolades = [];
         if (!postSnap.empty) {
             accolades.push('vibe_starter');
         }
-        const premiumUntil = new Date();
-        premiumUntil.setMonth(premiumUntil.getMonth() + 1);
-        await userRef.set({
-            createdAt: firestore_1.FieldValue.serverTimestamp(),
-            profileComplete: false,
-            accolades: accolades,
-            isPremium: true,
-            premiumUntil: firestore_1.Timestamp.fromDate(premiumUntil)
-        }, { merge: true });
+        await userRef.set({ accolades: accolades }, { merge: true });
+        // Increment total user count.
         const appStatusRef = db.collection('app_status').doc('user_stats');
         await appStatusRef.set({ totalUsers: firestore_1.FieldValue.increment(1) }, { merge: true });
-        firebase_functions_1.logger.info(`User document created for ${user.uid}`);
+        firebase_functions_1.logger.info(`User document updated for ${user.uid} and total user count incremented.`);
     }
     catch (error) {
         firebase_functions_1.logger.error(`Error processing new user ${user.uid}:`, error);
@@ -188,7 +182,7 @@ exports.onChatDelete = v1.firestore
         firebase_functions_1.logger.info(`Chat ${chatId} still active for some participants. Not purging.`);
     }
 });
-exports.cleanupExpiredFlashes = v1.pubsub.schedule('every 1 hours').onRun(async (context) => {
+exports.cleanupExpiredFlashes = v1.pubsub.schedule('every 2 hours').onRun(async (context) => {
     firebase_functions_1.logger.info('Running expired flashes cleanup job.');
     const now = firestore_1.Timestamp.now();
     const expiredFlashesQuery = db.collection('flashes').where('expiresAt', '<=', now);
@@ -459,47 +453,6 @@ exports.deleteUserAccount = (0, https_1.onCall)(async (request) => {
         throw new https_1.HttpsError("internal", "Failed to delete account. Please try again later.");
     }
 });
-exports.deletePost = (0, https_1.onCall)(async (request) => {
-    var _a;
-    const { postId } = request.data;
-    const uid = (_a = request.auth) === null || _a === void 0 ? void 0 : _a.uid;
-    if (!uid) {
-        throw new https_1.HttpsError("unauthenticated", "You must be logged in to delete a post.");
-    }
-    const postRef = db.collection("posts").doc(postId);
-    const postDoc = await postRef.get();
-    if (!postDoc.exists) {
-        throw new https_1.HttpsError("not-found", "Post not found.");
-    }
-    const postData = postDoc.data();
-    const isOwner = postData.userId === uid;
-    const adminUserDoc = await db.collection('users').doc(uid).get();
-    const adminUserData = adminUserDoc.data();
-    let isAdmin = false;
-    if (adminUserData && adminUserData.role) {
-        const userRole = adminUserData.role;
-        if (typeof userRole === 'string') {
-            isAdmin = userRole === 'founder';
-        }
-        else if (Array.isArray(userRole)) {
-            isAdmin = userRole.includes('founder');
-        }
-    }
-    if (!isOwner && !isAdmin) {
-        throw new https_1.HttpsError("permission-denied", "You do not have permission to delete this post.");
-    }
-    try {
-        await deleteSubcollection(postRef.collection('comments'));
-        await deleteSubcollection(postRef.collection('stars'));
-        await deleteSubcollection(postRef.collection('relays'));
-        await postRef.delete();
-        return { success: true, message: `Post ${postId} deleted successfully.` };
-    }
-    catch (error) {
-        firebase_functions_1.logger.error("Error deleting post and subcollections:", error);
-        throw new https_1.HttpsError("internal", "An error occurred while deleting the post.");
-    }
-});
 exports.deleteMessage = (0, https_1.onCall)(async (request) => {
     var _a, _b;
     const uid = (_a = request.auth) === null || _a === void 0 ? void 0 : _a.uid;
@@ -630,6 +583,126 @@ exports.decrementLikes = v1.firestore
     }
     catch (error) {
         firebase_functions_1.logger.error(`Error decrementing likesCount for post ${postId}:`, error);
+    }
+});
+// --- New Cloud Functions for counting ---
+exports.onFollow = v1.firestore
+    .document('users/{userId}/followers/{followerId}')
+    .onCreate(async (snap, context) => {
+    const { userId, followerId } = context.params;
+    const userRef = db.collection('users').doc(userId);
+    const followerRef = db.collection('users').doc(followerId);
+    try {
+        await userRef.update({ Follower_Count: firestore_1.FieldValue.increment(1) });
+        await followerRef.update({ Following_Count: firestore_1.FieldValue.increment(1) });
+        firebase_functions_1.logger.info(`Updated counts for ${userId} and ${followerId}`);
+    }
+    catch (error) {
+        firebase_functions_1.logger.error(`Error updating follow counts:`, error);
+    }
+});
+exports.onUnfollow = v1.firestore
+    .document('users/{userId}/followers/{followerId}')
+    .onDelete(async (snap, context) => {
+    const { userId, followerId } = context.params;
+    const userRef = db.collection('users').doc(userId);
+    const followerRef = db.collection('users').doc(followerId);
+    try {
+        await userRef.update({ Follower_Count: firestore_1.FieldValue.increment(-1) });
+        await followerRef.update({ Following_Count: firestore_1.FieldValue.increment(-1) });
+        firebase_functions_1.logger.info(`Updated counts for ${userId} and ${followerId}`);
+    }
+    catch (error) {
+        firebase_functions_1.logger.error(`Error updating unfollow counts:`, error);
+    }
+});
+exports.onPostCreate = v1.firestore
+    .document('posts/{postId}')
+    .onCreate(async (snap, context) => {
+    const post = snap.data();
+    const userId = post.userId;
+    const userRef = db.collection('users').doc(userId);
+    try {
+        await userRef.update({ Posts_Count: firestore_1.FieldValue.increment(1) });
+        firebase_functions_1.logger.info(`Incremented Posts_Count for user ${userId}`);
+    }
+    catch (error) {
+        firebase_functions_1.logger.error(`Error incrementing Posts_Count for user ${userId}:`, error);
+    }
+});
+exports.onPostDelete = v1.firestore
+    .document('posts/{postId}')
+    .onDelete(async (snap, context) => {
+    const { postId } = context.params;
+    const post = snap.data();
+    const userId = post.userId;
+    const bucket = storage.bucket();
+    firebase_functions_1.logger.info(`Post ${postId} is being deleted. Cleaning up associated data.`);
+    // 1. Delete Subcollections
+    const subcollections = ['comments', 'likes', 'stars', 'relays'];
+    for (const sub of subcollections) {
+        const ref = db.collection('posts').doc(postId).collection(sub);
+        await deleteSubcollection(ref);
+    }
+    firebase_functions_1.logger.info(`Deleted subcollections for post ${postId}.`);
+    // 2. Decrement user's post count
+    if (userId) {
+        const userRef = db.collection('users').doc(userId);
+        try {
+            await userRef.update({ Posts_Count: firestore_1.FieldValue.increment(-1) });
+            firebase_functions_1.logger.info(`Decremented Posts_Count for user ${userId}`);
+        }
+        catch (error) {
+            firebase_functions_1.logger.error(`Error decrementing Posts_Count for user ${userId}:`, error);
+        }
+    }
+    // 3. Delete media from Cloud Storage
+    const deletePromises = [];
+    const mediaUrls = Array.isArray(post.mediaUrl) ? post.mediaUrl : (post.mediaUrl ? [post.mediaUrl] : []);
+    for (const url of mediaUrls) {
+        try {
+            const decodedUrl = decodeURIComponent(url);
+            const path = decodedUrl.substring(decodedUrl.indexOf('/o/') + 3, decodedUrl.indexOf('?'));
+            if (path) {
+                deletePromises.push(bucket.file(path).delete());
+            }
+        }
+        catch (e) {
+            firebase_functions_1.logger.error(`Failed to parse or delete media URL ${url}:`, e);
+        }
+    }
+    if (post.videoQualities) {
+        for (const quality in post.videoQualities) {
+            const url = post.videoQualities[quality];
+            try {
+                const decodedUrl = decodeURIComponent(url);
+                const path = decodedUrl.substring(decodedUrl.indexOf('/o/') + 3, decodedUrl.indexOf('?'));
+                if (path) {
+                    deletePromises.push(bucket.file(path).delete());
+                }
+            }
+            catch (e) {
+                firebase_functions_1.logger.error(`Failed to parse or delete processed video URL ${url}:`, e);
+            }
+        }
+    }
+    if (post.rawMediaUrl) {
+        try {
+            const decodedUrl = decodeURIComponent(post.rawMediaUrl);
+            const path = decodedUrl.substring(decodedUrl.indexOf('/o/') + 3, decodedUrl.indexOf('?'));
+            if (path) {
+                deletePromises.push(bucket.file(path).delete());
+            }
+        }
+        catch (e) {
+            firebase_functions_1.logger.error(`Failed to parse or delete raw media URL ${post.rawMediaUrl}:`, e);
+        }
+    }
+    if (deletePromises.length > 0) {
+        await Promise.all(deletePromises).catch(err => {
+            firebase_functions_1.logger.error(`Failed to delete one or more storage files for post ${postId}:`, err);
+        });
+        firebase_functions_1.logger.info(`Successfully deleted storage files for post ${postId}.`);
     }
 });
 __exportStar(require("./process-media"), exports);

@@ -2,13 +2,12 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { getFirestore, collection, query, onSnapshot, doc as fsDoc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
+import { getFirestore, collection, query, onSnapshot, doc as fsDoc, setDoc, serverTimestamp, getDoc, deleteDoc } from "firebase/firestore";
 import { FaMusic } from "react-icons/fa";
 import { Repeat2, MapPin, Smile, MoreVertical, Edit, Trash, Eye, Sparkles, Zap, PlayCircle } from "lucide-react";
 import { auth, app } from '@/utils/firebaseClient';
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { getFunctions, httpsCallable } from "firebase/functions";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,7 +22,6 @@ import { CommentModal } from './CommentModal';
 import { FullScreenImageViewer } from './FullScreenImageViewer';
 
 const db = getFirestore(app);
-const functions = getFunctions(app);
 
 const timeAgo = (timestamp: any): string => {
     if (!timestamp) return "Just now";
@@ -58,7 +56,6 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
   const [author, setAuthor] = useState<any>(null);
 
   const currentUser = auth.currentUser;
-  const deletePostCallable = httpsCallable(functions, 'deletePost');
 
   useEffect(() => {
     if (post.userId) {
@@ -119,8 +116,8 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
   const handleDelete = async () => {
     if (window.confirm("Are you sure you want to permanently delete this post and all its interactions? This cannot be undone.")) {
       try {
-        await deletePostCallable({ postId: post.id });
-        alert(`Post ${post.id} has been successfully deleted.`);
+        await deleteDoc(fsDoc(db, collectionName, post.id));
+        alert(`Post has been successfully deleted.`);
       } catch (error: any) {
          alert(`Failed to delete post: ${(error as any).message}`);
       }

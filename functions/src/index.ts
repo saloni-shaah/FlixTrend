@@ -1,4 +1,3 @@
-
 import { initializeApp } from "firebase-admin/app";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import * as admin from "firebase-admin";
@@ -64,27 +63,19 @@ async function deleteSubcollection(collectionRef: admin.firestore.CollectionRefe
 export const onNewUserCreate = v1.auth.user().onCreate(async (user) => {
     const userRef = db.collection('users').doc(user.uid);
     try {
+        // Set initial data, including the vibe_starter accolade if they have posts.
         const postSnap = await db.collection('posts').where('userId', '==', user.uid).limit(1).get();
         const accolades = [];
         if(!postSnap.empty) {
             accolades.push('vibe_starter');
         }
+        await userRef.set({ accolades: accolades }, { merge: true });
 
-        const premiumUntil = new Date();
-        premiumUntil.setMonth(premiumUntil.getMonth() + 1);
-
-        await userRef.set({
-            createdAt: FieldValue.serverTimestamp(),
-            profileComplete: false,
-            accolades: accolades,
-            isPremium: true,
-            premiumUntil: Timestamp.fromDate(premiumUntil)
-        }, { merge: true });
-
+        // Increment total user count.
         const appStatusRef = db.collection('app_status').doc('user_stats');
         await appStatusRef.set({ totalUsers: FieldValue.increment(1) }, { merge: true });
 
-        logger.info(`User document created for ${user.uid}`);
+        logger.info(`User document updated for ${user.uid} and total user count incremented.`);
     } catch (error) {
         logger.error(`Error processing new user ${user.uid}:`, error);
     }
@@ -202,7 +193,7 @@ export const onChatDelete = v1.firestore
     }
   });
 
-export const cleanupExpiredFlashes = v1.pubsub.schedule('every 1 hours').onRun(async (context) => {
+export const cleanupExpiredFlashes = v1.pubsub.schedule('every 2 hours').onRun(async (context) => {
     logger.info('Running expired flashes cleanup job.');
     const now = Timestamp.now();
 
@@ -520,55 +511,6 @@ export const deleteUserAccount = onCall(async (request) => {
   }
 });
 
-export const deletePost = onCall(async (request) => {
-    const { postId } = request.data;
-    const uid = request.auth?.uid;
-
-    if (!uid) {
-        throw new HttpsError("unauthenticated", "You must be logged in to delete a post.");
-    }
-
-    const postRef = db.collection("posts").doc(postId);
-    const postDoc = await postRef.get();
-
-    if (!postDoc.exists) {
-        throw new HttpsError("not-found", "Post not found.");
-    }
-
-    const postData = postDoc.data()!;
-    const isOwner = postData.userId === uid;
-
-    const adminUserDoc = await db.collection('users').doc(uid).get();
-    const adminUserData = adminUserDoc.data();
-    let isAdmin = false;
-    if (adminUserData && adminUserData.role) {
-        const userRole = adminUserData.role;
-        if (typeof userRole === 'string') {
-            isAdmin = userRole === 'founder';
-        } else if (Array.isArray(userRole)) {
-            isAdmin = userRole.includes('founder');
-        }
-    }
-
-    if (!isOwner && !isAdmin) {
-        throw new HttpsError("permission-denied", "You do not have permission to delete this post.");
-    }
-
-    try {
-        await deleteSubcollection(postRef.collection('comments'));
-        await deleteSubcollection(postRef.collection('stars'));
-        await deleteSubcollection(postRef.collection('relays'));
-
-        await postRef.delete();
-
-        return { success: true, message: `Post ${postId} deleted successfully.` };
-    } catch (error) {
-        logger.error("Error deleting post and subcollections:", error);
-        throw new HttpsError("internal", "An error occurred while deleting the post.");
-    }
-});
-
-
 export const deleteMessage = onCall(async (request) => {
     const uid = request.auth?.uid;
     if (!uid) {
@@ -715,6 +657,134 @@ export const decrementLikes = v1.firestore
             logger.info(`Decremented likesCount for post ${postId}`);
         } catch (error) {
             logger.error(`Error decrementing likesCount for post ${postId}:`, error);
+        }
+    });
+
+// --- New Cloud Functions for counting ---
+export const onFollow = v1.firestore
+    .document('users/{userId}/followers/{followerId}')
+    .onCreate(async (snap, context) => {
+        const { userId, followerId } = context.params;
+        const userRef = db.collection('users').doc(userId);
+        const followerRef = db.collection('users').doc(followerId);
+
+        try {
+            await userRef.update({ Follower_Count: FieldValue.increment(1) });
+            await followerRef.update({ Following_Count: FieldValue.increment(1) });
+            logger.info(`Updated counts for ${userId} and ${followerId}`);
+        } catch (error) {
+            logger.error(`Error updating follow counts:`, error);
+        }
+    });
+
+export const onUnfollow = v1.firestore
+    .document('users/{userId}/followers/{followerId}')
+    .onDelete(async (snap, context) => {
+        const { userId, followerId } = context.params;
+        const userRef = db.collection('users').doc(userId);
+        const followerRef = db.collection('users').doc(followerId);
+
+        try {
+            await userRef.update({ Follower_Count: FieldValue.increment(-1) });
+            await followerRef.update({ Following_Count: FieldValue.increment(-1) });
+            logger.info(`Updated counts for ${userId} and ${followerId}`);
+        } catch (error) {
+            logger.error(`Error updating unfollow counts:`, error);
+        }
+    });
+
+export const onPostCreate = v1.firestore
+    .document('posts/{postId}')
+    .onCreate(async (snap, context) => {
+        const post = snap.data();
+        const userId = post.userId;
+        const userRef = db.collection('users').doc(userId);
+
+        try {
+            await userRef.update({ Posts_Count: FieldValue.increment(1) });
+            logger.info(`Incremented Posts_Count for user ${userId}`);
+        } catch (error) {
+            logger.error(`Error incrementing Posts_Count for user ${userId}:`, error);
+        }
+    });
+
+export const onPostDelete = v1.firestore
+    .document('posts/{postId}')
+    .onDelete(async (snap, context) => {
+        const { postId } = context.params;
+        const post = snap.data();
+        const userId = post.userId;
+        const bucket = storage.bucket();
+
+        logger.info(`Post ${postId} is being deleted. Cleaning up associated data.`);
+
+        // 1. Delete Subcollections
+        const subcollections = ['comments', 'likes', 'stars', 'relays'];
+        for (const sub of subcollections) {
+            const ref = db.collection('posts').doc(postId).collection(sub);
+            await deleteSubcollection(ref);
+        }
+        logger.info(`Deleted subcollections for post ${postId}.`);
+
+        // 2. Decrement user's post count
+        if (userId) {
+            const userRef = db.collection('users').doc(userId);
+            try {
+                await userRef.update({ Posts_Count: FieldValue.increment(-1) });
+                logger.info(`Decremented Posts_Count for user ${userId}`);
+            } catch (error) {
+                logger.error(`Error decrementing Posts_Count for user ${userId}:`, error);
+            }
+        }
+
+        // 3. Delete media from Cloud Storage
+        const deletePromises: Promise<any>[] = [];
+        const mediaUrls = Array.isArray(post.mediaUrl) ? post.mediaUrl : (post.mediaUrl ? [post.mediaUrl] : []);
+        
+        for (const url of mediaUrls) {
+            try {
+                const decodedUrl = decodeURIComponent(url);
+                const path = decodedUrl.substring(decodedUrl.indexOf('/o/') + 3, decodedUrl.indexOf('?'));
+                if (path) {
+                    deletePromises.push(bucket.file(path).delete());
+                }
+            } catch (e) {
+                logger.error(`Failed to parse or delete media URL ${url}:`, e);
+            }
+        }
+
+        if (post.videoQualities) {
+             for (const quality in post.videoQualities) {
+                const url = post.videoQualities[quality];
+                try {
+                    const decodedUrl = decodeURIComponent(url);
+                    const path = decodedUrl.substring(decodedUrl.indexOf('/o/') + 3, decodedUrl.indexOf('?'));
+                    if (path) {
+                        deletePromises.push(bucket.file(path).delete());
+                    }
+                } catch (e) {
+                    logger.error(`Failed to parse or delete processed video URL ${url}:`, e);
+                }
+            }
+        }
+        
+        if (post.rawMediaUrl) {
+            try {
+                const decodedUrl = decodeURIComponent(post.rawMediaUrl);
+                const path = decodedUrl.substring(decodedUrl.indexOf('/o/') + 3, decodedUrl.indexOf('?'));
+                if (path) {
+                    deletePromises.push(bucket.file(path).delete());
+                }
+            } catch (e) {
+                logger.error(`Failed to parse or delete raw media URL ${post.rawMediaUrl}:`, e);
+            }
+        }
+
+        if (deletePromises.length > 0) {
+            await Promise.all(deletePromises).catch(err => {
+                logger.error(`Failed to delete one or more storage files for post ${postId}:`, err);
+            });
+            logger.info(`Successfully deleted storage files for post ${postId}.`);
         }
     });
 
