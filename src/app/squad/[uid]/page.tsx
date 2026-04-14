@@ -131,7 +131,12 @@ export default function UserProfilePage() {
           <div className="absolute inset-0 w-full h-full bg-gradient-to-tr from-accent-pink/40 to-accent-cyan/40" />
         )}
       </div>
-      <div className="mx-auto w-full max-w-2xl glass-card p-6 -mt-24 flex flex-col items-center text-center">
+      <div className="mx-auto w-full max-w-2xl glass-card p-6 -mt-24 flex flex-col items-start relative">
+        {!isOwnProfile && firebaseUser && (
+          <div className="absolute top-6 right-6">
+            <FollowButton profileUser={profile} currentUser={firebaseUser} />
+          </div>
+        )}
         <div className="w-32 h-32 rounded-full bg-accent-cyan border-4 border-accent-pink shadow-fab-glow mb-4 overflow-hidden -mt-20 cursor-pointer" onClick={() => setFullScreenImage(profile.avatar_url)}>
           {profile.avatar_url ? (
             <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
@@ -139,52 +144,50 @@ export default function UserProfilePage() {
             <span className="text-5xl text-white flex items-center justify-center h-full w-full">{initials}</span>
           )}
         </div>
-        <div className="flex items-center justify-center gap-2">
-            <h2 className="text-2xl font-headline font-bold text-center">{profile.name}</h2>
-             {isPremium && (
-                <CheckCircle className="w-6 h-6 text-blue-500" title="Premium User"/>
-            )}
-             {isDeveloper && (
-                <ShieldCheck className="w-6 h-6 text-accent-purple" title="FlixTrend Developer"/>
-            )}
+        <div className="text-left">
+            <div className="flex items-center gap-2">
+                <h2 className="text-2xl font-headline font-bold">{profile.name}</h2>
+                 {isPremium && (
+                    <CheckCircle className="w-6 h-6 text-blue-500" title="Premium User"/>
+                )}
+                 {isDeveloper && (
+                    <ShieldCheck className="w-6 h-6 text-accent-purple" title="FlixTrend Developer"/>
+                )}
+            </div>
+            <p className="text-accent-cyan font-semibold mb-1">@{profile.username || "username"}</p>
         </div>
-        <p className="text-accent-cyan font-semibold mb-1 text-center">@{profile.username || "username"}</p>
         
-        {accolades.length > 0 && (
-            <div className="flex flex-wrap items-center justify-center gap-2 my-4">
-                {accolades.map((acc:string, i:number) => <AccoladeBadge key={i} type={acc} />)}
+        <div className="w-full">
+            {accolades.length > 0 && (
+                <div className="flex flex-wrap items-center justify-center gap-2 my-4">
+                    {accolades.map((acc:string, i:number) => <AccoladeBadge key={i} type={acc} />)}
+                </div>
+            )}
+
+            <div className="flex justify-center gap-8 my-4 w-full">
+              <div className="text-center">
+                <span className="font-bold text-lg text-accent-cyan">{profile.Posts_Count || 0}</span>
+                <span className="text-xs text-gray-400 block">Posts</span>
+              </div>
+              <button className="text-center" onClick={() => setShowFollowList('followers')}>
+                <span className="font-bold text-lg text-accent-cyan">{profile.Follower_Count || 0}</span>
+                <span className="text-xs text-gray-400 block hover:underline">Followers</span>
+              </button>
+              <button className="text-center" onClick={() => setShowFollowList('following')}>
+                <span className="font-bold text-lg text-accent-cyan">{profile.Following_Count || 0}</span>
+                <span className="text-xs text-gray-400 block hover:underline">Following</span>
+              </button>
             </div>
-        )}
 
-        <div className="flex justify-center gap-8 my-4 w-full">
-          <div className="text-center">
-            <span className="font-bold text-lg text-accent-cyan">{profile.Posts_Count || 0}</span>
-            <span className="text-xs text-gray-400 block">Posts</span>
-          </div>
-          <button className="text-center" onClick={() => setShowFollowList('followers')}>
-            <span className="font-bold text-lg text-accent-cyan">{profile.Follower_Count || 0}</span>
-            <span className="text-xs text-gray-400 block hover:underline">Followers</span>
-          </button>
-          <button className="text-center" onClick={() => setShowFollowList('following')}>
-            <span className="font-bold text-lg text-accent-cyan">{profile.Following_Count || 0}</span>
-            <span className="text-xs text-gray-400 block hover:underline">Following</span>
-          </button>
-        </div>
-
-        <div className="mt-4 w-full max-w-lg">
-            <p className="text-gray-400 text-center mb-4 text-sm">{profile.bio || "This user hasn't set a bio yet."}</p>
-            <div className="flex justify-center flex-wrap gap-x-4 gap-y-2 text-xs text-gray-500">
-                {profile.location && <span className="flex items-center gap-1.5"><MapPin size={12}/> {profile.location}</span>}
-                {profile.gender && <span className="flex items-center gap-1.5"><User size={12}/> {profile.gender}</span>}
-                {profile.interests && <span className="flex items-center gap-1.5"><Tag size={12}/> {profile.interests}</span>}
+            <div className="mt-4 w-full max-w-lg mx-auto">
+                <p className="text-gray-400 text-center mb-4 text-sm">{profile.bio || "This user hasn't set a bio yet."}</p>
+                <div className="flex justify-center flex-wrap gap-x-4 gap-y-2 text-xs text-gray-500">
+                    {profile.location && <span className="flex items-center gap-1.5"><MapPin size={12}/> {profile.location}</span>}
+                    {profile.gender && <span className="flex items-center gap-1.5"><User size={12}/> {profile.gender}</span>}
+                    {profile.interests && <span className="flex items-center gap-1.5"><Tag size={12}/> {profile.interests}</span>}
+                </div>
             </div>
         </div>
-
-        {!isOwnProfile && firebaseUser && (
-          <div className="mt-6">
-            <FollowButton profileUser={profile} currentUser={firebaseUser} />
-          </div>
-        )}
       </div>
       <div className="flex justify-center gap-4 my-8">
         <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "posts" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("posts")}>Posts</button>
