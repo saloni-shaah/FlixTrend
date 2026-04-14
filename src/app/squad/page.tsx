@@ -124,15 +124,15 @@ function SquadPageContent() {
             transition={{ delay: 0.2 }} 
             className="relative mx-auto w-full max-w-2xl glass-card p-6 -mt-32 flex flex-col items-center text-center"
           >
-            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="btn-glass absolute top-22 left-22" onClick={() => setShowEdit(true)}>Edit Profile</motion.button>
+            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="btn-glass absolute top-10 left-10" onClick={() => setShowEdit(true)}>Edit PF</motion.button>
               <motion.div 
                 whileHover={{ scale: 1.1 }} 
-                className="w-36 h-36 rounded-full bg-accent-cyan border-4 border-accent-pink shadow-fab-glow mb-4 overflow-hidden -mt-20 cursor-pointer translate-x-36"
+                className="w-36 h-36 rounded-full bg-accent-cyan border-4 border-accent-pink shadow-fab-glow mb-4 overflow-hidden -mt-20 cursor-pointer translate-x-18"
                 onClick={() => profile.avatar_url && setFullScreenImage(profile.avatar_url)}
               >
                 {profile.avatar_url ? <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : <span className="text-5xl text-white flex items-center justify-center h-full w-full">{initials}</span>}
               </motion.div>
-              <div className="translate-x-36">
+              <div className="translate-x-19">
                   <div className="flex items-center justify-center gap-2">
                       <h2 className="text-2xl font-headline font-bold text-center">{profile.name}</h2>
                       {isDeveloper && <ShieldCheck className="w-6 h-6 text-accent-purple" title="FlixTrend Developer" />}
