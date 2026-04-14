@@ -1,8 +1,8 @@
 'use client';
-import React, { useEffect, useState, Suspense, useRef } from "react";
+import React, { useEffect, useState, Suspense, useRef, useCallback } from "react";
 import { auth, app } from "@/utils/firebaseClient";
-import { getFirestore, doc, onSnapshot, collection, query, where, getDocs, orderBy, serverTimestamp, setDoc, limit } from "firebase/firestore";
-import { Cog, MapPin, User, Tag, ShieldCheck, CheckCircle, Users as UsersIcon, BarChart3, Home, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { getFirestore, doc, onSnapshot, collection, query, where, getDocs, orderBy, serverTimestamp, setDoc, limit, startAfter, OrderByDirection } from "firebase/firestore";
+import { Cog, MapPin, User, Tag, ShieldCheck, CheckCircle, Users as UsersIcon, BarChart3, Home, Loader2, ChevronLeft, ChevronRight, AlignLeft, Image, Video, ArrowUp, ArrowDown, TrendingUp } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -14,11 +14,26 @@ import { UserPlaylists } from "@/components/squad/UserPlaylists";
 import { AccoladeBadge } from "@/components/AccoladeBadge";
 import { CreatePostPrompt } from "@/components/CreatePostPrompt";
 import LikedPostsTab from "@/components/squad/LikedPostsTab";
-import UserPostsTab from "@/components/squad/UserPostsTab";
 import { FollowButton } from "@/components/FollowButton";
 import { FullScreenImageViewer } from "@/components/FullScreenImageViewer";
 
 const db = getFirestore(app);
+const POSTS_PER_PAGE = 10;
+
+const FlowIcon = ({ className }: { className?: string }) => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+        <defs>
+            <linearGradient id="flowGradient" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="var(--accent-pink)" />
+                <stop offset="100%" stopColor="var(--accent-cyan)" />
+            </linearGradient>
+        </defs>
+        <circle cx="12" cy="12" r="12" fill="url(#flowGradient)" className="group-hover:opacity-80 transition-opacity">
+             <animate attributeName="opacity" values="0.7;1;0.7" dur="2s" repeatCount="indefinite" />
+        </circle>
+        <path d="M9.5 16V8L16.5 12L9.5 16Z" fill="white"/>
+    </svg>
+);
 
 function SquadPageContent() {
   const [profile, setProfile] = useState<any>(null);
@@ -33,24 +48,26 @@ function SquadPageContent() {
   const [isCreator, setIsCreator] = useState(false);
   const router = useRouter();
 
-  const handleCreatorStudioClick = async () => {
-    const user = auth.currentUser;
-    if (!user) return;
+  // State for the new posts tab
+  const [userPosts, setUserPosts] = useState<any[]>([]);
+  const [postTypeFilter, setPostTypeFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('latest');
+  const [postsLoading, setPostsLoading] = useState(true);
+  const [lastVisible, setLastVisible] = useState<any>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMorePosts, setHasMorePosts] = useState(true);
 
-    try {
-      const idToken = await user.getIdToken();
-      const response = await fetch('/api/create-session-token', {
-        headers: { Authorization: `Bearer ${idToken}` },
-      });
-
-      if (!response.ok) throw new Error('Failed to create session token');
-
-      const { customToken } = await response.json();
-      window.open(`http://studio.flixtrend.in?token=${customToken}`, '_blank');
-    } catch (error) {
-      console.error("Error navigating to creator studio:", error);
-    }
-  };
+  const observer = useRef<IntersectionObserver>();
+  const loadMoreRef = useCallback(node => {
+    if (loadingMore) return;
+    if (observer.current) observer.current.disconnect();
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMorePosts && activeTab === 'posts') {
+        fetchMorePosts();
+      }
+    });
+    if (node) observer.current.observe(node);
+  }, [loadingMore, hasMorePosts, activeTab]);
 
   useEffect(() => {
     const unsubAuth = auth.onAuthStateChanged(async (user) => {
@@ -89,6 +106,100 @@ function SquadPageContent() {
 
     return () => unsubAuth();
   }, [router]);
+  
+  const uid = firebaseUser?.uid;
+
+  // Fetching logic for posts tab
+  useEffect(() => {
+    if (activeTab === 'posts' && uid) {
+      fetchInitialPosts();
+    }
+  }, [activeTab, uid, postTypeFilter, sortBy]);
+
+  const getQuery = () => {
+    let q = query(collection(db, "posts"), where("userId", "==", uid));
+
+    if (postTypeFilter !== 'all') {
+        if (postTypeFilter === 'flow') {
+            q = query(q, where('isFlow', '==', true));
+        } else if (postTypeFilter === 'image') {
+            q = query(q, where('type', '==', 'media'), where('isVideo', '==', false));
+        } else if (postTypeFilter === 'video') {
+            q = query(q, where('type', '==', 'media'), where('isVideo', '==', true));
+        } else {
+            q = query(q, where('type', '==', postTypeFilter));
+        }
+    }
+
+    let orderByField = 'createdAt';
+    let orderByDirection: OrderByDirection = sortBy === 'oldest' ? 'asc' : 'desc';
+    if (sortBy === 'popular') {
+        orderByField = 'likesCount';
+    }
+
+    q = query(q, orderBy(orderByField, orderByDirection));
+    return q;
+  }
+
+  const fetchInitialPosts = async () => {
+    if (!uid) return;
+    setPostsLoading(true);
+    setUserPosts([]);
+    setLastVisible(null);
+
+    const q = getQuery();
+    const finalQuery = query(q, limit(POSTS_PER_PAGE));
+
+    try {
+        const documentSnapshots = await getDocs(finalQuery);
+        const posts = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setUserPosts(posts);
+        setLastVisible(documentSnapshots.docs[documentSnapshots.docs.length - 1]);
+        setHasMorePosts(documentSnapshots.docs.length === POSTS_PER_PAGE);
+    } catch (error) {
+        console.error("Error fetching initial posts: ", error);
+        setHasMorePosts(false);
+    }
+    setPostsLoading(false);
+  }
+
+  const fetchMorePosts = async () => {
+    if (!uid || !lastVisible) return;
+    setLoadingMore(true);
+
+    const q = getQuery();
+    const finalQuery = query(q, startAfter(lastVisible), limit(POSTS_PER_PAGE));
+
+    try {
+        const documentSnapshots = await getDocs(finalQuery);
+        const newPosts = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setUserPosts(prevPosts => [...prevPosts, ...newPosts]);
+        setLastVisible(documentSnapshots.docs[documentSnapshots.docs.length - 1]);
+        setHasMorePosts(documentSnapshots.docs.length === POSTS_PER_PAGE);
+    } catch (error) {
+        console.error("Error fetching more posts: ", error);
+        setHasMorePosts(false);
+    }
+
+    setLoadingMore(false);
+  }
+
+  const handleCreatorStudioClick = async () => {
+    if (!uid) return;
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      const response = await fetch('/api/create-session-token', {
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
+
+      if (!response.ok) throw new Error('Failed to create session token');
+
+      const { customToken } = await response.json();
+      window.open(`http://studio.flixtrend.in?token=${customToken}`, '_blank');
+    } catch (error) {
+      console.error("Error navigating to creator studio:", error);
+    }
+  };
 
   if (loading || !firebaseUser || !profile) {
     return <div className="flex flex-col min-h-screen items-center justify-center text-accent-cyan"><Loader2 className="animate-spin"/></div>;
@@ -167,7 +278,46 @@ function SquadPageContent() {
 
           <div className="flex-1 flex flex-col items-center justify-center w-full min-h-[400px]">
               {activeTab === "home" && <HomeFeed user={firebaseUser} />}
-              {activeTab === "posts" && firebaseUser && <UserPostsTab userId={firebaseUser.uid} />}
+              {activeTab === "posts" && (
+                <div className="w-full max-w-xl flex flex-col gap-6">
+                    <div className="flex justify-center gap-2 p-1 rounded-full bg-black/30">
+                        <button onClick={() => { setPostTypeFilter('all'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'all' ? 'bg-white/10 text-white' : 'text-gray-400'}`}>All</button>
+                        <button onClick={() => { setPostTypeFilter('text'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'text' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><AlignLeft size={14} className="inline" /></button>
+                        <button onClick={() => { setPostTypeFilter('image'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'image' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><Image size={14} className="inline" /></button>
+                        <button onClick={() => { setPostTypeFilter('video'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'video' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><Video size={14} className="inline" /></button>
+                        <button onClick={() => { setPostTypeFilter('poll'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'poll' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><BarChart3 size={14} className="inline" /></button>
+                        <button onClick={() => { setPostTypeFilter('flow'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'flow' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><FlowIcon className="w-4 h-4 inline" /></button>
+                    </div>
+
+                    {postTypeFilter !== 'all' && (
+                        <div className="flex justify-center gap-2 p-1 rounded-full bg-black/20 text-xs">
+                            <button onClick={() => setSortBy('latest')} className={`px-3 py-1 rounded-full font-bold transition-colors flex items-center gap-1 ${sortBy === 'latest' ? 'bg-accent-cyan/20 text-accent-cyan' : 'text-gray-400'}`}><ArrowUp size={12}/>Latest</button>
+                            <button onClick={() => setSortBy('oldest')} className={`px-3 py-1 rounded-full font-bold transition-colors flex items-center gap-1 ${sortBy === 'oldest' ? 'bg-accent-cyan/20 text-accent-cyan' : 'text-gray-400'}`}><ArrowDown size={12}/>Oldest</button>
+                            <button onClick={() => setSortBy('popular')} className={`px-3 py-1 rounded-full font-bold transition-colors flex items-center gap-1 ${sortBy === 'popular' ? 'bg-accent-cyan/20 text-accent-cyan' : 'text-gray-400'}`}><TrendingUp size={12}/>Popular</button>
+                        </div>
+                    )}
+                    
+                    {postsLoading ? <div className="flex justify-center mt-20"><Loader2 className="animate-spin"/></div> :
+                      userPosts.length > 0 ? (
+                        userPosts.map((post, index) => {
+                          if (userPosts.length === index + 1) {
+                              return <div ref={loadMoreRef} key={post.id}><PostCard post={post} collectionName="posts"/></div>
+                          }
+                          return <PostCard key={post.id} post={post} collectionName="posts"/>
+                        }))
+                      : (
+                        <div className="text-gray-400 text-center mt-16 flex flex-col items-center">
+                          <div className="text-4xl mb-4">📝</div>
+                          <div className="text-lg font-semibold mb-2">No Posts Yet</div>
+                          <p className="text-sm mb-6">Your creative journey starts here. What will you share?</p>
+                          <Link href="/create" className="btn btn-primary btn-cta">Create Your First Post</Link>
+                        </div>
+                      )
+                    }
+                    {loadingMore && <div className="text-center text-accent-cyan py-4">Loading more posts...</div>}
+                    {!hasMorePosts && userPosts.length > 0 && <div className="text-center text-gray-500 py-4">You've reached the end!</div>}
+                </div>
+              )}
               {activeTab === "likes" && firebaseUser && <LikedPostsTab userId={firebaseUser.uid} />}
               {activeTab === "playlists" && firebaseUser && <UserPlaylists userId={firebaseUser.uid} />}
           </div>

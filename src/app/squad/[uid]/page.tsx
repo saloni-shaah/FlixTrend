@@ -1,8 +1,8 @@
 'use client';
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { getFirestore, doc, getDoc, collection, query, where, getDocs, onSnapshot, orderBy } from "firebase/firestore";
+import { getFirestore, doc, getDoc, collection, query, where, getDocs, onSnapshot, orderBy, limit, startAfter, OrderByDirection } from "firebase/firestore";
 import { auth, app } from "@/utils/firebaseClient";
 import { PostCard } from "@/components/PostCard";
 import { FollowButton } from "@/components/FollowButton";
@@ -28,6 +28,8 @@ const FlowIcon = ({ className }: { className?: string }) => (
     </svg>
 );
 
+const POSTS_PER_PAGE = 10;
+
 export default function UserProfilePage() {
   const params = useParams();
   const uid = typeof params?.uid === 'string' ? params.uid : Array.isArray(params?.uid) ? params.uid[0] : null;
@@ -41,6 +43,22 @@ export default function UserProfilePage() {
   const [showFollowList, setShowFollowList] = useState<null | 'followers' | 'following'>(null);
   const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
 
+  const [lastVisible, setLastVisible] = useState<any>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMorePosts, setHasMorePosts] = useState(true);
+
+  const observer = useRef<IntersectionObserver>();
+  const loadMoreRef = useCallback(node => {
+    if (loadingMore) return;
+    if (observer.current) observer.current.disconnect();
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMorePosts) {
+        fetchMorePosts();
+      }
+    });
+    if (node) observer.current.observe(node);
+  }, [loadingMore, hasMorePosts]);
+
   useEffect(() => {
     const unsub = auth.onAuthStateChanged((user) => {
       setFirebaseUser(user);
@@ -49,60 +67,93 @@ export default function UserProfilePage() {
   }, []);
 
   useEffect(() => {
+    if (uid) {
+        const docRef = doc(db, "users", uid);
+        const unsubProfile = onSnapshot(docRef, (docSnap) => {
+            setProfile(docSnap.exists() ? { uid: docSnap.id, ...docSnap.data() } : null);
+        });
+        return () => unsubProfile();
+    }
+  }, [uid]);
+
+
+  useEffect(() => {
     if (!uid) {
         setLoading(false);
         return;
     }
+    fetchInitialPosts();
+  }, [uid, postTypeFilter, sortBy]);
+
+  const getQuery = () => {
+    let q = query(collection(db, "posts"), where("userId", "==", uid));
+
+    if (postTypeFilter !== 'all') {
+        if (postTypeFilter === 'flow') {
+            q = query(q, where('isFlow', '==', true));
+        } else if (postTypeFilter === 'image') {
+            q = query(q, where('type', '==', 'media'), where('isVideo', '==', false));
+        } else if (postTypeFilter === 'video') {
+            q = query(q, where('type', '==', 'media'), where('isVideo', '==', true));
+        } else {
+            q = query(q, where('type', '==', postTypeFilter));
+        }
+    }
+
+    let orderByField = 'createdAt';
+    let orderByDirection: OrderByDirection = sortBy === 'oldest' ? 'asc' : 'desc';
+    if (sortBy === 'popular') {
+        orderByField = 'likesCount'; // Note: Assumes a 'likesCount' field exists on your post documents.
+    }
+
+    q = query(q, orderBy(orderByField, orderByDirection));
+    return q;
+  }
+
+  const fetchInitialPosts = async () => {
     setLoading(true);
+    setUserPosts([]);      // Explicitly clear posts
+    setLastVisible(null);  // Explicitly clear cursor
 
-    const docRef = doc(db, "users", uid);
-    const unsubProfile = onSnapshot(docRef, (docSnap) => {
-        setProfile(docSnap.exists() ? { uid: docSnap.id, ...docSnap.data() } : null);
-        setLoading(false);
-    });
+    const q = getQuery();
+    const finalQuery = query(q, limit(POSTS_PER_PAGE));
 
-    const postsQuery = query(collection(db, "posts"), where("userId", "==", uid));
-    const unsubPosts = onSnapshot(postsQuery, (snap) => {
-        setUserPosts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
-    
-    return () => {
-        unsubProfile();
-        unsubPosts();
-    };
-  }, [uid]);
+    try {
+        const documentSnapshots = await getDocs(finalQuery);
+        const posts = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setUserPosts(posts);
+        setLastVisible(documentSnapshots.docs[documentSnapshots.docs.length - 1]);
+        setHasMorePosts(documentSnapshots.docs.length === POSTS_PER_PAGE);
+    } catch (error) {
+        console.error("Error fetching initial posts: ", error);
+        setHasMorePosts(false); // Stop trying to load more if there was an error
+    }
+    setLoading(false);
+  }
 
-  const sortedAndFilteredPosts = userPosts
-    .filter(post => {
-        const postToCheck = post.type === 'relay' ? post.originalPost : post;
-        if (!postToCheck) return false;
-        switch (postTypeFilter) {
-            case 'all': return true;
-            case 'text': return postToCheck.type === 'text';
-            case 'image': return postToCheck.type === 'media' && !postToCheck.isVideo;
-            case 'video': return postToCheck.type === 'media' && postToCheck.isVideo;
-            case 'poll': return postToCheck.type === 'poll';
-            case 'flow': return postToCheck.isFlow === true;
-            default: return true;
-        }
-    })
-    .sort((a, b) => {
-        const postA = a.type === 'relay' ? a.originalPost : a;
-        const postB = b.type === 'relay' ? b.originalPost : b;
+  const fetchMorePosts = async () => {
+    if (!lastVisible) return;
+    setLoadingMore(true);
 
-        switch (sortBy) {
-            case 'latest':
-                return (postB.createdAt?.toDate() || 0) - (postA.createdAt?.toDate() || 0);
-            case 'oldest':
-                return (postA.createdAt?.toDate() || 0) - (postB.createdAt?.toDate() || 0);
-            case 'popular':
-                return (postB.likes?.length || 0) - (postA.likes?.length || 0);
-            default:
-                return 0;
-        }
-    });
+    const q = getQuery();
+    const finalQuery = query(q, startAfter(lastVisible), limit(POSTS_PER_PAGE));
 
-  if (loading) {
+    try {
+        const documentSnapshots = await getDocs(finalQuery);
+        const newPosts = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setUserPosts(prevPosts => [...prevPosts, ...newPosts]);
+        setLastVisible(documentSnapshots.docs[documentSnapshots.docs.length - 1]);
+        setHasMorePosts(documentSnapshots.docs.length === POSTS_PER_PAGE);
+    } catch (error) {
+        console.error("Error fetching more posts: ", error);
+        setHasMorePosts(false); // Stop trying to load more if there was an error
+    }
+
+    setLoadingMore(false);
+  }
+
+
+  if (loading && userPosts.length === 0) {
     return <div className="flex flex-col min-h-screen items-center justify-center text-accent-cyan">Loading profile...</div>;
   }
   if (!profile) {
@@ -206,13 +257,7 @@ export default function UserProfilePage() {
 
             {postTypeFilter !== 'all' && (
                 <div className="flex justify-center gap-2 p-1 rounded-full bg-black/20 text-xs">
-                    {['text', 'image', 'poll'].includes(postTypeFilter) && (
-                        <>
-                            <button onClick={() => setSortBy('latest')} className={`px-3 py-1 rounded-full font-bold transition-colors flex items-center gap-1 ${sortBy === 'latest' ? 'bg-accent-cyan/20 text-accent-cyan' : 'text-gray-400'}`}><ArrowUp size={12}/>Latest</button>
-                            <button onClick={() => setSortBy('oldest')} className={`px-3 py-1 rounded-full font-bold transition-colors flex items-center gap-1 ${sortBy === 'oldest' ? 'bg-accent-cyan/20 text-accent-cyan' : 'text-gray-400'}`}><ArrowDown size={12}/>Oldest</button>
-                        </>
-                    )}
-                    {['video', 'flow'].includes(postTypeFilter) && (
+                    {['text', 'image', 'poll', 'video', 'flow'].includes(postTypeFilter) && (
                         <>
                             <button onClick={() => setSortBy('latest')} className={`px-3 py-1 rounded-full font-bold transition-colors flex items-center gap-1 ${sortBy === 'latest' ? 'bg-accent-cyan/20 text-accent-cyan' : 'text-gray-400'}`}><ArrowUp size={12}/>Latest</button>
                             <button onClick={() => setSortBy('oldest')} className={`px-3 py-1 rounded-full font-bold transition-colors flex items-center gap-1 ${sortBy === 'oldest' ? 'bg-accent-cyan/20 text-accent-cyan' : 'text-gray-400'}`}><ArrowDown size={12}/>Oldest</button>
@@ -222,11 +267,14 @@ export default function UserProfilePage() {
                 </div>
             )}
 
-            {sortedAndFilteredPosts.length > 0 ? (
-              sortedAndFilteredPosts.map((post) => (
-                <PostCard key={post.id} post={post} collectionName="posts"/>
-              )))
-             : (
+            {userPosts.length > 0 ? (
+              userPosts.map((post, index) => {
+                if (userPosts.length === index + 1) {
+                    return <div ref={loadMoreRef} key={post.id}><PostCard post={post} collectionName="posts"/></div>
+                }
+                return <PostCard key={post.id} post={post} collectionName="posts"/>
+              }))
+             : !loading && (
             <div className="text-gray-400 text-center mt-16 flex flex-col items-center">
                 <div className="text-4xl mb-4">📝</div>
                 <div className="text-lg font-semibold mb-2">No Posts Yet</div>
@@ -241,7 +289,9 @@ export default function UserProfilePage() {
                     <p className>Check back later to see what {profile.name} shares!</p>
                 )}
             </div>
-          )}
+            )}
+            {loadingMore && <div className="text-center text-accent-cyan py-4">Loading more posts...</div>}
+            {!hasMorePosts && userPosts.length > 0 && <div className="text-center text-gray-500 py-4">You've reached the end!</div>}
           </div>
         )}
       </div>
