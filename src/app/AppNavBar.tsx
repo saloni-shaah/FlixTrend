@@ -109,7 +109,6 @@ export default function AppNavBar() {
   if (!hasMounted || hideNav || hideForFlowVideo) return null;
 
   const isSignalChatView = isMobile && pathname.startsWith('/signal/') && selectedChat;
-  const squadHref = currentUserProfile ? `/squad/${currentUserProfile.username}` : '/squad';
 
   return (
     <>
@@ -129,7 +128,7 @@ export default function AppNavBar() {
             <NavButton href="/vibespace" icon={VibeSpaceIcon} label="VibeSpace" />
             <NavButton href="/flow" icon={FlowIcon} label="Flow" />
             <NavButton href="/drop" icon={DropIcon} label="Drop" />
-            <NavButton href={squadHref} icon={SquadIcon} label="Squad" />
+            <NavButton href="/squad" icon={SquadIcon} label="Squad" />
             <NavButton href="/signal" icon={MessageSquare} label="Signal" />
           </>
         )}
