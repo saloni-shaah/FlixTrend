@@ -87,28 +87,22 @@ export function Trendboard({ currentPost }: { currentPost: any }) {
                 setTopPosts(postSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     
                 const usersRef = collection(db, "users");
-                const usersSnap = await getDocs(usersRef);
-                const allUsers = usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-                const postsSnap = await getDocs(query(collection(db, "posts")));
-                const allPosts = postsSnap.docs.map(doc => doc.data());
+                // Top Creators
+                const creatorsQuery = query(usersRef, orderBy("Follower_Count", "desc"), limit(3));
+                const creatorsSnap = await getDocs(creatorsQuery);
+                setTopCreators(creatorsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
 
-                const userStats = await Promise.all(allUsers.map(async (user) => {
-                    const followersSnap = await getDocs(collection(db, 'users', user.id, 'followers'));
-                    const userPosts = allPosts.filter(p => p.userId === user.id);
-                    const postCount = userPosts.length;
-                    const starCount = userPosts.reduce((total, p) => {
-                        if (p.likes) {
-                            return total + Object.values(p.likes).filter(v => v === true).length;
-                        }
-                        return total;
-                    }, 0);
-                    return { ...user, followerCount: followersSnap.size, postCount, starCount };
-                }));
+                // Most Liked Users
+                const likedUsersQuery = query(usersRef, orderBy("Total_likes", "desc"), limit(3));
+                const likedUsersSnap = await getDocs(likedUsersQuery);
+                setTopLikedUsers(likedUsersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+                
+                // Most Active Posters
+                const postersQuery = query(usersRef, orderBy("Posts_Count", "desc"), limit(5));
+                const postersSnap = await getDocs(postersQuery);
+                setTopPosters(postersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
 
-                setTopCreators([...userStats].sort((a, b) => b.followerCount - a.followerCount).slice(0, 3));
-                setTopPosters([...userStats].sort((a, b) => b.postCount - a.postCount).slice(0, 5));
-                setTopLikedUsers([...userStats].sort((a, b) => b.starCount - a.starCount).slice(0, 3));
 
             } catch (error) {
                 console.error("Error fetching trendboard data:", error);
@@ -141,7 +135,7 @@ export function Trendboard({ currentPost }: { currentPost: any }) {
                                 <p className="font-bold text-white">{item.name}</p>
                                 <p className="text-sm text-gray-400">@{item.username}</p>
                             </div>
-                            <span className="font-bold text-accent-green">{item.followerCount || 0} followers</span>
+                            <span className="font-bold text-accent-green">{item.Follower_Count || 0} followers</span>
                         </Link>
                     </motion.div>
                 )}
@@ -161,7 +155,7 @@ export function Trendboard({ currentPost }: { currentPost: any }) {
                                 <p className="font-bold text-white">{item.name}</p>
                                 <p className="text-sm text-gray-400">@{item.username}</p>
                             </div>
-                            <span className="font-bold text-accent-green flex items-center gap-1"><Star size={14}/> {item.starCount || 0}</span>
+                            <span className="font-bold text-accent-green flex items-center gap-1"><Star size={14}/> {item.Total_likes || 0}</span>
                         </Link>
                     </motion.div>
                 )}
@@ -181,7 +175,7 @@ export function Trendboard({ currentPost }: { currentPost: any }) {
                                 <p className="font-bold text-white">{item.name}</p>
                                 <p className="text-sm text-gray-400">@{item.username}</p>
                             </div>
-                            <span className="font-bold text-accent-green">{item.postCount || 0} posts</span>
+                            <span className="font-bold text-accent-green">{item.Posts_Count || 0} posts</span>
                         </Link>
                     </motion.div>
                 )}
