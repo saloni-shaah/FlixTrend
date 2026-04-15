@@ -72,8 +72,8 @@ export default function PhoneVerificationPage() {
     const fullPhoneNumber = `${countryCode}${phoneNumber}`;
 
     try {
-      const checkUserExists = httpsCallable(functions, 'checkUserExists');
-      const result = await checkUserExists({ phoneNumber: fullPhoneNumber });
+      const checkPhone = httpsCallable(functions, 'checkPhone');
+      const result = await checkPhone({ phoneNumber: fullPhoneNumber });
       const data = result.data as { exists: boolean };
 
       if (data.exists) {
