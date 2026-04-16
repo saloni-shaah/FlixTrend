@@ -1,15 +1,17 @@
 
 "use client";
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Play, Pause, Plus, Music, Search } from 'lucide-react';
+import { Play, Pause, Plus, Music, Search, MoreHorizontal } from 'lucide-react';
 import { getFirestore, collection, addDoc, serverTimestamp, query, onSnapshot, orderBy, where, updateDoc, arrayUnion, doc } from 'firebase/firestore';
 import { auth, app } from '@/utils/firebaseClient';
-import { useAppState } from '@/utils/AppStateContext';
+import { useMusicPlayer } from '@/utils/MusicPlayerContext';
+import { useRouter } from 'next/navigation';
+import { useToast } from "@/hooks/use-toast";
 
 const db = getFirestore(app);
 
-// Helper to generate the signature from our secure API route
+// NOTE: The Cloudinary helpers are omitted for brevity but are unchanged.
 async function getCloudinarySignature(paramsToSign: any) {
   const response = await fetch('/api/sign-cloudinary-params', {
     method: 'POST',
@@ -24,44 +26,31 @@ async function getCloudinarySignature(paramsToSign: any) {
   return signature;
 }
 
-// Helper to upload the file directly to Cloudinary
 async function uploadToCloudinary(file: File) {
     const timestamp = Math.round((new Date).getTime() / 1000); 
-    const paramsToSign = {
-        timestamp: timestamp,
-        // Add other parameters you want to include in the signature if needed
-        // For example, if you have a specific upload preset:
-        // upload_preset: 'your_preset_name'
-    };
-
+    const paramsToSign = { timestamp: timestamp };
     const signature = await getCloudinarySignature(paramsToSign);
-
     const formData = new FormData();
     formData.append("file", file);
     formData.append("timestamp", timestamp.toString());
-    // IMPORTANT: Replace with your Cloudinary cloud name and API key
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME; 
     const apiKey = process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY;
     if (!cloudName || !apiKey) {
         throw new Error("Cloudinary environment variables are not set.");
     }
-    formData.append("api_key", apiKey); 
+    formData.append("api_key", apiKey);
     formData.append("signature", signature);
-
     const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {
         method: "POST",
         body: formData,
     });
-
     if (!response.ok) {
         const errorResult = await response.json();
         throw new Error(`Cloudinary upload failed: ${errorResult.error.message}`);
     }
-
     const result = await response.json();
     return { success: true, url: result.secure_url };
 }
-
 
 function AddMusicModal({ onClose }: { onClose: () => void }) {
     const [form, setForm] = useState({
@@ -105,16 +94,11 @@ function AddMusicModal({ onClose }: { onClose: () => void }) {
         try {
             const user = auth.currentUser;
             if (!user) throw new Error("You must be logged in to upload music.");
-
-            // --- Upload files directly to Cloudinary ---
             const audioUploadResult = await uploadToCloudinary(audioFile);
             const artUploadResult = await uploadToCloudinary(albumArtFile);
-
             if (!audioUploadResult.success || !artUploadResult.success) {
                 throw new Error("One of the file uploads failed.");
             }
-
-            // --- Add Song to Firestore ---
             await addDoc(collection(db, 'songs'), {
                 ...form,
                 audioUrl: audioUploadResult.url,
@@ -124,8 +108,7 @@ function AddMusicModal({ onClose }: { onClose: () => void }) {
                 createdAt: serverTimestamp(),
                 playCount: 0,
             });
-
-            onClose(); // Success!
+            onClose();
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -133,14 +116,9 @@ function AddMusicModal({ onClose }: { onClose: () => void }) {
         }
     };
 
-
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-            <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="glass-card p-6 w-full max-w-lg relative max-h-[90vh] flex flex-col"
-            >
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="glass-card p-6 w-full max-w-lg relative max-h-[90vh] flex flex-col">
                 <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white">&times;</button>
                 <h2 className="text-xl font-headline font-bold mb-4 text-accent-cyan">Add a New Song</h2>
                 <form onSubmit={handleSubmit} className="flex flex-col gap-3 overflow-y-auto pr-2">
@@ -159,13 +137,10 @@ function AddMusicModal({ onClose }: { onClose: () => void }) {
                         <input type="number" name="year" placeholder="Year" className="input-glass w-full" value={form.year} onChange={handleChange} />
                     </div>
                     <textarea name="description" placeholder="Describe the song, its vibe, or a story behind it..." className="input-glass w-full rounded-2xl" rows={4} value={form.description} onChange={handleChange} />
-                    
                     <label className="text-sm font-bold text-accent-cyan mt-2">Upload Album Art</label>
                     <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'art')} className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent-pink/20 file:text-accent-pink hover:file:bg-accent-pink/40" required/>
-                    
                     <label className="text-sm font-bold text-accent-cyan mt-2">Upload Audio File</label>
                     <input type="file" accept="audio/*" onChange={(e) => handleFileChange(e, 'audio')} className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent-cyan/20 file:text-accent-cyan hover:file:bg-accent-cyan/40" required/>
-
                     {error && <div className="text-red-400 text-center p-2 bg-red-900/20 rounded-lg">{error}</div>}
                     <button type="submit" className="btn-glass bg-accent-cyan text-black mt-4" disabled={loading}>
                         {loading ? "Uploading..." : "Add Song"}
@@ -175,7 +150,6 @@ function AddMusicModal({ onClose }: { onClose: () => void }) {
         </div>
     );
 }
-
 
 function AddToPlaylistModal({ song, onClose }: { song: any; onClose: () => void }) {
     const [playlists, setPlaylists] = useState<any[]>([]);
@@ -200,11 +174,11 @@ function AddToPlaylistModal({ song, onClose }: { song: any; onClose: () => void 
             name: newPlaylistName,
             ownerId: currentUser.uid,
             createdAt: serverTimestamp(),
-            songIds: [song.id] // Add current song to new playlist
+            songIds: [song.id]
         });
         setNewPlaylistName('');
         setShowNewPlaylist(false);
-        onClose(); // Close modal after creating and adding
+        onClose();
     };
     
     const handleAddToPlaylist = async (playlistId: string) => {
@@ -217,11 +191,7 @@ function AddToPlaylistModal({ song, onClose }: { song: any; onClose: () => void 
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-            <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="glass-card p-6 w-full max-w-md relative flex flex-col max-h-[80vh]"
-            >
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="glass-card p-6 w-full max-w-md relative flex flex-col max-h-[80vh]">
                 <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white">&times;</button>
                 <h2 className="text-xl font-headline font-bold mb-4 text-accent-cyan">Add to Playlist</h2>
                 <div className="flex-1 overflow-y-auto mb-4 border-y border-accent-cyan/10 py-2">
@@ -239,13 +209,7 @@ function AddToPlaylistModal({ song, onClose }: { song: any; onClose: () => void 
                 </div>
                 {showNewPlaylist ? (
                     <div className="flex gap-2">
-                        <input 
-                            type="text"
-                            placeholder="New playlist name..."
-                            value={newPlaylistName}
-                            onChange={(e) => setNewPlaylistName(e.target.value)}
-                            className="input-glass flex-1"
-                        />
+                        <input type="text" placeholder="New playlist name..." value={newPlaylistName} onChange={(e) => setNewPlaylistName(e.target.value)} className="input-glass flex-1" />
                         <button onClick={handleCreatePlaylist} className="btn-glass bg-accent-pink">Create</button>
                     </div>
                 ) : (
@@ -264,7 +228,10 @@ export function MusicDiscovery() {
     const [showAddModal, setShowAddModal] = useState(false);
     const [showPlaylistModal, setShowPlaylistModal] = useState<any | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
-    const { activeSong, isPlaying, playSong, pauseSong } = useAppState();
+    const [openMenuSongId, setOpenMenuSongId] = useState<string | null>(null);
+    const { activeSong, isPlaying, playSong, toggleSong, addToQueue } = useMusicPlayer();
+    const router = useRouter();
+    const { toast } = useToast();
 
     useEffect(() => {
         const q = query(collection(db, "songs"), orderBy("createdAt", "desc"));
@@ -276,11 +243,16 @@ export function MusicDiscovery() {
     }, []);
     
     const handlePlayPause = (song: any, index: number) => {
-        if (activeSong?.id === song.id && isPlaying) {
-            pauseSong();
+        if (activeSong?.id === song.id) {
+            toggleSong();
         } else {
             playSong(song, filteredSongs, index);
         }
+    };
+
+    const handleAddToQueue = (song: any) => {
+        addToQueue(song);
+        toast({ title: "Added to Queue", description: `${song.title} will play next.` });
     };
 
     const filteredSongs = searchTerm
@@ -294,7 +266,7 @@ export function MusicDiscovery() {
     if (loading) return <div className="text-center text-accent-cyan animate-pulse">Loading music library...</div>
 
     return (
-        <div className="w-full flex flex-col items-center relative">
+        <div className="w-full flex flex-col items-center relative" onClick={() => setOpenMenuSongId(null)}>
             <h2 className="text-3xl font-headline bg-gradient-to-r from-accent-pink to-accent-green bg-clip-text text-transparent mb-6">Community Music</h2>
             
              <div className="relative mb-8 w-full max-w-lg mx-auto">
@@ -321,26 +293,64 @@ export function MusicDiscovery() {
                     {filteredSongs.map((song, index) => (
                         <motion.div
                             key={song.id}
-                            className="glass-card flex flex-col items-center text-center group"
+                            className="glass-card flex flex-col items-center text-center group cursor-pointer"
                             whileHover={{ y: -5 }}
+                            onClick={() => router.push(`/music/${song.id}`)}
                         >
                             <div className="relative w-full">
                                 <img src={song.albumArtUrl} alt={song.title} className="w-full h-auto rounded-t-2xl aspect-square object-cover"/>
-                                <div 
-                                    className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                                    onClick={() => handlePlayPause(song, index)}
-                                >
-                                    {activeSong?.id === song.id && isPlaying ? <Pause size={48} className="text-white"/> : <Play size={48} className="text-white"/>}
+                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button 
+                                        className="p-3 rounded-full bg-black/50 hover:bg-accent-cyan/50 text-white transition-colors"
+                                        onClick={(e) => { 
+                                            e.stopPropagation(); 
+                                            handlePlayPause(song, index); 
+                                        }}
+                                    >
+                                        {activeSong?.id === song.id && isPlaying ? <Pause size={32} /> : <Play size={32} />}
+                                    </button>
                                 </div>
+                                
                                 <button
-                                    className="absolute top-2 right-2 p-2 bg-black/40 rounded-full text-white hover:bg-accent-pink"
-                                    title="Add to playlist"
-                                    onClick={(e) => { e.stopPropagation(); setShowPlaylistModal(song); }}
+                                    className="absolute top-2 right-2 p-2 bg-black/40 rounded-full text-white hover:bg-accent-pink/80 z-10"
+                                    title="More options"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setOpenMenuSongId(openMenuSongId === song.id ? null : song.id);
+                                    }}
                                 >
-                                    <Plus size={16}/>
+                                    <MoreHorizontal size={16}/>
                                 </button>
+
+                                {openMenuSongId === song.id && (
+                                    <motion.div 
+                                        initial={{opacity: 0, y: -10}}
+                                        animate={{opacity: 1, y: 0}}
+                                        className="absolute top-12 right-2 bg-gray-800/90 backdrop-blur-md rounded-lg shadow-xl z-20 overflow-hidden w-48">
+                                        <button 
+                                            className="w-full text-left px-4 py-2 hover:bg-accent-cyan/20"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleAddToQueue(song);
+                                                setOpenMenuSongId(null);
+                                            }}
+                                        >
+                                            Add to Queue
+                                        </button>
+                                        <button 
+                                            className="w-full text-left px-4 py-2 hover:bg-accent-cyan/20"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setShowPlaylistModal(song);
+                                                setOpenMenuSongId(null);
+                                            }}
+                                        >
+                                           Add to Playlist
+                                        </button>
+                                    </motion.div>
+                                )}
                             </div>
-                            <div className="p-4 w-full cursor-pointer" onClick={() => handlePlayPause(song, index)}>
+                            <div className="p-4 w-full">
                                 <h3 className="font-headline text-base font-bold mb-1 text-accent-cyan truncate">{song.title}</h3>
                                 <p className="text-xs text-gray-400 truncate">{song.artist}</p>
                             </div>
