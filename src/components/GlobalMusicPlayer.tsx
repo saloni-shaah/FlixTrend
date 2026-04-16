@@ -1,21 +1,5 @@
+
 "use client";
-/**
- * GlobalMusicPlayer v2 — FlixTrend
- *
- * Fixes applied vs v1:
- *   ✅ useMemo queue sync (safe re-derivation on every playlist/activeSong change)
- *   ✅ Drag seek (mouse + touch scrubbing) with animated thumb
- *   ✅ Natural pull-down dismiss (dragConstraints bottom:300, elastic:0.2)
- *   ✅ Play button breathes when playing (scale pulse animation)
- *   ✅ localStorage persistence of activeSongId + currentTime
- *
- * Upgrades:
- *   🎨 Dynamic album-art blurred background (every song = unique palette)
- *   🌊 Inlined SVG noise texture overlay for film-grain depth
- *   🎯 Swipe left/right on vinyl disc to skip next/prev
- *   📳 whileTap on every control for haptic-feel micro-feedback
- *   🌀 Song-change crossfade on bg + disc (AnimatePresence mode="wait")
- */
 
 import React, {
   useState, useRef, useCallback, useMemo, useEffect,
@@ -29,8 +13,6 @@ import {
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import { Song } from '@/types/music';
 
-// ─── helpers ────────────────────────────────────────────────────────────────
-
 const fmt = (t: number) => {
   if (!t || isNaN(t)) return '0:00';
   const m = Math.floor(t / 60);
@@ -38,10 +20,18 @@ const fmt = (t: number) => {
   return `${m}:${s.toString().padStart(2, '0')}`;
 };
 
-// Inlined SVG noise — zero extra requests, renders as a grain texture
 const NOISE = `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`;
 
-// ─── main component ──────────────────────────────────────────────────────────
+const lightColors = [
+  'rgba(173, 216, 230, 0.5)', 
+  'rgba(144, 238, 144, 0.5)', 
+  'rgba(255, 255, 224, 0.5)', 
+  'rgba(255, 182, 193, 0.5)', 
+  'rgba(221, 160, 221, 0.5)', 
+  'rgba(240, 128, 128, 0.5)', 
+  'rgba(135, 206, 250, 0.5)', 
+  'rgba(255, 218, 185, 0.5)', 
+];
 
 export function GlobalMusicPlayer() {
   const {
@@ -66,7 +56,6 @@ export function GlobalMusicPlayer() {
   const [isSeeking,  setIsSeeking]  = useState(false);
   const progressRef                 = useRef<HTMLDivElement>(null);
 
-  // ── FIX #5: localStorage persistence ─────────────────────────────────────
   useEffect(() => {
     if (!activeSong) return;
     try {
@@ -74,20 +63,25 @@ export function GlobalMusicPlayer() {
         activeSongId: activeSong.id,
         currentTime,
       }));
-    } catch { /* quota / incognito – silent */ }
+    } catch {}
   }, [activeSong, currentTime]);
 
-  // ── derived ──────────────────────────────────────────────────────────────
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
-  // FIX #1: useMemo queue sync — always re-derived, safe after shuffle
+  const colorIndex = useMemo(() => {
+    if (!activeSong) return 0;
+    const hash = activeSong.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return hash % lightColors.length;
+  }, [activeSong]);
+
+  const dynamicBackgroundColor = lightColors[colorIndex];
+
   const upNext = useMemo<Song[]>(() => {
     if (!activeSong || currentPlaylist.length === 0) return [];
     const idx = currentPlaylist.findIndex(s => s?.id === activeSong.id);
     return idx >= 0 ? currentPlaylist.slice(idx + 1) : [];
   }, [activeSong, currentPlaylist]);
 
-  // ── FIX #2: drag seek (mouse + touch) ────────────────────────────────────
   const computeSeek = useCallback((clientX: number) => {
     if (!progressRef.current || !duration) return;
     const { left, width } = progressRef.current.getBoundingClientRect();
@@ -101,12 +95,10 @@ export function GlobalMusicPlayer() {
   const onTouchMove  = (e: React.TouchEvent)  => { if (isSeeking) computeSeek(e.touches[0].clientX); };
   const onTouchEnd   = ()                      =>   setIsSeeking(false);
 
-  // FIX #3: natural pull-down dismiss
   const onDragEnd = useCallback((_: unknown, info: PanInfo) => {
     if (info.offset.y > 100 || info.velocity.y > 400) setIsExpanded(false);
   }, []);
 
-  // UPGRADE: swipe vinyl left/right → next/prev
   const onAlbumSwipe = useCallback((_: unknown, info: PanInfo) => {
     if (Math.abs(info.offset.x) < 60) return;
     info.offset.x < 0 ? playNext() : playPrevious();
@@ -121,9 +113,6 @@ export function GlobalMusicPlayer() {
 
   return (
     <>
-      {/* ══════════════════════════════════════════════════════════════════
-          EXPANDED FULL-SCREEN PLAYER
-      ══════════════════════════════════════════════════════════════════ */}
       <AnimatePresence>
         {isExpanded && (
           <motion.div
@@ -132,17 +121,18 @@ export function GlobalMusicPlayer() {
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 280, damping: 32 }}
-            // FIX #3 – natural pull-to-dismiss
             drag="y"
             dragConstraints={{ top: 0, bottom: 300 }}
             dragElastic={0.2}
             onDragEnd={onDragEnd}
             className="fixed inset-0 z-[100] overflow-hidden"
-            style={{ touchAction: 'none' }}
+            style={{ 
+              backgroundColor: dynamicBackgroundColor, 
+              touchAction: 'none' 
+            }}
             onMouseUp={onMouseUp}
             onMouseLeave={onMouseUp}
           >
-            {/* UPGRADE: dynamic album-art background + noise grain */}
             <div className="absolute inset-0 overflow-hidden">
               <AnimatePresence mode="wait">
                 <motion.img
@@ -153,28 +143,24 @@ export function GlobalMusicPlayer() {
                   exit={{ opacity: 0,     scale: 1.05 }}
                   transition={{ duration: 0.55 }}
                   className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-                  style={{ filter: 'blur(55px) saturate(1.7) brightness(0.27)' }}
+                  style={{ filter: 'blur(55px) saturate(1.5) brightness(0.6)' }}
                 />
               </AnimatePresence>
-              {/* dark vignette */}
               <div
                 className="absolute inset-0"
                 style={{
                   background:
-                    'linear-gradient(180deg,rgba(0,0,0,.55) 0%,rgba(0,0,0,.80) 50%,rgba(0,0,0,.97) 100%)',
+                    'linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.7) 100%)',
                 }}
               />
-              {/* noise grain */}
               <div
                 className="absolute inset-0 pointer-events-none"
                 style={{ backgroundImage: NOISE, opacity: 0.045, mixBlendMode: 'overlay' }}
               />
             </div>
 
-            {/* content */}
             <div className="relative z-10 h-full flex flex-col max-w-lg mx-auto px-6">
 
-              {/* header */}
               <div className="flex items-center justify-between pt-14 pb-4">
                 <motion.button
                   whileTap={{ scale: 0.88 }}
@@ -198,11 +184,9 @@ export function GlobalMusicPlayer() {
                 </motion.button>
               </div>
 
-              {/* player / queue switcher */}
               <div className="relative flex-1 overflow-hidden">
                 <AnimatePresence mode="wait" initial={false}>
 
-                  {/* ── PLAYER VIEW ── */}
                   {!showQueue && (
                     <motion.div
                       key="player"
@@ -212,7 +196,6 @@ export function GlobalMusicPlayer() {
                       transition={{ duration: 0.22 }}
                       className="absolute inset-0 flex flex-col"
                     >
-                      {/* vinyl + swipe gesture area */}
                       <div className="flex-1 flex items-center justify-center">
                         <motion.div
                           drag="x"
@@ -221,7 +204,6 @@ export function GlobalMusicPlayer() {
                           onDragEnd={onAlbumSwipe}
                           className="relative cursor-grab active:cursor-grabbing select-none"
                         >
-                          {/* pulsing rings (only while playing) */}
                           {isPlaying && [0, 1, 2].map(i => (
                             <motion.div
                               key={i}
@@ -235,7 +217,6 @@ export function GlobalMusicPlayer() {
                             />
                           ))}
 
-                          {/* UPGRADE: song-change crossfade on disc */}
                           <AnimatePresence mode="wait">
                             <motion.div
                               key={activeSong.id + '-disc'}
@@ -263,7 +244,6 @@ export function GlobalMusicPlayer() {
                             </motion.div>
                           </AnimatePresence>
 
-                          {/* centre vinyl dot */}
                           <div
                             className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 rounded-full border-2 pointer-events-none"
                             style={{ background: 'rgba(0,0,0,.9)', borderColor: 'rgba(0,229,255,.35)' }}
@@ -271,7 +251,6 @@ export function GlobalMusicPlayer() {
                         </motion.div>
                       </div>
 
-                      {/* swipe hint */}
                       <p
                         className="text-center mb-2"
                         style={{ fontSize: 10, color: 'rgba(255,255,255,.18)', letterSpacing: '0.1em' }}
@@ -279,7 +258,6 @@ export function GlobalMusicPlayer() {
                         ← swipe vinyl to skip →
                       </p>
 
-                      {/* song meta (crossfades on song change) */}
                       <AnimatePresence mode="wait">
                         <motion.div
                           key={activeSong.id + '-meta'}
@@ -302,7 +280,6 @@ export function GlobalMusicPlayer() {
                         </motion.div>
                       </AnimatePresence>
 
-                      {/* FIX #2: drag-seekable progress bar */}
                       <div className="mb-5 select-none">
                         <div
                           ref={progressRef}
@@ -314,16 +291,14 @@ export function GlobalMusicPlayer() {
                           className="relative h-1.5 rounded-full cursor-pointer"
                           style={{ background: 'rgba(255,255,255,.1)', touchAction: 'none' }}
                         >
-                          {/* progress fill */}
                           <div
                             className="absolute top-0 left-0 h-full rounded-full"
                             style={{
                               width: `${progress}%`,
-                              background: 'linear-gradient(90deg,#00E5FF 0%,#00FF88 100%)',
+                              background: 'linear-gradient(90deg, #E6E6FA 0%, #BF00FF 100%)',
                               transition: isSeeking ? 'none' : 'width 0.22s linear',
                             }}
                           />
-                          {/* animated thumb */}
                           <motion.div
                             className="absolute top-1/2 -translate-y-1/2 rounded-full bg-white shadow-lg"
                             style={{ left: `calc(${progress}% - 8px)`, width: 16, height: 16 }}
@@ -341,7 +316,6 @@ export function GlobalMusicPlayer() {
                         </div>
                       </div>
 
-                      {/* controls */}
                       <div className="flex items-center justify-between mb-12">
                         <motion.button
                           whileTap={{ scale: 0.85 }}
@@ -361,7 +335,6 @@ export function GlobalMusicPlayer() {
                           <SkipBack size={28} fill="currentColor" />
                         </motion.button>
 
-                        {/* FIX #4: breathing play button */}
                         <motion.button
                           onClick={toggleSong}
                           whileTap={{ scale: 0.84 }}
@@ -407,7 +380,6 @@ export function GlobalMusicPlayer() {
                     </motion.div>
                   )}
 
-                  {/* ── QUEUE VIEW ── */}
                   {showQueue && (
                     <motion.div
                       key="queue"
@@ -417,7 +389,6 @@ export function GlobalMusicPlayer() {
                       transition={{ duration: 0.22 }}
                       className="absolute inset-0 flex flex-col overflow-y-auto pb-12"
                     >
-                      {/* currently playing */}
                       <div className="mb-6">
                         <p
                           className="font-bold uppercase mb-3"
@@ -453,7 +424,6 @@ export function GlobalMusicPlayer() {
                         </div>
                       </div>
 
-                      {/* up next list */}
                       <p
                         className="font-bold uppercase mb-3"
                         style={{ fontSize: 10, letterSpacing: '0.2em', color: 'rgba(255,255,255,.22)' }}
@@ -511,9 +481,6 @@ export function GlobalMusicPlayer() {
         )}
       </AnimatePresence>
 
-      {/* ══════════════════════════════════════════════════════════════════
-          MINI PLAYER — bottom bar
-      ══════════════════════════════════════════════════════════════════ */}
       <AnimatePresence>
         {!isExpanded && (
           <motion.div
@@ -522,20 +489,19 @@ export function GlobalMusicPlayer() {
             animate={{ y: 0 }}
             exit={{ y: 120 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="fixed bottom-20 md:bottom-5 left-3 right-3 z-50"
+            className="fixed bottom-28 md:bottom-24 left-1/2 -translate-x-1/2 w-[90%] max-w-md z-50"
           >
             <div
               onClick={() => setIsExpanded(true)}
               className="relative flex items-center gap-3 px-3 py-2.5 rounded-2xl cursor-pointer overflow-hidden"
               style={{
-                background: 'rgba(6,6,16,.88)',
+                background: 'rgba(255,255,255,0.07)',
                 backdropFilter: 'blur(28px)',
                 WebkitBackdropFilter: 'blur(28px)',
                 border: '1px solid rgba(0,229,255,.1)',
                 boxShadow: '0 8px 40px rgba(0,0,0,.55)',
               }}
             >
-              {/* UPGRADE: per-song art tint in mini bar */}
               <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
                 <AnimatePresence mode="wait">
                   <motion.img
@@ -551,7 +517,6 @@ export function GlobalMusicPlayer() {
                 </AnimatePresence>
               </div>
 
-              {/* progress stripe */}
               <div
                 className="absolute top-0 left-0 right-0 h-[2px] rounded-t-2xl overflow-hidden"
                 style={{ background: 'rgba(255,255,255,.04)' }}
@@ -560,13 +525,12 @@ export function GlobalMusicPlayer() {
                   className="h-full rounded-full"
                   style={{
                     width:      `${progress}%`,
-                    background: 'linear-gradient(90deg,#00E5FF 0%,#00FF88 100%)',
+                    background: 'linear-gradient(90deg, #E6E6FA 0%, #BF00FF 100%)',
                     transition: 'width 0.5s linear',
                   }}
                 />
               </div>
 
-              {/* spinning thumbnail */}
               <motion.img
                 key={activeSong.id + '-thumb'}
                 animate={isPlaying ? { rotate: 360 } : {}}
@@ -577,7 +541,6 @@ export function GlobalMusicPlayer() {
                 style={{ boxShadow: '0 0 14px rgba(0,229,255,.32)' }}
               />
 
-              {/* title / artist */}
               <div className="relative z-10 flex-1 min-w-0">
                 <p className="font-bold text-white truncate text-sm leading-tight">{activeSong.title}</p>
                 <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,.42)' }}>
@@ -585,7 +548,6 @@ export function GlobalMusicPlayer() {
                 </p>
               </div>
 
-              {/* controls — stopPropagation so taps don't expand */}
               <div className="relative z-10 flex items-center gap-0.5" onClick={e => e.stopPropagation()}>
                 <motion.button
                   whileTap={{ scale: 0.84 }}
@@ -624,8 +586,6 @@ export function GlobalMusicPlayer() {
     </>
   );
 }
-
-// ─── Animated bars — "currently playing" indicator in queue view ─────────────
 
 function BarsAnimation() {
   return (

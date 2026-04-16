@@ -160,7 +160,7 @@ function AddToPlaylistModal({ song, onClose }: { song: any; onClose: () => void 
 
     useEffect(() => {
         if (!currentUser) return;
-        const q = query(collection(db, "playlists"), where("ownerId", "==", currentUser.uid));
+        const q = query(collection(db, "users", currentUser.uid, "playlists"), where("Playlist_Type", "==", "song"));
         const unsub = onSnapshot(q, (snapshot) => {
             setPlaylists(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
             setLoading(false);
@@ -170,11 +170,12 @@ function AddToPlaylistModal({ song, onClose }: { song: any; onClose: () => void 
 
     const handleCreatePlaylist = async () => {
         if (!newPlaylistName.trim() || !currentUser) return;
-        await addDoc(collection(db, "playlists"), {
+        await addDoc(collection(db, "users", currentUser.uid, "playlists"), {
             name: newPlaylistName,
-            ownerId: currentUser.uid,
+            owner: currentUser.uid,
             createdAt: serverTimestamp(),
-            songIds: [song.id]
+            songIds: [song.id],
+            Playlist_Type: "song"
         });
         setNewPlaylistName('');
         setShowNewPlaylist(false);
@@ -182,7 +183,7 @@ function AddToPlaylistModal({ song, onClose }: { song: any; onClose: () => void 
     };
     
     const handleAddToPlaylist = async (playlistId: string) => {
-        const playlistRef = doc(db, "playlists", playlistId);
+        const playlistRef = doc(db, "users", currentUser.uid, "playlists", playlistId);
         await updateDoc(playlistRef, {
             songIds: arrayUnion(song.id)
         });
