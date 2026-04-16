@@ -11,7 +11,6 @@ import { useToast } from "@/hooks/use-toast";
 
 const db = getFirestore(app);
 
-// NOTE: The Cloudinary helpers are omitted for brevity but are unchanged.
 async function getCloudinarySignature(paramsToSign: any) {
   const response = await fetch('/api/sign-cloudinary-params', {
     method: 'POST',
@@ -183,6 +182,7 @@ function AddToPlaylistModal({ song, onClose }: { song: any; onClose: () => void 
     };
     
     const handleAddToPlaylist = async (playlistId: string) => {
+        if (!currentUser) return;
         const playlistRef = doc(db, "users", currentUser.uid, "playlists", playlistId);
         await updateDoc(playlistRef, {
             songIds: arrayUnion(song.id)
@@ -294,11 +294,10 @@ export function MusicDiscovery() {
                     {filteredSongs.map((song, index) => (
                         <motion.div
                             key={song.id}
-                            className="glass-card flex flex-col items-center text-center group cursor-pointer"
+                            className="glass-card flex flex-col items-center text-center group"
                             whileHover={{ y: -5 }}
-                            onClick={() => router.push(`/music/${song.id}`)}
                         >
-                            <div className="relative w-full">
+                            <div className="relative w-full cursor-pointer" onClick={() => router.push(`/music/${song.id}`)}>
                                 <img src={song.albumArtUrl} alt={song.title} className="w-full h-auto rounded-t-2xl aspect-square object-cover"/>
                                 <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                     <button 

@@ -79,8 +79,9 @@ export function GlobalMusicPlayer() {
   const upNext = useMemo<Song[]>(() => {
     if (!activeSong || currentPlaylist.length === 0) return [];
     const idx = currentPlaylist.findIndex(s => s?.id === activeSong.id);
-    return idx >= 0 ? currentPlaylist.slice(idx + 1) : [];
-  }, [activeSong, currentPlaylist]);
+    if (idx === -1) return [];
+    return currentPlaylist.slice(idx + 1, idx + 11); // Limit to 10 songs
+}, [activeSong, currentPlaylist]);
 
   const computeSeek = useCallback((clientX: number) => {
     if (!progressRef.current || !duration) return;
