@@ -34,8 +34,6 @@ const SongPage = () => {
         addToQueue,
     } = useMusicPlayer();
 
-    const originalPlaylist = useMemo(() => song ? [song, ...relatedSongs] : [], [song, relatedSongs]);
-
     useEffect(() => {
         const fetchSongAndRelated = async () => {
             if (songId) {
@@ -55,24 +53,24 @@ const SongPage = () => {
                         .map(doc => ({ id: doc.id, ...doc.data() } as Song))
                         .filter(s => s.id !== songData.id);
                     setRelatedSongs(related);
-
-                    // Only play the song if it's not already the active one.
-                    // This prevents re-starting the song on navigation.
-                    if (activeSong?.id !== songData.id) {
-                        playSong(songData, [songData, ...related], 0);
-                    }
                 }
             }
         };
 
         fetchSongAndRelated();
-    }, [songId]); // Dependency array is now safe.
+    }, [songId]);
 
     const handlePlayPause = () => {
         if (activeSong?.id === song?.id) {
             toggleSong();
         } else if (song) {
-            playSong(song, originalPlaylist, 0);
+            const isSongInCurrentPlaylist = currentPlaylist.some(s => s.id === song.id);
+            if (isSongInCurrentPlaylist) {
+                playSongFromPlaylist(song);
+            } else {
+                const newPlaylist = [song, ...relatedSongs];
+                playSong(song, newPlaylist, 0);
+            }
         }
     };
 
@@ -97,13 +95,12 @@ const SongPage = () => {
         return <div className="flex items-center justify-center h-screen"><p>Loading song...</p></div>;
     }
 
-    // --- Highly Robust "Up Next" Queue Logic ---
     let upNextQueue: Song[] = [];
     if (activeSong && currentPlaylist && currentPlaylist.length > 0) {
         const activeSongIndex = currentPlaylist.findIndex(s => s && s.id === activeSong.id);
 
         if (activeSongIndex !== -1) {
-            upNextQueue = currentPlaylist.slice(activeSongIndex + 1);
+            upNextQueue = currentPlaylist.slice(activeSongIndex + 1, activeSongIndex + 11);
         }
     }
     const safeUpNextQueue = upNextQueue.filter(Boolean);
