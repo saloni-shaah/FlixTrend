@@ -1,18 +1,33 @@
+
 'use client';
 
 import { usePathname } from 'next/navigation';
-import AppNavBar from '@/app/AppNavBar';
+import { MusicPlayerProvider } from '@/utils/MusicPlayerContext';
+import { GlobalMusicPlayer } from '@/components/GlobalMusicPlayer';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
-    const pathname = usePathname();
+  const pathname = usePathname();
 
-    // This will hide the navbar on any sub-route of /watch or /signup
-    const shouldHideBottomNav = pathname.startsWith('/watch') || pathname.startsWith('/signup');
+  const noNavRoutes = [
+    '/auth',
+    '/welcome',
+    '/settings/edit-profile',
+    '/settings/account',
+    '/settings/notifications',
+    '/settings/privacy',
+    '/settings/security',
+    '/create'
+  ];
 
-    return (
-        <>
-            {children}
-            {!shouldHideBottomNav && <AppNavBar />}
-        </>
-    );
+  const hideNav = noNavRoutes.some(route => pathname.startsWith(route));
+
+  return (
+    <MusicPlayerProvider>
+      {/* Nav components would be here if they existed */}
+      <main className={`transition-all duration-300 ease-in-out ${hideNav ? 'pt-0' : 'pt-16'} pb-16 md:pb-0`}>
+        {children}
+      </main>
+      <GlobalMusicPlayer />
+    </MusicPlayerProvider>
+  );
 }

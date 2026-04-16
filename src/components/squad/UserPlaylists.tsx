@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -6,15 +7,16 @@ import {
 } from 'firebase/firestore';
 import { app } from '@/utils/firebaseClient';
 import { PostCard } from '@/components/PostCard';
-import { ListMusic, Loader2, Play, ArrowLeft } from 'lucide-react';
+import { ListMusic, Loader2, Play, ArrowLeft, Music } from 'lucide-react';
 import { motion } from "framer-motion";
+import { useAppState } from '@/utils/AppStateContext';
+import { Song } from '@/types/music';
 
 const db = getFirestore(app);
 
 type Post = { id: string; } & DocumentData;
-type Playlist = { id: string; name: string; postIds: string[]; createdAt?: any; };
+type Playlist = { id: string; name: string; postIds?: string[]; songIds?: string[]; Playlist_Type?: string; createdAt?: any; };
 
-// --- Updated PlaylistCard Component Logic ---
 const PlaylistCard = ({ playlist, onClick }: { playlist: Playlist; onClick: () => void; }) => {
     const [coverImages, setCoverImages] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
@@ -78,14 +80,75 @@ const PlaylistCard = ({ playlist, onClick }: { playlist: Playlist; onClick: () =
     );
 };
 
+const SongPlaylistCard = ({ playlist, onClick }: { playlist: Playlist; onClick: () => void; }) => {
+    const [coverImages, setCoverImages] = useState<string[]>([]);
+    const [loading, setLoading] = useState(true);
 
-// --- Main UserPlaylists Component ---
+    useEffect(() => {
+        const fetchCoverImages = async () => {
+            setLoading(true);
+            const songIds = playlist.songIds || [];
+            const imagePromises: Promise<string | null>[] = songIds.slice(0, 4).map(async (songId) => {
+                try {
+                    const songSnap = await getDoc(doc(db, 'songs', songId));
+                    if (songSnap.exists()) {
+                        const songData = songSnap.data();
+                        return songData.albumArtUrl;
+                    }
+                } catch (err) {
+                  console.error(`Failed to fetch song ${songId} for cover art`, err);
+                }
+                return null;
+            });
+
+            const urls = (await Promise.all(imagePromises)).filter((url): url is string => !!url);
+            setCoverImages(urls);
+            setLoading(false);
+        };
+
+        fetchCoverImages();
+    }, [playlist.id, playlist.songIds]);
+
+    const imageGridClass = `grid gap-0.5 ${coverImages.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`;
+
+    return (
+        <motion.div
+            whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.07)' }}
+            transition={{ duration: 0.2 }}
+            onClick={onClick}
+            className="glass-card p-3 rounded-xl cursor-pointer flex flex-row items-center gap-4"
+        >
+            <div className="w-24 h-24 rounded-lg overflow-hidden bg-white/5 flex-shrink-0">
+                {loading ? (
+                    <div className="w-full h-full flex items-center justify-center"><Loader2 className="animate-spin text-gray-500" /></div>
+                ) : coverImages.length > 0 ? (
+                    <div className={`w-full h-full ${imageGridClass}`}>
+                        {coverImages.slice(0,4).map((url, index) => (
+                           <img key={index} src={url} alt={`Playlist cover ${index + 1}`} className="w-full h-full object-cover" />
+                        ))}
+                    </div>
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-accent-cyan/10">
+                       <Music className="text-accent-cyan/50" size={32} />
+                    </div>
+                )}
+            </div>
+            <div className="flex-1 min-w-0">
+                 <h3 className="font-bold text-lg text-white truncate">{playlist.name}</h3>
+                 <p className="text-sm text-gray-400">{playlist.songIds?.length || 0} songs</p>
+            </div>
+        </motion.div>
+    );
+};
+
 export function UserPlaylists({ userId }: { userId: string }) {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [loading, setLoading] = useState(true);
   const [openPlaylist, setOpenPlaylist] = useState<Playlist | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
-  const [postsLoading, setPostsLoading] = useState(false);
+  const [songs, setSongs] = useState<Song[]>([]);
+  const [contentLoading, setContentLoading] = useState(false);
+  const { playSong } = useAppState();
 
   useEffect(() => {
     if (!userId) { setLoading(false); return; }
@@ -107,28 +170,44 @@ export function UserPlaylists({ userId }: { userId: string }) {
 
   const openAndLoadPlaylist = useCallback(async (playlist: Playlist) => {
     setOpenPlaylist(playlist);
-    setPosts([]);
-    setPostsLoading(true);
-
-    const postIds = playlist.postIds || [];
-    if (postIds.length === 0) { setPostsLoading(false); return; }
-
-    try {
-        const fetched = await Promise.all(
-          postIds.map(async (id) => {
-            const snap = await getDoc(doc(db, "posts", id));
-            return snap.exists() ? { id: snap.id, ...snap.data() } as Post : null;
-          })
-        );
-        setPosts(fetched.filter((p): p is Post => p !== null));
-    } catch (error) {
-        console.error("Error loading playlist posts:", error);
-    } finally {
-        setPostsLoading(false);
+    setContentLoading(true);
+    if(playlist.Playlist_Type === 'song'){
+        setSongs([]);
+        const songIds = playlist.songIds || [];
+        if (songIds.length === 0) { setContentLoading(false); return; }
+        try {
+            const fetched = await Promise.all(
+              songIds.map(async (id) => {
+                const snap = await getDoc(doc(db, "songs", id));
+                return snap.exists() ? { id: snap.id, ...snap.data() } as Song : null;
+              })
+            );
+            setSongs(fetched.filter((p): p is Song => p !== null));
+        } catch (error) {
+            console.error("Error loading playlist songs:", error);
+        } finally {
+            setContentLoading(false);
+        }
+    } else {
+        setPosts([]);
+        const postIds = playlist.postIds || [];
+        if (postIds.length === 0) { setContentLoading(false); return; }
+        try {
+            const fetched = await Promise.all(
+              postIds.map(async (id) => {
+                const snap = await getDoc(doc(db, "posts", id));
+                return snap.exists() ? { id: snap.id, ...snap.data() } as Post : null;
+              })
+            );
+            setPosts(fetched.filter((p): p is Post => p !== null));
+        } catch (error) {
+            console.error("Error loading playlist posts:", error);
+        } finally {
+            setContentLoading(false);
+        }
     }
   }, []);
 
-  // --- Playlist Detail View ---
   if (openPlaylist) {
     return (
       <div className="w-full max-w-xl flex flex-col gap-4">
@@ -141,23 +220,46 @@ export function UserPlaylists({ userId }: { userId: string }) {
         </motion.button>
         <h2 className="text-3xl font-bold text-white">{openPlaylist.name}</h2>
         
-        {postsLoading ? (
+        {contentLoading ? (
             <div className="flex justify-center mt-20"><Loader2 className="animate-spin text-accent-cyan"/></div>
-        ) : posts.length > 0 ? (
-             <div className="flex flex-col gap-6 mt-4">
-                {posts.map(post => <PostCard key={post.id} post={post} collectionName="posts" />)}
-            </div>
+        ) : openPlaylist.Playlist_Type === 'song' ? (
+            songs.length > 0 ? (
+                <div className="flex flex-col gap-2 mt-4">
+                   {songs.map((song, index) => (
+                       <div key={song.id} className="flex items-center gap-4 p-2 rounded-lg hover:bg-white/10 cursor-pointer" onClick={() => playSong(song, songs, index)}>
+                           <img src={song.albumArtUrl} className="w-12 h-12 rounded-md" />
+                           <div>
+                               <div className="font-bold text-white">{song.title}</div>
+                               <div className="text-sm text-gray-400">{song.artist}</div>
+                           </div>
+                           <div className="ml-auto">
+                               <Play size={24} className="text-white" />
+                           </div>
+                       </div>
+                   ))}
+                </div>
+            ) : (
+                 <div className="text-gray-400 text-center mt-16 p-8 bg-white/5 rounded-2xl">
+                    <div className="text-lg font-semibold">No songs to display.</div>
+                    <p className="text-sm">The songs in this playlist may have been deleted.</p>
+                </div>
+            )
         ) : (
-            <div className="text-gray-400 text-center mt-16 p-8 bg-white/5 rounded-2xl">
-                <div className="text-lg font-semibold">No posts to display.</div>
-                <p className="text-sm">The posts in this playlist may have been deleted.</p>
-            </div>
+             posts.length > 0 ? (
+                 <div className="flex flex-col gap-6 mt-4">
+                    {posts.map(post => <PostCard key={post.id} post={post} collectionName="posts" />)}
+                </div>
+            ) : (
+                <div className="text-gray-400 text-center mt-16 p-8 bg-white/5 rounded-2xl">
+                    <div className="text-lg font-semibold">No posts to display.</div>
+                    <p className="text-sm">The posts in this playlist may have been deleted.</p>
+                </div>
+            )
         )}
       </div>
     );
   }
 
-  // --- Playlist List View ---
   if (loading) {
     return (
         <div className="flex flex-col gap-4 w-full max-w-xl">
@@ -191,7 +293,9 @@ export function UserPlaylists({ userId }: { userId: string }) {
         animate={{ opacity: 1 }}
     >
       {playlists.map(playlist => (
-        <PlaylistCard key={playlist.id} playlist={playlist} onClick={() => openAndLoadPlaylist(playlist)} />
+          playlist.Playlist_Type === 'song' ?
+          <SongPlaylistCard key={playlist.id} playlist={playlist} onClick={() => openAndLoadPlaylist(playlist)} /> :
+          <PlaylistCard key={playlist.id} playlist={playlist} onClick={() => openAndLoadPlaylist(playlist)} />
       ))}
     </motion.div>
   );

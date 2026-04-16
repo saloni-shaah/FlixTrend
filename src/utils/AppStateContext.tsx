@@ -4,17 +4,12 @@ import React, { createContext, useState, useContext, ReactNode, useEffect, useRe
 import { getFirestore, doc, onSnapshot, setDoc, serverTimestamp, Unsubscribe, updateDoc, collection, addDoc, getDoc, writeBatch, getDocs, deleteField } from 'firebase/firestore';
 import { auth, app } from './firebaseClient';
 import { CallScreen } from '@/components/CallScreen';
+import { Song } from '@/types/music';
 
 const db = getFirestore(app);
 
 interface Call {
   id: string;
-  [key: string]: any;
-}
-
-interface Song {
-  id: string;
-  audioUrl: string;
   [key: string]: any;
 }
 
@@ -35,14 +30,6 @@ interface AppState {
   handleEndCall: () => Promise<void>;
   closeCall: () => void;
   pc: RTCPeerConnection | null;
-  activeSong: Song | null;
-  isPlaying: boolean;
-  playSong: (song: Song, queue?: Song[], index?: number) => void;
-  pauseSong: () => void;
-  toggleSong: () => void;
-  playNext: () => void;
-  playPrevious: () => void;
-  audioPlayer: HTMLAudioElement | null;
   selectedChat: any | null;
   setSelectedChat: React.Dispatch<React.SetStateAction<any | null>>;
   drafts: { [chatId: string]: string };
@@ -90,11 +77,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [activeCall, setActiveCall] = useState<Call | null>(null);
   const [pc, setPc] = useState<RTCPeerConnection | null>(null);
   
-  const [activeSong, setActiveSong] = useState<Song | null>(null);
-  const [songQueue, setSongQueue] = useState<Song[]>([]);
-  const [currentSongIndex, setCurrentSongIndex] = useState<number>(-1);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const [selectedChat, setSelectedChat] = useState<any | null>(null);
   const [drafts, setDrafts] = useState<{ [chatId: string]: string }>({});
   const [isFlowVideoPlaying, setIsFlowVideoPlaying] = useState(false);
@@ -239,65 +221,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       await cleanUpCall(callId);
   };
   
-  useEffect(() => {
-    return () => {
-        if (audioRef.current) {
-            audioRef.current.pause();
-            audioRef.current = null;
-        }
-    }
-  }, []);
-
-  const startSong = (song: Song) => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-    }
-    const audio = new Audio(song.audioUrl);
-    audioRef.current = audio;
-    audio.play();
-
-    audio.addEventListener('play', () => setIsPlaying(true));
-    audio.addEventListener('pause', () => setIsPlaying(false));
-    audio.addEventListener('ended', playNext);
-
-    setActiveSong(song);
-    setIsPlaying(true);
-  };
-  
-  const playSong = (song: Song, queue: Song[] = [], index: number = -1) => {
-    startSong(song);
-    setSongQueue(queue);
-    setCurrentSongIndex(index);
-  };
-  
-  const pauseSong = () => {
-    if(audioRef.current) {
-        audioRef.current.pause();
-    }
-  };
-  
-  const toggleSong = () => {
-      if (isPlaying) {
-          pauseSong();
-      } else if(audioRef.current) {
-          audioRef.current.play();
-      }
-  };
-
-  const playNext = () => {
-    if (songQueue.length === 0) return;
-    const nextIndex = (currentSongIndex + 1) % songQueue.length;
-    setCurrentSongIndex(nextIndex);
-    startSong(songQueue[nextIndex]);
-  };
-
-  const playPrevious = () => {
-    if (songQueue.length === 0) return;
-    const prevIndex = (currentSongIndex - 1 + songQueue.length) % songQueue.length;
-    setCurrentSongIndex(prevIndex);
-    startSong(songQueue[prevIndex]);
-  };
-
   const closeCall = () => {
     if(pc) {
       pc.close();
@@ -320,14 +243,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     handleEndCall,
     closeCall,
     pc,
-    activeSong,
-    isPlaying,
-    playSong,
-    pauseSong,
-    toggleSong,
-    playNext,
-    playPrevious,
-    audioPlayer: audioRef.current,
     selectedChat,
     setSelectedChat,
     drafts,
