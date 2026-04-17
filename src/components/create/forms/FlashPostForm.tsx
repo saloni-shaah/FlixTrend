@@ -1,10 +1,9 @@
-
 "use client";
 import React, { useState, useRef, useEffect } from 'react';
 import { X, UploadCloud, Music as MusicIcon, MapPin, Camera, Image as ImageIcon, Locate, Loader, Calendar as CalendarIcon, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getFirestore, collection, onSnapshot, query, orderBy, getDoc, doc } from 'firebase/firestore';
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getStorage } from 'firebase/storage';
 import { auth, app } from '@/utils/firebaseClient';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -14,15 +13,18 @@ import imageCompression from 'browser-image-compression';
 const db = getFirestore(app);
 const storage = getStorage(app);
 
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+
 export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange: (data: any) => void }) {
     const [mediaPreview, setMediaPreview] = useState<string | null>(data.mediaUrl ? (Array.isArray(data.mediaUrl) ? data.mediaUrl[0] : data.mediaUrl) : null);
+    const [mediaFile, setMediaFile] = useState<File | null>(data.mediaFiles?.[0] || null);
     const [showSongPicker, setShowSongPicker] = useState(false);
     const [appSongs, setAppSongs] = useState<any[]>([]);
     
     const [showCamera, setShowCamera] = useState(false);
     const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
     const [cameraError, setCameraError] = useState<string | null>(null);
-    const [isUploading, setIsUploading] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
     const [uploadError, setUploadError] = useState('');
     const [isFetchingLocation, setIsFetchingLocation] = useState(false);
     const [isDragOver, setIsDragOver] = useState(false);
@@ -87,60 +89,73 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
         return () => unsub();
     }, [data.songId]);
 
-    const handleFileUpload = async (file: File) => {
-        const user = auth.currentUser;
-        if (!user) {
-            setUploadError("You must be logged in to upload files.");
-            return;
-        }
-
-        if (file.size > 20 * 1024 * 1024) { // 20MB limit
-            setUploadError("File is too large for a Flash (max 20MB).");
-            return;
-        }
-
-        setIsUploading(true);
+    const handleFileChange = async (file: File) => {
         setUploadError('');
 
-        let processedFile = file;
-        const isVideo = file.type.startsWith('video/');
-
-        if (!isVideo) {
-            try {
-                const options = {
-                    maxSizeMB: 0.5,
-                    maxWidthOrHeight: 1920,
-                    useWebWorker: true,
-                };
-                processedFile = await imageCompression(file, options);
-            } catch (error) {
-                console.error("Image compression error: ", error);
-                setUploadError("Could not compress the image.");
-                setIsUploading(false);
-                return;
-            }
+        // Validate file size (50MB limit)
+        if (file.size > MAX_FILE_SIZE) {
+            setUploadError("File is too large. Maximum size is 50MB.");
+            return;
         }
 
-        const previewUrl = URL.createObjectURL(processedFile);
-        setMediaPreview(previewUrl);
+        // Validate file type
+        const isImage = file.type.startsWith('image/');
+        const isVideo = file.type.startsWith('video/');
+
+        if (!isImage && !isVideo) {
+            setUploadError("Only images and videos are allowed.");
+            return;
+        }
+
+        setIsProcessing(true);
 
         try {
-            const fileName = `${user.uid}-${Date.now()}-${processedFile.name}`;
-            const fileRef = storageRef(storage, `flashes/${user.uid}/${fileName}`);
-            
-            const snapshot = await uploadBytes(fileRef, processedFile);
-            const downloadURL = await getDownloadURL(snapshot.ref);
+            let processedFile = file;
+            let previewUrl: string;
 
-            onDataChange({ ...data, mediaUrl: [downloadURL], mediaFiles: [processedFile] });
-            setMediaPreview(downloadURL);
+            // Only compress images, not videos
+            if (isImage) {
+                try {
+                    const options = {
+                        maxSizeMB: 0.5,
+                        maxWidthOrHeight: 1920,
+                        useWebWorker: true,
+                    };
+                    processedFile = await imageCompression(file, options);
+                } catch (error) {
+                    console.error("Image compression error: ", error);
+                    setUploadError("Could not compress the image.");
+                    setIsProcessing(false);
+                    return;
+                }
+            }
+
+            // Create local preview without uploading to Firebase
+            previewUrl = URL.createObjectURL(processedFile);
+            
+            // Store file locally and pass to parent - don't upload yet
+            setMediaFile(processedFile);
+            setMediaPreview(previewUrl);
+            
+            // Update parent with file and preview, but NOT the upload URL
+            onDataChange({ 
+                ...data, 
+                mediaFiles: [processedFile],
+                mediaUrl: null, // No URL yet - it will be uploaded on publish
+                isVideo: isVideo
+            });
 
         } catch (error: any) {
-            console.error("Upload failed:", error);
+            console.error("Error processing file:", error);
             setUploadError(error.message);
             setMediaPreview(null);
         } finally {
-            setIsUploading(false);
+            setIsProcessing(false);
         }
+    };
+
+    const handleFileUpload = (file: File) => {
+        handleFileChange(file);
     };
     
     const handleCapture = () => {
@@ -163,7 +178,7 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
         setShowCamera(false);
     };
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             handleFileUpload(e.target.files[0]);
         }
@@ -181,7 +196,8 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
     
     const removeMedia = () => {
         setMediaPreview(null);
-        onDataChange({ ...data, mediaUrl: [], mediaFiles: [] });
+        setMediaFile(null);
+        onDataChange({ ...data, mediaUrl: null, mediaFiles: [], isVideo: false });
     };
 
     const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
@@ -248,9 +264,9 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
         <div className="flex flex-col gap-4">
             <textarea name="caption" className="input-glass w-full rounded-2xl" placeholder="Add a caption..." value={data.caption || ''} onChange={handleTextChange} />
 
-            <div onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop} className={`p-4 border-2 border-dashed rounded-2xl text-center min-h-[200px] flex flex-col items-center justify-center transition-colors ${isDragOver ? 'border-accent-pink bg-accent-pink/10' : 'border-accent-cyan/30'}`}>
-                {isUploading ? (
-                    <div className="flex flex-col items-center gap-2"><Loader className="animate-spin text-accent-cyan"/><p className="text-sm text-accent-cyan">Uploading...</p></div>
+            <div onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop} className={`p-4 border-2 border-dashed rounded-2xl text-center min-h-[200px] flex flex-col items-center justify-center ${isDragOver ? 'border-accent-cyan bg-accent-cyan/10' : 'border-gray-600'}`}>
+                {isProcessing ? (
+                    <div className="flex flex-col items-center gap-2"><Loader className="animate-spin text-accent-cyan"/><p className="text-sm text-accent-cyan">Processing...</p></div>
                 ) : !mediaPreview ? (
                     <div className="flex flex-col items-center gap-4">
                         <UploadCloud className="text-gray-500" size={40}/>
@@ -262,11 +278,12 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
                                 <button type="button" className="btn-glass flex items-center justify-center gap-2" onClick={() => setShowCamera(true)}><Camera /> Camera</button>
                             )}
                         </div>
+                        <p className="text-xs text-gray-500 mt-2">Max 50MB - Images or Videos</p>
                     </div>
                 ) : (
                      <div className="relative group w-full h-full">
                         <div className="aspect-video w-full h-full">
-                             {(mediaPreview.includes('.mp4') || mediaPreview.includes('.webm') || data.mediaFiles[0]?.type.startsWith('video/')) ? (
+                             {data.isVideo ? (
                                 <video src={mediaPreview} className="w-full h-full object-contain rounded-lg" controls/>
                             ) : (
                                 <img src={mediaPreview} alt="preview" className="w-full h-full object-contain rounded-lg" />
@@ -275,14 +292,14 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
                         <button type="button" onClick={removeMedia} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 z-10"><X size={16} /></button>
                     </div>
                 )}
-                <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*,video/*" />
+                <input type="file" ref={fileInputRef} onChange={handleFileInputChange} className="hidden" accept="image/*,video/*" />
                 {uploadError && <p className="text-red-400 text-xs mt-2">{uploadError}</p>}
             </div>
             
              <div className="relative">
                 <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                 <input type="text" name="location" className="w-full rounded-xl p-3 pl-10 bg-black/20 text-white border-2 border-accent-cyan focus:outline-none focus:ring-2 focus:ring-accent-pink" placeholder="Add location..." value={data.location || ''} onChange={handleTextChange} />
-                 <button type="button" onClick={handleGetLocation} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-accent-cyan" disabled={isFetchingLocation}>{isFetchingLocation ? <Loader className="animate-spin" size={16} /> : <Locate size={16} />}</button>
+                 <button type="button" onClick={handleGetLocation} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-accent-cyan" disabled={isFetchingLocation}>{isFetchingLocation ? <Loader size={20} className="animate-spin" /> : <Locate size={20} />}</button>
             </div>
             
              <div>
@@ -294,7 +311,7 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
                     </button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0 glass-card">
-                    <Calendar mode="single" selected={data.scheduleDate} onSelect={handleDateChange} initialFocus disabled={(date) => date < new Date(new Date().setDate(new Date().getDate() - 1))}/>
+                    <Calendar mode="single" selected={data.scheduleDate} onSelect={handleDateChange} initialFocus disabled={(date) => date < new Date(new Date().setDate(new Date().getDate() - 1))} />
                     </PopoverContent>
                 </Popover>
             </div>
