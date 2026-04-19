@@ -1,6 +1,6 @@
-"use client";
+'use client';
 import React, { useState, useRef, useEffect } from 'react';
-import { X, UploadCloud, Music as MusicIcon, MapPin, Camera, Image as ImageIcon, Locate, Loader, Calendar as CalendarIcon, Zap } from 'lucide-react';
+import { X, UploadCloud, Music as MusicIcon, MapPin, Camera, Image as ImageIcon, Locate, Loader, Calendar as CalendarIcon, Zap, Search, Play, Pause } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getFirestore, collection, onSnapshot, query, orderBy, getDoc, doc } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
@@ -14,12 +14,20 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_VIDEO_DURATION = 180; // 3 minutes
+
+const formatTime = (time: number) => {
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60).toString().padStart(2, '0');
+    return `${minutes}:${seconds}`;
+};
 
 export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange: (data: any) => void }) {
     const [mediaPreview, setMediaPreview] = useState<string | null>(data.mediaUrl ? (Array.isArray(data.mediaUrl) ? data.mediaUrl[0] : data.mediaUrl) : null);
-    const [mediaFile, setMediaFile] = useState<File | null>(data.mediaFiles?.[0] || null);
     const [showSongPicker, setShowSongPicker] = useState(false);
     const [appSongs, setAppSongs] = useState<any[]>([]);
+    const [songSearchTerm, setSongSearchTerm] = useState('');
+    const [hasFetchedSongs, setHasFetchedSongs] = useState(false);
     
     const [showCamera, setShowCamera] = useState(false);
     const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
@@ -30,12 +38,15 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
     const [isDragOver, setIsDragOver] = useState(false);
     const [isCameraSupported, setIsCameraSupported] = useState(false);
 
+    const [songDuration, setSongDuration] = useState(0);
+    const [isSnippetPlaying, setIsSnippetPlaying] = useState(false);
+
     const fileInputRef = useRef<HTMLInputElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const snippetAudioRef = useRef<HTMLAudioElement>(null);
 
     useEffect(() => {
-        // Check for camera support on component mount
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
             navigator.mediaDevices.enumerateDevices()
                 .then(devices => {
@@ -81,81 +92,103 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
             };
             fetchSong();
         }
-
-        const q = query(collection(db, "songs"), orderBy("createdAt", "desc"));
-        const unsub = onSnapshot(q, (snapshot) => {
-            setAppSongs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        });
-        return () => unsub();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [data.songId]);
 
-    const handleFileChange = async (file: File) => {
-        setUploadError('');
-
-        // Validate file size (50MB limit)
-        if (file.size > MAX_FILE_SIZE) {
-            setUploadError("File is too large. Maximum size is 50MB.");
-            return;
+    useEffect(() => {
+        if (showSongPicker && !hasFetchedSongs) {
+            const q = query(collection(db, "songs"), orderBy("createdAt", "desc"));
+            const unsub = onSnapshot(q, (snapshot) => {
+                setAppSongs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+                setHasFetchedSongs(true);
+            });
+            return () => unsub();
         }
+    }, [showSongPicker, hasFetchedSongs]);
 
-        // Validate file type
+    const handleFileChange = async (file: File) => {
+        // Reset errors and set processing state
+        setUploadError('');
+        setIsProcessing(true);
+
+        // 1. Validate file type and size
         const isImage = file.type.startsWith('image/');
         const isVideo = file.type.startsWith('video/');
 
         if (!isImage && !isVideo) {
             setUploadError("Only images and videos are allowed.");
+            setIsProcessing(false);
             return;
         }
 
-        setIsProcessing(true);
+        if (file.size > MAX_FILE_SIZE) {
+            setUploadError(`File is too large. Max size is ${MAX_FILE_SIZE / 1024 / 1024}MB.`);
+            setIsProcessing(false);
+            return;
+        }
 
-        try {
-            let processedFile = file;
-            let previewUrl: string;
-
-            // Only compress images, not videos
-            if (isImage) {
-                try {
-                    const options = {
-                        maxSizeMB: 0.5,
-                        maxWidthOrHeight: 1920,
-                        useWebWorker: true,
+        // 2. Validate video duration if it's a video
+        if (isVideo) {
+            try {
+                const duration = await new Promise<number>((resolve, reject) => {
+                    const videoElement = document.createElement('video');
+                    videoElement.preload = 'metadata';
+                    videoElement.onloadedmetadata = () => {
+                        window.URL.revokeObjectURL(videoElement.src);
+                        resolve(videoElement.duration);
                     };
-                    processedFile = await imageCompression(file, options);
-                } catch (error) {
-                    console.error("Image compression error: ", error);
-                    setUploadError("Could not compress the image.");
+                    videoElement.onerror = () => reject('Could not read video file.');
+                    videoElement.src = URL.createObjectURL(file);
+                });
+
+                if (duration > MAX_VIDEO_DURATION) {
+                    setUploadError(`Video is too long. Max is ${MAX_VIDEO_DURATION / 60} minutes.`);
                     setIsProcessing(false);
                     return;
                 }
+            } catch (videoError) {
+                setUploadError(String(videoError));
+                setIsProcessing(false);
+                return;
             }
-
-            // Create local preview without uploading to Firebase
-            previewUrl = URL.createObjectURL(processedFile);
-            
-            // Store file locally and pass to parent - don't upload yet
-            setMediaFile(processedFile);
-            setMediaPreview(previewUrl);
-            
-            // Update parent with file and preview, but NOT the upload URL
-            onDataChange({ 
-                ...data, 
-                mediaFiles: [processedFile],
-                mediaUrl: null, // No URL yet - it will be uploaded on publish
-                isVideo: isVideo
-            });
-
-        } catch (error: any) {
-            console.error("Error processing file:", error);
-            setUploadError(error.message);
-            setMediaPreview(null);
-        } finally {
-            setIsProcessing(false);
         }
-    };
 
-    const handleFileUpload = (file: File) => {
-        handleFileChange(file);
+        // 3. Process the file (image compression)
+        let processedFile = file;
+        if (isImage) {
+            try {
+                processedFile = await imageCompression(file, { 
+                    maxSizeMB: 0.5, 
+                    maxWidthOrHeight: 1920, 
+                    useWebWorker: true 
+                });
+            } catch (compressionError) {
+                console.error("Image compression error: ", compressionError);
+                setUploadError("Could not compress the image.");
+                setIsProcessing(false);
+                return;
+            }
+        }
+
+        // 4. Create a temporary local URL for previewing
+        const previewUrl = URL.createObjectURL(processedFile);
+
+        // 5. Update local state to show the preview in this component
+        setMediaPreview(previewUrl);
+
+        // 6. Update parent state for the next steps
+        // The `mediaUrl` MUST be an array for Step3 to correctly read it.
+        // This was the source of the "b" text bug.
+        const updatedData = {
+            ...data,
+            mediaFiles: [processedFile], // The raw file for the final upload
+            mediaUrl: [previewUrl],      // The temporary URL for previews, wrapped in an array
+            isVideo: isVideo
+        };
+        onDataChange(updatedData);
+
+        // 7. Finish processing
+        setIsProcessing(false);
     };
     
     const handleCapture = () => {
@@ -169,8 +202,8 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
                 context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
                 canvas.toBlob((blob) => {
                     if (blob) {
-                        const file = new File([blob], `camera-capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
-                        handleFileUpload(file);
+                        const capturedFile = new File([blob], `camera-capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
+                        handleFileChange(capturedFile);
                     }
                 }, 'image/jpeg');
             }
@@ -179,8 +212,9 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
     };
 
     const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            handleFileUpload(e.target.files[0]);
+        const file = e.target.files?.[0];
+        if (file) {
+            handleFileChange(file);
         }
     };
 
@@ -189,14 +223,14 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
     const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         setIsDragOver(false);
-        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-            handleFileUpload(e.dataTransfer.files[0]);
+        const file = e.dataTransfer.files?.[0];
+        if (file) {
+            handleFileChange(file);
         }
     };
     
     const removeMedia = () => {
         setMediaPreview(null);
-        setMediaFile(null);
         onDataChange({ ...data, mediaUrl: null, mediaFiles: [], isVideo: false });
     };
 
@@ -209,7 +243,16 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
     }
 
     const handleSelectSong = (song: any) => {
-        onDataChange({ ...data, song: { id: song.id, name: song.title, artists: [song.artist], album: song.album, albumArt: song.albumArtUrl, preview_url: song.audioUrl } });
+        onDataChange({ ...data, song: { 
+            id: song.id, 
+            name: song.title, 
+            artists: [song.artist], 
+            album: song.album, 
+            albumArt: song.albumArtUrl, 
+            preview_url: song.audioUrl,
+            snippetStart: 0, // Default snippet
+            snippetEnd: 15
+        } });
         setShowSongPicker(false);
     };
 
@@ -238,6 +281,42 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
             setUploadError("Geolocation is not supported by this browser.");
         }
     };
+
+    const handleAudioMetadata = () => {
+        if (snippetAudioRef.current) {
+            setSongDuration(snippetAudioRef.current.duration);
+        }
+    };
+
+    const toggleSnippetPreview = () => {
+        if (!snippetAudioRef.current) return;
+        if (isSnippetPlaying) {
+            snippetAudioRef.current.pause();
+        } else {
+            snippetAudioRef.current.currentTime = data.song.snippetStart || 0;
+            snippetAudioRef.current.play();
+        }
+        setIsSnippetPlaying(!isSnippetPlaying);
+    };
+
+    const handleSnippetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const startTime = parseFloat(e.target.value);
+        onDataChange({ ...data, song: { ...data.song, snippetStart: startTime, snippetEnd: startTime + 15 } });
+        if (snippetAudioRef.current) {
+            snippetAudioRef.current.currentTime = startTime;
+        }
+    };
+
+    const handleSnippetTimeUpdate = () => {
+        if (snippetAudioRef.current && snippetAudioRef.current.currentTime >= (data.song.snippetStart || 0) + 15) {
+            snippetAudioRef.current.pause();
+            setIsSnippetPlaying(false);
+        }
+    };
+
+    const songsToShow = songSearchTerm
+        ? appSongs.filter(s => s.title?.toLowerCase().includes(songSearchTerm.toLowerCase()) || s.artist?.toLowerCase().includes(songSearchTerm.toLowerCase())).slice(0, 10)
+        : appSongs.slice(0, 10);
 
     if (showCamera) {
         return (
@@ -278,7 +357,7 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
                                 <button type="button" className="btn-glass flex items-center justify-center gap-2" onClick={() => setShowCamera(true)}><Camera /> Camera</button>
                             )}
                         </div>
-                        <p className="text-xs text-gray-500 mt-2">Max 50MB - Images or Videos</p>
+                        <p className="text-xs text-gray-500 mt-2">Max 50MB & 3 minutes</p>
                     </div>
                 ) : (
                      <div className="relative group w-full h-full">
@@ -322,19 +401,71 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
                     <MusicIcon size={16}/>
                 </button>
                 <motion.div initial={false} animate={{ height: showSongPicker ? 'auto' : 0, opacity: showSongPicker ? 1 : 0 }} className="overflow-hidden bg-black/20 rounded-b-lg">
+                    <div className="p-2">
+                        <div className="relative">
+                            <input
+                                type="text"
+                                placeholder="Search songs..."
+                                className="input-glass w-full pl-8 text-sm"
+                                value={songSearchTerm}
+                                onChange={(e) => setSongSearchTerm(e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                            />
+                            <Search size={16} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                        </div>
+                    </div>
                     <div className="p-2 max-h-48 overflow-y-auto">
-                        {appSongs.map(song => (
-                            <div key={song.id} className="flex items-center gap-3 p-2 rounded cursor-pointer hover:bg-accent-cyan/10" onClick={() => handleSelectSong(song)}>
-                                <img src={song.albumArtUrl} alt="album" className="w-10 h-10 rounded" />
-                                <div>
-                                    <div className="font-bold text-sm text-accent-cyan">{song.title}</div>
-                                    <div className="text-xs text-gray-400">{song.artist}</div>
+                        {!hasFetchedSongs ? (
+                           <div className="flex justify-center items-center p-4"><Loader className="animate-spin text-accent-cyan"/></div>
+                        ) : songsToShow.length > 0 ? (
+                            songsToShow.map(song => (
+                                <div key={song.id} className="flex items-center gap-3 p-2 rounded cursor-pointer hover:bg-accent-cyan/10" onClick={() => handleSelectSong(song)}>
+                                    <img src={song.albumArtUrl} alt="album" className="w-10 h-10 rounded" />
+                                    <div>
+                                        <div className="font-bold text-sm text-accent-cyan">{song.title}</div>
+                                        <div className="text-xs text-gray-400">{song.artist}</div>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))
+                        ) : (
+                            <p className="text-center text-gray-400 text-sm py-4">No songs found.</p>
+                        )}
                     </div>
                 </motion.div>
             </div>
+
+            {data.song && !data.isVideo && (
+                <div className="p-3 bg-black/20 rounded-lg mt-2">
+                    <p className="text-sm font-bold text-accent-pink mb-2">Trim Song Snippet (15s)</p>
+                    <div className="flex items-center gap-3">
+                        <button onClick={toggleSnippetPreview} className="p-2 btn-glass">
+                            {isSnippetPlaying ? <Pause size={18} /> : <Play size={18} />}
+                        </button>
+                        <div className='flex-1'>
+                            <input
+                                type="range"
+                                min="0"
+                                max={songDuration > 15 ? songDuration - 15 : 0}
+                                step="0.1"
+                                value={data.song.snippetStart || 0}
+                                className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer range-thumb-pink"
+                                onChange={handleSnippetChange}
+                            />
+                            <div className="flex justify-between text-xs font-mono text-gray-400 mt-1">
+                                <span>{formatTime(data.song.snippetStart || 0)}</span>
+                                <span>{formatTime(songDuration)}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <audio
+                        ref={snippetAudioRef}
+                        src={data.song.preview_url}
+                        onLoadedMetadata={handleAudioMetadata}
+                        onTimeUpdate={handleSnippetTimeUpdate}
+                        onEnded={() => setIsSnippetPlaying(false)}
+                    />
+                </div>
+            )}
         </div>
     );
 }

@@ -1,7 +1,6 @@
-
-"use client";
+'use client';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Send, Heart, Laugh, ThumbsUp, Volume2, VolumeX, Pause, Play, Music } from 'lucide-react';
+import { X, Send, Volume2, VolumeX, Pause, Play, Music } from 'lucide-react';
 import { auth, app } from '@/utils/firebaseClient';
 import { getFirestore, addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import Image from 'next/image';
@@ -9,28 +8,21 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const db = getFirestore(app);
 
-// EXACT copy of the working FlashInteraction from your FlashModal
 function FlashInteraction({ flash, currentUser, onClose }: { flash: any; currentUser: any; onClose: () => void }) {
     const [message, setMessage] = useState('');
     const emojis = ['❤️', '😂', '😮', '😢', '🔥', '👍'];
-
     const getChatId = (uid1: string, uid2: string) => [uid1, uid2].sort().join("_");
 
     const handleSend = async (text: string) => {
         if (!text.trim() || !currentUser || !flash) return;
-        
         const chatId = getChatId(currentUser.uid, flash.userId);
-
         await addDoc(collection(db, "chats", chatId, "messages"), {
             text: text,
             sender: currentUser.uid,
             createdAt: serverTimestamp(),
             type: 'flash_reply',
             readBy: [currentUser.uid],
-            flash_preview: {
-                mediaUrl: flash.mediaUrl,
-                caption: flash.caption || '',
-            }
+            flash_preview: { mediaUrl: flash.mediaUrl, caption: flash.caption || '' }
         });
         onClose(); 
     };
@@ -44,33 +36,15 @@ function FlashInteraction({ flash, currentUser, onClose }: { flash: any; current
                     onChange={e => setMessage(e.target.value)}
                     placeholder="Send a message..."
                     className="input-glass flex-1 text-sm bg-black/50 border-white/20 focus:ring-accent-cyan"
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter' && message.trim()) {
-                            e.preventDefault();
-                            handleSend(message);
-                        }
-                    }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && message.trim()) { e.preventDefault(); handleSend(message); } }}
                      onFocus={() => (window as any).isTyping = true}
                      onBlur={() => (window as any).isTyping = false}
                 />
-                <button 
-                    onClick={() => handleSend(message)}
-                    disabled={!message.trim()}
-                    className="p-3 rounded-full bg-accent-cyan text-black disabled:bg-gray-600"
-                >
-                    <Send size={16} />
-                </button>
+                <button onClick={() => handleSend(message)} disabled={!message.trim()} className="p-3 rounded-full bg-accent-cyan text-black disabled:bg-gray-600"><Send size={16} /></button>
             </div>
             <div className="flex gap-2 justify-around items-center pt-3 px-2">
                 {emojis.map(emoji => (
-                    <motion.button 
-                        key={emoji} 
-                        className="text-2xl hover:scale-125 transition-transform"
-                        onClick={() => handleSend(emoji)}
-                        whileTap={{ scale: 0.9 }}
-                    >
-                        {emoji}
-                    </motion.button>
+                    <motion.button key={emoji} className="text-2xl hover:scale-125 transition-transform" onClick={() => handleSend(emoji)} whileTap={{ scale: 0.9 }}>{emoji}</motion.button>
                 ))}
             </div>
         </div>
@@ -112,6 +86,7 @@ export default function FlashPlayer({ usersWithFlashes, onClose, initialUserInde
         if (audioRef.current) {
             audioRef.current.pause();
             audioRef.current.src = '';
+            audioRef.current = null;
         }
         if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
         setIsLoading(true);
@@ -151,6 +126,10 @@ export default function FlashPlayer({ usersWithFlashes, onClose, initialUserInde
             audioRef.current = new Audio(currentFlash.song.preview_url);
             audioRef.current.muted = isMuted;
             audioRef.current.volume = isVideo ? 0.2 : 1.0;
+
+            const snippetStart = currentFlash.song.snippetStart || 0;
+            audioRef.current.currentTime = snippetStart;
+            
             if (!isPaused) audioRef.current.play().catch(e => {});
         }
         return () => cleanup();
@@ -175,21 +154,29 @@ export default function FlashPlayer({ usersWithFlashes, onClose, initialUserInde
 
     useEffect(() => {
         if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+
         if (!isVideo && !isPaused && !isLoading) {
-            const DURATION = 15000;
+            const DURATION = (currentFlash.song?.snippetEnd && currentFlash.song?.snippetStart) 
+                ? (currentFlash.song.snippetEnd - currentFlash.song.snippetStart) * 1000
+                : 15000;
+            
             let startTime: number;
             const animate = (timestamp: number) => {
                 if (startTime === undefined) startTime = timestamp;
                 const elapsed = timestamp - startTime;
                 const newProgress = Math.min((elapsed / DURATION) * 100, 100);
                 setProgress(newProgress);
-                if (elapsed < DURATION) animationFrameRef.current = requestAnimationFrame(animate);
-                else goToNextFlash();
+                if (elapsed < DURATION) {
+                    animationFrameRef.current = requestAnimationFrame(animate);
+                } else {
+                    goToNextFlash();
+                }
             };
             animationFrameRef.current = requestAnimationFrame(animate);
         }
+
         return () => { if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current); };
-    }, [isVideo, isPaused, isLoading, goToNextFlash]);
+    }, [isVideo, isPaused, isLoading, goToNextFlash, currentFlash]);
 
     useEffect(() => {
         const video = videoRef.current;
@@ -238,7 +225,6 @@ export default function FlashPlayer({ usersWithFlashes, onClose, initialUserInde
                     </motion.div>
                 </AnimatePresence>
 
-                {/* OVERLAYS at the top */}
                 <div className="absolute top-0 left-0 right-0 p-3 z-40 bg-gradient-to-b from-black/50 to-transparent">
                     <div className="flex items-center gap-2 mb-3">
                        {currentUserFlashes.map((_, index) => <ProgressBar key={index} progress={index === currentFlashIndex ? progress : (index < currentFlashIndex ? 100 : 0)} active={index === currentFlashIndex}/>)}

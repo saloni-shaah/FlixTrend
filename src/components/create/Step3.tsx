@@ -62,7 +62,7 @@ function PostPreview({ postData }: { postData: any }) {
                 )}
                  {postType === 'live' && (
                     <div className="text-center">
-                        <p className="font-bold text-red-500\">LIVE</p>
+                        <p className="font-bold text-red-500\\\">LIVE</p>
                         <p>{postData.title || "Live Stream"}</p>
                     </div>
                 )}
@@ -106,10 +106,23 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
             const mainCategory = creatorCategoryMap[creatorType] || null;
             const hashtags = (postData.hashtags || "").split(/[\s,]+/).map((h:string) => h.replace('#', '')).filter(Boolean);
 
-            // --------------------- FIX START: Handle Flash Post Separately ---------------------
             if (postData.postType === 'flash') {
                 const createdAt = postData.scheduleDate ? Timestamp.fromDate(postData.scheduleDate) : serverTimestamp();
                 const expiresAt = new Date((postData.scheduleDate || new Date()).getTime() + 24 * 60 * 60 * 1000);
+                
+                let finalMediaUrl: string | null = null;
+
+                if (postData.mediaFiles && postData.mediaFiles.length > 0) {
+                    const file = postData.mediaFiles[0];
+                    const mediaPath = `flashes/${user.uid}/${Date.now()}_${file.name}`;
+                    finalMediaUrl = await uploadFile(file, mediaPath);
+                } else if (postData.mediaUrl && !postData.mediaUrl[0].startsWith('blob:')) {
+                    finalMediaUrl = postData.mediaUrl[0];
+                }
+
+                if (!finalMediaUrl) {
+                    throw new Error("Media is missing for the Flash post. Please go back and re-select your media.");
+                }
 
                 const flashData = {
                     userId: user.uid,
@@ -124,23 +137,17 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                     expiresAt,
                     publishAt: createdAt,
                     location: postData.location || null,
-                    mediaUrl: postData.mediaUrl?.[0] || null, // Directly use the URL from FlashPostForm
+                    mediaUrl: finalMediaUrl,
                     song: postData.song || null,
                     viewCount: 0,
                     creatorType,
                     category: mainCategory,
                 };
 
-                if (!flashData.mediaUrl) {
-                    throw new Error("Media URL is missing for the Flash post. Please go back and re-select your media.");
-                }
-
                 await addDoc(collection(db, 'flashes'), flashData);
                 router.push('/vibespace');
-                return; // Exit the function to prevent further processing
+                return; 
             }
-            // --------------------- FIX END: Handle Flash Post Separately ---------------------
-
 
             // --- Existing logic for all other post types (media, text, poll, live) ---
             let finalThumbnailUrl: string | null = null;
