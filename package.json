@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@2toad/profanity": "^3.3.0",
     "@fontsource/cinzel": "^5.2.8",
     "@fontsource/great-vibes": "^5.2.8",
     "@fontsource/inter": "^5.2.8",
@@ -46,6 +47,7 @@
     "@tailwindcss/line-clamp": "^0.4.4",
     "@tailwindcss/typography": "^0.5.19",
     "@upstash/redis": "^1.35.7",
+    "bad-words": "^4.0.0",
     "browser-image-compression": "^2.0.2",
     "class-variance-authority": "^0.7.1",
     "cloudinary": "^2.9.0",
@@ -59,6 +61,7 @@
     "firebase-admin": "^12.7.0",
     "firebase-functions": "^4.9.0",
     "framer-motion": "^12.23.24",
+    "leo-profanity": "^1.9.0",
     "livekit-client": "^2.16.0",
     "livekit-server-sdk": "^2.14.2",
     "lucide-react": "^0.554.0",

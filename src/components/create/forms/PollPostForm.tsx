@@ -2,24 +2,54 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { X, Plus, CheckCircle } from 'lucide-react';
+import { isAbusive } from '@/utils/moderation';
 
-export function PollPostForm({ data, onDataChange }: { data: any, onDataChange: (data: any) => void }) {
+export function PollPostForm({ data, onDataChange, onError }: { data: any, onDataChange: (data: any) => void, onError: (error: string | null) => void }) {
     const [options, setOptions] = useState<any[]>(data.options || [{ text: '' }, { text: '' }]);
     const [correctAnswerIndex, setCorrectAnswerIndex] = useState<number | null>(data.correctAnswerIndex ?? null);
 
+    const checkForAbuse = (checkData: {
+        question?: string;
+        options?: { text: string }[];
+        hashtags?: string;
+    }) => {
+        const { question, options: pollOptions, hashtags } = { ...data, ...checkData };
+
+        if (isAbusive(question || '')) {
+            onError("The poll question contains inappropriate language.");
+            return;
+        }
+        if (isAbusive(hashtags || '')) {
+            onError("The hashtags contain inappropriate language.");
+            return;
+        }
+        if (pollOptions && pollOptions.some((opt:any) => isAbusive(opt.text))) {
+            onError("A poll option contains inappropriate language.");
+            return;
+        }
+
+        onError(null); // No abuse found
+    };
+
     // Sync parent data changes to local state
     useEffect(() => {
-        onDataChange({ ...data, options, correctAnswerIndex });
+        const updatedData = { ...data, options, correctAnswerIndex };
+        onDataChange(updatedData);
+        checkForAbuse(updatedData);
     }, [options, correctAnswerIndex]);
 
     const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        onDataChange({ ...data, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        const newData = { ...data, [name]: value };
+        onDataChange(newData);
+        checkForAbuse(newData);
     };
 
     const handleOptionTextChange = (index: number, text: string) => {
         const newOptions = [...options];
         newOptions[index] = { ...newOptions[index], text };
         setOptions(newOptions);
+        // The useEffect will handle data change and validation
     };
 
     const addOption = () => {

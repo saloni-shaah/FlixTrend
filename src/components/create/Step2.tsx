@@ -1,108 +1,55 @@
-
 "use client";
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { Shield, ShieldAlert, ArrowLeft, ArrowRight } from 'lucide-react';
+// Import the centralized isAbusive function
+import { isAbusive } from '@/utils/moderation';
 
-const filters = [
-    { name: 'None', style: 'none' },
-    { name: 'Vintage', style: 'sepia(0.6) saturate(1.4) contrast(0.8)' },
-    { name: 'Mono', style: 'grayscale(1)' },
-    { name: 'Dreamy', style: 'saturate(1.8) brightness(1.1) contrast(0.9)' },
-    { name: 'Sunset', style: 'hue-rotate(-20deg) saturate(1.5)' },
-    { name: 'Matrix', style: 'contrast(1.5) saturate(1.8) hue-rotate(90deg)' }
-];
+export default function Step2({ onBack, onNext, postData }: { onBack: () => void; onNext: () => void; postData: any }) {
+    const { content, description, hashtags, question } = postData;
 
-// This is a new special filter type that will overlay an image
-const overlayFilters = [
-    { name: 'Sunglasses', icon: '/filters/sunglasses.png' } // Corrected path
-];
+    // Use the imported function
+    const contentIsAbusive = isAbusive(content);
+    const descriptionIsAbusive = isAbusive(description);
+    const hashtagsAreAbusive = isAbusive(hashtags);
+    const questionIsAbusive = isAbusive(question);
 
-export default function Step2({ onNext, onBack, postData, onDataChange }: { onNext: (data: any) => void; onBack: () => void; postData: any, onDataChange: (data: any) => void }) {
-    const [selectedFilter, setSelectedFilter] = useState(postData.filter || 'none');
-    const [selectedOverlay, setSelectedOverlay] = useState(postData.overlay || 'none');
-    
-    const mediaPreview = postData.mediaPreviews?.[0];
+    const isClean = !contentIsAbusive && !descriptionIsAbusive && !hashtagsAreAbusive && !questionIsAbusive;
 
-    const handleSelectFilter = (filterStyle: string) => {
-        setSelectedFilter(filterStyle);
-        setSelectedOverlay('none'); // Clear overlay when a CSS filter is chosen
-        onDataChange({ ...postData, filter: filterStyle, overlay: 'none' });
-    };
-    
-    const handleSelectOverlay = (overlayName: string) => {
-        const iconPath = overlayFilters.find(f => f.name === overlayName)?.icon || 'none';
-        setSelectedOverlay(iconPath);
-        setSelectedFilter('none'); // Clear CSS filter when an overlay is chosen
-        onDataChange({ ...postData, overlay: iconPath, filter: 'none' });
-    };
+    const getFieldFeedback = (isAbusive: boolean, fieldName: string) => {
+        if (!isAbusive) {
+            return <span className="flex items-center gap-2 text-green-400"><Shield size={16}/> {fieldName} is clean.</span>
+        }
+        return <span className="flex items-center gap-2 text-red-400"><ShieldAlert size={16}/> {fieldName} contains potentially abusive language.</span>
+    }
 
     return (
-        <motion.div initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }}>
-            <div className="glass-card p-4 md:p-8 flex flex-col md:flex-row gap-8 items-center">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <div className="glass-card p-8">
+                <h2 className="text-2xl font-headline text-accent-cyan mb-4">Step 2: Content Review</h2>
+                <p className="text-gray-400 mb-6">We automatically check for abusive language to keep our community safe. Please review the results below.</p>
                 
-                {/* Image Preview */}
-                <div className="w-full md:w-1/2 relative aspect-square flex items-center justify-center">
-                    {mediaPreview ? (
-                        <div className="relative w-full h-full">
-                            <img 
-                                src={mediaPreview} 
-                                alt="Preview" 
-                                className="w-full h-full object-contain rounded-lg"
-                                style={{ filter: selectedFilter }}
-                            />
-                            {selectedOverlay !== 'none' && (
-                                <img
-                                    src={selectedOverlay}
-                                    alt="Overlay"
-                                    className="absolute top-0 left-0 w-full h-full object-contain"
-                                />
-                            )}
-                        </div>
-                    ) : (
-                        <div className="w-full h-full bg-black/20 rounded-lg flex items-center justify-center text-gray-400">
-                           No image to preview
-                        </div>
-                    )}
+                <div className="space-y-3">
+                    {content && <div>{getFieldFeedback(contentIsAbusive, "Caption/Content")}</div>}
+                    {description && <div>{getFieldFeedback(descriptionIsAbusive, "Description")}</div>}
+                    {hashtags && <div>{getFieldFeedback(hashtagsAreAbusive, "Hashtags")}</div>}
+                    {question && <div>{getFieldFeedback(questionIsAbusive, "Poll Question")}</div>}
                 </div>
 
-                {/* Filter Selection */}
-                <div className="w-full md:w-1/2">
-                    <h2 className="text-xl font-headline text-accent-cyan mb-4">Choose a Filter</h2>
-                    <div className="grid grid-cols-3 gap-2">
-                        {filters.map(f => (
-                            <button 
-                                key={f.name}
-                                onClick={() => handleSelectFilter(f.style)}
-                                className={`aspect-square flex items-center justify-center text-xs font-bold rounded-lg border-2 ${selectedFilter === f.style ? 'border-accent-pink' : 'border-transparent'}`}
-                            >
-                                <div className="w-16 h-16 bg-cover bg-center rounded" style={{ backgroundImage: `url(${mediaPreview})`, filter: f.style }}></div>
-                                <span className="absolute">{f.name}</span>
-                            </button>
-                        ))}
+                {!isClean && (
+                    <div className="mt-6 p-4 rounded-lg bg-red-900/50 border border-red-500/80 text-red-300">
+                        <h3 className="font-bold">Action Required</h3>
+                        <p>One or more fields contain language that violates our community guidelines. Please go back and revise your content before you can publish.</p>
                     </div>
-                     <h2 className="text-xl font-headline text-accent-cyan mt-6 mb-4">Overlays</h2>
-                     <div className="grid grid-cols-4 gap-2">
-                        {overlayFilters.map(f => (
-                            <button
-                                key={f.name}
-                                onClick={() => handleSelectOverlay(f.name)}
-                                className={`aspect-square flex flex-col items-center justify-center text-xs font-bold rounded-lg border-2 ${selectedOverlay === f.icon ? 'border-accent-pink' : 'border-transparent'}`}
-                            >
-                                <img src={f.icon} alt={f.name} className="w-12 h-12" />
-                                {f.name}
-                            </button>
-                        ))}
-                    </div>
-                </div>
+                )}
             </div>
 
             <div className="flex justify-between mt-8">
-                <button className="btn-glass flex items-center gap-2" onClick={onBack}>
-                    <ArrowLeft /> Back
+                <button className="btn-glass bg-gray-700 flex items-center gap-2" onClick={onBack}>
+                    <ArrowLeft /> Go Back
                 </button>
-                <button className="btn-glass bg-accent-cyan text-black flex items-center gap-2" onClick={() => onNext({})}>
-                    Next <ArrowRight />
+                <button className="btn-glass bg-accent-pink flex items-center gap-2" onClick={onNext} disabled={!isClean}>
+                    Next Step <ArrowRight />
                 </button>
             </div>
         </motion.div>
