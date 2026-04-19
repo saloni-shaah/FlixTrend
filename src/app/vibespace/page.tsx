@@ -13,13 +13,13 @@ import { app } from "@/utils/firebaseClient";
 import { VibeSpaceLoader } from "@/components/VibeSpaceLoader";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Image from 'next/image';
 import { WelcomeAnimation } from "@/components/WelcomeAnimation";
 import { redisClient } from '@/utils/redis';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import { FlixFlameIcon } from '@/components/icons/FlixFlameIcon';
 
-const MusicDiscovery = dynamic(() => import('@/components/MusicDiscovery').then(mod => mod.MusicDiscovery), { ssr: false });
-const FlashModal = dynamic(() => import('@/components/FlashModal'), { ssr: false });
+const FlashPlayer = dynamic(() => import('./FlashPlayer'), { ssr: false });
 
 const db = getFirestore(app);
 
@@ -95,15 +95,6 @@ function VibeSpaceContent() {
         setViewedFlashes(JSON.parse(storedViewed));
     }
   }, []);
-
-  const handleFlashModalClose = (viewedUserId?: string) => {
-    if (viewedUserId && !viewedFlashes.includes(viewedUserId)) {
-      const newViewed = [...viewedFlashes, viewedUserId];
-      setViewedFlashes(newViewed);
-      localStorage.setItem('viewedFlashes', JSON.stringify(newViewed));
-    }
-    setSelectedFlashUser(null);
-  };
 
     const fetchPosts = useCallback(async (category: string | null, subCategory: string | null, loadMore = false) => {
         if (loadMore && (!hasMore || loadingMore)) return;
@@ -210,7 +201,7 @@ function VibeSpaceContent() {
     const groupedFlashes = flashes.reduce((acc: any, flash) => {
         if (!acc[flash.userId]) {
             acc[flash.userId] = {
-                userId: flash.userId,
+                id: flash.userId, // FIX: Pass the user ID for consistency
                 username: flash.username,
                 avatar_url: flash.avatar_url,
                 flashes: []
@@ -348,13 +339,13 @@ function VibeSpaceContent() {
                     <Plus className="text-gray-400 mb-1" />
                     <span className="text-xs text-gray-400">Add New</span>
                   </motion.button>
-                {flashUsers.map((userFlashes: any) => {
-                  const hasBeenViewed = viewedFlashes.includes(userFlashes.userId);
+                {flashUsers.map((userFlashes: any, index: number) => {
+                  const hasBeenViewed = viewedFlashes.includes(userFlashes.id);
                   return (
                   <motion.button
-                    key={userFlashes.userId}
+                    key={userFlashes.id}
                     variants={flashItemVariants}
-                    className={`w-20 h-20 shrink-0 rounded-full bg-gradient-to-tr flex items-center justify-center overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background focus:ring-accent-green
+                    className={`relative w-20 h-20 shrink-0 rounded-full bg-gradient-to-tr flex items-center justify-center overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background focus:ring-accent-green
                         ${hasBeenViewed ? 'border-4 border-gray-600' : 'from-accent-pink to-accent-green border-4 border-accent-green/40'}`}
                     onClick={() => setSelectedFlashUser(userFlashes)}
                     title={userFlashes.username || "Flash"}
@@ -362,7 +353,7 @@ function VibeSpaceContent() {
                     whileTap={{ scale: 0.95 }}
                   >
                     {userFlashes.avatar_url ? (
-                        <img src={userFlashes.avatar_url} alt="flash" className={`w-full h-full object-cover transition-opacity ${hasBeenViewed ? 'opacity-60' : ''}`} />
+                        <Image src={userFlashes.avatar_url} alt={userFlashes.username || 'flash'} fill style={{ objectFit: 'cover' }} className={`transition-opacity ${hasBeenViewed ? 'opacity-60' : ''}`} unoptimized />
                     ) : (
                       <span className="text-2xl text-white">⚡</span>
                     )}
@@ -421,7 +412,13 @@ function VibeSpaceContent() {
         </motion.div>
 
       <AnimatePresence>
-        {selectedFlashUser && <FlashModal userFlashes={selectedFlashUser} onClose={() => handleFlashModalClose(selectedFlashUser?.userId)} />}
+        {selectedFlashUser && (
+            <FlashPlayer 
+                usersWithFlashes={flashUsers} 
+                initialUserIndex={flashUsers.findIndex(u => u.id === selectedFlashUser.id)}
+                onClose={() => setSelectedFlashUser(null)} 
+            />
+        )}
       </AnimatePresence>
     </div>
   );

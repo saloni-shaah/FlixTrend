@@ -41,13 +41,14 @@ function PostPreview({ postData }: { postData: any }) {
                 
                 {(postType === 'media' || postType === 'flash') && (thumbnailUrl || mediaUrl?.[0]) && (
                      <>
-                        <p className="font-bold text-white pb-2">{postData.content}</p>
+                        <p className="font-bold text-white pb-2">{postData.content || postData.caption}</p>
                         <div className="mt-2 aspect-video w-full rounded-md overflow-hidden bg-black flex items-center justify-center">
                             <img src={thumbnailUrl || mediaUrl[0]} alt="preview" className="w-full h-full object-cover" />
                         </div>
                         {postData.description && <p className="text-sm text-gray-300 mt-2">{postData.description}</p>}
                     </>
                 )}
+
 
                 {postType === 'poll' && (
                     <>
@@ -61,7 +62,7 @@ function PostPreview({ postData }: { postData: any }) {
                 )}
                  {postType === 'live' && (
                     <div className="text-center">
-                        <p className="font-bold text-red-500">LIVE</p>
+                        <p className="font-bold text-red-500\">LIVE</p>
                         <p>{postData.title || "Live Stream"}</p>
                     </div>
                 )}
@@ -96,22 +97,66 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
         if (!user) { alert("You must be logged in to post."); setIsPublishing(false); return; }
 
         try {
+            const userDocRef = doc(db, 'users', user.uid);
+            const userDocSnap = await getDoc(userDocRef);
+            if (!userDocSnap.exists()) throw new Error("User profile not found!");
+            const userData = userDocSnap.data();
+
+            const creatorType = userData.creatorType || '';
+            const mainCategory = creatorCategoryMap[creatorType] || null;
+            const hashtags = (postData.hashtags || "").split(/[\s,]+/).map((h:string) => h.replace('#', '')).filter(Boolean);
+
+            // --------------------- FIX START: Handle Flash Post Separately ---------------------
+            if (postData.postType === 'flash') {
+                const createdAt = postData.scheduleDate ? Timestamp.fromDate(postData.scheduleDate) : serverTimestamp();
+                const expiresAt = new Date((postData.scheduleDate || new Date()).getTime() + 24 * 60 * 60 * 1000);
+
+                const flashData = {
+                    userId: user.uid,
+                    displayName: userData.name || user.displayName,
+                    username: userData.username,
+                    avatar_url: userData.avatar_url || null,
+                    type: 'flash',
+                    caption: postData.caption || "",
+                    content: postData.caption || "",
+                    hashtags,
+                    createdAt,
+                    expiresAt,
+                    publishAt: createdAt,
+                    location: postData.location || null,
+                    mediaUrl: postData.mediaUrl?.[0] || null, // Directly use the URL from FlashPostForm
+                    song: postData.song || null,
+                    viewCount: 0,
+                    creatorType,
+                    category: mainCategory,
+                };
+
+                if (!flashData.mediaUrl) {
+                    throw new Error("Media URL is missing for the Flash post. Please go back and re-select your media.");
+                }
+
+                await addDoc(collection(db, 'flashes'), flashData);
+                router.push('/vibespace');
+                return; // Exit the function to prevent further processing
+            }
+            // --------------------- FIX END: Handle Flash Post Separately ---------------------
+
+
+            // --- Existing logic for all other post types (media, text, poll, live) ---
             let finalThumbnailUrl: string | null = null;
             let finalMediaUrl: string | null = null;
             let finalRawMediaUrl: string | null = null;
-            let storagePath: string | null = null; // ARCHITECTURAL FIX: Variable to hold the exact storage path
+            let storagePath: string | null = null;
 
             if (postData.thumbnailFile && postData.thumbnailUrl?.startsWith('blob:')) {
-                // Storing thumbnails in a separate, dedicated path
                 const thumbPath = `thumbnails/${user.uid}/thumb_${Date.now()}.jpg`;
                 finalThumbnailUrl = await uploadFile(postData.thumbnailFile, thumbPath);
             }
 
             if (postData.files && postData.files.length > 0) {
                 const file = postData.files[0];
-                const collectionName = postData.postType === 'flash' ? 'flashes' : 'posts';
-                const mediaPath = `${collectionName}/${user.uid}/${Date.now()}_${file.name}`;
-                storagePath = mediaPath; // ARCHITECTURAL FIX: Save the exact path for later lookup
+                const mediaPath = `posts/${user.uid}/${Date.now()}_${file.name}`;
+                storagePath = mediaPath;
                 
                 const uploadedUrl = await uploadFile(file, mediaPath);
                 
@@ -123,29 +168,9 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                 }
             }
             
-            const userDocRef = doc(db, 'users', user.uid);
-            const userDocSnap = await getDoc(userDocRef);
-            if (!userDocSnap.exists()) throw new Error("User profile not found!");
-            const userData = userDocSnap.data();
-
-            const creatorType = userData.creatorType || '';
-            const mainCategory = creatorCategoryMap[creatorType] || null;
-
-            let createdAt, expiresAt;
-            if (postData.postType === 'flash' && scheduleDate) {
-                const flashDate = new Date(scheduleDate);
-                flashDate.setHours(0, 0, 0, 0); 
-                createdAt = Timestamp.fromDate(flashDate);
-                expiresAt = new Date(flashDate.getTime() + 24 * 60 * 60 * 1000);
-            } else if (postData.postType === 'flash') {
-                createdAt = serverTimestamp();
-                expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-            } else {
-                createdAt = serverTimestamp();
-            }
-
+            let createdAt = serverTimestamp();
             let publishAt;
-            if (isScheduling && scheduleDate && postData.postType !== 'live' && postData.postType !== 'flash') {
+            if (isScheduling && scheduleDate && postData.postType !== 'live') {
                 const [hours, minutes] = scheduleTime.split(':');
                 const finalDate = new Date(scheduleDate);
                 finalDate.setHours(parseInt(hours, 10));
@@ -156,8 +181,7 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
             }
 
             const livekitRoomName = postData.postType === 'live' ? `${user.uid}-${Date.now()}` : null;
-            const collectionName = postData.postType === 'flash' ? 'flashes' : 'posts';
-            const hashtags = (postData.hashtags || "").split(/[\s,]+/).map((h:string) => h.replace('#', '')).filter(Boolean);
+            const collectionName = 'posts';
 
             const dataToSave: any = {
                 userId: user.uid,
@@ -165,7 +189,7 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                 username: userData.username,
                 avatar_url: userData.avatar_url || null,
                 type: postData.postType,
-                content: postData.content || postData.caption || postData.question || postData.title || "",
+                content: postData.content || postData.question || postData.title || "",
                 hashtags: hashtags,
                 createdAt: createdAt,
                 publishAt: publishAt, 
@@ -185,22 +209,13 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                     mediaUrl: finalMediaUrl,
                     rawMediaUrl: finalRawMediaUrl,
                     thumbnailUrl: finalThumbnailUrl,
-                    storagePath: storagePath, // ARCHITECTURAL FIX: Storing the path
+                    storagePath: storagePath,
                     title: postData.title || "",
                     description: postData.description || "",
                     isFlow: postData.isFlow || false,
                     isVideo: postData.isVideo || false,
                     videoDuration: postData.videoDuration || null,
                     isPortrait: postData.isPortrait || false,
-                }),
-                ...(postData.postType === 'flash' && { 
-                    mediaUrl: finalMediaUrl, 
-                    rawMediaUrl: finalRawMediaUrl,
-                    thumbnailUrl: finalThumbnailUrl,
-                    storagePath: storagePath, // ARCHITECTURAL FIX: Storing the path
-                    song: postData.song || null, 
-                    expiresAt: expiresAt,
-                    caption: postData.caption || "" 
                 }),
                 ...(postData.postType === 'poll' && { 
                     question: postData.question,
