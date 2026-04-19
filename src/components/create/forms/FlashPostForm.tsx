@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import imageCompression from 'browser-image-compression';
+import { isAbusive } from '@/utils/moderation';
 
 const db = getFirestore(app);
 const storage = getStorage(app);
@@ -22,7 +23,7 @@ const formatTime = (time: number) => {
     return `${minutes}:${seconds}`;
 };
 
-export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange: (data: any) => void }) {
+export function FlashPostForm({ data, onDataChange, onError }: { data: any, onDataChange: (data: any) => void, onError: (error: string | null) => void }) {
     const [mediaPreview, setMediaPreview] = useState<string | null>(data.mediaUrl ? (Array.isArray(data.mediaUrl) ? data.mediaUrl[0] : data.mediaUrl) : null);
     const [showSongPicker, setShowSongPicker] = useState(false);
     const [appSongs, setAppSongs] = useState<any[]>([]);
@@ -235,7 +236,15 @@ export function FlashPostForm({ data, onDataChange }: { data: any, onDataChange:
     };
 
     const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
-        onDataChange({ ...data, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        if (name === 'caption') {
+            if (isAbusive(value)) {
+                onError('Your caption contains inappropriate language and cannot be posted.');
+            } else {
+                onError(null);
+            }
+        }
+        onDataChange({ ...data, [name]: value });
     };
     
     const handleDateChange = (date: Date | undefined) => {

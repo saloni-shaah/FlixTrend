@@ -26,6 +26,7 @@ import {
     AlertDialogHeader, 
     AlertDialogTitle 
 } from '@/components/ui/alert-dialog';
+import { isAbusive } from '@/utils/moderation';
 
 const db = getFirestore(app);
 const functions = getFunctions(app);
@@ -61,6 +62,7 @@ const formatTimestamp = (ts: any) => {
 const EditCommentDialog = ({ comment, postId, collectionName, onOpenChange, onFinish }: { comment: Comment, postId: string, collectionName: string, onOpenChange: (open: boolean) => void, onFinish: () => void }) => {
     const [newText, setNewText] = useState(comment.text);
     const [isSaving, setIsSaving] = useState(false);
+    const [error, setError] = useState('');
     const updateCommentCallable = httpsCallable(functions, 'updateComment');
 
     const handleSave = async () => {
@@ -68,7 +70,14 @@ const EditCommentDialog = ({ comment, postId, collectionName, onOpenChange, onFi
             onFinish();
             return;
         }
+
+        if(isAbusive(newText)) {
+            setError("Comment contains abusive language.");
+            return;
+        }
+
         setIsSaving(true);
+        setError('');
         try {
             await updateCommentCallable({ postId, commentId: comment.id, newText: newText.trim() });
             onFinish();
@@ -88,6 +97,7 @@ const EditCommentDialog = ({ comment, postId, collectionName, onOpenChange, onFi
                     <AlertDialogDescription>Make changes to your comment below.</AlertDialogDescription>
                 </AlertDialogHeader>
                 <Textarea value={newText} onChange={(e) => setNewText(e.target.value)} className="my-4" rows={4}/>
+                {error && <p className="text-red-500 text-sm">{error}</p>}
                 <AlertDialogFooter>
                     <AlertDialogCancel onClick={onFinish}>Cancel</AlertDialogCancel>
                     <AlertDialogAction onClick={handleSave} disabled={isSaving}>{isSaving ? "Saving..." : "Save"}</AlertDialogAction>
@@ -203,6 +213,7 @@ export function CommentModal({ postId, postAuthorId, onClose, post, collectionNa
     const [newComment, setNewComment] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [editingComment, setEditingComment] = useState<Comment | null>(null);
+    const [moderationError, setModerationError] = useState('');
     const { currentUserProfile } = useAppState();
     const currentUser = auth.currentUser;
     const bottomOfList = useRef<HTMLDivElement>(null);
@@ -222,7 +233,14 @@ export function CommentModal({ postId, postAuthorId, onClose, post, collectionNa
     const handleCommentSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newComment.trim() || !currentUser) return;
+        
+        if (isAbusive(newComment)) {
+            setModerationError('Your comment contains inappropriate language and cannot be posted.');
+            return;
+        }
+
         setIsSubmitting(true);
+        setModerationError('');
 
         const commentPayload = {
             userId: currentUser.uid,
@@ -274,26 +292,29 @@ export function CommentModal({ postId, postAuthorId, onClose, post, collectionNa
                 )}
 
                 <div className="p-3 border-t border-glass-border shrink-0 bg-background/50">
-                    <form onSubmit={handleCommentSubmit} className="flex items-start gap-2">
-                       <img src={currentUserProfile?.avatar_url || '/img/default-avatar.png'} alt="Your avatar" className="w-9 h-9 rounded-full object-cover mt-1" />
-                       <div className="flex-1 relative">
-                           <Textarea 
-                                value={newComment} 
-                                onChange={(e) => setNewComment(e.target.value)} 
-                                placeholder="Add a comment..." 
-                                className="bg-neutral-800 border-neutral-700 rounded-xl w-full pr-12 resize-none text-base py-2 px-4"
-                                rows={1}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter' && !e.shiftKey) {
-                                        e.preventDefault();
-                                        handleCommentSubmit(e as any);
-                                    }
-                                }}
-                            />
-                            <Button type="submit" size="icon" disabled={isSubmitting || !newComment.trim()} className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-accent-green hover:bg-accent-green/80">
-                                <Send size={16} />
-                            </Button>
+                    <form onSubmit={handleCommentSubmit} className="flex flex-col gap-2">
+                        <div className="flex items-start gap-2">
+                            <img src={currentUserProfile?.avatar_url || '/img/default-avatar.png'} alt="Your avatar" className="w-9 h-9 rounded-full object-cover mt-1" />
+                            <div className="flex-1 relative">
+                                <Textarea 
+                                    value={newComment} 
+                                    onChange={(e) => setNewComment(e.target.value)} 
+                                    placeholder="Add a comment..." 
+                                    className="bg-neutral-800 border-neutral-700 rounded-xl w-full pr-12 resize-none text-base py-2 px-4"
+                                    rows={1}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                            e.preventDefault();
+                                            handleCommentSubmit(e as any);
+                                        }
+                                    }}
+                                />
+                                <Button type="submit" size="icon" disabled={isSubmitting || !newComment.trim()} className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-accent-green hover:bg-accent-green/80">
+                                    <Send size={16} />
+                                </Button>
+                            </div>
                         </div>
+                        {moderationError && <p className="text-red-500 text-sm ml-11">{moderationError}</p>}
                     </form>
                 </div>
             </motion.div>

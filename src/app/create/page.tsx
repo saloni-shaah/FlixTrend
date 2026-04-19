@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlignLeft, Image as ImageIcon, BarChart3, Zap, Radio } from 'lucide-react';
 import Step1 from '@/components/create/Step1';
+import Step2 from '@/components/create/Step2';
 import Step3 from '@/components/create/Step3';
 
 const POST_TYPES = [
@@ -39,7 +40,7 @@ function CreatePostPageContent() {
         }
     }, [initialType, typeSelected]);
 
-    const handleNext = (data: any) => {
+    const handleNext = (data: any = {}) => {
         setPostData(prev => ({ ...prev, ...data }));
         setStep(s => s + 1);
     };
@@ -62,13 +63,14 @@ function CreatePostPageContent() {
 
     const steps = [
         <Step1 key="step1" onNext={handleNext} postType={postType!} postData={postData} onDataChange={handleDataChange} />,
-        <Step3 key="step2" onBack={handleBack} postData={postData} />,
+        <Step2 key="step2" onBack={handleBack} onNext={handleNext} postData={postData} />,
+        <Step3 key="step3" onBack={handleBack} postData={postData} />,
     ];
 
-    const totalSteps = 2;
+    const totalSteps = 3;
     const currentStepLogic = step;
 
-    const stepLabels = ['Details', 'Publish'];
+    const stepLabels = ['Details', 'Review', 'Publish'];
 
 
     return (

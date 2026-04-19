@@ -3,8 +3,9 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { UploadCloud, X, MapPin, Smile, Hash, Loader, Locate, Image as ImageIcon } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
+import { isAbusive } from '@/utils/moderation';
 
-export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange: (data: any) => void }) {
+export function MediaPostForm({ data, onDataChange, onError }: { data: any, onDataChange: (data: any) => void, onError: (error: string | null) => void }) {
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const thumbnailInputRef = useRef<HTMLInputElement>(null);
@@ -157,7 +158,17 @@ export function MediaPostForm({ data, onDataChange }: { data: any, onDataChange:
     };
     
     const handleTextChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        onDataChange({ ...data, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+
+        if (name === 'content' || name === 'description' || name === 'hashtags') {
+            if (isAbusive(value)) {
+                onError('Your post contains inappropriate language and cannot be posted.');
+            } else {
+                onError(null);
+            }
+        }
+
+        onDataChange({ ...data, [name]: value });
     };
 
     const handleGetLocation = () => {

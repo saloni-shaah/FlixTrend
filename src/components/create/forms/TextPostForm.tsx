@@ -1,6 +1,8 @@
+
 "use client";
 import React, { useState } from 'react';
 import { MapPin, Smile, Locate, Loader, Slash } from 'lucide-react';
+import { isAbusive } from '@/utils/moderation';
 
 // New curated color palette
 const backgroundColors = [
@@ -21,13 +23,21 @@ const fontStyles = [
     { name: 'Mono', style: 'font-mono' }
 ];
 
-export function TextPostForm({ data, onDataChange }: { data: any, onDataChange: (data: any) => void }) {
+export function TextPostForm({ data, onDataChange, onError }: { data: any, onDataChange: (data: any) => void, onError: (error: string | null) => void }) {
     const [isFetchingLocation, setIsFetchingLocation] = useState(false);
     
     const currentBg = data.backgroundColor;
 
     const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
-        onDataChange({ ...data, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        if (name === 'content') {
+            if (isAbusive(value)) {
+                onError('Your post contains inappropriate language and cannot be posted.');
+            } else {
+                onError(null);
+            }
+        }
+        onDataChange({ ...data, [name]: value });
     };
 
     const handleBgColorChange = (color: string | null) => {
