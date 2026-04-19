@@ -1,4 +1,4 @@
-import abusiveWords from '@/lib/abusiveWords.json';
+import abusiveWords from '@/lib/abusiveWords';
 import { profanity } from '@2toad/profanity';
 import { Filter } from 'bad-words';
 
@@ -38,10 +38,8 @@ export const isAbusive = (text: string): boolean => {
         console.error("Error checking profanity with external libraries:", e);
     }
 
-    // **THE FIX IS HERE**
     // Next, check for Devanagari words using a much more robust regex for splitting.
-    // This regex now splits by whitespace and a wide range of punctuation, including quotes.
-    const textWords = text.split(/[\s,.;:!?()[\]{}"'<>]+/g).filter(Boolean);
+    const textWords = text.split(/[\s,.;:!?()[\]{}"\'<>]+/g).filter(Boolean);
     for (const word of textWords) {
         if (devanagariWords.has(word)) {
             return true;
@@ -49,7 +47,6 @@ export const isAbusive = (text: string): boolean => {
     }
 
     // Finally, check a normalized version of the text for Romanized words (Hinglish/English).
-    // This part already handles punctuation correctly due to its normalization.
     const normalizedRomanWords = normalizeRomanText(text).split(' ');
     for (const word of normalizedRomanWords) {
         if (romanizedWords.has(word)) {
