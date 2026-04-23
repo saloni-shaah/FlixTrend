@@ -40,7 +40,7 @@ export default function LiveStreamPage() {
     const fetchPost = async () => {
       try {
         const postsRef = collection(db, 'posts');
-        const q = query(postsRef, where('roomName', '==', roomName), where('type', '==', 'live'));
+        const q = query(postsRef, where('livekitRoomName', '==', roomName), where('type', '==', 'live'));
         const querySnapshot = await getDocs(q);
 
         if (querySnapshot.empty) {
@@ -85,10 +85,10 @@ export default function LiveStreamPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            roomName: post.roomName,
+            roomName: post.livekitRoomName,
             identity: user.uid,
             name: user.displayName || 'Anonymous Viewer',
-            isStreamer: post.authorId === user.uid,
+            isStreamer: post.userId === user.uid,
           }),
         });
 

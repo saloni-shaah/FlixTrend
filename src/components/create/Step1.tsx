@@ -32,7 +32,7 @@ export default function Step1({ onNext, postType, postData }: { onNext: (data: a
             case 'poll':
                 return <PollPostForm data={formData} onDataChange={handleDataChange} onError={handleModerationError} />;
             case 'live':
-                return <LivePostForm data={formData} onDataChange={handleDataChange} />;
+                return <LivePostForm data={formData} onDataChange={handleDataChange} onError={handleModerationError} />;
             default:
                 return <p>Select a post type</p>;
         }

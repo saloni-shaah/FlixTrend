@@ -3,8 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation'; // Import useParams
 import { auth } from '@/utils/firebaseClient';
+import { getFirestore, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
 import { LiveKitRoom, VideoConference } from '@livekit/components-react';
 import '@livekit/components-styles';
+
+const db = getFirestore(auth.app);
 
 export default function BroadcastPage() { // Remove params from props
   const params = useParams(); // Get params from the hook
@@ -56,6 +59,21 @@ export default function BroadcastPage() { // Remove params from props
     fetchToken();
   }, [user, roomName]);
 
+  const handleDisconnect = async () => {
+    if (!roomName) return;
+    try {
+      const postsRef = collection(db, 'posts');
+      const q = query(postsRef, where('livekitRoomName', '==', roomName));
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        const postDoc = querySnapshot.docs[0];
+        await updateDoc(postDoc.ref, { liveStatus: 'ended' });
+      }
+    } catch (error) {
+      console.error("Error updating post status:", error);
+    }
+  };
+
   if (error) {
     return <div className="w-full h-screen flex items-center justify-center bg-black text-red-400 p-4 text-center">Error connecting to broadcast: {error}</div>;
   }
@@ -73,6 +91,7 @@ export default function BroadcastPage() { // Remove params from props
             serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_WS_URL!}
             data-lk-theme="default"
             style={{ height: '100%' }}
+            onDisconnected={handleDisconnect}
         >
             <VideoConference />
         </LiveKitRoom>
