@@ -1,121 +1,80 @@
 
 "use client";
 import React, { useState, useRef } from 'react';
-import { Radio, Loader2, UploadCloud, X } from 'lucide-react';
-import { useAppState } from '@/utils/AppStateContext';
-import { useRouter } from 'next/navigation';
-import { storage } from '@/utils/firebaseClient';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { Radio, UploadCloud, X, MapPin, Hash, Locate, Loader } from 'lucide-react';
+import { isAbusive } from '@/utils/moderation';
 
-export function LivePostForm({ data, onDataChange }: { data: any, onDataChange: (data: any) => void }) {
-  const { currentUserProfile } = useAppState();
-  const router = useRouter();
-  const [isGoingLive, setIsGoingLive] = useState(false);
-  const [error, setError] = useState('');
-  
-  // Thumbnail state
-  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+export function LivePostForm({ data, onDataChange, onError }: { data: any, onDataChange: (data: any) => void, onError: (error: string | null) => void }) {
+  const [previewUrl, setPreviewUrl] = useState<string | null>(data.thumbnailUrl || null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isFetchingLocation, setIsFetchingLocation] = useState(false);
 
-  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onDataChange({ ...data, title: e.target.value });
+  const handleDataChange = (field: string, value: any) => {
+    if (field === 'content' || field === 'hashtags') {
+      if (isAbusive(value)) {
+        onError('Your post contains inappropriate language and cannot be posted.');
+      } else {
+        onError(null);
+      }
+    }
+    onDataChange({ ...data, [field]: value });
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        setError('Thumbnail image must be less than 5MB.');
+        onError('Thumbnail image must be less than 5MB.');
         return;
       }
       if (!file.type.startsWith('image/')) {
-        setError('Please select an image file.');
+        onError('Please select an image file.');
         return;
       }
-      setError('');
-      setThumbnailFile(file);
+      onError(null);
+      
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreviewUrl(reader.result as string);
+        onDataChange({ ...data, thumbnailFile: file, thumbnailUrl: reader.result as string });
       };
       reader.readAsDataURL(file);
     }
   };
 
   const handleRemoveThumbnail = () => {
-    setThumbnailFile(null);
     setPreviewUrl(null);
+    onDataChange({ ...data, thumbnailFile: null, thumbnailUrl: null });
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
-
-  const uploadThumbnail = async (file: File, userId: string): Promise<string> => {
-    const fileExtension = file.name.split('.').pop();
-    const thumbnailRef = ref(storage, `thumbnails/${userId}-${Date.now()}.${fileExtension}`);
-    const snapshot = await uploadBytes(thumbnailRef, file);
-    return getDownloadURL(snapshot.ref);
-  };
-
-  const handleGoLive = async () => {
-    if (!data.title) {
-      setError('Please enter a title for your stream.');
-      return;
-    }
-    if (!thumbnailFile) {
-      setError('Please upload a thumbnail for your stream.');
-      return;
-    }
-    if (!currentUserProfile) {
-      setError('You must be logged in to go live.');
-      return;
-    }
-
-    setIsGoingLive(true);
-    setError('');
-
-    try {
-      // 1. Upload Thumbnail
-      const thumbnailUrl = await uploadThumbnail(thumbnailFile, currentUserProfile.uid);
-
-      // 2. Create the live post and get the token
-      const response = await fetch('/api/posts/live', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: data.title,
-          thumbnailUrl,
-          authorId: currentUserProfile.uid,
-          authorName: currentUserProfile.displayName,
-          authorAvatar: currentUserProfile.photoURL
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to create live stream.');
-      }
-
-      const { roomName } = result;
-      
-      // 3. Redirect to the broadcast page
-      router.push(`/broadcast/${roomName}`);
-
-    } catch (err: any) {
-      console.error("Failed to go live:", err);
-      setError(err.message || 'Something went wrong. Please try again.');
-      setIsGoingLive(false);
-    }
-  };
+  
+  const handleGetLocation = () => {
+        if (!navigator.geolocation) { onError("Geolocation is not supported."); return; }
+        setIsFetchingLocation(true);
+        navigator.geolocation.getCurrentPosition(async (position) => {
+            try {
+                const { latitude, longitude } = position.coords;
+                const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+                const locData = await response.json();
+                const city = locData.address.city || locData.address.town || locData.address.village;
+                const country = locData.address.country;
+                handleDataChange('location', city && country ? `${city}, ${country}` : 'Unknown Location');
+            } catch (error) { onError('Could not fetch location name.'); }
+            finally { setIsFetchingLocation(false); }
+        }, (error) => {
+            onError(error.code === error.PERMISSION_DENIED ? 'Location permission denied.' : 'Could not get location.');
+            setIsFetchingLocation(false);
+        });
+    };
 
   return (
     <div className="flex flex-col gap-4">
         <div className="flex flex-col items-center gap-4 text-center">
             <Radio className="text-red-500 animate-pulse" size={48} />
             <h3 className="text-xl font-bold text-white">Set Up Your Live Stream</h3>
-            <p className="text-sm text-gray-400">Add a title and a thumbnail to attract viewers.</p>
+            <p className="text-sm text-gray-400">Add a title, thumbnail, and hashtags to attract viewers.</p>
         </div>
 
         {/* Thumbnail Uploader */}
@@ -140,22 +99,46 @@ export function LivePostForm({ data, onDataChange }: { data: any, onDataChange: 
         {/* Title Input */}
         <input
             type="text"
-            name="title"
+            name="content"
             className="input-glass w-full mt-2"
             placeholder="Live Stream Title"
-            value={data.title || ''}
-            onChange={handleTitleChange}
+            value={data.content || ''}
+            onChange={(e) => handleDataChange('content', e.target.value)}
         />
+        
+        {/* Hashtags Input */}
+        <div className="relative">
+          <Hash className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+          <input 
+            type="text" 
+            name="hashtags" 
+            placeholder="#live #gaming #q&a" 
+            className="input-glass w-full pl-10" 
+            value={data.hashtags || ''} 
+            onChange={(e) => handleDataChange('hashtags', e.target.value)}
+          />
+        </div>
 
-        {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-
-        <button 
-          className="btn-primary bg-red-600 hover:bg-red-700 w-full mt-4 disabled:opacity-50"
-          onClick={handleGoLive}
-          disabled={isGoingLive}
-        >
-            {isGoingLive ? <Loader2 className="animate-spin mx-auto" /> : 'Go Live'}
-        </button>
+        {/* Location Input */}
+        <div className="relative">
+            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+            <input 
+              type="text" 
+              name="location" 
+              placeholder="Add location..." 
+              className="input-glass w-full pl-10" 
+              value={data.location || ''} 
+              onChange={(e) => handleDataChange('location', e.target.value)}
+            />
+            <button 
+              type="button" 
+              onClick={handleGetLocation} 
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-accent-cyan" 
+              disabled={isFetchingLocation}
+            >
+                {isFetchingLocation ? <Loader className="animate-spin" size={16} /> : <Locate size={16} />}
+            </button>
+        </div>
     </div>
   );
 }

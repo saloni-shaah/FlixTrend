@@ -2,13 +2,14 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, CheckCircle, ShieldOff, Calendar as CalendarIcon, Eye } from 'lucide-react';
+import { ArrowLeft, CheckCircle, ShieldOff, Calendar as CalendarIcon, Eye, Radio } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { getFirestore, collection, addDoc, serverTimestamp, Timestamp, doc, getDoc } from "firebase/firestore";
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { auth, app } from '@/utils/firebaseClient';
 import { useRouter } from 'next/navigation';
+import { isAbusive } from '@/utils/moderation';
 
 const db = getFirestore(app);
 const storage = getStorage(app);
@@ -61,10 +62,14 @@ function PostPreview({ postData }: { postData: any }) {
                     </>
                 )}
                  {postType === 'live' && (
-                    <div className="text-center">
-                        <p className="font-bold text-red-500\\\">LIVE</p>
-                        <p>{postData.title || "Live Stream"}</p>
-                    </div>
+                    <>
+                         <p className="font-bold text-white pb-2">{postData.content}</p>
+                         {postData.thumbnailUrl &&
+                            <div className="mt-2 aspect-video w-full rounded-md overflow-hidden bg-black flex items-center justify-center">
+                                <img src={postData.thumbnailUrl} alt="preview" className="w-full h-full object-cover" />
+                            </div>
+                         }
+                    </>
                 )}
             </div>
         </div>
@@ -95,6 +100,12 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
         setError(null);
         const user = auth.currentUser;
         if (!user) { alert("You must be logged in to post."); setIsPublishing(false); return; }
+        
+        if (isAbusive(postData.content) || isAbusive(postData.hashtags)){
+             setError("Your post contains inappropriate language and cannot be posted.");
+             setIsPublishing(false);
+             return;
+        }
 
         try {
             const userDocRef = doc(db, 'users', user.uid);
@@ -155,7 +166,7 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
             let finalRawMediaUrl: string | null = null;
             let storagePath: string | null = null;
 
-            if (postData.thumbnailFile && postData.thumbnailUrl?.startsWith('blob:')) {
+            if (postData.thumbnailFile) {
                 const thumbPath = `thumbnails/${user.uid}/thumb_${Date.now()}.jpg`;
                 finalThumbnailUrl = await uploadFile(postData.thumbnailFile, thumbPath);
             }
@@ -196,7 +207,7 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                 username: userData.username,
                 avatar_url: userData.avatar_url || null,
                 type: postData.postType,
-                content: postData.content || postData.question || postData.title || "",
+                content: postData.content || postData.question || "",
                 hashtags: hashtags,
                 createdAt: createdAt,
                 publishAt: publishAt, 
@@ -217,7 +228,6 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                     rawMediaUrl: finalRawMediaUrl,
                     thumbnailUrl: finalThumbnailUrl,
                     storagePath: storagePath,
-                    title: postData.title || "",
                     description: postData.description || "",
                     isFlow: postData.isFlow || false,
                     isVideo: postData.isVideo || false,
@@ -231,8 +241,8 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                  }),
                 ...(postData.postType === 'live' && { 
                     livekitRoomName: livekitRoomName, 
-                    title: postData.title || "Live Stream", 
-                    status: (isScheduling && publishAt > serverTimestamp()) ? 'scheduled' : 'live'
+                    thumbnailUrl: finalThumbnailUrl,
+                    liveStatus: (isScheduling && publishAt > serverTimestamp()) ? 'scheduled' : 'live'
                 }),
             };
             
@@ -255,6 +265,7 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
     const shouldShowScheduling = postData.postType !== 'live';
     const getButtonText = () => {
         if (isPublishing) return 'Publishing...';
+        if (postData.postType === 'live') return 'Go Live';
         if (isScheduling && scheduleDate) {
             if(postData.postType === 'flash') return 'Schedule Flash';
             return 'Schedule Post';
@@ -333,11 +344,11 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                     <ArrowLeft /> Back
                 </button>
                 <button 
-                    className="btn-accent" 
+                    className={`btn-accent ${postData.postType === 'live' ? 'bg-red-600 hover:bg-red-700' : ''}`}
                     onClick={handleSubmit}
-                    disabled={isPublishing}
+                    disabled={isPublishing || (postData.postType === 'live' && (!postData.content || !postData.thumbnailFile))}
                 >
-                    {getButtonText()} <CheckCircle />
+                    {getButtonText()} {postData.postType === 'live' ? <Radio /> :<CheckCircle />}
                 </button>
             </div>
         </motion.div>
