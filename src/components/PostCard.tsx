@@ -16,7 +16,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { InFeedVideoPlayer } from '../app/vibespace/InFeedVideoPlayer';
 import { PostActions } from './PostActions';
-import { StreamViewer } from './StreamViewer';
+// StreamViewer is no longer needed here as it will be on its own page
+// import { StreamViewer } from './StreamViewer'; 
 import { EditPostModal } from './squad/EditPostModal';
 import { CommentModal } from './CommentModal';
 import { FullScreenImageViewer } from './FullScreenImageViewer';
@@ -56,6 +57,46 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
   const [author, setAuthor] = useState<any>(null);
 
   const currentUser = auth.currentUser;
+
+  // NEW: Dedicated component for Live posts
+  if (post.type === 'live' && post.roomName) {
+    return (
+      <Link href={`/live/${post.roomName}`} passHref>
+        <motion.div
+          className="glass-card p-0 flex flex-col gap-3 relative rounded-xl overflow-hidden group cursor-pointer border-2 border-transparent hover:border-red-500 transition-colors"
+          initial={{ opacity: 0, y: 50 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.2 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        >
+          <div className="relative w-full aspect-video bg-gray-900">
+            {post.thumbnailUrl && 
+              <img src={post.thumbnailUrl} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+            }
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
+            <div className="absolute top-3 right-3 bg-red-600 text-white px-3 py-1 rounded-md text-sm font-bold flex items-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-full bg-white animate-pulse"></div>
+              LIVE
+            </div>
+            <div className="absolute bottom-4 left-4 text-white">
+                <span className="bg-black/50 px-2 py-1 rounded-md text-xs font-semibold flex items-center gap-1.5">
+                    <Eye size={14} /> {viewCount.toLocaleString()} viewers
+                </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 px-4 pb-4">
+              <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center font-bold text-lg overflow-hidden shrink-0">
+                  {post.authorAvatar ? <img src={post.authorAvatar} alt={post.authorName} className="w-full h-full object-cover" /> : <span>{post.authorName?.[0] || 'U'}</span>}
+              </div>
+              <div className='flex-grow min-w-0'>
+                  <h3 className="font-bold text-white text-base truncate group-hover:text-red-400 transition-colors">{post.title}</h3>
+                  <p className="text-sm text-gray-400 truncate">@{post.authorName || 'user'}</p>
+              </div>
+          </div>
+        </motion.div>
+      </Link>
+    );
+  }
 
   useEffect(() => {
     if (post.userId) {
@@ -149,7 +190,8 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
                 </Link>
                 <div className="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
                     <span>{timeAgo(contentPost.createdAt)}</span>
-                    {(contentPost.isVideo || contentPost.type === 'live') && (
+                    {/* OLD live post type check is now removed from here */}
+                    {(contentPost.isVideo) && (
                         <span className="flex items-center gap-1">
                             <Eye size={14} /> {viewCount.toLocaleString()}
                         </span>
@@ -168,11 +210,7 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
                 </div>
             </div>
 
-            {contentPost.type === "live" && contentPost.livekitRoom && contentPost.status === 'live' && (
-                <div className="w-full aspect-video rounded-xl overflow-hidden mt-2">
-                    <StreamViewer streamPost={contentPost} />
-                </div>
-            )}
+            {/* OLD live stream viewer is removed from here */}
 
             {contentPost.content && (
                  <div className={`whitespace-pre-line mb-2 px-4 py-3 rounded-xl ${isShortVibe ? 'text-white text-base line-clamp-2 text-left' : 'text-[1.15rem]'} ${contentPost.fontStyle || defaultFontStyle}`} style={{ backgroundColor: contentPost.backgroundColor && !isShortVibe ? contentPost.backgroundColor : 'transparent', color: contentPost.backgroundColor && contentPost.backgroundColor !== '#ffffff' && !isShortVibe ? 'hsl(var(--foreground))' : 'inherit', textShadow: isShortVibe ? "0 1px 4px #000" : "none" }}>

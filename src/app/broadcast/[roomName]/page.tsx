@@ -1,15 +1,20 @@
 
 'use client';
 import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation'; // Import useParams
 import { auth } from '@/utils/firebaseClient';
 import { LiveKitRoom, VideoConference } from '@livekit/components-react';
 import '@livekit/components-styles';
 
-export default function BroadcastPage({ params }: { params: { roomName: string } }) {
+export default function BroadcastPage() { // Remove params from props
+  const params = useParams(); // Get params from the hook
   const [user, setUser] = useState(auth.currentUser);
   const [token, setToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const roomName = params.roomName ? decodeURIComponent(params.roomName) : '';
+  
+  // Handle roomName being a string or string[]
+  const roomNameParam = Array.isArray(params.roomName) ? params.roomName[0] : params.roomName;
+  const roomName = roomNameParam ? decodeURIComponent(roomNameParam) : '';
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(currentUser => {
