@@ -5,8 +5,6 @@ import { doc, setDoc, getDoc, collection } from 'firebase/firestore';
 import { GoogleAuthProvider, signInWithPopup, onAuthStateChanged, User } from 'firebase/auth';
 import { db, auth } from '@/utils/firebaseClient';
 import { Button } from "@/components/ui/button";
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function Admin() {
   const [prompt, setPrompt] = useState('');
@@ -16,15 +14,21 @@ export default function Admin() {
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
+    const FOUNDER_UID = "x04gu2AkBFVX4y6Iho6J713cJOy2";
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
-      if (currentUser) {
+      if (currentUser && currentUser.uid === FOUNDER_UID) {
         const userDocRef = doc(db, 'users', currentUser.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists() && userDoc.data().role === 'founder') {
-          setIsFounder(true);
-        } else {
-          setIsFounder(false);
+        try {
+            const userDoc = await getDoc(userDocRef);
+            if (userDoc.exists() && userDoc.data().isFounder === true) {
+                setIsFounder(true);
+            } else {
+                setIsFounder(false);
+            }
+        } catch (error) {
+            console.error("Error fetching user document:", error);
+            setIsFounder(false);
         }
       } else {
         setIsFounder(false);
@@ -37,18 +41,15 @@ export default function Admin() {
   const handleSignIn = async () => {
     const provider = new GoogleAuthProvider();
     try {
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-      const userDocRef = doc(db, 'users', user.uid);
-      await setDoc(userDocRef, { email: user.email, displayName: user.displayName }, { merge: true });
+      await signInWithPopup(auth, provider);
     } catch (error) {
       console.error("Error signing in:", error);
     }
   };
 
   const handleSavePrompt = async () => {
-    if (!user) {
-      alert("You must be logged in to save a prompt.");
+    if (!isFounder) {
+      alert("You do not have permission to save a prompt.");
       return;
     }
     setIsSaving(true);
@@ -68,15 +69,7 @@ export default function Admin() {
       alert('Prompt saved successfully!');
     } catch (error) {
       console.error("Error saving prompt:", error);
-
-      // Emit a detailed error for the listener to catch
-      const permissionError = new FirestorePermissionError({
-        path: promptDocRef.path,
-        operation: 'write',
-        requestResourceData: promptData,
-      });
-      errorEmitter.emit('permission-error', permissionError);
-
+      alert("Failed to save prompt. See console for details.");
     } finally {
       setIsSaving(false);
     }
@@ -109,9 +102,9 @@ export default function Admin() {
               </Button>
             </div>
           ) : (
-            <div className="p-4 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded">
+            <div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded">
               <p className="font-bold">Permission Denied</p>
-              <p>You have signed in, but you do not have the 'founder' role required to post a prompt. Please go to the Firebase console and add the field `role` with the value `founder` to your user document in the `users` collection.</p>
+              <p>You do not have the necessary permissions to access this page.</p>
             </div>
           )}
         </div>
