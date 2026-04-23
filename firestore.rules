@@ -7,14 +7,21 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isFounder() {
+        return request.auth.uid == 'x04gu2AkBFVX4y6Iho6J713cJOy2';
+    }
+
     function canLikeComment() {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes']);
     }
 
-    // Users: Read any profile, write to your own.
+    // Users: Read any profile, write to your own, with special founder access.
     match /users/{userId} {
       allow get, list: if isSignedIn();
       allow write: if request.auth.uid == userId;
+
+      // This rule is the key fix: It allows the founder to read their own document to check the isFounder flag.
+      allow read: if isFounder() && request.auth.uid == userId;
 
       match /{subcollection}/{docId} {
         allow read: if (request.auth.uid == userId) || 
@@ -177,12 +184,12 @@ service cloud.firestore {
     // Prompts
     match /prompts/current {
       allow read: if true;
-      allow write: if request.auth.uid == 'x04gu2AkBFVX4y6Iho6J713cJOy2';
+      allow write: if isFounder();
     }
 
     match /dropPrompts/{promptId} {
       allow read: if true;
-      allow write: if request.auth.uid == 'x04gu2AkBFVX4y6Iho6J713cJOy2';
+      allow write: if isFounder();
     }
   }
 }
