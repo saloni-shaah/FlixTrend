@@ -34,6 +34,7 @@ const timeAgo = (timestamp: any): string => {
 
 const MediaItem = ({ url, ...props }: { url: string, [key: string]: any }) => {
     const isVideo = (url: string) => {
+        if (!url) return false;
         try {
             const pathname = new URL(url).pathname.toLowerCase();
             return pathname.endsWith('.mp4') || pathname.endsWith('.webm') || pathname.endsWith('.mov');
@@ -175,8 +176,10 @@ export function DropCard({ post }: { post: any }) {
             <MediaViewer
                 post={post}
                 media={mediaUrls}
-                initialIndex={selectedIndex}
+                currentMediaIndex={selectedIndex}
                 onClose={() => setViewerOpen(false)}
+                onNext={() => setSelectedIndex(prev => (prev + 1) % mediaUrls.length)}
+                onPrev={() => setSelectedIndex(prev => (prev - 1 + mediaUrls.length) % mediaUrls.length)}
             />
         )}
 
