@@ -26,6 +26,7 @@ export function MediaViewer({
   const [showLike, setShowLike] = useState(false);
 
   const isVideo = useCallback((url: string) => {
+    if (!url) return false;
     try {
       const pathname = new URL(url).pathname.toLowerCase();
       return pathname.endsWith('.mp4') || pathname.endsWith('.webm') || pathname.endsWith('.mov');
