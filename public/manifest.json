@@ -1,7 +1,7 @@
 {
   "name": "FlixTrend",
   "short_name": "FlixTrend",
-  "description": "The next-generation social media app for Gen-Z.",
+  "description": "FlixTrend: The Future of Social, Built for Gen-Z. Secure, Creative, Connected. Where trends find you first.",
   "icons": [
     {
       "src": "/icons/android-chrome-192x192.png",
@@ -14,12 +14,12 @@
       "type": "image/png"
     }
   ],
-  "theme_color": "#1a1a1a",
-  "background_color": "#1a1a1a",
+  "theme_color": "#1B1B1E",
+  "background_color": "#1B1B1E",
   "display": "standalone",
   "start_url": "/",
   "scope": "/",
   "orientation": "portrait",
   "dir": "auto",
-  "lang": "hi"
+  "lang": "en-IN"
 }
