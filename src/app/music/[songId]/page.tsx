@@ -1,14 +1,21 @@
-
-"use client";
-import React, { useEffect, useState, useMemo } from 'react';
+'use client';
+import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/utils/firebaseClient';
 import { useMusicPlayer } from '@/utils/MusicPlayerContext';
 import { Song } from '@/types/music';
-import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Repeat1, MoreHorizontal } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Repeat1, MoreHorizontal, Mic } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { LyricsDisplay } from '@/components/LyricsDisplay';
+
+const fmt = (t: number) => {
+    if (!t || isNaN(t)) return '0:00';
+    const m = Math.floor(t / 60);
+    const s = Math.floor(t % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+};
 
 const SongPage = () => {
     const params = useParams();
@@ -16,8 +23,12 @@ const SongPage = () => {
     const [song, setSong] = useState<Song | null>(null);
     const [relatedSongs, setRelatedSongs] = useState<Song[]>([]);
     const [menuOpen, setMenuOpen] = useState(false);
+    const [showLyrics, setShowLyrics] = useState(false);
+    const [lyricsInteractive, setLyricsInteractive] = useState(true);
     const { toast } = useToast();
-    
+    const progressRef = useRef<HTMLDivElement>(null);
+    const [isSeeking, setIsSeeking] = useState(false);
+
     const {
         activeSong,
         isPlaying,
@@ -26,6 +37,9 @@ const SongPage = () => {
         playNext,
         playPrevious,
         currentPlaylist,
+        currentTime,
+        duration,
+        seek,
         playSongFromPlaylist,
         isShuffle,
         toggleShuffle,
@@ -91,6 +105,26 @@ const SongPage = () => {
         setRepeatMode(modes[nextIndex] as 'none' | 'one' | 'all');
     };
 
+    const computeSeek = useCallback((clientX: number) => {
+        if (progressRef.current && duration) {
+            const { left, width } = progressRef.current.getBoundingClientRect();
+            const newTime = Math.max(0, Math.min(1, (clientX - left) / width)) * duration;
+            seek(newTime);
+        }
+    }, [duration, seek]);
+
+    const onMouseDown = (e: React.MouseEvent) => { setIsSeeking(true); computeSeek(e.clientX); };
+    const onMouseMove = (e: React.MouseEvent) => { if (isSeeking) computeSeek(e.clientX); };
+    const onMouseUp = () => setIsSeeking(false);
+    const onTouchStart = (e: React.TouchEvent) => { setIsSeeking(true); computeSeek(e.touches[0].clientX); };
+    const onTouchMove = (e: React.TouchEvent) => { if (isSeeking) computeSeek(e.touches[0].clientX); };
+    const onTouchEnd = () => setIsSeeking(false);
+
+    const progress = useMemo(() => {
+        if (activeSong?.id !== song?.id) return 0;
+        return duration > 0 ? (currentTime / duration) * 100 : 0;
+    }, [currentTime, duration, activeSong, song]);
+
     if (!song) {
         return <div className="flex items-center justify-center h-screen"><p>Loading song...</p></div>;
     }
@@ -98,7 +132,6 @@ const SongPage = () => {
     let upNextQueue: Song[] = [];
     if (activeSong && currentPlaylist && currentPlaylist.length > 0) {
         const activeSongIndex = currentPlaylist.findIndex(s => s && s.id === activeSong.id);
-
         if (activeSongIndex !== -1) {
             upNextQueue = currentPlaylist.slice(activeSongIndex + 1, activeSongIndex + 11);
         }
@@ -114,7 +147,7 @@ const SongPage = () => {
     };
 
     return (
-        <div className="container mx-auto p-4" onClick={() => setMenuOpen(false)}>
+        <div className="container mx-auto p-4" onClick={() => setMenuOpen(false)} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div className="md:col-span-1 relative">
                     <img src={song.albumArtUrl} alt={song.title} className="w-full rounded-lg shadow-lg aspect-square object-cover" />
@@ -143,7 +176,7 @@ const SongPage = () => {
                         <p className="text-sm text-gray-300 mt-4 text-left">{song.description}</p>
                     </div>
                 </div>
-                <div className="md:col-span-2">
+                <div className="md:col-span-2" onMouseMove={onMouseMove} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
                     <div className="glass-card p-6 rounded-lg">
                         <div className="flex items-center justify-center space-x-6">
                             <button onClick={toggleShuffle} className={`p-2 rounded-full transition-colors ${isShuffle ? 'text-accent-green' : 'text-gray-400 hover:text-white'}`}>
@@ -161,35 +194,87 @@ const SongPage = () => {
                              <button onClick={handleRepeatToggle} className="p-2 rounded-full text-gray-400 hover:text-white transition-colors">
                                 {repeatMode === 'one' ? <Repeat1 className="text-accent-green" /> : <Repeat className={repeatMode === 'all' ? 'text-accent-green' : ''}/>}
                             </button>
+                            <button onClick={() => setShowLyrics(l => !l)} disabled={!song.lyricsUrl && !song.lyrics} className={`p-2 rounded-full transition-colors ${showLyrics ? 'text-accent-cyan' : 'text-gray-400 hover:text-white'} disabled:text-gray-600 disabled:cursor-not-allowed`}>
+                                <Mic />
+                            </button>
                         </div>
                          <div className="mt-6">
-                            <div className="h-2 bg-black/20 rounded-full">
-                                <div className="h-2 bg-accent-cyan rounded-full" style={{width: '30%'}}></div>
+                            <div ref={progressRef} onMouseDown={onMouseDown} onTouchStart={onTouchStart} className="relative h-2 bg-black/20 rounded-full cursor-pointer">
+                                <div className="absolute h-full rounded-full" style={{width: `${progress}%`, transition: isSeeking ? 'none' : 'width 0.1s linear', background: 'linear-gradient(90deg, var(--accent-pink), var(--accent-purple), var(--accent-cyan))'}}></div>
+                                <div className="absolute h-4 w-4 bg-white rounded-full -top-1 shadow-md" style={{left: `calc(${progress}% - 8px)`}}>
+                                    <motion.div 
+                                        className="w-full h-full rounded-full bg-white/80"
+                                        whileHover={{scale: 1.2}}
+                                        animate={{scale: isSeeking ? 1.5 : 1}}
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex justify-between text-xs text-gray-400 mt-2">
+                                <span>{fmt(activeSong?.id === song.id ? currentTime : 0)}</span>
+                                <span>{fmt(activeSong?.id === song.id ? duration : 0)}</span>
                             </div>
                         </div>
                     </div>
                     <div className="mt-8">
-                        <h2 className="text-2xl font-bold mb-4 text-white">Up Next</h2>
-                        <ul className="flex flex-col gap-2">
-                            {safeUpNextQueue.map((nextSong, index) => (
-                                <li 
-                                    key={`${nextSong.id}-${index}`}
-                                    className="flex items-center justify-between p-2 rounded-lg hover:bg-white/10 cursor-pointer transition-colors"
-                                    onClick={() => playSongFromPlaylist(nextSong)}
+                        <AnimatePresence mode="wait">
+                            {showLyrics ? (
+                                <motion.div
+                                    key="lyrics"
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -20 }}
                                 >
-                                    <div className="flex items-center space-x-4">
-                                        <img src={nextSong.albumArtUrl} alt={nextSong.title} className="w-14 h-14 rounded-md object-cover" />
-                                        <div>
-                                            <p className={`font-semibold ${activeSong?.id === nextSong.id ? 'text-accent-green' : 'text-white'}`}>{nextSong.title}</p>
-                                            <p className="text-sm text-gray-400">{nextSong.artist}</p>
-                                        </div>
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h2 className="text-2xl font-bold text-white">Lyrics</h2>
+                                        <button 
+                                            onClick={() => setLyricsInteractive(i => !i)}
+                                            className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-full transition-colors ${lyricsInteractive ? 'bg-cyan-400/20 text-cyan-300' : 'bg-white/10 text-white/50'}`}
+                                        >
+                                            {lyricsInteractive ? 'Synced' : 'Sync'}
+                                        </button>
                                     </div>
-                                    <button className="p-2 rounded-full hover:bg-white/20 transition-colors" onClick={(e) => {e.stopPropagation(); handleUpNextClick(nextSong)}}>
-                                        {activeSong?.id === nextSong.id && isPlaying ? <Pause/> : <Play />}
-                                    </button>
-                                </li>
-                            ))}
-                        </ul>
+                                    <div className="h-[40vh] overflow-y-auto pr-4">
+                                        <LyricsDisplay
+                                            lyricsUrl={song.lyricsUrl}
+                                            lyrics={song.lyrics}
+                                            currentTime={activeSong?.id === song.id ? currentTime : 0}
+                                            seek={seek}
+                                            isPlaying={isPlaying && activeSong?.id === song.id}
+                                            isInteractive={lyricsInteractive}
+                                        />
+                                    </div>
+                                </motion.div>
+                            ) : (
+                                <motion.div
+                                    key="up-next"
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -20 }}
+                                >
+                                    <h2 className="text-2xl font-bold mb-4 text-white">Up Next</h2>
+                                    <ul className="flex flex-col gap-2">
+                                        {safeUpNextQueue.map((nextSong, index) => (
+                                            <li 
+                                                key={`${nextSong.id}-${index}`}
+                                                className="flex items-center justify-between p-2 rounded-lg hover:bg-white/10 cursor-pointer transition-colors"
+                                                onClick={() => playSongFromPlaylist(nextSong)}
+                                            >
+                                                <div className="flex items-center space-x-4">
+                                                    <img src={nextSong.albumArtUrl} alt={nextSong.title} className="w-14 h-14 rounded-md object-cover" />
+                                                    <div>
+                                                        <p className={`font-semibold ${activeSong?.id === nextSong.id ? 'text-accent-green' : 'text-white'}`}>{nextSong.title}</p>
+                                                        <p className="text-sm text-gray-400">{nextSong.artist}</p>
+                                                    </div>
+                                                </div>
+                                                <button className="p-2 rounded-full hover:bg-white/20 transition-colors" onClick={(e) => {e.stopPropagation(); handleUpNextClick(nextSong)}}>
+                                                    {activeSong?.id === nextSong.id && isPlaying ? <Pause/> : <Play />}
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </div>
                 </div>
             </div>

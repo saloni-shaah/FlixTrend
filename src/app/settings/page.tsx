@@ -1,7 +1,7 @@
-"use client";
+'use client';
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Cog, Palette, Lock, MessageCircle, LogOut, Trash2, AtSign, Mail, CheckCircle, UserX, ArrowLeft } from 'lucide-react';
+import { Cog, Palette, Lock, MessageCircle, LogOut, Trash2, AtSign, Mail, CheckCircle, UserX, ArrowLeft, Music } from 'lucide-react';
 import Link from 'next/link';
 import { signOut, sendEmailVerification } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
@@ -130,6 +130,18 @@ export default function SettingsPage() {
                         </div>
                     </Link>
                 </div>
+
+                {!profile.isSinger && (
+                    <div className="bg-white/5 rounded-xl p-4">
+                        <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan"><Music /> Creator Tools</h3>
+                        <Link href="/signup/singer">
+                            <div className="w-full p-4 rounded-2xl bg-accent-cyan/10 hover:bg-accent-cyan/20 cursor-pointer">
+                                <h4 className="font-headline font-bold text-accent-cyan">Become a Singer</h4>
+                                <p className="text-xs text-white/80">Upload your music and start earning.</p>
+                            </div>
+                        </Link>
+                    </div>
+                )}
 
                 <div className="bg-white/5 rounded-xl p-4">
                 <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan"><Palette /> Theme & UI</h3>

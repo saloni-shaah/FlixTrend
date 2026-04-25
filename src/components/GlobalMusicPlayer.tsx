@@ -1,5 +1,4 @@
-
-"use client";
+'use client';
 
 import React, {
   useState, useRef, useCallback, useMemo, useEffect,
@@ -8,10 +7,11 @@ import { useMusicPlayer } from '@/utils/MusicPlayerContext';
 import {
   Play, Pause, SkipBack, SkipForward,
   Shuffle, Repeat, Repeat1, ChevronDown,
-  ListMusic, Music2,
+  ListMusic, Music2, Mic, MicOff, Loader2,
 } from 'lucide-react';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import { Song } from '@/types/music';
+import { LyricsDisplay } from './LyricsDisplay';
 
 const fmt = (t: number) => {
   if (!t || isNaN(t)) return '0:00';
@@ -53,6 +53,8 @@ export function GlobalMusicPlayer() {
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [showQueue,  setShowQueue]  = useState(false);
+  const [showLyrics, setShowLyrics] = useState(false);
+  const [lyricsInteractive, setLyricsInteractive] = useState(true);
   const [isSeeking,  setIsSeeking]  = useState(false);
   const progressRef                 = useRef<HTMLDivElement>(null);
 
@@ -176,19 +178,35 @@ export function GlobalMusicPlayer() {
                 >
                   Now Playing
                 </p>
-                <motion.button
-                  whileTap={{ scale: 0.88 }}
-                  onClick={() => setShowQueue(q => !q)}
-                  className={`p-2 -mr-2 transition-colors ${showQueue ? 'text-cyan-400' : 'text-white/40 hover:text-white'}`}
-                >
-                  <ListMusic size={22} />
-                </motion.button>
+                <div className="flex items-center gap-2">
+                  <motion.button
+                    whileTap={{ scale: 0.88 }}
+                    onClick={() => {
+                        setShowLyrics(l => !l);
+                        if (!showLyrics) setShowQueue(false);
+                    }}
+                    disabled={!activeSong.lyricsUrl && !activeSong.lyrics}
+                    className={`p-2 transition-colors ${showLyrics ? 'text-cyan-400' : 'text-white/40 hover:text-white'} disabled:text-white/20 disabled:cursor-not-allowed`}
+                  >
+                    <Mic size={22} />
+                  </motion.button>
+                  <motion.button
+                    whileTap={{ scale: 0.88 }}
+                    onClick={() => {
+                        setShowQueue(q => !q);
+                        if (!showQueue) setShowLyrics(false);
+                    }}
+                    className={`p-2 -mr-2 transition-colors ${showQueue ? 'text-cyan-400' : 'text-white/40 hover:text-white'}`}
+                  >
+                    <ListMusic size={22} />
+                  </motion.button>
+                </div>
               </div>
 
               <div className="relative flex-1 overflow-hidden">
                 <AnimatePresence mode="wait" initial={false}>
 
-                  {!showQueue && (
+                  {!showQueue && !showLyrics && (
                     <motion.div
                       key="player"
                       initial={{ opacity: 0, x: -20 }}
@@ -475,6 +493,42 @@ export function GlobalMusicPlayer() {
                     </motion.div>
                   )}
 
+                  {showLyrics && (
+                    <motion.div
+                      key="lyrics"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      transition={{ duration: 0.22 }}
+                      className="absolute inset-0 flex flex-col"
+                    >
+                        <div className="flex justify-between items-center px-4 pt-2 pb-4">
+                             <p
+                                className="font-bold uppercase"
+                                style={{ fontSize: 10, letterSpacing: '0.22em', color: 'rgba(0,229,255,.45)' }}
+                                >
+                                Lyrics
+                            </p>
+                            <button
+                                onClick={() => setLyricsInteractive(i => !i)}
+                                className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-full transition-colors ${lyricsInteractive ? 'bg-cyan-400/20 text-cyan-300' : 'bg-white/10 text-white/50'}`}
+                            >
+                                {lyricsInteractive ? 'Synced' : 'Sync'}
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto pb-12">
+                            <LyricsDisplay
+                                lyricsUrl={activeSong.lyricsUrl}
+                                lyrics={activeSong.lyrics}
+                                currentTime={currentTime}
+                                seek={seek}
+                                isPlaying={isPlaying}
+                                isInteractive={lyricsInteractive}
+                            />
+                        </div>
+                    </motion.div>
+                  )}
+
                 </AnimatePresence>
               </div>
             </div>
@@ -550,6 +604,21 @@ export function GlobalMusicPlayer() {
               </div>
 
               <div className="relative z-10 flex items-center gap-0.5" onClick={e => e.stopPropagation()}>
+                <motion.button
+                  whileTap={{ scale: 0.84 }}
+                  onClick={(e) => {
+                      e.stopPropagation();
+                      setIsExpanded(true);
+                      setShowLyrics(true);
+                      setShowQueue(false);
+                  }}
+                  disabled={!activeSong.lyricsUrl && !activeSong.lyrics}
+                  className="p-2 hover:text-white transition-colors disabled:text-white/20 disabled:cursor-not-allowed"
+                  style={{ color: 'rgba(255,255,255,.38)' }}
+                >
+                    <Mic size={18} />
+                </motion.button>
+
                 <motion.button
                   whileTap={{ scale: 0.84 }}
                   onClick={playPrevious}
