@@ -83,9 +83,9 @@ export default function UserProfilePage() {
             const userDoc = querySnapshot.docs[0];
             const userData = { uid: userDoc.id, ...userDoc.data() };
             setProfile(userData);
-            setUid(userDoc.id); // Make sure to set UID for other hooks
+            setUid(userDoc.id);
         } else {
-            setProfile(null); // No user found with that username
+            setProfile(null);
             setUid(null);
         }
         setLoading(false);
@@ -96,7 +96,7 @@ export default function UserProfilePage() {
         setLoading(false);
     });
 
-    return () => unsubscribe(); // Cleanup listener on component unmount
+    return () => unsubscribe();
 }, [username]);
 
 
@@ -131,7 +131,7 @@ export default function UserProfilePage() {
     let orderByField = 'createdAt';
     let orderByDirection: OrderByDirection = sortBy === 'oldest' ? 'asc' : 'desc';
     if (sortBy === 'popular') {
-        orderByField = 'likesCount'; // Note: Assumes a 'likesCount' field exists on your post documents.
+        orderByField = 'likesCount'; 
     }
 
     q = query(q, orderBy(orderByField, orderByDirection));
@@ -143,8 +143,8 @@ export default function UserProfilePage() {
     if (!q) return;
 
     setLoading(true);
-    setUserPosts([]);      // Explicitly clear posts
-    setLastVisible(null);  // Explicitly clear cursor
+    setUserPosts([]);      
+    setLastVisible(null);  
 
     const finalQuery = query(q, limit(POSTS_PER_PAGE));
 
@@ -156,7 +156,7 @@ export default function UserProfilePage() {
         setHasMorePosts(documentSnapshots.docs.length === POSTS_PER_PAGE);
     } catch (error) {
         console.error("Error fetching initial posts: ", error);
-        setHasMorePosts(false); // Stop trying to load more if there was an error
+        setHasMorePosts(false); 
     }
     setLoading(false);
   }
@@ -177,12 +177,11 @@ export default function UserProfilePage() {
         setHasMorePosts(documentSnapshots.docs.length === POSTS_PER_PAGE);
     } catch (error) {
         console.error("Error fetching more posts: ", error);
-        setHasMorePosts(false); // Stop trying to load more if there was an error
+        setHasMorePosts(false);
     }
 
     setLoadingMore(false);
   }
-
 
   if (loading) {
     return <div className="flex flex-col min-h-screen items-center justify-center text-accent-cyan">Loading profile...</div>;
@@ -197,7 +196,6 @@ export default function UserProfilePage() {
   const isDeveloper = Array.isArray(profile.role) && (profile.role.includes('developer') || profile.role.includes('founder'));
   const accolades = profile.accolades || [];
   const isOwnProfile = firebaseUser?.uid === uid;
-
 
   return (
     <>

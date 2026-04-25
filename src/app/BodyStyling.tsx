@@ -30,6 +30,7 @@ export default function BodyStyling() {
         '/about',
         '/privacy',
         '/terms',
+        '/faq',
         '/contact'
     ];
     

@@ -67,6 +67,7 @@ const nextConfig = {
   },
   allowedDevOrigins: [
     '3000-firebase-studio-1771359278488.cluster-w5vd22whf5gmav2vgkomwtc4go.cloudworkstations.dev',
+    '6000-firebase-studio-1776275182221.cluster-fdkw7vjj7bgguspe3fbbc25tra.cloudworkstations.dev',
     '9000-firebase-studio-1776275182221.cluster-fdkw7vjj7bgguspe3fbbc25tra.cloudworkstations.dev',
     '9002-firebase-studio-1771359278488.cluster-w5vd22whf5gmav2vgkomwtc4go.cloudworkstations.dev'
   ],

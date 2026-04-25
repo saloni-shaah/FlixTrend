@@ -10,15 +10,20 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://flixtrend.in';
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: 'FlixTrend',
+    default: 'FlixTrend: The clean side of the internet.',
     template: '%s | FlixTrend',
   },
-  description: 'FlixTrend: The Future of Social, Built for Gen-Z. Secure, Creative, Connected. Where trends find you first.',
+  description: 'FlixTrend: A cleaner, more positive online experience. The Future of Social, Built for Gen-Z. Secure, Creative, Connected.',
   manifest: "/manifest.json",
-  keywords: ['FlixTrend', 'social media', 'Gen-Z', 'video sharing', 'live streaming', 'secure social', 'Indian social media', 'flashes', 'vibes', 'vibesapce', 'flow'],
+  keywords: [
+    'FlixTrend', 'social media', 'Gen-Z', 'video sharing', 'live streaming', 
+    'secure social', 'Indian social media', 'clean internet', 'positive social media', 
+    'safe browsing', 'family-friendly content', 'ethical social media', 'digital wellness', 
+    'mindful scrolling', 'non-toxic social media', 'flashes', 'vibes', 'vibespace', 'flow'
+  ],
   openGraph: {
-    title: 'FlixTrend',
-    description: 'The Future of Social, Built for Gen-Z. Secure, Creative, Connected.',
+    title: 'FlixTrend: The clean side of the internet.',
+    description: 'A cleaner, more positive online experience. The Future of Social, Built for Gen-Z.',
     url: siteUrl,
     siteName: 'FlixTrend',
     images: [
@@ -26,7 +31,7 @@ export const metadata: Metadata = {
         url: '/og-image.png', 
         width: 1200,
         height: 630,
-        alt: 'FlixTrend - The Future of Social',
+        alt: 'FlixTrend - The clean side of the internet.',
       },
     ],
     locale: 'en_IN',
@@ -34,18 +39,18 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'FlixTrend: The Vibe is Here.',
-    description: 'The Future of Social, Built for Gen-Z. Secure, Creative, Connected.',
+    title: 'FlixTrend: The clean side of the internet.',
+    description: 'A cleaner, more positive online experience, built for Gen-Z.',
     creator: '@FlxTrnd',
     site: '@FlxTrnd',
     images: [`${siteUrl}/og-image.png`],
   },
   icons: {
     icon: [
-        { url: '/favicon.ico', sizes: 'any' },
-        { url: '/icon.svg', type: 'image/svg+xml' },
-        { url: "/icons/icon-192x192.png", type: "image/png", sizes: "192x192" },
-        { url: "/icons/icon-512x512.png", type: "image/png", sizes: "512x512" },
+      { url: '/favicon.ico', sizes: 'any', type: 'image/x-icon' },
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
     ],
     apple: [
         { url: '/apple-touch-icon.png' },
@@ -84,9 +89,21 @@ export default function RootLayout({
     })();
   `;
 
+  const organizationSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'FlixTrend',
+    url: siteUrl,
+    logo: `${siteUrl}/icon.svg`,
+  };
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+        />
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <meta name="theme-color" content="#1B1B1E" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />

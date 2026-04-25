@@ -1,3 +1,10 @@
 User-agent: *
 Allow: /
+
+# Block sensitive or useless pages
+Disallow: /api/
+Disallow: /admin/
+Disallow: /auth/
+Disallow: /private/
+
 Sitemap: https://flixtrend.in/sitemap.xml
