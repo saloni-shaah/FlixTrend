@@ -191,5 +191,22 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isFounder();
     }
+    
+    // Singers: Public profiles for artists, linked to a user account.
+    match /singers/{uid} {
+      // Anyone can view a public artist profile.
+      allow read: if isSignedIn();
+
+      // An authenticated user can create their OWN singer profile.
+      // The document ID must match their user ID.
+      allow create: if request.auth.uid == uid;
+
+      // The artist can update their own profile.
+      allow update: if request.auth.uid == uid;
+
+      // Deleting a singer profile is a destructive action. It's better to
+      // have an 'isActive' flag within the document.
+      allow delete: if false;
+    }
   }
 }

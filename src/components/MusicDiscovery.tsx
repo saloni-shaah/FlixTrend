@@ -1,9 +1,8 @@
-
-"use client";
+'use client';
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Play, Pause, Plus, Music, Search, MoreHorizontal } from 'lucide-react';
-import { getFirestore, collection, addDoc, serverTimestamp, query, onSnapshot, orderBy, where, updateDoc, arrayUnion, doc } from 'firebase/firestore';
+import { Play, Pause, Music, Search, MoreHorizontal } from 'lucide-react';
+import { getFirestore, collection, query, onSnapshot, orderBy, where, updateDoc, arrayUnion, doc } from 'firebase/firestore';
 import { auth, app } from '@/utils/firebaseClient';
 import { useMusicPlayer } from '@/utils/MusicPlayerContext';
 import { useRouter } from 'next/navigation';
@@ -11,144 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 
 const db = getFirestore(app);
 
-async function getCloudinarySignature(paramsToSign: any) {
-  const response = await fetch('/api/sign-cloudinary-params', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ paramsToSign }),
-  });
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`Failed to get signature: ${error.error}`);
-  }
-  const { signature } = await response.json();
-  return signature;
-}
-
-async function uploadToCloudinary(file: File) {
-    const timestamp = Math.round((new Date).getTime() / 1000); 
-    const paramsToSign = { timestamp: timestamp };
-    const signature = await getCloudinarySignature(paramsToSign);
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("timestamp", timestamp.toString());
-    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME; 
-    const apiKey = process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY;
-    if (!cloudName || !apiKey) {
-        throw new Error("Cloudinary environment variables are not set.");
-    }
-    formData.append("api_key", apiKey);
-    formData.append("signature", signature);
-    const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, {
-        method: "POST",
-        body: formData,
-    });
-    if (!response.ok) {
-        const errorResult = await response.json();
-        throw new Error(`Cloudinary upload failed: ${errorResult.error.message}`);
-    }
-    const result = await response.json();
-    return { success: true, url: result.secure_url };
-}
-
-function AddMusicModal({ onClose }: { onClose: () => void }) {
-    const [form, setForm] = useState({
-        title: '',
-        artist: '',
-        album: '',
-        genre: '',
-        year: '',
-        description: '',
-    });
-    const [albumArtFile, setAlbumArtFile] = useState<File | null>(null);
-    const [audioFile, setAudioFile] = useState<File | null>(null);
-    const [albumArtPreview, setAlbumArtPreview] = useState<string | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        setForm({ ...form, [e.target.name]: e.target.value });
-    };
-
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'art' | 'audio') => {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            if (type === 'art') {
-                setAlbumArtFile(file);
-                setAlbumArtPreview(URL.createObjectURL(file));
-            } else {
-                setAudioFile(file);
-            }
-        }
-    };
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!audioFile || !albumArtFile || !form.title || !form.artist) {
-            setError('Please fill in all required fields and upload both files.');
-            return;
-        }
-        setLoading(true);
-        setError('');
-        try {
-            const user = auth.currentUser;
-            if (!user) throw new Error("You must be logged in to upload music.");
-            const audioUploadResult = await uploadToCloudinary(audioFile);
-            const artUploadResult = await uploadToCloudinary(albumArtFile);
-            if (!audioUploadResult.success || !artUploadResult.success) {
-                throw new Error("One of the file uploads failed.");
-            }
-            await addDoc(collection(db, 'songs'), {
-                ...form,
-                audioUrl: audioUploadResult.url,
-                albumArtUrl: artUploadResult.url,
-                userId: user.uid,
-                username: user.displayName || "Anonymous",
-                createdAt: serverTimestamp(),
-                playCount: 0,
-            });
-            onClose();
-        } catch (err: any) {
-            setError(err.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="glass-card p-6 w-full max-w-lg relative max-h-[90vh] flex flex-col">
-                <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white">&times;</button>
-                <h2 className="text-xl font-headline font-bold mb-4 text-accent-cyan">Add a New Song</h2>
-                <form onSubmit={handleSubmit} className="flex flex-col gap-3 overflow-y-auto pr-2">
-                    <div className="flex gap-4 items-center">
-                        <div className="w-32 h-32 bg-black/20 rounded-lg flex items-center justify-center text-gray-400 overflow-hidden shrink-0">
-                            {albumArtPreview ? <img src={albumArtPreview} alt="preview" className="w-full h-full object-cover" /> : "Album Art"}
-                        </div>
-                        <div className="flex flex-col gap-3 w-full">
-                             <input type="text" name="title" placeholder="Song Title" className="input-glass w-full" value={form.title} onChange={handleChange} required />
-                             <input type="text" name="artist" placeholder="Artist Name" className="input-glass w-full" value={form.artist} onChange={handleChange} required />
-                        </div>
-                    </div>
-                    <div className="flex gap-3">
-                        <input type="text" name="album" placeholder="Album Name" className="input-glass w-full" value={form.album} onChange={handleChange} />
-                        <input type="text" name="genre" placeholder="Genre" className="input-glass w-full" value={form.genre} onChange={handleChange} />
-                        <input type="number" name="year" placeholder="Year" className="input-glass w-full" value={form.year} onChange={handleChange} />
-                    </div>
-                    <textarea name="description" placeholder="Describe the song, its vibe, or a story behind it..." className="input-glass w-full rounded-2xl" rows={4} value={form.description} onChange={handleChange} />
-                    <label className="text-sm font-bold text-accent-cyan mt-2">Upload Album Art</label>
-                    <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'art')} className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent-pink/20 file:text-accent-pink hover:file:bg-accent-pink/40" required/>
-                    <label className="text-sm font-bold text-accent-cyan mt-2">Upload Audio File</label>
-                    <input type="file" accept="audio/*" onChange={(e) => handleFileChange(e, 'audio')} className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent-cyan/20 file:text-accent-cyan hover:file:bg-accent-cyan/40" required/>
-                    {error && <div className="text-red-400 text-center p-2 bg-red-900/20 rounded-lg">{error}</div>}
-                    <button type="submit" className="btn-glass bg-accent-cyan text-black mt-4" disabled={loading}>
-                        {loading ? "Uploading..." : "Add Song"}
-                    </button>
-                </form>
-            </motion.div>
-        </div>
-    );
-}
+// NOTE: The AddMusicModal and related Cloudinary upload functions have been removed from this file.
+// All music uploads are now handled by MusicUploadForm.tsx in the Creator Studio.
 
 function AddToPlaylistModal({ song, onClose }: { song: any; onClose: () => void }) {
     const [playlists, setPlaylists] = useState<any[]>([]);
@@ -226,7 +89,6 @@ function AddToPlaylistModal({ song, onClose }: { song: any; onClose: () => void 
 export function MusicDiscovery() {
     const [songs, setSongs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [showAddModal, setShowAddModal] = useState(false);
     const [showPlaylistModal, setShowPlaylistModal] = useState<any | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [openMenuSongId, setOpenMenuSongId] = useState<string | null>(null);
@@ -287,7 +149,7 @@ export function MusicDiscovery() {
                 <div className="text-center text-gray-400 mt-16">
                     <Music size={64} className="mx-auto mb-4"/>
                     <h3 className="text-xl font-bold">{searchTerm ? "No Results Found" : "The Stage is Empty"}</h3>
-                    <p>{searchTerm ? "Try a different search term." : "Be the first to upload a song!"}</p>
+                    <p>{searchTerm ? "Try a different search term." : "No music has been uploaded yet."}</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -359,15 +221,7 @@ export function MusicDiscovery() {
                 </div>
             )}
             
-            <button
-              className="fixed bottom-24 right-4 z-50 btn-glass-icon w-16 h-16 bg-gradient-to-tr from-accent-pink to-accent-purple flex items-center justify-center"
-              aria-label="Add Song"
-              onClick={() => setShowAddModal(true)}
-            >
-                <Plus size={32} />
-            </button>
-
-            {showAddModal && <AddMusicModal onClose={() => setShowAddModal(false)} />}
+            {/* The Add Song button has been removed. Users now upload via the Creator Studio. */}
             {showPlaylistModal && <AddToPlaylistModal song={showPlaylistModal} onClose={() => setShowPlaylistModal(null)} />}
         </div>
     );
