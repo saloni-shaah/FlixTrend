@@ -1,7 +1,11 @@
 
 import { NextResponse } from 'next/server';
 import cloudinary from '@/utils/cloudinary';
-import { auth } from '@/utils/firebaseAdmin';
+import admin from 'firebase-admin';
+import { initAdmin } from '@/utils/firebaseAdmin';
+
+// Ensure Firebase Admin is initialized
+initAdmin();
 
 export async function POST(request: Request) {
   const { publicIds, songId, userId } = await request.json();
@@ -14,7 +18,7 @@ export async function POST(request: Request) {
   const idToken = authToken.split('Bearer ')[1];
 
   try {
-    const decodedToken = await auth.verifyIdToken(idToken);
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
 
     if (decodedToken.uid !== userId) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
