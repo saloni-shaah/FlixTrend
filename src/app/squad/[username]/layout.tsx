@@ -1,84 +1,72 @@
 import type { Metadata } from 'next';
-import { getFirestore, collection, query, where, getDocs, limit } from "firebase/firestore";
-import { app } from "@/utils/firebaseClient";
+import { getUserByUsername } from '@/lib/getUserByUsername';
 
-const db = getFirestore(app);
+export async function generateMetadata(
+  { params }: { params: Promise<{ username: string }> }
+): Promise<Metadata> {
 
-type Props = {
-  params: { username: string };
-  children: React.ReactNode;
-}
-
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const username = params.username;
   const siteUrl = 'https://flixtrend.in';
 
-  if (!username || typeof username !== 'string') {
+  const { username: rawUsername } = await params;
+
+  if (!rawUsername) {
     return {
-        title: 'FlixTrend',
-        description: 'The clean side of the internet. Discover posts, vibes, and connections.',
+      title: 'FlixTrend',
+      robots: { index: false, follow: false },
     };
   }
 
-  const usersCollection = collection(db, 'users');
-  const q = query(usersCollection, where('username', '==', username), limit(1));
-  
-  try {
-    const querySnapshot = await getDocs(q);
+  const username = rawUsername.toLowerCase();
 
-    if (querySnapshot.empty) {
+  try {
+    const profile = await getUserByUsername(username);
+
+    if (!profile) {
       return {
-        title: 'User Not Found',
-        description: 'This user does not exist on FlixTrend.',
+        title: 'User Not Found | FlixTrend',
+        robots: { index: false, follow: false },
       };
     }
 
-    const profile = querySnapshot.docs[0].data();
-
-    const pageTitle = `${profile.name} (@${profile.username}) | FlixTrend`;
-    const pageDescription = profile.bio || `Check out the profile of ${profile.name} on FlixTrend. Discover their posts, vibes, and connections in the clean side of the internet.`;
+    const name = profile.name || profile.username;
 
     return {
-      title: pageTitle,
-      description: pageDescription,
+      metadataBase: new URL(siteUrl),
+
+      title: `${name} (@${profile.username}) | FlixTrend`,
+      description:
+        profile.bio ||
+        `Explore ${name} on FlixTrend.`,
+
+      alternates: {
+        canonical: `${siteUrl}/squad/${username}`,
+      },
+
       openGraph: {
-        title: pageTitle,
-        description: pageDescription,
+        title: `${name} (@${profile.username})`,
         url: `${siteUrl}/squad/${username}`,
-        siteName: 'FlixTrend',
         images: [
           {
             url: profile.avatar_url || `${siteUrl}/default-avatar.png`,
             width: 800,
             height: 800,
-            alt: `${profile.name}'s profile picture`,
           },
         ],
-        locale: 'en_IN',
-        type: 'profile',
-        profile: {
-            username: profile.username,
-        }
       },
-      twitter: {
-        card: 'summary_large_image',
-        title: pageTitle,
-        description: pageDescription,
-        creator: '@FlxTrnd',
-        images: [profile.avatar_url || `${siteUrl}/default-avatar.png`],
-      },
+
+      robots: { index: true, follow: true },
     };
 
   } catch (error) {
-    // --- FIX: Make the error log useful --- 
-    console.error("Error fetching user metadata:", {error});
+    console.error('Metadata error:', error);
+
     return {
-      title: 'Server Error',
-      description: 'Could not fetch user profile at this time.',
+      title: 'FlixTrend',
+      robots: { index: false, follow: false },
     };
   }
 }
 
-export default function ProfileLayout({ children }: Props) {
+export default function ProfileLayout({ children }: { children: React.ReactNode }) {
   return children;
 }

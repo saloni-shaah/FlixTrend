@@ -1,50 +1,36 @@
-
 import admin from 'firebase-admin';
 
-const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-let serviceAccount;
+function initializeApp() {
+  if (admin.apps.length > 0) {
+    return admin.app();
+  }
 
-if (serviceAccountKey) {
+  const key = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+
+  if (!key) {
+    throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY is missing');
+  }
+
+  let serviceAccount;
+
   try {
-    // Vercel automatically escapes the secret, so we need to parse it correctly
-    serviceAccount = JSON.parse(serviceAccountKey);
-  } catch (error) {
-    console.error('Error parsing FIREBASE_SERVICE_ACCOUNT_KEY:', error);
-    // Fallback for local dev where it might not be a JSON string
-    if (typeof serviceAccountKey === 'string' && serviceAccountKey.startsWith("{")) {
-        try {
-            serviceAccount = JSON.parse(JSON.parse(serviceAccountKey));
-        } catch(e) {}
+    serviceAccount = JSON.parse(key);
+  } catch {
+    try {
+      // Fix for escaped newlines in Vercel
+      serviceAccount = JSON.parse(key.replace(/\\n/g, '\n'));
+    } catch {
+      throw new Error('Invalid FIREBASE_SERVICE_ACCOUNT_KEY format');
     }
   }
+
+  return admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
 }
 
-// Initialize Firebase Admin SDK
-if (!admin.apps.length && serviceAccount) {
-  try {
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
-    console.log('Firebase Admin SDK Initialized.');
-  } catch (error) {
-    console.error('Firebase Admin initialization error:', error);
-  }
-} else {
-    if (!serviceAccount) {
-        console.log('FIREBASE_SERVICE_ACCOUNT_KEY not found. Admin SDK not initialized.');
-    }
+// ✅ Always returns a working Firestore instance or throws
+export function getFirestore() {
+  const app = initializeApp();
+  return admin.firestore(app);
 }
-
-// Export the initialized firestore instance
-const firestore = admin.firestore();
-
-export { firestore };
-
-// Redundant initAdmin, kept for compatibility, but the top-level execution handles initialization now.
-export const initAdmin = () => {
-  if (!admin.apps.length && serviceAccount) {
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
-  }
-};
