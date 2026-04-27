@@ -21,8 +21,7 @@ service cloud.firestore {
 
     // ───────────────── USERS ─────────────────
     match /users/{userId} {
-      allow get: if true; // public profile (SEO)
-      allow list: if isSignedIn();
+      allow get, list: if true;
       allow create, update, delete: if isOwner(userId);
 
       match /{subcollection}/{docId} {
@@ -35,7 +34,7 @@ service cloud.firestore {
       }
 
       match /playlists/{playlistId} {
-        allow read: if isSignedIn();
+        allow read: if isOwner(userId);
         allow write: if isOwner(userId);
       }
     }
@@ -117,17 +116,16 @@ service cloud.firestore {
 
     // ───────────────── DROPS ─────────────────
     match /drops/{dropId} {
-      allow get, list: if true; // SEO
+      allow get, list: if isSignedIn();
 
       allow create: if isSignedIn() &&
         request.auth.uid == request.resource.data.userId;
 
       allow update: if isSignedIn() && (
         request.auth.uid == resource.data.userId ||
-        (
-          onlyKeysChanged(['likes']) &&
-          request.auth.uid in request.resource.data.likes
-        )
+        onlyKeysChanged(['reactions']) ||
+        (onlyKeysChanged(['viewCount']) &&
+         request.resource.data.viewCount >= resource.data.viewCount)
       );
 
       allow delete: if isOwner(resource.data.userId);

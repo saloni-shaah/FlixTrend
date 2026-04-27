@@ -286,6 +286,7 @@ function VibeSpaceContent() {
 
   return (
     <div className="flex flex-col w-full">
+        <h1 className="sr-only">Vibespace - The heart of FlixTrend</h1>
       <div className="w-full max-w-2xl mx-auto">
         <motion.div className="flex justify-center items-center mb-6 w-full" initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
             <div className={`input-glass w-full flex items-center px-4 transition-all duration-300 ${isSearchFocused ? 'ring-2 ring-brand-saffron' : ''}`}>
@@ -363,9 +364,9 @@ function VibeSpaceContent() {
           </motion.section>
         
         <section className="flex-1 flex flex-col items-center mt-4">
-            <motion.h2 className="text-xl font-headline self-start bg-gradient-to-r from-accent-pink to-accent-green bg-clip-text text-transparent mb-4 text-glow" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
+            <h1 className="text-xl font-headline self-start bg-gradient-to-r from-accent-pink to-accent-green bg-clip-text text-transparent mb-4 text-glow" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
                 VibeSpace
-            </motion.h2>
+            </h1>
             {loading ? (
               <VibeSpaceLoader />
             ) : (

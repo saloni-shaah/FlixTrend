@@ -351,7 +351,9 @@ const CreatorSuggestions = ({ creators, title, currentUser }: { creators: any[],
         }
     };
 
-    if (creators.length === 0) {
+    const validCreators = creators.filter(creator => creator && creator.id && creator.name && creator.username);
+
+    if (validCreators.length === 0) {
         return null;
     }
 
@@ -365,24 +367,27 @@ const CreatorSuggestions = ({ creators, title, currentUser }: { creators: any[],
                 </div>
             </div>
             <div ref={scrollContainerRef} className="flex overflow-x-auto gap-4 pb-4 scrollbar-hide">
-                {creators.map(creator => (
-                     <motion.div
-                        key={creator.id}
-                        whileHover={{ y: -5 }}
-                        className="bg-white/5 p-4 rounded-lg flex flex-col text-center flex-shrink-0 w-48"
-                        style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
+                {validCreators.map(creator => {
+                    const avatarUrl = creator.avatar_url || `https://api.dicebear.com/8.x/bottts-neutral/svg?seed=${creator.id}`;
+                    return (
+                        <motion.div
+                            key={creator.id}
+                            whileHover={{ y: -5 }}
+                            className="bg-white/5 p-4 rounded-lg flex flex-col text-center flex-shrink-0 w-48"
+                            style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
                         >
-                        <Link href={`/squad/${creator.id}`} className="flex flex-col items-center flex-grow">
-                            <img src={creator.avatar_url} alt={creator.name} className="w-20 h-20 rounded-full object-cover mb-3"/>
-                            <h4 className="font-bold text-md truncate w-full">{creator.name}</h4>
-                            <p className="text-xs text-accent-cyan/80">@{creator.username}</p>
-                            <p className="text-xs text-gray-400 mt-2 line-clamp-2 flex-grow min-h-[40px] w-full">{creator.bio || ''}</p>
-                        </Link>
-                        <div className="mt-4 w-full">
-                           <FollowButton profileUser={creator} currentUser={currentUser} />
-                        </div>
-                    </motion.div>
-                ))}
+                            <Link href={`/squad/${creator.id}`} className="flex flex-col items-center flex-grow">
+                                <img src={avatarUrl} alt={creator.name} className="w-20 h-20 rounded-full object-cover mb-3"/>
+                                <h4 className="font-bold text-md truncate w-full">{creator.name}</h4>
+                                <p className="text-xs text-accent-cyan/80">@{creator.username}</p>
+                                <p className="text-xs text-gray-400 mt-2 line-clamp-2 flex-grow min-h-[40px] w-full">{creator.bio || ''}</p>
+                            </Link>
+                            <div className="mt-4 w-full">
+                               <FollowButton profileUser={creator} currentUser={currentUser} />
+                            </div>
+                        </motion.div>
+                    );
+                })}
             </div>
         </motion.div>
     );

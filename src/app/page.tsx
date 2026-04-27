@@ -36,10 +36,10 @@ export default function LandingPage() {
   return (
     <>
       <Head>
-        <title>FlixTrend — The calm side of the internet</title>
+        <title>  The clean side of the internet. </title>
         <meta
           name="description"
-          content="FlixTrend is a social space designed for intentional sharing — not endless consumption."
+          content="FlixTrend is a social space designed for intentional sharing — not endless consumption. Find your quiet corner of the internet."
         />
       </Head>
 
@@ -68,8 +68,10 @@ export default function LandingPage() {
             </div>
 
             <h1 className="text-4xl md:text-5xl font-light tracking-tight text-zinc-100">
-              The calm side of the internet.
+              The clean side of the internet.
             </h1>
+            <h1 className="sr-only">FlixTrend: A Social Space for Intentional Sharing, not Endless Consumption</h1>
+
 
             <p className="text-lg md:text-xl font-light text-zinc-400 leading-relaxed">
               To create a space where connection feels real, not performed.
