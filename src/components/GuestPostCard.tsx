@@ -81,7 +81,7 @@ export function GuestPostCard({ post }: { post: any }) {
                     <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green flex items-center justify-center font-bold text-lg overflow-hidden border-2 border-accent-green group-hover:scale-105 transition-transform">
                         {contentPost.avatar_url ? <img src={contentPost.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : <span className="text-white">{initials}</span>}
                     </div>
-                    <span className="font-headline text-accent-green text-sm group-hover:underline">@{contentPost.username || "user"}</span>
+                    <span className="font-headline text-accent-green text-sm group-hover:underline">{contentPost.displayName || contentPost.username || "user"}</span>
                 </div>
                 <div className="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
                     <span>{contentPost.createdAt?.toDate?.().toLocaleString?.() || "Just now"}</span>
@@ -198,7 +198,7 @@ export function GuestPostCard({ post }: { post: any }) {
     >
       {post.type === 'relay' && (
           <div className="text-xs text-muted-foreground font-bold mb-2 flex items-center gap-2">
-              <Repeat2 size={14}/> Relayed by <span className="text-accent-cyan">@{post.username}</span>
+              <Repeat2 size={14}/> Relayed by <span className="text-accent-cyan">@{post.displayName || post.username}</span>
           </div>
       )}
 

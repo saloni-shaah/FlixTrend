@@ -1,48 +1,42 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import admin, { auth as adminAuth, firestore } from 'firebase-admin';
-import { initAdmin } from '@/utils/firebaseAdmin';
+import { getFirestore } from '@/utils/firebaseAdmin';
 
 // Initialize Firebase Admin
-initAdmin();
+getFirestore();
 
-export async function GET(req: NextRequest) {
-  if (!admin.apps.length) {
-    return NextResponse.json({ error: 'Firebase not initialized' }, { status: 500 });
-  }
-  const db = firestore();
-  const idToken = req.headers.get('authorization')?.split('Bearer ')[1];
-
-  if (!idToken) {
-    return NextResponse.json({ error: 'Unauthorized: No token provided.' }, { status: 401 });
-  }
-
+export async function POST(req: NextRequest) {
   try {
-    // 1. Verify the user's ID token to get their UID.
+    const { idToken } = await req.json();
+
+    // Verify the ID token to get the user's UID.
     const decodedToken = await adminAuth().verifyIdToken(idToken);
-    const { uid } = decodedToken;
+    const uid = decodedToken.uid;
 
-    // 2. Use the UID to get the user's document from Firestore.
-    const userDocRef = db.collection('users').doc(uid);
-    const userDoc = await userDocRef.get();
+    // Create a session cookie.
+    const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5 days
+    const sessionCookie = await adminAuth().createSessionCookie(idToken, { expiresIn });
 
-    // 3. Check if the user exists and has the 'creator' accountType.
-    if (!userDoc.exists || userDoc.data()?.accountType !== 'creator') {
-      // If not, deny access. This is the crucial server-side check.
-      return NextResponse.json({ error: 'Forbidden: You do not have creator access.' }, { status: 403 });
-    }
+    // Set cookie policy for session cookie.
+    const options = {
+      name: 'session',
+      value: sessionCookie,
+      maxAge: expiresIn,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+    };
 
-    // 4. If they are a creator, create a custom token for them to sign into the studio.
-    const customToken = await adminAuth().createCustomToken(uid);
-    
-    return NextResponse.json({ customToken });
+    // Create a response with the session cookie.
+    const response = NextResponse.json({ status: 'success' }, { status: 200 });
+    response.cookies.set(options);
 
-  } catch (error: any) {
-    console.error('Error creating custom token:', error);
-    // Differentiate between auth errors and other errors
-    if (error.code === 'auth/id-token-expired') {
-        return NextResponse.json({ error: 'Unauthorized: Token has expired.' }, { status: 401 });
-    }
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return response;
+
+  } catch (error) {
+    console.error('Error creating session cookie:', error);
+    // Respond with an error status.
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 }

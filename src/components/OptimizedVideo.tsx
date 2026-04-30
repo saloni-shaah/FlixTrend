@@ -28,6 +28,8 @@ export const OptimizedVideo = React.forwardRef<HTMLVideoElement, { src: string; 
         loop: loop,
         muted: muted,
         style: { userSelect: 'none' },
+        onContextMenu: handleContextMenu, // Prevent right-click
+        controlsList: "nodownload", // Prevent download button
         ...props,
     };
 

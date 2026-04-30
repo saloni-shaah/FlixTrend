@@ -1,10 +1,6 @@
 
-import { getFirestore, collection, query, where, orderBy, limit, getDocs } from "firebase/firestore";
-import { app } from "@/utils/firebaseClient";
+import { getFirestore } from "@/utils/firebaseAdmin";
 import { redirect } from 'next/navigation';
-import { VibeSpaceLoader } from "@/components/VibeSpaceLoader";
-
-const db = getFirestore(app);
 
 // This is an RSC (React Server Component)
 export default async function FlowRedirectPage() {
@@ -12,15 +8,14 @@ export default async function FlowRedirectPage() {
     let hasError = false;
 
     try {
-        const q = query(
-            collection(db, "posts"),
-            where("isFlow", "==", true),
-            where("isVideo", "==", true),
-            orderBy("publishAt", "desc"),
-            limit(1)
-        );
+        const db = getFirestore();
+        const postsQuery = db.collection("posts")
+            .where("isFlow", "==", true)
+            .where("isVideo", "==", true)
+            .orderBy("publishAt", "desc")
+            .limit(1);
 
-        const snapshot = await getDocs(q);
+        const snapshot = await postsQuery.get();
 
         if (!snapshot.empty) {
             const latestVideoId = snapshot.docs[0].id;

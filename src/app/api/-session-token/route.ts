@@ -1,24 +1,31 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { auth as adminAuth } from 'firebase-admin';
-import { initAdmin } from '@/utils/firebaseAdmin';
+import { getFirestore } from '@/utils/firebaseAdmin';
 
-initAdmin();
+getFirestore();
 
-export async function GET(req: NextRequest) {
-  const idToken = req.headers.get('authorization')?.split('Bearer ')[1];
-
-  if (!idToken) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
+export async function POST(req: NextRequest) {
   try {
-    const decodedToken = await adminAuth().verifyIdToken(idToken);
-    const customToken = await adminAuth().createCustomToken(decodedToken.uid);
+    const { idToken } = await req.json();
+    const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5 days
+    const sessionCookie = await adminAuth().createSessionCookie(idToken, { expiresIn });
     
-    return NextResponse.json({ customToken: customToken });
+    const options = {
+      name: 'session',
+      value: sessionCookie,
+      maxAge: expiresIn,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+    };
+
+    const response = NextResponse.json({ status: 'success' }, { status: 200 });
+    response.cookies.set(options);
+    return response;
+
   } catch (error) {
-    console.error('Error creating session token:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    console.error('Error creating session cookie:', error);
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 }

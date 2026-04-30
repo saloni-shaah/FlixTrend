@@ -1,13 +1,12 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Cog, Palette, Lock, MessageCircle, LogOut, Trash2, AtSign, Mail, CheckCircle, UserX, ArrowLeft, Music } from 'lucide-react';
+import { Cog, Palette, Lock, MessageCircle, LogOut, Trash2, AtSign, Mail, CheckCircle, UserX, ArrowLeft, Music, User } from 'lucide-react';
 import Link from 'next/link';
 import { signOut, sendEmailVerification } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { auth, db } from '@/utils/firebaseClient';
 import { doc, onSnapshot, updateDoc } from "firebase/firestore";
-import { DeleteAccountModal } from '@/components/squad/DeleteAccountModal';
 
 export default function SettingsPage() {
     const [profile, setProfile] = useState<any>(null);
@@ -23,7 +22,6 @@ export default function SettingsPage() {
         emailNotifications: false,
     });
     const [isSaving, setIsSaving] = useState(false);
-    const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [resendStatus, setResendStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
     const router = useRouter();
 
@@ -142,7 +140,7 @@ export default function SettingsPage() {
                         </Link>
                     </div>
                 )}
-
+                
                 <div className="bg-white/5 rounded-xl p-4">
                 <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan"><Palette /> Theme & UI</h3>
                 <div className="flex items-center justify-between py-2">
@@ -201,12 +199,15 @@ export default function SettingsPage() {
                     </select>
                 </div>
                 </div>
-                
+
                 <div className="bg-white/5 rounded-xl p-4">
-                <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan">Account Actions</h3>
-                <button className="btn-glass bg-red-500/20 text-red-400 hover:bg-red-500/40 hover:text-white w-full mt-4" onClick={() => setShowDeleteModal(true)}>
-                    <Trash2 className="inline-block mr-2" /> Permanently Delete Account
-                </button>
+                    <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan"><User /> Account Information</h3>
+                    <Link href="/settings/additional">
+                        <div className="w-full p-4 rounded-2xl bg-accent-cyan/10 hover:bg-accent-cyan/20 cursor-pointer">
+                            <h4 className="font-headline font-bold text-accent-cyan">Update Profile</h4>
+                            <p className="text-xs text-white/80">Change your username, age, and gender.</p>
+                        </div>
+                    </Link>
                 </div>
 
                 <button className="btn-glass bg-accent-pink/20 text-accent-pink hover:bg-accent-pink/40 hover:text-white w-full mt-4" onClick={handleLogout}>
@@ -214,12 +215,6 @@ export default function SettingsPage() {
                 </button>
             </div>
         </div>
-        {showDeleteModal && (
-            <DeleteAccountModal 
-                profile={profile}
-                onClose={() => setShowDeleteModal(false)}
-            />
-        )}
     </>
     );
 }

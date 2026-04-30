@@ -1,50 +1,45 @@
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import cloudinary from '@/utils/cloudinary';
 import admin from 'firebase-admin';
-import { initAdmin } from '@/utils/firebaseAdmin';
+import { getFirestore } from '@/utils/firebaseAdmin';
 
 // Ensure Firebase Admin is initialized
-initAdmin();
+getFirestore();
 
-export async function POST(request: Request) {
-  const { publicIds, songId, userId } = await request.json();
-
-  const authToken = request.headers.get('Authorization');
-  if (!authToken || !authToken.startsWith('Bearer ')) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const idToken = authToken.split('Bearer ')[1];
-
+export async function POST(req: NextRequest) {
   try {
+    const body = await req.json();
+    const { public_id, idToken } = body;
+
+    if (!public_id || !idToken) {
+      return NextResponse.json({ error: 'Missing public_id or idToken' }, { status: 400 });
+    }
+
+    // Verify the Firebase ID token to authenticate the user
     const decodedToken = await admin.auth().verifyIdToken(idToken);
+    const uid = decodedToken.uid;
 
-    if (decodedToken.uid !== userId) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    // Optional: Check if the user is authorized to delete the media.
+    // This might involve checking a database record to see who owns the media.
+
+    // Delete the media from Cloudinary
+    const result = await cloudinary.uploader.destroy(public_id, { resource_type: 'video' });
+
+    if (result.result === 'ok') {
+      return NextResponse.json({ message: 'Media deleted successfully' });
+    } else {
+      return NextResponse.json({ error: 'Failed to delete media from Cloudinary' }, { status: 500 });
     }
 
-    if (!Array.isArray(publicIds) || publicIds.length === 0) {
-      return NextResponse.json({ error: 'Invalid public_ids provided' }, { status: 400 });
+  } catch (error) {
+    console.error('Error in delete-cloudinary-media handler:', error);
+    if (error instanceof Error && 'code' in error && error.code === 'auth/id-token-expired') {
+        return NextResponse.json({ error: 'Authentication token has expired.' }, { status: 401 });
+    } else if (error instanceof Error && 'code' in error && error.code === 'auth/argument-error') {
+        return NextResponse.json({ error: 'Invalid authentication token.' }, { status: 401 });
+    } else {
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
-
-    // This deletes the resources from Cloudinary
-    // The resource_type is automatically determined by Cloudinary
-    const deletePromises = publicIds.map(publicId => {
-        if (!publicId) return Promise.resolve(null); // Skip if publicId is empty
-        return cloudinary.uploader.destroy(publicId, { resource_type: 'auto' });
-    });
-    
-    await Promise.all(deletePromises);
-
-    return NextResponse.json({ success: true, message: 'Media deleted successfully' });
-
-  } catch (error: any) {
-    console.error('Error in delete-cloudinary-media:', error);
-     // Handle Firebase token verification errors
-     if (error.code === 'auth/id-token-expired' || error.code === 'auth/argument-error') {
-        return NextResponse.json({ error: 'Authentication token is invalid or expired.' }, { status: 401 });
-    }
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
