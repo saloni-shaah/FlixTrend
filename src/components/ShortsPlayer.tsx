@@ -2,19 +2,20 @@
 "use client";
 import React, { useRef, useEffect, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { OptimizedVideo } from './OptimizedVideo';
-import { Play, Pause, Volume2, VolumeX, Heart } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Star } from 'lucide-react';
 import { useAppState } from '@/utils/AppStateContext';
-import { doc, updateDoc, increment, getFirestore } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, increment, getFirestore } from 'firebase/firestore';
 import { app } from '@/utils/firebaseClient';
 import { PostActions } from './PostActions';
 import Link from 'next/link';
 import { FaMusic } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ProgressBar } from './video/ProgressBar';
+import { useRouter } from 'next/navigation';
 
 const db = getFirestore(app);
 
-export const ShortsPlayer = forwardRef(({ post, isActive, onCommentClick }: { post: any, isActive: boolean, onCommentClick: (e: React.MouseEvent) => void }, ref) => {
+export const ShortsPlayer = forwardRef(({ post, isActive, onCommentClick, onDescriptionClick }: { post: any, isActive: boolean, onCommentClick: (e: React.MouseEvent) => void, onDescriptionClick: (e: React.MouseEvent) => void }, ref) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const actionsRef = useRef<HTMLDivElement>(null);
@@ -25,9 +26,41 @@ export const ShortsPlayer = forwardRef(({ post, isActive, onCommentClick }: { po
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [isScrubbing, setIsScrubbing] = useState(false);
-    const [showHeart, setShowHeart] = useState(false);
+    const [showStar, setShowStar] = useState(false);
     const viewCountedRef = useRef(false);
     const tapTimeout = useRef<NodeJS.Timeout | null>(null);
+    const router = useRouter();
+
+    const handleProfileClick = async (e: React.MouseEvent, uid: string) => {
+        e.preventDefault();
+        e.stopPropagation(); // Prevent card click logic
+        if (!uid) return;
+
+        const target = e.currentTarget as HTMLElement;
+        const originalCursor = target.style.cursor;
+        target.style.cursor = 'wait';
+
+        try {
+            const userDocRef = doc(db, "users", uid);
+            const userDocSnap = await getDoc(userDocRef);
+            if (userDocSnap.exists()) {
+                const currentUsername = userDocSnap.data().username;
+                if (currentUsername) {
+                    router.push(`/squad/${currentUsername}`);
+                } else {
+                    alert("This user does not have a profile page.");
+                }
+            } else {
+                alert("User not found.");
+            }
+        } catch (error) {
+            console.error("Error navigating to profile:", error);
+            alert("Could not navigate to profile.");
+        } finally {
+            target.style.cursor = originalCursor;
+        }
+    };
+
 
     const safePlay = useCallback((video: HTMLVideoElement) => {
         const playPromise = video.play();
@@ -173,11 +206,14 @@ export const ShortsPlayer = forwardRef(({ post, isActive, onCommentClick }: { po
     };
 
     const handleDoubleTap = () => {
-        setShowHeart(true);
-        setTimeout(() => setShowHeart(false), 800);
         const likeButton = containerRef.current?.querySelector('[data-like-button="true"]');
-        if (likeButton instanceof HTMLElement && !likeButton.dataset.liked) {
-            likeButton.click();
+        if (likeButton instanceof HTMLElement) {
+            const isAlreadyLiked = likeButton.classList.contains('text-yellow-400');
+            if (!isAlreadyLiked) {
+                setShowStar(true);
+                setTimeout(() => setShowStar(false), 1000); // Animation duration
+                likeButton.click();
+            }
         }
     };
 
@@ -227,16 +263,67 @@ export const ShortsPlayer = forwardRef(({ post, isActive, onCommentClick }: { po
                 controlsList="nodownload" // Prevent download option in controls
             />
             <AnimatePresence>
-                {showHeart && (
-                    <motion.div
-                        key="heart"
-                        initial={{ scale: 0.5, opacity: 0 }}
-                        animate={{ scale: 1.2, opacity: 1 }}
-                        exit={{ scale: 2, opacity: 0 }}
-                        transition={{ duration: 0.4, ease: "easeOut" }}
+                {showStar && (
+                     <motion.div
+                        key="like-animation"
                         className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                        initial="initial"
+                        animate="animate"
+                        exit="exit"
+                        variants={{
+                            initial: { opacity: 0 },
+                            animate: { opacity: 1, transition: { staggerChildren: 0.05 } },
+                            exit: { opacity: 0, transition: { duration: 0.3 } }
+                        }}
                     >
-                        <Heart fill="red" stroke="white" strokeWidth={2} size={100} />
+                        {/* Particle Burst */}
+                        {Array.from({ length: 8 }).map((_, i) => {
+                            const angle = (i / 8) * (2 * Math.PI);
+                            return (
+                                <motion.div
+                                    key={i}
+                                    className="absolute bg-yellow-400 rounded-full"
+                                    variants={{
+                                        initial: { scale: 0, x: 0, y: 0 },
+                                        animate: {
+                                            x: Math.cos(angle) * 80,
+                                            y: Math.sin(angle) * 80,
+                                            scale: [0.5, 1, 0],
+                                        },
+                                        exit: { scale: 0 }
+                                    }}
+                                    transition={{
+                                        duration: 0.5,
+                                        ease: 'easeOut',
+                                    }}
+                                    style={{ width: 20, height: 20 }}
+                                />
+                            );
+                        })}
+
+                        {/* Main Star */}
+                        <motion.div
+                            variants={{
+                                initial: { scale: 0, rotate: 45 },
+                                animate: {
+                                    scale: [0, 1.4, 1.2],
+                                    rotate: [-15, 10, 0],
+                                },
+                                exit: { scale: 0 }
+                            }}
+                            transition={{
+                                duration: 0.6,
+                                ease: "backOut"
+                            }}
+                        >
+                            <Star
+                                className="text-yellow-400"
+                                fill="currentColor"
+                                stroke="white"
+                                strokeWidth={1}
+                                size={100}
+                            />
+                        </motion.div>
                     </motion.div>
                 )}
                 {!isPlaying && (
@@ -262,13 +349,13 @@ export const ShortsPlayer = forwardRef(({ post, isActive, onCommentClick }: { po
             <div className="absolute inset-x-0 bottom-0 p-4 flex flex-col justify-end bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none">
                 <div className="flex-1 flex items-end justify-between">
                     <div className="flex flex-col gap-2 text-white drop-shadow-lg max-w-[calc(100%-80px)]">
-                        <Link href={`/squad/${post.userId}`} onClick={e => e.stopPropagation()} className="flex items-center gap-2 group cursor-pointer w-fit pointer-events-auto">
+                         <a onClick={(e) => handleProfileClick(e, post.userId)} className="flex items-center gap-2 group cursor-pointer w-fit pointer-events-auto">
                             <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green flex items-center justify-center font-bold text-lg overflow-hidden border-2 border-accent-green group-hover:scale-105 transition-transform">
                                 {post.avatar_url ? <img src={post.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : <span className="text-white">{post.displayName?.[0] || 'U'}</span>}
                             </div>
                             <span className="font-headline text-white text-base group-hover:underline">@{post.username || "user"}</span>
-                        </Link>
-                        <p className="text-white text-sm font-body line-clamp-3">{post.content}</p>
+                        </a>
+                        <p onClick={onDescriptionClick} className="text-white text-sm font-body line-clamp-3 cursor-pointer pointer-events-auto">{post.content}</p>
                         {post.song && (
                             <div className="flex items-center gap-2 text-white text-sm">
                                 <FaMusic /> <span>Original Audio</span>

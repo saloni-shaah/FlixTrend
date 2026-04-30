@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React, { useEffect, useState } from "react";
 import { getFirestore, doc, onSnapshot, deleteDoc, setDoc, collection, serverTimestamp } from "firebase/firestore";
@@ -10,7 +10,7 @@ export function FollowButton({ profileUser, currentUser }: { profileUser: any; c
   const [isFollowing, setIsFollowing] = useState(false);
 
   useEffect(() => {
-    if (!currentUser || !profileUser) return;
+    if (!currentUser?.uid || !profileUser?.uid) return;
     const unsub = onSnapshot(doc(db, "users", profileUser.uid, "followers", currentUser.uid), (doc) => {
       setIsFollowing(doc.exists());
     });
@@ -18,7 +18,7 @@ export function FollowButton({ profileUser, currentUser }: { profileUser: any; c
   }, [profileUser?.uid, currentUser?.uid]);
 
   const handleFollow = async () => {
-    if (!currentUser || !profileUser) return;
+    if (!currentUser?.uid || !profileUser?.uid) return;
     const followersCol = collection(db, "users", profileUser.uid, "followers");
     const followingCol = collection(db, "users", currentUser.uid, "following");
     const followDocRef = doc(followersCol, currentUser.uid);

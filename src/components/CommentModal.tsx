@@ -208,7 +208,7 @@ export const CommentComponent = ({ comment, postId, currentUser, collectionName,
     )
 }
 
-export function CommentModal({ postId, postAuthorId, onClose, post, collectionName }: { postId: string, postAuthorId: string, onClose: () => void, post: any, collectionName: string }) {
+export function CommentModal({ postId, postAuthorId, onClose, post, collectionName, isOpen, isOverlay = true }: { postId: string, postAuthorId: string, onClose: () => void, post: any, collectionName: string, isOpen?: boolean, isOverlay?: boolean }) {
     const [comments, setComments] = useState<Comment[]>([]);
     const [newComment, setNewComment] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -218,8 +218,10 @@ export function CommentModal({ postId, postAuthorId, onClose, post, collectionNa
     const currentUser = auth.currentUser;
     const bottomOfList = useRef<HTMLDivElement>(null);
 
+    const shouldBeOpen = isOpen === undefined ? true : isOpen;
+
     useEffect(() => {
-        if (!postId || !collectionName) return;
+        if (!postId || !collectionName || !shouldBeOpen) return;
         const q = query(collection(db, collectionName, postId, "comments"), orderBy("createdAt", "asc"));
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const commentsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Comment));
@@ -228,7 +230,7 @@ export function CommentModal({ postId, postAuthorId, onClose, post, collectionNa
             console.error("Error fetching comments:", error);
         });
         return () => unsubscribe();
-    }, [postId, collectionName]);
+    }, [postId, collectionName, shouldBeOpen]);
 
     const handleCommentSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -261,65 +263,58 @@ export function CommentModal({ postId, postAuthorId, onClose, post, collectionNa
         }
     };
 
-    return (
-        <>
-            <motion.div 
-                initial={{ x: '100%' }}
-                animate={{ x: 0 }}
-                exit={{ x: '100%' }}
-                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                className="fixed top-0 right-0 h-full w-full max-w-md bg-background z-50 flex flex-col shadow-2xl glass-card"
-                onClick={(e) => e.stopPropagation()}
-            >
-                <div className="p-4 border-b border-glass-border flex items-center justify-between shrink-0">
-                    <h2 className="text-xl font-bold">Comments ({post.commentCount || 0})</h2>
-                    <button onClick={onClose} className="p-2 rounded-full hover:bg-white/10"><X size={24} /></button>
+    if (!shouldBeOpen) return null;
+
+    const content = (
+        <div className="h-full w-full bg-background flex flex-col glass-card">
+            <div className="p-4 border-b border-glass-border flex items-center justify-between shrink-0">
+                <h2 className="text-xl font-bold">Comments ({post.commentCount || 0})</h2>
+                <button onClick={onClose} className="p-2 rounded-full hover:bg-white/10"><X size={24} /></button>
+            </div>
+
+            {comments.length === 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-8">
+                    <MessageCircle size={48} className="mb-4"/>
+                    <h3 className="font-bold text-lg">No comments yet</h3>
+                    <p className="text-sm">Be the first one to share your thoughts!</p>
                 </div>
+            ) : (
+                <div className="flex-1 overflow-y-auto p-4">
+                    {comments.map((comment) => (
+                        <CommentComponent key={comment.id} comment={comment} postId={postId} currentUser={currentUser} collectionName={collectionName} onEdit={() => setEditingComment(comment)} />
+                    ))}
+                        <div ref={bottomOfList} />
+                </div>
+            )}
 
-                {comments.length === 0 ? (
-                    <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-8">
-                        <MessageCircle size={48} className="mb-4"/>
-                        <h3 className="font-bold text-lg">No comments yet</h3>
-                        <p className="text-sm">Be the first one to share your thoughts!</p>
-                    </div>
-                ) : (
-                    <div className="flex-1 overflow-y-auto p-4">
-                        {comments.map((comment) => (
-                            <CommentComponent key={comment.id} comment={comment} postId={postId} currentUser={currentUser} collectionName={collectionName} onEdit={() => setEditingComment(comment)} />
-                        ))}
-                         <div ref={bottomOfList} />
-                    </div>
-                )}
-
-                <div className="p-3 border-t border-glass-border shrink-0 bg-background/50">
-                    <form onSubmit={handleCommentSubmit} className="flex flex-col gap-2">
-                        <div className="flex items-start gap-2">
-                            <img src={currentUserProfile?.avatar_url || '/img/default-avatar.png'} alt="Your avatar" className="w-9 h-9 rounded-full object-cover mt-1" />
-                            <div className="flex-1 relative">
-                                <Textarea 
-                                    value={newComment} 
-                                    onChange={(e) => setNewComment(e.target.value)} 
-                                    placeholder="Add a comment..." 
-                                    className="bg-neutral-800 border-neutral-700 rounded-xl w-full pr-12 resize-none text-base py-2 px-4"
-                                    rows={1}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter' && !e.shiftKey) {
-                                            e.preventDefault();
-                                            handleCommentSubmit(e as any);
-                                        }
-                                    }}
-                                />
-                                <Button type="submit" size="icon" disabled={isSubmitting || !newComment.trim()} className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-accent-green hover:bg-accent-green/80">
-                                    <Send size={16} />
-                                </Button>
-                            </div>
+            <div className="p-3 border-t border-glass-border shrink-0 bg-background/50">
+                <form onSubmit={handleCommentSubmit} className="flex flex-col gap-2">
+                    <div className="flex items-start gap-2">
+                        <img src={currentUserProfile?.avatar_url || '/img/default-avatar.png'} alt="Your avatar" className="w-9 h-9 rounded-full object-cover mt-1" />
+                        <div className="flex-1 relative">
+                            <Textarea 
+                                value={newComment} 
+                                onChange={(e) => setNewComment(e.target.value)} 
+                                placeholder="Add a comment..." 
+                                className="bg-neutral-800 border-neutral-700 rounded-xl w-full pr-12 resize-none text-base py-2 px-4"
+                                rows={1}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                        e.preventDefault();
+                                        handleCommentSubmit(e as any);
+                                    }
+                                }}
+                            />
+                            <Button type="submit" size="icon" disabled={isSubmitting || !newComment.trim()} className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-accent-green hover:bg-accent-green/80">
+                                <Send size={16} />
+                            </Button>
                         </div>
-                        {moderationError && <p className="text-red-500 text-sm ml-11">{moderationError}</p>}
-                    </form>
-                </div>
-            </motion.div>
-            {editingComment && (
-                 <EditCommentDialog 
+                    </div>
+                    {moderationError && <p className="text-red-500 text-sm ml-11">{moderationError}</p>}
+                </form>
+            </div>
+             {editingComment && (
+                    <EditCommentDialog 
                     comment={editingComment} 
                     postId={postId} 
                     collectionName={collectionName} 
@@ -327,6 +322,36 @@ export function CommentModal({ postId, postAuthorId, onClose, post, collectionNa
                     onFinish={() => setEditingComment(null)} 
                 />
             )}
-        </>
+        </div>
+    );
+
+    if (isOverlay) {
+        return (
+            <>
+                 <motion.div 
+                    initial={{ opacity: 0 }} 
+                    animate={{ opacity: 1 }} 
+                    exit={{ opacity: 0 }} 
+                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" 
+                    onClick={onClose}
+                />
+                <motion.div
+                    initial={{ x: '100%' }}
+                    animate={{ x: 0 }}
+                    exit={{ x: '100%' }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                    className="fixed top-0 right-0 h-full w-full max-w-md z-50"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    {content}
+                </motion.div>
+            </>
+        )
+    }
+    
+    return (
+        <div className="h-full w-full">
+            {content}
+        </div>
     );
 }

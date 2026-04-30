@@ -18,7 +18,8 @@ import { FollowButton } from "@/components/FollowButton";
 import { FullScreenImageViewer } from "@/components/FullScreenImageViewer";
 
 const db = getFirestore(app);
-const POSTS_PER_PAGE = 10;
+const INITIAL_POSTS_PER_PAGE = 5;
+const MORE_POSTS_PER_PAGE = 4;
 
 const FlowIcon = ({ className }: { className?: string }) => (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
@@ -58,6 +59,55 @@ function SquadPageContent() {
   const [hasMorePosts, setHasMorePosts] = useState(true);
 
   const observer = useRef<IntersectionObserver>();
+
+  const uid = firebaseUser?.uid;
+
+  const getQuery = useCallback(() => {
+    let q = query(collection(db, "posts"), where("userId", "==", uid));
+
+    if (postTypeFilter !== 'all') {
+        if (postTypeFilter === 'flow') {
+            q = query(q, where('isFlow', '==', true));
+        } else if (postTypeFilter === 'image') {
+            q = query(q, where('type', '==', 'media'), where('isVideo', '==', false));
+        } else if (postTypeFilter === 'video') {
+            q = query(q, where('type', '==', 'media'), where('isVideo', '==', true));
+        } else {
+            q = query(q, where('type', '==', postTypeFilter));
+        }
+    }
+
+    let orderByField = 'createdAt';
+    let orderByDirection: OrderByDirection = sortBy === 'oldest' ? 'asc' : 'desc';
+    if (sortBy === 'popular') {
+        orderByField = 'likesCount';
+    }
+
+    q = query(q, orderBy(orderByField, orderByDirection));
+    return q;
+  }, [uid, postTypeFilter, sortBy]);
+
+  const fetchMorePosts = useCallback(async () => {
+    if (!uid || !lastVisible) return;
+    setLoadingMore(true);
+
+    const q = getQuery();
+    const finalQuery = query(q, startAfter(lastVisible), limit(MORE_POSTS_PER_PAGE));
+
+    try {
+        const documentSnapshots = await getDocs(finalQuery);
+        const newPosts = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setUserPosts(prevPosts => [...prevPosts, ...newPosts]);
+        setLastVisible(documentSnapshots.docs[documentSnapshots.docs.length - 1]);
+        setHasMorePosts(documentSnapshots.docs.length === MORE_POSTS_PER_PAGE);
+    } catch (error) {
+        console.error("Error fetching more posts: ", error);
+        setHasMorePosts(false);
+    }
+
+    setLoadingMore(false);
+  }, [uid, lastVisible, getQuery]);
+
   const loadMoreRef = useCallback(node => {
     if (loadingMore) return;
     if (observer.current) observer.current.disconnect();
@@ -67,7 +117,7 @@ function SquadPageContent() {
       }
     });
     if (node) observer.current.observe(node);
-  }, [loadingMore, hasMorePosts, activeTab]);
+  }, [loadingMore, hasMorePosts, activeTab, fetchMorePosts]);
 
   useEffect(() => {
     const unsubAuth = auth.onAuthStateChanged(async (user) => {
@@ -107,82 +157,34 @@ function SquadPageContent() {
     return () => unsubAuth();
   }, [router]);
   
-  const uid = firebaseUser?.uid;
-
-  // Fetching logic for posts tab
-  useEffect(() => {
-    if (activeTab === 'posts' && uid) {
-      fetchInitialPosts();
-    }
-  }, [activeTab, uid, postTypeFilter, sortBy]);
-
-  const getQuery = () => {
-    let q = query(collection(db, "posts"), where("userId", "==", uid));
-
-    if (postTypeFilter !== 'all') {
-        if (postTypeFilter === 'flow') {
-            q = query(q, where('isFlow', '==', true));
-        } else if (postTypeFilter === 'image') {
-            q = query(q, where('type', '==', 'media'), where('isVideo', '==', false));
-        } else if (postTypeFilter === 'video') {
-            q = query(q, where('type', '==', 'media'), where('isVideo', '==', true));
-        } else {
-            q = query(q, where('type', '==', postTypeFilter));
-        }
-    }
-
-    let orderByField = 'createdAt';
-    let orderByDirection: OrderByDirection = sortBy === 'oldest' ? 'asc' : 'desc';
-    if (sortBy === 'popular') {
-        orderByField = 'likesCount';
-    }
-
-    q = query(q, orderBy(orderByField, orderByDirection));
-    return q;
-  }
-
-  const fetchInitialPosts = async () => {
+  const fetchInitialPosts = useCallback(async () => {
     if (!uid) return;
     setPostsLoading(true);
     setUserPosts([]);
     setLastVisible(null);
 
     const q = getQuery();
-    const finalQuery = query(q, limit(POSTS_PER_PAGE));
+    const finalQuery = query(q, limit(INITIAL_POSTS_PER_PAGE));
 
     try {
         const documentSnapshots = await getDocs(finalQuery);
         const posts = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setUserPosts(posts);
         setLastVisible(documentSnapshots.docs[documentSnapshots.docs.length - 1]);
-        setHasMorePosts(documentSnapshots.docs.length === POSTS_PER_PAGE);
+        setHasMorePosts(documentSnapshots.docs.length === INITIAL_POSTS_PER_PAGE);
     } catch (error) {
         console.error("Error fetching initial posts: ", error);
         setHasMorePosts(false);
     }
     setPostsLoading(false);
-  }
+  }, [uid, getQuery]);
 
-  const fetchMorePosts = async () => {
-    if (!uid || !lastVisible) return;
-    setLoadingMore(true);
-
-    const q = getQuery();
-    const finalQuery = query(q, startAfter(lastVisible), limit(POSTS_PER_PAGE));
-
-    try {
-        const documentSnapshots = await getDocs(finalQuery);
-        const newPosts = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setUserPosts(prevPosts => [...prevPosts, ...newPosts]);
-        setLastVisible(documentSnapshots.docs[documentSnapshots.docs.length - 1]);
-        setHasMorePosts(documentSnapshots.docs.length === POSTS_PER_PAGE);
-    } catch (error) {
-        console.error("Error fetching more posts: ", error);
-        setHasMorePosts(false);
+  // Fetching logic for posts tab
+  useEffect(() => {
+    if (activeTab === 'posts' && uid) {
+      fetchInitialPosts();
     }
-
-    setLoadingMore(false);
-  }
+  }, [activeTab, uid, postTypeFilter, sortBy, fetchInitialPosts]);
 
   const handleCreatorStudioClick = async () => {
     if (!uid) return;
@@ -417,7 +419,6 @@ const HomeFeed = ({ user }: { user: any }) => {
 
                 const creatorsPromise = getDocs(query(
                     collection(db, 'users'),
-                    where('accountType', '==', 'creator'),
                     limit(40)
                 ));
                 
@@ -465,8 +466,8 @@ const HomeFeed = ({ user }: { user: any }) => {
                  <div className="text-center text-gray-400 mt-20 p-8 bg-white/5 rounded-2xl">
                     <UsersIcon size={48} className="mx-auto mb-4 text-accent-cyan"/>
                     <h3 className="text-xl font-bold">Your feed is quiet</h3>
-                    <p className="mt-2">Follow creators to see their latest posts here or find new creators to follow.</p>
-                </div>
+                    <p className="mt-2">Follow creators to see their latest posts here or or find new creators to follow.</p>
+                 </div>
             ) : (
                 <>
                     {posts1.map(post => <PostCard key={post.id} post={post} collectionName="posts" />)}

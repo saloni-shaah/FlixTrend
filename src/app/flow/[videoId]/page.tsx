@@ -9,6 +9,8 @@ import { useAppState } from "@/utils/AppStateContext";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter, useParams } from 'next/navigation';
 import { CommentModal } from "@/components/CommentModal";
+import { VideoDescription } from "@/components/flow/VideoDescription";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const db = getFirestore(app);
 const POSTS_PER_PAGE = 3;
@@ -32,14 +34,31 @@ export default function FlowVideoPage() {
     const [showCommentModal, setShowCommentModal] = useState(false);
     const [activePost, setActivePost] = useState<any>(null);
 
+    const [isDescriptionOpen, setIsDescriptionOpen] = useState(false);
+    const isMobile = useIsMobile();
+
     const handleCommentClick = (e: React.MouseEvent, post: any) => {
         e.stopPropagation();
         setActivePost(post);
-        setShowCommentModal(true);
+        if (isMobile) {
+            setShowCommentModal(true);
+        } else {
+            // On desktop, toggle the description view to show comments
+            setIsDescriptionOpen(prev => !prev);
+        }
+    };
+
+    const handleDescriptionClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setIsDescriptionOpen(prev => !prev);
+    };
+
+    const closeDescription = () => {
+        setIsDescriptionOpen(false);
     };
 
     const incrementViewCount = useCallback(async (postId: string) => {
-        if (viewedVideosRef.current.has(postId)) return;
+        if (viewedVideosRef.current.has(postId) || !postId) return;
         try {
             const postRef = doc(db, 'posts', postId);
             await updateDoc(postRef, { viewCount: increment(1) });
@@ -49,9 +68,21 @@ export default function FlowVideoPage() {
         }
     }, []);
 
-    useEffect(() => {
-        const fetchInitialData = async () => {
+     useEffect(() => {
+        const syncStateToUrl = async () => {
             if (!videoId) return;
+
+            const postIndexInState = posts.findIndex(p => p.id === videoId);
+
+            if (postIndexInState !== -1) {
+                if (postIndexInState !== currentIndex) {
+                    setCurrentIndex(postIndexInState);
+                }
+                incrementViewCount(videoId);
+                setLoading(false);
+                return; 
+            }
+
             setLoading(true);
             try {
                 const postRef = doc(db, 'posts', videoId);
@@ -76,7 +107,6 @@ export default function FlowVideoPage() {
                     setPosts([initialPostData, ...subsequentPosts]);
                     setCurrentIndex(0);
                     setHasMore(subsequentPosts.length === POSTS_PER_PAGE);
-
                 } else {
                     console.warn(`Post ${videoId} not found or not a flow video. Redirecting.`);
                     router.replace('/flow');
@@ -89,8 +119,9 @@ export default function FlowVideoPage() {
             }
         };
 
-        fetchInitialData();
-    }, [videoId, router, incrementViewCount]);
+        syncStateToUrl();
+    }, [videoId, router]); // Keep router here for initial load redirect, but it won't cause scroll-refresh.
+
 
     const fetchMorePosts = useCallback(async () => {
         if (!hasMore || loadingMore || posts.length === 0) return;
@@ -134,37 +165,86 @@ export default function FlowVideoPage() {
 
     useEffect(() => {
         const handleScroll = () => {
-            if (containerRef.current) {
-                const { scrollTop, clientHeight, scrollHeight } = containerRef.current;
-                const newIndex = Math.round(scrollTop / clientHeight);
+            if (isMobile === false || !containerRef.current) return;
+            const { scrollTop, clientHeight, scrollHeight } = containerRef.current;
+            const newIndex = Math.round(scrollTop / clientHeight);
 
-                if (newIndex !== currentIndex) {
-                    setCurrentIndex(newIndex);
-                    const newVideoId = posts[newIndex]?.id;
-                    if (newVideoId) {
-                        window.history.replaceState(null, '', `/flow/${newVideoId}`);
-                        incrementViewCount(newVideoId);
-                    }
+            if (newIndex !== currentIndex) {
+                setCurrentIndex(newIndex);
+                const newVideoId = posts[newIndex]?.id;
+                if (newVideoId && newVideoId !== videoId) {
+                    // This is the fix: use history.replaceState to avoid re-triggering Next.js router
+                    window.history.replaceState(null, '', `/flow/${newVideoId}`);
+                    incrementViewCount(newVideoId);
                 }
+            }
 
-                if (scrollHeight - scrollTop - clientHeight < clientHeight * 1.5 && hasMore && !loadingMore) {
-                    fetchMorePosts();
-                }
+            if (scrollHeight - scrollTop - clientHeight < clientHeight * 1.5 && hasMore && !loadingMore) {
+                fetchMorePosts();
             }
         };
 
         const el = containerRef.current;
-        el?.addEventListener('scroll', handleScroll);
+        el?.addEventListener('scroll', handleScroll, { passive: true });
         return () => el?.removeEventListener('scroll', handleScroll);
-    }, [currentIndex, posts, fetchMorePosts, hasMore, loadingMore, incrementViewCount]);
+    }, [currentIndex, posts, hasMore, loadingMore, isMobile, videoId, fetchMorePosts, incrementViewCount]);
 
     useEffect(() => {
         setIsFlowVideoPlaying(true);
         return () => setIsFlowVideoPlaying(false);
     }, [setIsFlowVideoPlaying]);
 
-    if (loading && posts.length === 0) {
+    const activePostForView = posts[currentIndex];
+    
+    if (loading || isMobile === undefined) {
         return <VibeSpaceLoader />;
+    }
+
+    if (!isMobile) {
+        return (
+            <div className="w-full h-screen bg-black flex relative overflow-hidden">
+                 <style jsx global>{` body { overflow-y: hidden; } main { padding: 0 !important; } `}</style>
+                <AnimatePresence>
+                    {isDescriptionOpen && (
+                        <motion.div
+                            initial={{ width: 0, opacity: 0 }}
+                            animate={{ width: "40%", opacity: 1 }}
+                            exit={{ width: 0, opacity: 0 }}
+                            transition={{ duration: 0.3, ease: "easeInOut" }}
+                            className="h-full bg-black border-r border-gray-800 z-30 overflow-hidden"
+                        >
+                            <div className="p-8 h-full overflow-y-auto">
+                               {activePostForView && <VideoDescription post={activePostForView} onClose={closeDescription} isOpen={true} isOverlay={false} />}
+                                {activePostForView && (
+                                    <CommentModal 
+                                        post={activePostForView} 
+                                        postId={activePostForView.id} 
+                                        postAuthorId={activePostForView.userId} 
+                                        collectionName="posts" 
+                                        isOpen={true} 
+                                        isOverlay={false} 
+                                        onClose={closeDescription} 
+                                    />
+                                )}
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+                <div className="flex-1 h-full flex items-center justify-center relative">
+                    <div className="aspect-[9/16] h-full">
+                        {activePostForView && (
+                             <ShortsPlayer
+                                key={activePostForView.id}
+                                post={activePostForView}
+                                isActive={true}
+                                onCommentClick={(e) => handleCommentClick(e, activePostForView)}
+                                onDescriptionClick={handleDescriptionClick}
+                            />
+                        )}
+                    </div>
+                </div>
+            </div>
+        )
     }
 
     return (
@@ -184,6 +264,7 @@ export default function FlowVideoPage() {
                             post={post}
                             isActive={index === currentIndex}
                             onCommentClick={(e) => handleCommentClick(e, post)}
+                            onDescriptionClick={handleDescriptionClick}
                         />
                     </motion.div>
                 ))}
@@ -196,24 +277,19 @@ export default function FlowVideoPage() {
 
             <AnimatePresence>
                 {showCommentModal && activePost && (
-                    <>
-                        <motion.div 
-                            initial={{ opacity: 0 }} 
-                            animate={{ opacity: 1 }} 
-                            exit={{ opacity: 0 }} 
-                            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" 
-                            onClick={() => setShowCommentModal(false)}
-                        />
-                        <CommentModal 
-                            postId={activePost.id} 
-                            postAuthorId={activePost.userId} 
-                            onClose={() => setShowCommentModal(false)} 
-                            post={activePost}
-                            collectionName="posts"
-                        />
-                    </>
+                    <CommentModal 
+                        postId={activePost.id} 
+                        postAuthorId={activePost.userId} 
+                        onClose={() => setShowCommentModal(false)} 
+                        post={activePost}
+                        collectionName="posts"
+                        isOpen={showCommentModal}
+                        isOverlay={true}
+                    />
                 )}
             </AnimatePresence>
+            
+            {activePostForView && <VideoDescription post={activePostForView} isOpen={isDescriptionOpen} onClose={closeDescription} isOverlay={true} />}
         </div>
     );
 }

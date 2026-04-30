@@ -1,3 +1,4 @@
+
 import React, { useRef, useCallback, useEffect, useState } from "react";
 
 interface ProgressBarProps {
@@ -95,12 +96,12 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
         className="relative flex-1 h-1.5 bg-white/20 rounded-full cursor-pointer"
       >
         <div
-          className="absolute top-0 left-0 h-full bg-purple-500 rounded-full flex items-center justify-end"
+          className="absolute top-0 left-0 h-full bg-gradient-to-r from-pink-500 via-blue-500 to-red-500 rounded-full flex items-center justify-end"
           style={{ width: `${progress}%` }}
         >
           {variant !== "feed" && (
             <div 
-              className={`w-3 h-3 bg-white rounded-full shadow-xl border border-purple-400 transition-transform ${
+              className={`w-3 h-3 bg-white rounded-full shadow-xl border-2 border-pink-500 transition-transform ${
                 isDragging ? "scale-150" : "scale-100"
               } ${variant === 'watch' ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'}`} 
               style={{ marginRight: '-6px' }} 

@@ -1,10 +1,27 @@
 import { getFirestore } from '@/utils/firebaseAdmin';
 
 export type UserProfile = {
+  uid: string;
   username: string;
   name?: string;
   bio?: string;
   avatar_url?: string;
+  // Add other profile fields here
+  [key: string]: any; // Allow other fields
+};
+
+// Helper to convert Firestore Timestamps
+const convertTimestamps = (data: any) => {
+  const newData: { [key: string]: any } = {};
+  for (const key in data) {
+    const value = data[key];
+    if (value && typeof value.toMillis === 'function') {
+      newData[key] = value.toMillis();
+    } else {
+      newData[key] = value;
+    }
+  }
+  return newData;
 };
 
 export async function getUserByUsername(
@@ -17,20 +34,10 @@ export async function getUserByUsername(
     return null;
   }
 
-  let firestore;
+  const db = getFirestore();
 
   try {
-    firestore = getFirestore();
-  } catch (error) {
-    console.error('Firestore init error:', {
-      message: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : null,
-    });
-    return null;
-  }
-
-  try {
-    const snapshot = await firestore
+    const snapshot = await db
       .collection('users')
       .where('username', '==', normalized)
       .limit(1)
@@ -38,7 +45,12 @@ export async function getUserByUsername(
 
     if (snapshot.empty) return null;
 
-    return snapshot.docs[0].data() as UserProfile;
+    const doc = snapshot.docs[0];
+    const data = doc.data();
+    
+    const profileData = convertTimestamps(data);
+
+    return { uid: doc.id, ...profileData } as UserProfile;
   } catch (error) {
     console.error('Firestore query error:', {
       message: error instanceof Error ? error.message : String(error),

@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState, useMemo } from 'react';
@@ -20,6 +19,7 @@ import { StreamViewer } from './StreamViewer';
 import { EditPostModal } from './squad/EditPostModal';
 import { CommentModal } from './CommentModal';
 import { FullScreenImageViewer } from './FullScreenImageViewer';
+import { useRouter } from 'next/navigation';
 
 const db = getFirestore(app);
 
@@ -53,21 +53,45 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
   const [viewCount, setViewCount] = useState(post.viewCount || 0);
   const [playVideo, setPlayVideo] = useState(false);
   const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
-  const [author, setAuthor] = useState<any>(null);
 
+  const router = useRouter();
   const currentUser = auth.currentUser;
 
-  useEffect(() => {
-    if (post.userId) {
-        const userRef = fsDoc(db, "users", post.userId);
-        const unsubscribe = onSnapshot(userRef, (doc) => {
-            if (doc.exists()) {
-                setAuthor({ uid: doc.id, ...doc.data() });
+  const handleProfileClick = async (e: React.MouseEvent, uid: string) => {
+    e.preventDefault();
+    if (!uid) return;
+
+    const target = e.currentTarget as HTMLElement;
+    const originalCursor = target.style.cursor;
+    target.style.cursor = 'wait';
+
+    try {
+        const userDocRef = fsDoc(db, "users", uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+            const currentUsername = userDocSnap.data().username;
+            if (currentUsername) {
+                router.push(`/squad/${currentUsername}`);
+            } else {
+                alert("This user does not have a profile page.");
             }
-        });
-        return () => unsubscribe();
+        } else {
+            alert("User not found.");
+        }
+    } catch (error) {
+        console.error("Error navigating to profile:", error);
+        alert("Could not navigate to profile.");
+    } finally {
+        target.style.cursor = originalCursor;
     }
-  }, [post.userId]);
+  };
+  
+  const author = useMemo(() => ({
+      uid: post.userId,
+      displayName: post.displayName,
+      username: post.username,
+      avatar_url: post.avatar_url,
+  }), [post.userId, post.displayName, post.username, post.avatar_url]);
 
   const { totalVotes, maxVotes, maxVoteIndex } = useMemo(() => {
     if (post.type !== 'poll') return { totalVotes: 0, maxVotes: 0, maxVoteIndex: -1 };
@@ -131,7 +155,6 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
   
   const renderPostContent = (p: any) => {
     const contentPost = p.type === 'relay' ? p.originalPost : p;
-    if (!author) return <div>Loading author...</div>; // Or a more sophisticated skeleton loader
     
     const initials = author.displayName?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || author.username?.slice(0, 2).toUpperCase() || "U";
     const mediaUrls = Array.isArray(contentPost.mediaUrl) ? contentPost.mediaUrl : (contentPost.mediaUrl ? [contentPost.mediaUrl] : []);
@@ -141,12 +164,12 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
     return (
         <>
             <div className="flex items-center gap-3 mb-2">
-                <Link href={`/squad/${author.username}`} className="flex items-center gap-2 group cursor-pointer">
+                <a onClick={(e) => handleProfileClick(e, author.uid)} className="flex items-center gap-2 group cursor-pointer">
                     <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green flex items-center justify-center font-bold text-lg overflow-hidden border-2 border-accent-green group-hover:scale-105 transition-transform">
                         {author.avatar_url ? <img src={author.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : <span className="text-white">{initials}</span>}
                     </div>
-                    <span className="font-headline text-accent-green text-sm group-hover:underline">@{author.username || "user"}</span>
-                </Link>
+                    <span className="font-headline text-accent-green text-sm group-hover:underline">{author.displayName || `@${author.username || "user"}`}</span>
+                </a>
                 <div className="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
                     <span>{timeAgo(contentPost.createdAt)}</span>
                     {(contentPost.isVideo || contentPost.type === 'live') && (
@@ -316,16 +339,15 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
   }
 
  if (isShortVibe) {
-    if (!author) return null; // Don't render if author info isn't loaded
     return (
         <div className="absolute inset-0 w-full h-full p-4 pr-8 flex items-end justify-between pointer-events-none bg-gradient-to-t from-black/60 via-black/20 to-transparent">
             <div className="flex-1 flex flex-col gap-2 self-end text-white drop-shadow-lg max-w-[calc(100%-80px)] pointer-events-auto">
-                <Link href={`/squad/${author.username}`} className="flex items-center gap-2 group cursor-pointer w-fit">
+                <a onClick={(e) => handleProfileClick(e, author.uid)} className="flex items-center gap-2 group cursor-pointer w-fit">
                     <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green flex items-center justify-center font-bold text-lg overflow-hidden border-2 border-accent-green group-hover:scale-105 transition-transform">
                         {author.avatar_url ? <img src={author.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : <span className="text-white">{author.displayName?.[0] || 'U'}</span>}
                     </div>
-                    <span className="font-headline text-white text-base group-hover:underline">@{author.username || "user"}</span>
-                </Link>
+                    <span className="font-headline text-white text-base group-hover:underline">{author.displayName || `@${author.username || "user"}`}</span>
+                </a>
                 <p className={`text-white text-sm line-clamp-3 ${post.fontStyle || 'font-body'}`}>{post.content || post.question}</p>
                  {post.song && (
                     <div className="flex items-center gap-2 text-white text-sm">
@@ -350,9 +372,9 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
       viewport={{ once: true, amount: 0.2 }}
       transition={{ duration: 0.5, ease: "easeOut" }}
     >
-        {post.type === 'relay' && author && (
+        {post.type === 'relay' && (
             <div className="text-xs text-muted-foreground font-bold mb-2 flex items-center gap-2">
-                <Repeat2 size={14}/> Relayed by <Link href={`/squad/${author.username}`} className="text-accent-cyan hover:underline">@{author.username}</Link>
+                <Repeat2 size={14}/> Relayed by <a onClick={(e) => handleProfileClick(e, author.uid)} className="text-accent-cyan hover:underline cursor-pointer">{author.displayName || `@${author.username}`}</a>
             </div>
         )}
 
