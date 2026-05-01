@@ -13,7 +13,7 @@ export default function SettingsPage() {
     const [firebaseUser, setFirebaseUser] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [settings, setSettings] = useState({
-        darkMode: false,
+        theme: 'light',
         simpleMode: false,
         accentColor: '#00F0FF',
         dmPrivacy: 'everyone',
@@ -25,7 +25,6 @@ export default function SettingsPage() {
     const [resendStatus, setResendStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
     const router = useRouter();
 
-    
     useEffect(() => {
         const unsub = auth.onAuthStateChanged(user => {
             if(user) {
@@ -36,8 +35,8 @@ export default function SettingsPage() {
                         const data = docSnap.data();
                         setProfile({ uid: docSnap.id, ...data });
                         setSettings({
-                            darkMode: localStorage.getItem('theme') === 'dark',
-                            simpleMode: localStorage.getItem('simpleMode') === 'true',
+                            theme: localStorage.getItem('theme') || data.settings?.theme || 'light',
+                            simpleMode: localStorage.getItem('simpleMode') === 'true' || data.settings?.simpleMode || false,
                             accentColor: data.settings?.accentColor || '#00F0FF',
                             dmPrivacy: data.settings?.dmPrivacy || 'everyone',
                             tagPrivacy: data.settings?.tagPrivacy || 'everyone',
@@ -57,34 +56,35 @@ export default function SettingsPage() {
 
     const handleSettingChange = async (key: keyof typeof settings, value: any) => {
         setIsSaving(true);
-        const newSettings = { ...settings, [key]: value };
-        setSettings(newSettings);
+        // Apply changes to localStorage immediately
+        if (key === 'theme') {
+            localStorage.setItem('theme', value);
+        } else if (key === 'simpleMode') {
+            localStorage.setItem('simpleMode', String(value));
+        } else if (key === 'accentColor') {
+            localStorage.setItem('accentColor', value);
+            document.documentElement.style.setProperty('--accent-cyan', value);
+            document.documentElement.style.setProperty('--brand-saffron', value);
+        }
 
-        if (key === 'darkMode') {
-          document.documentElement.classList.toggle('dark', value);
-          localStorage.setItem('theme', value ? 'dark' : 'light');
-        }
-        if (key === 'simpleMode') {
-          document.documentElement.classList.toggle('simple', value);
-          localStorage.setItem('simpleMode', String(value));
-        }
-        if (key === 'accentColor') {
-          localStorage.setItem('accentColor', value);
-          document.documentElement.style.setProperty('--accent-cyan', value);
-          document.documentElement.style.setProperty('--brand-saffron', value);
-        }
-        
-        try {
-            if(firebaseUser) {
+        // Save to Firestore asynchronously
+        if (firebaseUser) {
+            try {
                 const userDocRef = doc(db, "users", firebaseUser.uid);
-                await updateDoc(userDocRef, {
-                    [`settings.${key}`]: value
-                });
+                await updateDoc(userDocRef, { [`settings.${key}`]: value });
+            } catch (error) {
+                console.error("Failed to save settings:", error);
+            } finally {
+                setIsSaving(false);
             }
-        } catch (error) {
-            console.error("Failed to save settings:", error);
-        } finally {
-            setIsSaving(false);
+        }
+
+        // If a theme-related setting is changed, reload the page
+        if (key === 'theme' || key === 'simpleMode') {
+            window.location.reload();
+        } else {
+          const newSettings = { ...settings, [key]: value };
+          setSettings(newSettings);
         }
     };
 
@@ -146,12 +146,12 @@ export default function SettingsPage() {
                 <div className="flex items-center justify-between py-2">
                     <span>Dark Mode</span>
                     <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" checked={settings.darkMode} onChange={(e) => handleSettingChange('darkMode', e.target.checked)} className="sr-only peer" />
+                    <input type="checkbox" checked={settings.theme === 'dark'} onChange={(e) => handleSettingChange('theme', e.target.checked ? 'dark' : 'light')} className="sr-only peer" />
                     <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-accent-cyan peer-checked:after:translate-x-full after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-cyan"></div>
                     </label>
                 </div>
                 <div className="flex items-center justify-between py-2">
-                    <span>Simple Mode (B&W)</span>
+                    <span>Simple Mode</span>
                     <label className="relative inline-flex items-center cursor-pointer">
                     <input type="checkbox" checked={settings.simpleMode} onChange={(e) => handleSettingChange('simpleMode', e.target.checked)} className="sr-only peer" />
                     <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-accent-cyan peer-checked:after:translate-x-full after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-cyan"></div>

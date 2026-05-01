@@ -3,180 +3,198 @@
 /* --- Font Imports --- */
 @import "@fontsource/inter/400.css";
 @import "@fontsource/space-grotesk/700.css";
-@import "@fontsource/cinzel/400.css"; 
+@import "@fontsource/cinzel/400.css";
 @import "@fontsource/great-vibes/400.css";
 
-/* --- Base & Dark Theme --- */
-:root, .dark {
-  --background: 240 6% 10%; /* #17171a */
-  --foreground: 0 0% 98%; /* #fafafa */
-
-  --card: 240 5% 14%; /* #212124 */
+/* ==========================================================================
+   BASE (DARK) THEME
+   Applied via .dark on the html tag
+   ========================================================================== */
+:root,
+.dark {
+  --background: 240 6% 10%;       /* #17171a */
+  --foreground: 0 0% 98%;         /* #fafafa */
+  --card: 240 5% 14%;             /* #212124 */
   --card-foreground: 0 0% 98%;
-
   --popover: 240 6% 10%;
   --popover-foreground: 0 0% 98%;
-
   --primary: 210 40% 98%;
   --primary-foreground: 222 47% 11%;
-
   --secondary: 240 4% 20%;
   --secondary-foreground: 0 0% 98%;
-
   --muted: 240 4% 20%;
-  --muted-foreground: 0 0% 63%; /* zinc-400 */
-  
+  --muted-foreground: 0 0% 63%;
   --accent: 240 4% 25%;
   --accent-foreground: 0 0% 98%;
-  
   --destructive: 0 62% 40%;
   --destructive-foreground: 0 0% 98%;
-
   --border: 240 4% 20%;
   --input: 240 4% 20%;
   --ring: 210 40% 98%;
-
   --radius: 0.5rem;
 
-  /* Custom Colors for the brand */
+  /* Custom Brand Colors */
   --accent-pink: #FF6B6B;
   --accent-green: #4ECDC4;
   --accent-purple: #7D5FFF;
   --brand-gold: #FFB400;
   --accent-cyan: #00F0FF;
+  --brand-saffron: #FF9933;
 
-  --card-background: rgba(23, 23, 26, 0.5); 
+  /* Glass Surfaces */
+  --card-background: rgba(23, 23, 26, 0.5);
   --glass-border: rgba(255, 255, 255, 0.1);
+
+  /* Button glass specific */
+  --btn-glass-bg: rgba(255, 255, 255, 0.1);
+  --btn-glass-border: rgba(255, 255, 255, 0.2);
+  --btn-glass-hover-bg: rgba(255, 255, 255, 0.15);
+  --input-glass-bg: rgba(0, 0, 0, 0.25);
 }
 
-/* Light Mode Theme */
+/* ==========================================================================
+   LIGHT THEME
+   Applied via .light on the html tag
+   ========================================================================== */
 .light {
-  --background: 248 240 88%; /* #FFF8F0 Soft Ivory */
-  --foreground: 0 0 18%; /* #2E2E2E Charcoal Gray */
-  
-  --card: 220 15% 95%; /* Lighter gray for cards */
-  --card-foreground: 0 0 18%;
+  /* --- Core Surface Colors --- */
+  --background: 220 20% 97%;       /* Warm off-white: #f4f5f7 — avoids clinical pure white */
+  --foreground: 222 39% 11%;       /* Deep navy: #131929 — max contrast, easier on eyes than pure black */
 
-  --popover: 0 0 95%;
-  --popover-foreground: 0 0 18%;
+  /* --- Card Colors --- */
+  --card: 0 0% 100%;               /* Pure white cards pop against the off-white background */
+  --card-foreground: 222 39% 11%; /* Same deep navy for consistency */
 
-  --primary: 207.2 88.2% 57.8%; /* Soft Blue for Almighty */
-  --primary-foreground: 0 0 10%;
+  /* --- Popover --- */
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 39% 11%;
 
-  --secondary: 0 0 95%;
-  --secondary-foreground: 0 0 18%;
+  /* --- Primary Actions --- */
+  --primary: 222 47% 18%;          /* Rich dark navy for buttons/CTAs */
+  --primary-foreground: 0 0% 98%; /* Near-white text on dark buttons */
 
-  --muted: 0 0 95%;
-  --muted-foreground: 0 0 45%;
+  /* --- Secondary / Muted Surfaces --- */
+  --secondary: 220 14% 92%;        /* Slightly darker than bg for grouping */
+  --secondary-foreground: 222 39% 15%;
 
-  --accent: 174.5 62.6% 49.6%; /* Teal for Almighty */
-  --accent-foreground: 0-0 10%;
+  --muted: 220 14% 92%;
+  --muted-foreground: 222 15% 35%; /* FIXED: was 0 0% 45% (too low contrast). Now ~4.8:1 ratio */
 
-  --destructive: 0 72.2% 50.6%; /* Soft Red for Almighty */
-  --destructive-foreground: 0 0 98%;
+  /* --- Accent --- */
+  --accent: 220 14% 90%;
+  --accent-foreground: 222 39% 11%;
 
-  --border: 0 0 89%;
-  --input: 0 0 89%;
-  --ring: 207.2 88.2% 57.8%;
-  
-  --brand-saffron: #FF9933; /* Saffron for Tiranga */
+  /* --- Status Colors --- */
+  --destructive: 0 84% 45%;        /* Slightly darker red than default for light bg contrast */
+  --destructive-foreground: 0 0% 98%;
 
-  --card-background: rgba(242, 242, 242, 0.5);
-  --glass-border: rgba(46, 46, 46, 0.1);
+  /* --- Borders & Inputs --- */
+  --border: 220 13% 82%;           /* FIXED: was 0 0% 90% (near-invisible). Now clearly visible */
+  --input: 220 13% 88%;
+  --ring: 222 47% 30%;
+
+  --radius: 0.5rem;
+
+  /* --- Custom Brand Colors (light-adjusted) --- */
+  --accent-pink: #E5383B;          /* Darker red — readable on light */
+  --accent-green: #1A9E97;         /* Darker teal — readable on light */
+  --accent-purple: #5B3FD4;        /* Darker purple — readable on light */
+  --brand-gold: #C98000;           /* Darker gold — readable on light */
+  --accent-cyan: #007A8A;          /* Darker cyan — readable on light */
+  --brand-saffron: #D4780A;        /* Darker saffron — readable on light */
+
+  /* --- Glass Surfaces (light-adapted) --- */
+  --card-background: rgba(255, 255, 255, 0.75); /* More opaque so text behind doesn't bleed */
+  --glass-border: rgba(0, 0, 0, 0.08);
+
+  /* --- Button & Input Glass (light-adapted) --- */
+  --btn-glass-bg: rgba(0, 0, 0, 0.06);
+  --btn-glass-border: rgba(0, 0, 0, 0.14);
+  --btn-glass-hover-bg: rgba(0, 0, 0, 0.10);
+  --input-glass-bg: rgba(255, 255, 255, 0.8);
 }
 
-
-/* Logged-out background */
-.logged-out-background {
-  background-color: #0b0b0c;
-  background-image: radial-gradient(1200px circle at top, #121214, #0b0b0c);
-  background-attachment: fixed;
-}
-
-/* Logged-in background */
-.logged-in-background {
-  background-color: hsl(var(--background));
-  background-image: 
-    radial-gradient(at 15% 15%, hsla(160, 100%, 50%, 0.3) 0px, transparent 50%),
-    radial-gradient(at 85% 20%, hsla(330, 100%, 71%, .3) 0px, transparent 50%),
-    radial-gradient(at 50% 85%, hsla(250, 100%, 70%, 0.3) 0px, transparent 50%),
-    radial-gradient(at 5% 90%, hsla(42, 100%, 50%, 0.2) 0px, transparent 50%);
-  background-attachment: fixed;
-}
-
-
+/* ==========================================================================
+   BODY & BACKGROUND
+   ========================================================================== */
 body {
   color: hsl(var(--foreground));
   font-family: 'Kalam', cursive;
+  background-color: hsl(var(--background));
+  background-attachment: fixed;
 }
 
-.simple body {
-    background-image: none;
+.logged-out-background {
+  background-color: #0b0b0c;
+  background-image: radial-gradient(1200px circle at top, #121214, #0b0b0c);
 }
 
+/* Colorful Dark Background — pulled directly from FlixTrend logo palette */
+body.colorful-dark {
+  background-image:
+    radial-gradient(at 20% 15%, hsla(262, 100%, 58%, 0.40) 0px, transparent 55%),  /* deep violet — logo flame base */
+    radial-gradient(at 80% 10%, hsla(335, 100%, 58%, 0.35) 0px, transparent 50%),  /* hot magenta — logo flame mid */
+    radial-gradient(at 75% 75%, hsla(200, 100%, 50%, 0.30) 0px, transparent 50%),  /* electric cyan — logo arrow */
+    radial-gradient(at 15% 85%, hsla(285, 100%, 50%, 0.25) 0px, transparent 45%),  /* purple-pink — logo ground glow */
+    radial-gradient(at 50% 40%, hsla(25,  100%, 55%, 0.15) 0px, transparent 50%);  /* orange ember — logo flame tip */
+}
+/* Colorful Light Background — light version of dark palette */
+body.colorful-light {
+  background-image:
+    radial-gradient(at 20% 15%, hsla(262, 100%, 58%, 0.18) 0px, transparent 55%),  /* deep violet */
+    radial-gradient(at 80% 10%, hsla(335, 100%, 58%, 0.15) 0px, transparent 50%),  /* hot magenta */
+    radial-gradient(at 75% 75%, hsla(200, 100%, 50%, 0.13) 0px, transparent 50%),  /* electric cyan */
+    radial-gradient(at 15% 85%, hsla(285, 100%, 50%, 0.11) 0px, transparent 45%),  /* purple-pink */
+    radial-gradient(at 50% 40%, hsla(25,  100%, 55%, 0.08) 0px, transparent 50%);  /* orange ember */
+}
+
+/* ==========================================================================
+   ANIMATIONS
+   ========================================================================== */
 @keyframes fadeIn {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
 
 @keyframes float-watermark {
-  0% {
-    transform: translate(0, 0);
-    opacity: 0.7;
-    bottom: 2%;
-    right: 2%;
-  }
-  20% {
-    transform: translate(-45vw, -85vh);
-    opacity: 0.4;
-  }
-  40% {
-    transform: translate(-85vw, -40vh);
-    opacity: 0.7;
-  }
-  60% {
-    transform: translate(-40vw, 0);
-    opacity: 0.4;
-  }
-  80% {
-    transform: translate(0, -45vh);
-    opacity: 0.7;
-  }
-  100% {
-    transform: translate(0, 0);
-    opacity: 0.7;
-    bottom: 2%;
-    right: 2%;
-  }
+  0%   { transform: translate(0, 0);         opacity: 0.7; bottom: 2%; right: 2%; }
+  20%  { transform: translate(-45vw, -85vh); opacity: 0.4; }
+  40%  { transform: translate(-85vw, -40vh); opacity: 0.7; }
+  60%  { transform: translate(-40vw, 0);     opacity: 0.4; }
+  80%  { transform: translate(0, -45vh);     opacity: 0.7; }
+  100% { transform: translate(0, 0);         opacity: 0.7; bottom: 2%; right: 2%; }
 }
 
 @keyframes shadow-glow {
-  0% { box-shadow: 0 0 5px var(--accent-cyan), 0 0 10px var(--accent-cyan); }
-  50% { box-shadow: 0 0 20px var(--accent-cyan), 0 0 30px var(--accent-cyan); }
-  100% { box-shadow: 0 0 5px var(--accent-cyan), 0 0 10px var(--accent-cyan); }
+  0%   { box-shadow: 0 0  5px var(--accent-cyan), 0 0 10px var(--accent-cyan); }
+  50%  { box-shadow: 0 0 20px var(--accent-cyan), 0 0 30px var(--accent-cyan); }
+  100% { box-shadow: 0 0  5px var(--accent-cyan), 0 0 10px var(--accent-cyan); }
 }
 
 .shadow-glow {
   animation: shadow-glow 2s infinite ease-in-out;
 }
 
+/* ==========================================================================
+   GLASS COMPONENTS
+   ========================================================================== */
 
-/* Base card style */
+/* Base glass card — uses theme-aware variables */
 .glass-card {
   background: var(--card-background);
   backdrop-filter: blur(20px) saturate(180%);
-  border-radius: 1.5rem; /* 24px */
+  border-radius: 1.5rem;
   border: 1px solid var(--glass-border);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
 }
 
-/* Liquid Glass Button Style */
+/* Liquid Glass Button — FIXED: now uses theme variables instead of hardcoded rgba whites */
 .btn-glass {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--btn-glass-bg);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 9999px; /* rounded-full */
-  padding: 0.75rem 1.5rem; /* px-6 py-3 */
+  border: 1px solid var(--btn-glass-border);
+  border-radius: 9999px;
+  padding: 0.75rem 1.5rem;
   font-weight: bold;
   color: hsl(var(--foreground));
   transition: all 0.3s ease;
@@ -184,19 +202,19 @@ body {
 }
 
 .btn-glass:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: var(--btn-glass-hover-bg);
+  border-color: var(--btn-glass-border);
   transform: translateY(-1px);
 }
 
-/* Icon Button variant */
+/* Icon Button — FIXED: hover glow now references brand-saffron which is defined in both themes */
 .btn-glass-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(125, 95, 255, 0.1); /* purple-tinged */
+  background: rgba(125, 95, 255, 0.1);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--btn-glass-border);
   border-radius: 9999px;
   width: 48px;
   height: 48px;
@@ -210,31 +228,35 @@ body {
   transform: scale(1.1);
 }
 
-/* Input style to match */
+/* Input — FIXED: uses theme variable so it's visible on both light and dark backgrounds */
 .input-glass {
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--input-glass-bg);
   border: 1px solid var(--glass-border);
   border-radius: 0.5rem;
   padding: 0.75rem 1.25rem;
   color: hsl(var(--foreground));
   transition: all 0.2s ease;
 }
+
 .input-glass:focus {
   outline: none;
-  border-color: #a1a1aa; /* zinc-400 */
-  box-shadow: 0 0 10px rgba(161, 161, 170, 0.2);
+  border-color: hsl(var(--ring));
+  box-shadow: 0 0 0 2px hsla(var(--ring) / 0.25);
 }
 
+/* ==========================================================================
+   UTILITIES
+   ========================================================================== */
 .heptagon-clip {
   clip-path: polygon(50% 0%, 95% 25%, 95% 75%, 50% 100%, 5% 75%, 5% 25%);
 }
 
-.font-headline { font-family: 'Space Grotesk', sans-serif; }
-.font-body { font-family: 'Inter', sans-serif; }
-.font-cursive { font-family: 'Dancing Script', cursive; }
-.font-calligraphy { font-family: 'Great Vibes', cursive; }
-.font-italiano { font-family: 'Italianno', cursive; }
-.font-kalam { font-family: 'Kalam', cursive; }
-.font-courgette { font-family: 'Courgette', cursive; }
-.font-handlee { font-family: 'Handlee', cursive; }
-.font-patrick-hand { font-family: 'Patrick Hand', cursive; }
+.font-headline      { font-family: 'Space Grotesk',  sans-serif; }
+.font-body          { font-family: 'Inter',           sans-serif; }
+.font-cursive       { font-family: 'Dancing Script',  cursive; }
+.font-calligraphy   { font-family: 'Great Vibes',     cursive; }
+.font-italiano      { font-family: 'Italianno',       cursive; }
+.font-kalam         { font-family: 'Kalam',           cursive; }
+.font-courgette     { font-family: 'Courgette',       cursive; }
+.font-handlee       { font-family: 'Handlee',         cursive; }
+.font-patrick-hand  { font-family: 'Patrick Hand',    cursive; }
