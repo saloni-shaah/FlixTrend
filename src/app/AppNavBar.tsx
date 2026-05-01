@@ -1,16 +1,15 @@
-"use client";
-import { usePathname, useRouter } from "next/navigation";
-import { useAppState } from "@/utils/AppStateContext";
-import { MessageSquare, ArrowLeft, Flame } from "lucide-react";
-import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
-import { getFirestore, collection, query, where, onSnapshot } from "firebase/firestore";
-import { auth, app } from "@/utils/firebaseClient";
-import DropIcon from "../components/icons/DropIcon"
+'use client';
+import { usePathname, useRouter } from 'next/navigation';
+import { useAppState } from '@/utils/AppStateContext';
+import { MessageSquare, ArrowLeft, Flame } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
+import { getFirestore, collection, query, where, onSnapshot } from 'firebase/firestore';
+import { auth, app } from '@/utils/firebaseClient';
+import DropIcon from '../components/icons/DropIcon';
 
 const db = getFirestore(app);
 
-// Custom SVG for VibeSpace (VibeSpace)
 const VibeSpaceIcon = ({ className }: { className?: string }) => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
     <g>
@@ -21,7 +20,6 @@ const VibeSpaceIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-// Custom SVG for Squad (Profile)
 const SquadIcon = ({ className }: { className?: string }) => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
     <path d="M12 12C14.2091 12 16 10.2091 16 8C16 5.79086 14.2091 4 12 4C9.79086 4 8 5.79086 8 8C8 10.2091 9.79086 12 12 12Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -29,7 +27,6 @@ const SquadIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-// Custom animated circular SVG for Flow
 const FlowIcon = ({ className }: { className?: string }) => (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
         <defs>
@@ -44,7 +41,6 @@ const FlowIcon = ({ className }: { className?: string }) => (
         <path d="M9.5 16V8L16.5 12L9.5 16Z" fill="white"/>
     </svg>
 );
-
 
 function NavButton({ href, icon: Icon, label }: { href: string; icon: React.ElementType; label: string; }) {
   const pathname = usePathname();
@@ -101,8 +97,8 @@ export default function AppNavBar() {
     };
   }, []);
 
-  const isAuthPage = pathname === "/login" || pathname === "/signup" || pathname === "/";
-  const isSpecialPage = ["/guest", "/about", "/privacy", "/terms", "/contact"].includes(pathname);
+  const isAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/';
+  const isSpecialPage = ['/guest', '/about', '/privacy', '/terms', '/contact'].includes(pathname);
   const hideNav = isAuthPage || isSpecialPage || !!activeCall || pathname.startsWith('/watch');
   const hideForFlowVideo = pathname.startsWith('/flow') && isFlowVideoPlaying;
 
@@ -114,10 +110,19 @@ export default function AppNavBar() {
     <>
       {isOffline && (
         <div className="fixed bottom-0 left-0 w-full z-50 bg-yellow-500/90 backdrop-blur-md text-black font-bold p-2 text-center text-sm">
-            You are offline. Some features may be limited.
+            You are offline. Some features may be. Please check your network connection.
         </div>
       )}
-      <nav className={`fixed left-0 w-full z-40 bg-background/50 backdrop-blur-lg border-t border-glass-border flex justify-around items-center py-2 transition-all ${isOffline ? 'bottom-8' : 'bottom-0'}`}>
+      <nav 
+        className={`fixed left-0 w-full z-40 border-t border-glass-border flex justify-around items-center py-2 backdrop-blur-lg transition-all ${isOffline ? 'bottom-8' : 'bottom-0'}`}
+        style={{
+          background: `
+            radial-gradient(at 30% 20%, rgba(120, 120, 255, 0.06), transparent 50%),
+            radial-gradient(at 70% 80%, rgba(0, 200, 255, 0.05), transparent 50%),
+            rgba(152, 153, 161, 0.72)
+          `
+        }}
+      >
         {isSignalChatView ? (
           <button onClick={() => { setSelectedChat(null); router.back(); }} className="flex flex-col items-center gap-1 px-2 py-1 text-foreground">
             <ArrowLeft />
