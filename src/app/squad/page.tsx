@@ -2,7 +2,7 @@
 import React, { useEffect, useState, Suspense, useRef, useCallback } from "react";
 import { auth, app } from "@/utils/firebaseClient";
 import { getFirestore, doc, onSnapshot, collection, query, where, getDocs, orderBy, serverTimestamp, setDoc, limit, startAfter, OrderByDirection } from "firebase/firestore";
-import { Cog, MapPin, User, Tag, ShieldCheck, CheckCircle, Users as UsersIcon, BarChart3, Home, Loader2, ChevronLeft, ChevronRight, AlignLeft, Image, Video, ArrowUp, ArrowDown, TrendingUp } from "lucide-react";
+import { Cog, MapPin, User, Tag, Users as UsersIcon, BarChart3, Home, Loader2, ChevronLeft, ChevronRight, AlignLeft, Image, Video, ArrowUp, ArrowDown, TrendingUp } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -11,11 +11,12 @@ import { FollowListModal } from "@/components/FollowListModal";
 import { CompleteProfileModal } from "@/components/squad/CompleteProfileModal";
 import { EditProfileModal } from "@/components/squad/EditProfileModal";
 import { UserPlaylists } from "@/components/squad/UserPlaylists";
-import { AccoladeBadge } from "@/components/AccoladeBadge";
+import { SquadBadges } from "@/components/squad/badges";
 import { CreatePostPrompt } from "@/components/CreatePostPrompt";
 import LikedPostsTab from "@/components/squad/LikedPostsTab";
 import { FollowButton } from "@/components/FollowButton";
 import { FullScreenImageViewer } from "@/components/FullScreenImageViewer";
+import VerifiedBadge from "@/components/verifiedbadge";
 
 const db = getFirestore(app);
 const INITIAL_POSTS_PER_PAGE = 5;
@@ -208,9 +209,18 @@ function SquadPageContent() {
   }
 
   const initials = profile.name?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || profile.username?.slice(0, 2).toUpperCase() || "U";
-  const isPremium = profile.isPremium && (!profile.premiumUntil || profile.premiumUntil.toDate() > new Date());
-  const isDeveloper = Array.isArray(profile.role) && (profile.role.includes('developer') || profile.role.includes('founder'));
-  const accolades = profile.accolades || [];
+  
+  let premiumUntilTimestamp = null;
+  if (profile.premiumUntil) {
+    if (typeof profile.premiumUntil.seconds === 'number') {
+      premiumUntilTimestamp = profile.premiumUntil.seconds * 1000;
+    } else if (typeof profile.premiumUntil === 'number') {
+      premiumUntilTimestamp = profile.premiumUntil;
+    } else if (profile.premiumUntil.toDate) {
+      premiumUntilTimestamp = profile.premiumUntil.toDate().getTime();
+    }
+  }
+  const isPremium = profile.isPremium && (!premiumUntilTimestamp || premiumUntilTimestamp > Date.now());
 
   return (
     <>
@@ -246,21 +256,20 @@ function SquadPageContent() {
                 {profile.avatar_url ? <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : <span className="text-5xl text-white flex items-center justify-center h-full w-full">{initials}</span>}
               </motion.div>
               <div className="translate-x-19">
-                  <div className="flex items-center justify-center gap-2">
-                      <h2 className="text-2xl font-headline font-bold text-center">{profile.name}</h2>
-                      {isDeveloper && <ShieldCheck className="w-6 h-6 text-accent-purple" title="FlixTrend Developer" />}
-                      {isPremium && <CheckCircle className="w-6 h-6 text-blue-500" title="Premium User" />}
+                  <div className="flex items-center justify-center gap-[5px]">
+                       <h2 className="text-2xl font-headline font-bold text-center">{profile.name}</h2>
+                       <VerifiedBadge isVerified={isPremium} expiredAt={premiumUntilTimestamp} />
                   </div>
                   <p className="text-accent-cyan font-semibold mb-1 text-center">@{profile.username || "username"}</p>
               </div>
-              {accolades.length > 0 && <div className="flex flex-wrap items-center justify-center gap-2 my-4">{accolades.map(type => <AccoladeBadge key={type} type={type} />)}</div>}
+              <SquadBadges accolades={profile.accolades} />
               <div className="flex justify-center gap-8 my-4 w-full">
-                  <div className="text-center"><span className="font-bold text-lg text-accent-cyan">{profile.Posts_Count || 0}</span><span className="text-xs text-gray-400 block">Posts</span></div>
-                  <button className="text-center" onClick={() => setShowFollowList('followers')}><span className="font-bold text-lg text-accent-cyan">{profile.Follower_Count || 0}</span><span className="text-xs text-gray-400 block hover:underline">Followers</span></button>
-                  <button className="text-center" onClick={() => setShowFollowList('following')}><span className="font-bold text-lg text-accent-cyan">{profile.Following_Count || 0}</span><span className="text-xs text-gray-400 block hover:underline">Following</span></button>
+                  <div className="text-center"><span className="font-bold text-lg text-accent-cyan">{profile.Posts_Count || 0}</span><span className="text-xs text-muted-foreground block">Posts</span></div>
+                  <button className="text-center" onClick={() => setShowFollowList('followers')}><span className="font-bold text-lg text-accent-cyan">{profile.Follower_Count || 0}</span><span className="text-xs text-muted-foreground block hover:underline">Followers</span></button>
+                  <button className="text-center" onClick={() => setShowFollowList('following')}><span className="font-bold text-lg text-accent-cyan">{profile.Following_Count || 0}</span><span className="text-xs text-muted-foreground block hover:underline">Following</span></button>
               </div>
               <div className="mt-4 w-full max-w-lg">
-                  <p className="text-gray-400 text-center mb-4 text-sm">{profile.bio || "This user hasn't set a bio yet."}</p>
+                  <p className="text-muted-foreground text-center mb-4 text-sm">{profile.bio || "This user hasn't set a bio yet."}</p>
                   <div className="flex justify-center flex-wrap gap-x-4 gap-y-2 text-xs text-gray-500">
                       {profile.location && <span className="flex items-center gap-1.5"><MapPin size={12} /> {profile.location}</span>}
                       {profile.gender && <span className="flex items-center gap-1.5"><User size={12} /> {profile.gender}</span>}
@@ -272,30 +281,30 @@ function SquadPageContent() {
           {['home', 'posts', 'likes', 'playlists'].includes(activeTab) && firebaseUser && profile && firebaseUser.uid === profile.uid && <div className="w-full max-w-xl mt-8"><CreatePostPrompt /></div>}
 
           <div className="flex justify-center gap-2 md:gap-4 my-8 flex-wrap">
-              <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "home" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("home")}><Home className="inline-block mr-2" size={16}/>Home</button>
-              <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "posts" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("posts")}>My Posts</button>
-              <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "likes" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("likes")}>Likes</button>
-              <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "playlists" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("playlists")}>Playlists</button>
+              <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "home" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`} onClick={() => setActiveTab("home")}><Home className="inline-block mr-2" size={16}/>Home</button>
+              <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "posts" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`} onClick={() => setActiveTab("posts")}>My Posts</button>
+              <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "likes" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`} onClick={() => setActiveTab('likes')}>Likes</button>
+              <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "playlists" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`} onClick={() => setActiveTab("playlists")}>Playlists</button>
           </div>
 
           <div className="flex-1 flex flex-col items-center justify-center w-full min-h-[400px]">
               {activeTab === "home" && <HomeFeed user={firebaseUser} />}
               {activeTab === "posts" && (
                 <div className="w-full max-w-xl flex flex-col gap-6">
-                    <div className="flex justify-center gap-2 p-1 rounded-full bg-black/30">
-                        <button onClick={() => { setPostTypeFilter('all'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'all' ? 'bg-white/10 text-white' : 'text-gray-400'}`}>All</button>
-                        <button onClick={() => { setPostTypeFilter('text'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'text' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><AlignLeft size={14} className="inline" /></button>
-                        <button onClick={() => { setPostTypeFilter('image'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'image' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><Image size={14} className="inline" /></button>
-                        <button onClick={() => { setPostTypeFilter('video'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'video' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><Video size={14} className="inline" /></button>
-                        <button onClick={() => { setPostTypeFilter('poll'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'poll' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><BarChart3 size={14} className="inline" /></button>
-                        <button onClick={() => { setPostTypeFilter('flow'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'flow' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><FlowIcon className="w-4 h-4 inline" /></button>
+                    <div className="flex justify-center gap-2 p-1 rounded-full bg-secondary">
+                        <button onClick={() => { setPostTypeFilter('all'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'all' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}>All</button>
+                        <button onClick={() => { setPostTypeFilter('text'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'text' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}><AlignLeft size={14} className="inline" /></button>
+                        <button onClick={() => { setPostTypeFilter('image'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'image' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}><Image size={14} className="inline" /></button>
+                        <button onClick={() => { setPostTypeFilter('video'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'video' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}><Video size={14} className="inline" /></button>
+                        <button onClick={() => { setPostTypeFilter('poll'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'poll' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}><BarChart3 size={14} className="inline" /></button>
+                        <button onClick={() => { setPostTypeFilter('flow'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'flow' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}><FlowIcon className="w-4 h-4 inline" /></button>
                     </div>
 
                     {postTypeFilter !== 'all' && (
-                        <div className="flex justify-center gap-2 p-1 rounded-full bg-black/20 text-xs">
-                            <button onClick={() => setSortBy('latest')} className={`px-3 py-1 rounded-full font-bold transition-colors flex items-center gap-1 ${sortBy === 'latest' ? 'bg-accent-cyan/20 text-accent-cyan' : 'text-gray-400'}`}><ArrowUp size={12}/>Latest</button>
-                            <button onClick={() => setSortBy('oldest')} className={`px-3 py-1 rounded-full font-bold transition-colors flex items-center gap-1 ${sortBy === 'oldest' ? 'bg-accent-cyan/20 text-accent-cyan' : 'text-gray-400'}`}><ArrowDown size={12}/>Oldest</button>
-                            <button onClick={() => setSortBy('popular')} className={`px-3 py-1 rounded-full font-bold transition-colors flex items-center gap-1 ${sortBy === 'popular' ? 'bg-accent-cyan/20 text-accent-cyan' : 'text-gray-400'}`}><TrendingUp size={12}/>Popular</button>
+                        <div className="flex justify-center gap-2 p-1 rounded-full bg-secondary text-xs">
+                            <button onClick={() => setSortBy('latest')} className={`px-3 py-1 rounded-full font-bold transition-colors flex items-center gap-1 ${sortBy === 'latest' ? 'bg-accent-cyan/20 text-accent-cyan' : 'text-muted-foreground'}`}><ArrowUp size={12}/>Latest</button>
+                            <button onClick={() => setSortBy('oldest')} className={`px-3 py-1 rounded-full font-bold transition-colors flex items-center gap-1 ${sortBy === 'oldest' ? 'bg-accent-cyan/20 text-accent-cyan' : 'text-muted-foreground'}`}><ArrowDown size={12}/>Oldest</button>
+                            <button onClick={() => setSortBy('popular')} className={`px-3 py-1 rounded-full font-bold transition-colors flex items-center gap-1 ${sortBy === 'popular' ? 'bg-accent-cyan/20 text-accent-cyan' : 'text-muted-foreground'}`}><TrendingUp size={12}/>Popular</button>
                         </div>
                     )}
                     
@@ -308,7 +317,7 @@ function SquadPageContent() {
                           return <PostCard key={post.id} post={post} collectionName="posts"/>
                         }))
                       : (
-                        <div className="text-gray-400 text-center mt-16 flex flex-col items-center">
+                        <div className="text-muted-foreground text-center mt-16 flex flex-col items-center">
                           <div className="text-4xl mb-4">📝</div>
                           <div className="text-lg font-semibold mb-2">No Posts Yet</div>
                           <p className="text-sm mb-6">Your creative journey starts here. What will you share?</p>
@@ -317,7 +326,7 @@ function SquadPageContent() {
                       )
                     }
                     {loadingMore && <div className="text-center text-accent-cyan py-4">Loading more posts...</div>}
-                    {!hasMorePosts && userPosts.length > 0 && <div className="text-center text-gray-500 py-4">You've reached the end!</div>}
+                    {!hasMorePosts && userPosts.length > 0 && <div className="text-center text-muted-foreground py-4">You've reached the end!</div>}
                 </div>
               )}
               {activeTab === "likes" && firebaseUser && <LikedPostsTab userId={firebaseUser.uid} />}
@@ -382,7 +391,7 @@ const CreatorSuggestions = ({ creators, title, currentUser }: { creators: any[],
                                 <img src={avatarUrl} alt={creator.name} className="w-20 h-20 rounded-full object-cover mb-3"/>
                                 <h4 className="font-bold text-md truncate w-full">{creator.name}</h4>
                                 <p className="text-xs text-accent-cyan/80">@{creator.username}</p>
-                                <p className="text-xs text-gray-400 mt-2 line-clamp-2 flex-grow min-h-[40px] w-full">{creator.bio || ''}</p>
+                                <p className="text-xs text-muted-foreground mt-2 line-clamp-2 flex-grow min-h-[40px] w-full">{creator.bio || ''}</p>
                             </Link>
                             <div className="mt-4 w-full">
                                <FollowButton profileUser={creator} currentUser={currentUser} />
@@ -463,7 +472,7 @@ const HomeFeed = ({ user }: { user: any }) => {
     return (
         <div className="w-full max-w-xl flex flex-col gap-6">
             {!hasContent && !loading ? (
-                 <div className="text-center text-gray-400 mt-20 p-8 bg-white/5 rounded-2xl">
+                 <div className="text-center text-muted-foreground mt-20 p-8 bg-secondary rounded-2xl">
                     <UsersIcon size={48} className="mx-auto mb-4 text-accent-cyan"/>
                     <h3 className="text-xl font-bold">Your feed is quiet</h3>
                     <p className="mt-2">Follow creators to see their latest posts here or or find new creators to follow.</p>

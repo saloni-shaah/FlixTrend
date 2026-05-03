@@ -123,8 +123,8 @@ export default function SettingsPage() {
                 <div className="bg-white/5 rounded-xl p-4">
                     <Link href="/premium">
                         <div className="w-full p-4 rounded-2xl bg-gradient-to-r from-accent-purple via-accent-pink to-brand-gold cursor-pointer mb-4">
-                            <h4 className="font-headline font-bold text-white">Manage Premium</h4>
-                            <p className="text-xs text-white/80">Upgrade or manage your subscription.</p>
+                            <h4 className="font-headline font-bold text-on-solid">Manage Premium</h4>
+                            <p className="text-xs text-on-solid-muted">Upgrade or manage your subscription.</p>
                         </div>
                     </Link>
                 </div>
@@ -135,7 +135,7 @@ export default function SettingsPage() {
                         <Link href="/signup/singer">
                             <div className="w-full p-4 rounded-2xl bg-accent-cyan/10 hover:bg-accent-cyan/20 cursor-pointer">
                                 <h4 className="font-headline font-bold text-accent-cyan">Become a Singer</h4>
-                                <p className="text-xs text-white/80">Upload your music and start earning.</p>
+                                <p className="text-xs text-on-solid-muted">Upload your music and start earning.</p>
                             </div>
                         </Link>
                     </div>
@@ -205,7 +205,7 @@ export default function SettingsPage() {
                     <Link href="/settings/additional">
                         <div className="w-full p-4 rounded-2xl bg-accent-cyan/10 hover:bg-accent-cyan/20 cursor-pointer">
                             <h4 className="font-headline font-bold text-accent-cyan">Update Profile</h4>
-                            <p className="text-xs text-white/80">Change your username, age, and gender.</p>
+                            <p className="text-xs text-on-solid-muted">Change your username, age, and gender.</p>
                         </div>
                     </Link>
                 </div>

@@ -296,7 +296,7 @@ export function CommentModal({ postId, postAuthorId, onClose, post, collectionNa
                                 value={newComment} 
                                 onChange={(e) => setNewComment(e.target.value)} 
                                 placeholder="Add a comment..." 
-                                className="bg-neutral-800 border-neutral-700 rounded-xl w-full pr-12 resize-none text-base py-2 px-4"
+                                className="bg-transparent border-border rounded-xl w-full pr-12 resize-none text-base py-2 px-4"
                                 rows={1}
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter' && !e.shiftKey) {
