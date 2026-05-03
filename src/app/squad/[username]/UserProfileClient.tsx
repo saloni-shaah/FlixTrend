@@ -6,10 +6,11 @@ import { getFirestore, doc, getDoc, collection, query, where, getDocs, onSnapsho
 import { auth, app } from "@/utils/firebaseClient";
 import { PostCard } from "@/components/PostCard";
 import { FollowButton } from "@/components/FollowButton";
-import { Star, MapPin, User, Tag, ShieldCheck, Heart, CheckCircle, Trophy, Award, Sparkles, Users as UsersIcon, Edit2, AlignLeft, Image, BarChart3, Video, ArrowUp, ArrowDown, TrendingUp } from "lucide-react";
+import { Star, MapPin, User, Tag, Heart, Users as UsersIcon, Edit2, AlignLeft, Image, BarChart3, Video, ArrowUp, ArrowDown, TrendingUp } from "lucide-react";
 import { FollowListModal } from "@/components/FollowListModal";
-import { AccoladeBadge } from "@/components/AccoladeBadge";
+import { SquadBadges } from "@/components/squad/badges";
 import { FullScreenImageViewer } from "@/components/FullScreenImageViewer";
+import VerifiedBadge from "@/components/verifiedbadge";
 
 const db = getFirestore(app);
 
@@ -64,6 +65,19 @@ export default function UserProfileClient({ initialProfile, initialPosts, hasMor
     });
     return () => unsub();
   }, []);
+
+  useEffect(() => {
+    if (!uid) return;
+
+    const userDocRef = doc(db, 'users', uid);
+    const unsub = onSnapshot(userDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+            setProfile({ uid: docSnap.id, ...docSnap.data() });
+        }
+    });
+
+    return () => unsub();
+}, [uid]);
 
   useEffect(() => {
     if (!uid) return;
@@ -140,9 +154,18 @@ export default function UserProfileClient({ initialProfile, initialPosts, hasMor
   }
 
   const initials = profile.name?.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase() || profile.username?.slice(0, 2).toUpperCase() || "U";
-  const isPremium = profile.isPremium && (!profile.premiumUntil || profile.premiumUntil > Date.now());
-  const isDeveloper = Array.isArray(profile.role) && (profile.role.includes('developer') || profile.role.includes('founder'));
-  const accolades = profile.accolades || [];
+  
+  let premiumUntilTimestamp = null;
+  if (profile.premiumUntil) {
+    if (typeof profile.premiumUntil.seconds === 'number') {
+      premiumUntilTimestamp = profile.premiumUntil.seconds * 1000;
+    } else if (typeof profile.premiumUntil === 'number') {
+      premiumUntilTimestamp = profile.premiumUntil;
+    } else if (profile.premiumUntil.toDate) {
+      premiumUntilTimestamp = profile.premiumUntil.toDate().getTime();
+    }
+  }
+  const isPremium = profile.isPremium && (!premiumUntilTimestamp || premiumUntilTimestamp > Date.now());
   const isOwnProfile = firebaseUser?.uid === uid;
 
   return (
@@ -170,46 +193,36 @@ export default function UserProfileClient({ initialProfile, initialPosts, hasMor
           {profile.avatar_url ? (
             <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
           ) : (
-            <span className="text-5xl text-white flex items-center justify-center h-full w-full">{initials}</span>
+            <span className="text-5xl text-on-solid flex items-center justify-center h-full w-full">{initials}</span>
           )}
         </div>
         <div className="text-left">
-            <div className="flex items-center gap-2">
-                <h2 className="text-2xl font-headline font-bold">{profile.name}</h2>
-                 {isPremium && (
-                    <CheckCircle className="w-6 h-6 text-blue-500" title="Premium User"/>
-                )}
-                 {isDeveloper && (
-                    <ShieldCheck className="w-6 h-6 text-accent-purple" title="FlixTrend Developer"/>
-                )}
+             <div className="flex items-center gap-[5px]">
+                 <h2 className="text-2xl font-headline font-bold">{profile.name}</h2>
+                 <VerifiedBadge isVerified={isPremium} expiredAt={premiumUntilTimestamp} />
             </div>
             <p className="text-accent-cyan font-semibold mb-1">@{profile.username || "username"}</p>
         </div>
 
         <div className="w-full">
-            {accolades.length > 0 && (
-                <div className="flex flex-wrap items-center justify-center gap-2 my-4">
-                    {accolades.map((acc, i) => <AccoladeBadge key={i} type={acc} />)}
-                </div>
-            )}
-
+            <SquadBadges accolades={profile.accolades} />
             <div className="flex justify-center gap-8 my-4 w-full">
               <div className="text-center">
                 <span className="font-bold text-lg text-accent-cyan">{profile.Posts_Count || 0}</span>
-                <span className="text-xs text-gray-400 block">Posts</span>
+                <span className="text-xs text-muted-foreground block">Posts</span>
               </div>
               <button className="text-center" onClick={() => setShowFollowList('followers')}>
                 <span className="font-bold text-lg text-accent-cyan">{profile.Follower_Count || 0}</span>
-                <span className="text-xs text-gray-400 block hover:underline">Followers</span>
+                <span className="text-xs text-muted-foreground block hover:underline">Followers</span>
               </button>
               <button className="text-center" onClick={() => setShowFollowList('following')}>
                 <span className="font-bold text-lg text-accent-cyan">{profile.Following_Count || 0}</span>
-                <span className="text-xs text-gray-400 block hover:underline">Following</span>
+                <span className="text-xs text-muted-foreground block hover:underline">Following</span>
               </button>
             </div>
 
             <div className="mt-4 w-full max-w-lg mx-auto">
-                <p className="text-gray-400 text-center mb-4 text-sm">{profile.bio || "This user hasn't set a bio yet."}</p>
+                <p className="text-muted-foreground text-center mb-4 text-sm">{profile.bio || "This user hasn't set a bio yet."}</p>
                 <div className="flex justify-center flex-wrap gap-x-4 gap-y-2 text-xs text-gray-500">
                     {profile.location && <span className="flex items-center gap-1.5"><MapPin size={12}/> {profile.location}</span>}
                     {profile.gender && <span className="flex items-center gap-1.5"><User size={12}/> {profile.gender}</span>}
@@ -219,27 +232,27 @@ export default function UserProfileClient({ initialProfile, initialPosts, hasMor
         </div>
       </div>
       <div className="flex justify-center gap-4 my-8">
-        <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "posts" ? "bg-accent-cyan text-black" : "bg-white/10 text-white"}`} onClick={() => setActiveTab("posts")}>Posts</button>
+        <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "posts" ? "bg-accent-cyan text-black" : "bg-secondary text-foreground"}`} onClick={() => setActiveTab("posts")}>Posts</button>
       </div>
       <div className="flex-1 flex flex-col items-center justify-center w-full">
         {activeTab === "posts" && (
           <div className="w-full max-w-xl flex flex-col gap-6">
-             <div className="flex justify-center gap-2 p-1 rounded-full bg-black/30">
-                <button onClick={() => { setPostTypeFilter('all'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'all' ? 'bg-white/10 text-white' : 'text-gray-400'}`}>All</button>
-                <button onClick={() => { setPostTypeFilter('text'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'text' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><AlignLeft size={14} className="inline" /></button>
-                <button onClick={() => { setPostTypeFilter('image'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'image' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><Image size={14} className="inline" /></button>
-                <button onClick={() => { setPostTypeFilter('video'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'video' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><Video size={14} className="inline" /></button>
-                <button onClick={() => { setPostTypeFilter('poll'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'poll' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><BarChart3 size={14} className="inline" /></button>
-                <button onClick={() => { setPostTypeFilter('flow'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'flow' ? 'bg-white/10 text-white' : 'text-gray-400'}`}><FlowIcon className="w-4 h-4 inline" /></button>
+             <div className="flex justify-center gap-2 p-1 rounded-full bg-secondary">
+                <button onClick={() => { setPostTypeFilter('all'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'all' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}>All</button>
+                <button onClick={() => { setPostTypeFilter('text'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'text' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}><AlignLeft size={14} className="inline" /></button>
+                <button onClick={() => { setPostTypeFilter('image'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'image' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}><Image size={14} className="inline" /></button>
+                <button onClick={() => { setPostTypeFilter('video'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'video' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}><Video size={14} className="inline" /></button>
+                <button onClick={() => { setPostTypeFilter('poll'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'poll' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}><BarChart3 size={14} className="inline" /></button>
+                <button onClick={() => { setPostTypeFilter('flow'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'flow' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}><FlowIcon className="w-4 h-4 inline" /></button>
             </div>
 
             {postTypeFilter !== 'all' && (
-                <div className="flex justify-center gap-2 p-1 rounded-full bg-black/20 text-xs">
+                <div className="flex justify-center gap-2 p-1 rounded-full bg-secondary text-xs">
                     {['text', 'image', 'poll', 'video', 'flow'].includes(postTypeFilter) && (
                         <>
-                            <button onClick={() => setSortBy('latest')} className={`px-3 py-1 rounded-full font-bold transition-colors flex items-center gap-1 ${sortBy === 'latest' ? 'bg-accent-cyan/20 text-accent-cyan' : 'text-gray-400'}`}><ArrowUp size={12}/>Latest</button>
-                            <button onClick={() => setSortBy('oldest')} className={`px-3 py-1 rounded-full font-bold transition-colors flex items-center gap-1 ${sortBy === 'oldest' ? 'bg-accent-cyan/20 text-accent-cyan' : 'text-gray-400'}`}><ArrowDown size={12}/>Oldest</button>
-                            <button onClick={() => setSortBy('popular')} className={`px-3 py-1 rounded-full font-bold transition-colors flex items-center gap-1 ${sortBy === 'popular' ? 'bg-accent-cyan/20 text-accent-cyan' : 'text-gray-400'}`}><TrendingUp size={12}/>Popular</button>
+                            <button onClick={() => setSortBy('latest')} className={`px-3 py-1 rounded-full font-bold transition-colors flex items-center gap-1 ${sortBy === 'latest' ? 'bg-accent-cyan/20 text-accent-cyan' : 'text-muted-foreground'}`}><ArrowUp size={12}/>Latest</button>
+                            <button onClick={() => setSortBy('oldest')} className={`px-3 py-1 rounded-full font-bold transition-colors flex items-center gap-1 ${sortBy === 'oldest' ? 'bg-accent-cyan/20 text-accent-cyan' : 'text-muted-foreground'}`}><ArrowDown size={12}/>Oldest</button>
+                            <button onClick={() => setSortBy('popular')} className={`px-3 py-1 rounded-full font-bold transition-colors flex items-center gap-1 ${sortBy === 'popular' ? 'bg-accent-cyan/20 text-accent-cyan' : 'text-muted-foreground'}`}><TrendingUp size={12}/>Popular</button>
                         </>
                     )}
                 </div>
@@ -254,7 +267,7 @@ export default function UserProfileClient({ initialProfile, initialPosts, hasMor
                 return <PostCard key={post.id} post={post} collectionName="posts"/>
               }))
              : !loading && (
-            <div className="text-gray-400 text-center mt-16 flex flex-col items-center">
+            <div className="text-muted-foreground text-center mt-16 flex flex-col items-center">
                 <div className="text-4xl mb-4">📝</div>
                 <div className="text-lg font-semibold mb-2">No Posts Yet</div>
                 {isOwnProfile ? (
@@ -270,7 +283,7 @@ export default function UserProfileClient({ initialProfile, initialPosts, hasMor
             </div>
             )}
             {loadingMore && <div className="text-center text-accent-cyan py-4">Loading more posts...</div>}
-            {!hasMorePosts && userPosts.length > 0 && <div className="text-center text-gray-500 py-4">You've reached the end!</div>}
+            {!hasMorePosts && userPosts.length > 0 && <div className="text-center text-muted-foreground py-4">You've reached the end!</div>}
           </div>
         )}
       </div>

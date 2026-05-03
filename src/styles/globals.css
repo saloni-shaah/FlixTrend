@@ -50,6 +50,10 @@
   --btn-glass-border: rgba(255, 255, 255, 0.2);
   --btn-glass-hover-bg: rgba(255, 255, 255, 0.15);
   --input-glass-bg: rgba(0, 0, 0, 0.25);
+
+  /* Text on solid color backgrounds */
+  --text-on-solid: #ffffff;
+  --text-on-solid-muted: rgba(255, 255, 255, 0.8);
 }
 
 /* ==========================================================================
@@ -112,6 +116,10 @@
   --btn-glass-border: rgba(0, 0, 0, 0.14);
   --btn-glass-hover-bg: rgba(0, 0, 0, 0.10);
   --input-glass-bg: rgba(255, 255, 255, 0.8);
+
+  /* Text on solid color backgrounds */
+  --text-on-solid: #000000;
+  --text-on-solid-muted: rgba(0, 0, 0, 0.7);
 }
 
 /* ==========================================================================
@@ -122,6 +130,14 @@ body {
   font-family: 'Kalam', cursive;
   background-color: hsl(var(--background));
   background-attachment: fixed;
+}
+
+.text-on-solid {
+  color: var(--text-on-solid);
+}
+
+.text-on-solid-muted {
+  color: var(--text-on-solid-muted);
 }
 
 .logged-out-background {

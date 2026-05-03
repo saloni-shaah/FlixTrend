@@ -98,7 +98,7 @@ export default function AppNavBar() {
   }, []);
 
   const isAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/';
-  const isSpecialPage = ['/guest', '/about', '/privacy', '/terms', '/contact'].includes(pathname);
+  const isSpecialPage = ['/guest', '/about', '/privacy', '/terms', '/contact', '/signup/complete-profile', '/signup/account-type', '/signup/avatar-banner', '/signup/phone-verification'].includes(pathname);
   const hideNav = isAuthPage || isSpecialPage || !!activeCall || pathname.startsWith('/watch');
   const hideForFlowVideo = pathname.startsWith('/flow') && isFlowVideoPlaying;
 
@@ -110,7 +110,7 @@ export default function AppNavBar() {
     <>
       {isOffline && (
         <div className="fixed bottom-0 left-0 w-full z-50 bg-yellow-500/90 backdrop-blur-md text-black font-bold p-2 text-center text-sm">
-            You are offline. Some features may be. Please check your network connection.
+            No signal rn 📵 some stuff might be glitchy 😵‍💫 check your net 🌐 and try again 🔄
         </div>
       )}
       <nav 

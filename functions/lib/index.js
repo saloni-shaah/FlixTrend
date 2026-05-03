@@ -26,7 +26,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onPostDelete = exports.onPostCreate = exports.onUnfollow = exports.onFollow = exports.decrementLikes = exports.incrementLikes = exports.updateComment = exports.deleteComment = exports.updatePost = exports.deleteMessage = exports.deleteUserAccount = exports.checkEmail = exports.checkPhone = exports.checkUsername = exports.cleanupStaleDocuments = exports.cleanupOldDrops = exports.selectNextPrompt = exports.updateAccolades = exports.cleanupExpiredFlashes = exports.onChatDelete = exports.onUserDelete = exports.onNewDropPrompt = exports.onNewFollower = exports.onNewMessage = exports.onCommentCreate = exports.onNewUserCreate = void 0;
+exports.onPostDelete = exports.onPostCreate = exports.onUnfollow = exports.onFollow = exports.decrementLikes = exports.incrementLikes = exports.updateComment = exports.deleteComment = exports.updatePost = exports.deleteMessage = exports.deleteUserAccount = exports.checkEmail = exports.checkPhone = exports.checkUsername = exports.cleanupStaleDocuments = exports.cleanupOldDrops = exports.selectNextPrompt = exports.cleanupExpiredFlashes = exports.onChatDelete = exports.onUserDelete = exports.onNewDropPrompt = exports.onNewFollower = exports.onNewMessage = exports.onCommentCreate = void 0;
 const app_1 = require("firebase-admin/app");
 const firestore_1 = require("firebase-admin/firestore");
 const admin = __importStar(require("firebase-admin"));
@@ -81,25 +81,6 @@ async function deleteSubcollection(collectionRef) {
     }
 }
 // --- V1 Cloud Functions ---
-exports.onNewUserCreate = v1.auth.user().onCreate(async (user) => {
-    const userRef = db.collection('users').doc(user.uid);
-    try {
-        // Set initial data, including the vibe_starter accolade if they have posts.
-        const postSnap = await db.collection('posts').where('userId', '==', user.uid).limit(1).get();
-        const accolades = [];
-        if (!postSnap.empty) {
-            accolades.push('vibe_starter');
-        }
-        await userRef.set({ accolades: accolades }, { merge: true });
-        // Increment total user count.
-        const appStatusRef = db.collection('app_status').doc('user_stats');
-        await appStatusRef.set({ totalUsers: firestore_1.FieldValue.increment(1) }, { merge: true });
-        firebase_functions_1.logger.info(`User document updated for ${user.uid} and total user count incremented.`);
-    }
-    catch (error) {
-        firebase_functions_1.logger.error(`Error processing new user ${user.uid}:`, error);
-    }
-});
 exports.onCommentCreate = v1.firestore
     .document('posts/{postId}/comments/{commentId}')
     .onCreate(async (snap, context) => {
@@ -214,53 +195,6 @@ exports.cleanupExpiredFlashes = v1.pubsub.schedule('every 2 hours').onRun(async 
     await Promise.all(deletePromises);
     firebase_functions_1.logger.info(`Cleanup complete. Deleted ${expiredFlashesSnap.size} expired flashes.`);
     return null;
-});
-exports.updateAccolades = v1.pubsub.schedule('every 1 hours').onRun(async (context) => {
-    firebase_functions_1.logger.info('Running accolades update job.');
-    try {
-        const usersSnap = await db.collection('users').get();
-        const usersWithFollowerCount = await Promise.all(usersSnap.docs.map(async (userDoc) => {
-            const followersSnap = await db.collection('users').doc(userDoc.id).collection('followers').get();
-            return {
-                id: userDoc.id,
-                data: userDoc.data(),
-                followerCount: followersSnap.size,
-            };
-        }));
-        // Top follower accolades
-        usersWithFollowerCount.sort((a, b) => b.followerCount - a.followerCount);
-        const top3 = usersWithFollowerCount.slice(0, 3);
-        const topIds = top3.map(u => u.id);
-        const oldTopUsersQuery = db.collection('users').where('accolades', 'array-contains-any', ['top_1_follower', 'top_2_follower', 'top_3_follower']);
-        const oldTopUsersSnap = await oldTopUsersQuery.get();
-        for (const userDoc of oldTopUsersSnap.docs) {
-            if (!topIds.includes(userDoc.id)) {
-                await userDoc.ref.update({
-                    accolades: firestore_1.FieldValue.arrayRemove('top_1_follower', 'top_2_follower', 'top_3_follower')
-                });
-            }
-        }
-        if (top3[0])
-            await db.collection('users').doc(top3[0].id).update({ accolades: firestore_1.FieldValue.arrayUnion('top_1_follower') });
-        if (top3[1])
-            await db.collection('users').doc(top3[1].id).update({ accolades: firestore_1.FieldValue.arrayUnion('top_2_follower') });
-        if (top3[2])
-            await db.collection('users').doc(top3[2].id).update({ accolades: firestore_1.FieldValue.arrayUnion('top_3_follower') });
-        // Other accolades
-        for (const user of usersWithFollowerCount) {
-            const userRef = db.collection('users').doc(user.id);
-            const currentAccolades = user.data.accolades || [];
-            if (user.followerCount >= 50 && !currentAccolades.includes('social_butterfly')) {
-                await userRef.update({ accolades: firestore_1.FieldValue.arrayUnion('social_butterfly') });
-            }
-        }
-        firebase_functions_1.logger.info('Accolades update complete.');
-        return null;
-    }
-    catch (error) {
-        firebase_functions_1.logger.error("Error updating accolades:", error);
-        return null;
-    }
 });
 exports.selectNextPrompt = v1.pubsub.schedule('0 23 * * *').timeZone('Asia/Kolkata').onRun(async (context) => {
     firebase_functions_1.logger.info("Running daily prompt selection function.");
@@ -562,27 +496,73 @@ exports.updateComment = (0, https_1.onCall)(async (request) => {
 exports.incrementLikes = v1.firestore
     .document('posts/{postId}/likes/{userId}')
     .onCreate(async (snap, context) => {
-    const { postId } = context.params;
+    const { postId, userId } = context.params;
     const postRef = db.collection('posts').doc(postId);
     try {
-        await postRef.update({ likesCount: firestore_1.FieldValue.increment(1) });
-        firebase_functions_1.logger.info(`Incremented likesCount for post ${postId}`);
+        const postDoc = await postRef.get();
+        if (!postDoc.exists) {
+            firebase_functions_1.logger.error(`Post ${postId} not found.`);
+            return;
+        }
+        const postData = postDoc.data();
+        if (!postData) {
+            firebase_functions_1.logger.error(`Post data for ${postId} is undefined.`);
+            return;
+        }
+        const authorId = postData.userId;
+        const batch = db.batch();
+        // Increment post's likesCount
+        batch.update(postRef, { likesCount: firestore_1.FieldValue.increment(1) });
+        // Increment author's Total_likes
+        if (authorId) {
+            const authorRef = db.collection('users').doc(authorId);
+            batch.update(authorRef, { Total_likes: firestore_1.FieldValue.increment(1) });
+        }
+        // Add to user's likedPosts subcollection
+        const currentYear = new Date().getFullYear().toString();
+        const likedPostsRef = db.collection('users').doc(userId).collection('likedPosts').doc(currentYear);
+        batch.set(likedPostsRef, { postIds: firestore_1.FieldValue.arrayUnion(postId) }, { merge: true });
+        await batch.commit();
+        firebase_functions_1.logger.info(`Successfully processed like for post ${postId} by user ${userId}`);
     }
     catch (error) {
-        firebase_functions_1.logger.error(`Error incrementing likesCount for post ${postId}:`, error);
+        firebase_functions_1.logger.error(`Error processing like for post ${postId}:`, error);
     }
 });
 exports.decrementLikes = v1.firestore
     .document('posts/{postId}/likes/{userId}')
     .onDelete(async (snap, context) => {
-    const { postId } = context.params;
+    const { postId, userId } = context.params;
     const postRef = db.collection('posts').doc(postId);
     try {
-        await postRef.update({ likesCount: firestore_1.FieldValue.increment(-1) });
-        firebase_functions_1.logger.info(`Decremented likesCount for post ${postId}`);
+        const postDoc = await postRef.get();
+        if (!postDoc.exists) {
+            firebase_functions_1.logger.error(`Post ${postId} not found.`);
+            return;
+        }
+        const postData = postDoc.data();
+        if (!postData) {
+            firebase_functions_1.logger.error(`Post data for ${postId} is undefined.`);
+            return;
+        }
+        const authorId = postData.userId;
+        const batch = db.batch();
+        // Decrement post's likesCount
+        batch.update(postRef, { likesCount: firestore_1.FieldValue.increment(-1) });
+        // Decrement author's Total_likes
+        if (authorId) {
+            const authorRef = db.collection('users').doc(authorId);
+            batch.update(authorRef, { Total_likes: firestore_1.FieldValue.increment(-1) });
+        }
+        // Remove from user's likedPosts subcollection
+        const currentYear = new Date().getFullYear().toString();
+        const likedPostsRef = db.collection('users').doc(userId).collection('likedPosts').doc(currentYear);
+        batch.update(likedPostsRef, { postIds: firestore_1.FieldValue.arrayRemove(postId) });
+        await batch.commit();
+        firebase_functions_1.logger.info(`Successfully processed unlike for post ${postId} by user ${userId}`);
     }
     catch (error) {
-        firebase_functions_1.logger.error(`Error decrementing likesCount for post ${postId}:`, error);
+        firebase_functions_1.logger.error(`Error processing unlike for post ${postId}:`, error);
     }
 });
 // --- New Cloud Functions for counting ---
@@ -706,4 +686,6 @@ exports.onPostDelete = v1.firestore
     }
 });
 __exportStar(require("./process-media"), exports);
+__exportStar(require("./updateAccolades"), exports);
+__exportStar(require("./onUserUpdate"), exports);
 //# sourceMappingURL=index.js.map

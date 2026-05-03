@@ -7,9 +7,10 @@ import { CheckCircle, Diamond, ShieldCheck, Sparkles, Bot } from "lucide-react";
 import { motion } from "framer-motion";
 import { auth, db } from "@/utils/firebaseClient";
 import { doc, getDoc } from "firebase/firestore";
+import VerifiedBadge from "@/components/VerifiedBadge";
 
 const premiumFeatures = [
-    { icon: <CheckCircle className="text-accent-cyan"/>, text: "Verified Blue Tick on your profile" },
+    { icon: <VerifiedBadge className="text-accent-cyan"/>, text: "Verified Blue Tick on your profile" },
     { icon: <Diamond className="text-accent-pink"/>, text: "Ad-Free Experience across the app" },
     { icon: <Sparkles className="text-brand-gold"/>, text: "Exclusive profile customization options" },
     { icon: <Bot className="text-accent-purple"/>, text: "Early access to new features" },
