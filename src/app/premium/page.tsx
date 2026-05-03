@@ -7,10 +7,10 @@ import { CheckCircle, Diamond, ShieldCheck, Sparkles, Bot } from "lucide-react";
 import { motion } from "framer-motion";
 import { auth, db } from "@/utils/firebaseClient";
 import { doc, getDoc } from "firebase/firestore";
-import VerifiedBadge from "@/components/VerifiedBadge";
+import VerifiedBadge from "@/components/verifiedbadge";
 
 const premiumFeatures = [
-    { icon: <VerifiedBadge className="text-accent-cyan"/>, text: "Verified Blue Tick on your profile" },
+    { icon: <VerifiedBadge isVerified={true} />, text: "Verified Blue Tick on your profile" },
     { icon: <Diamond className="text-accent-pink"/>, text: "Ad-Free Experience across the app" },
     { icon: <Sparkles className="text-brand-gold"/>, text: "Exclusive profile customization options" },
     { icon: <Bot className="text-accent-purple"/>, text: "Early access to new features" },
@@ -53,7 +53,7 @@ export default function PremiumPage() {
         <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="glass-card p-8 md:p-12 w-full max-w-2xl text-center"
+            className="glass-card p-8 md:p-12 w-all max-w-2xl text-center"
         >
             {loading ? (
                  <p className="text-accent-cyan">Loading status...</p>
