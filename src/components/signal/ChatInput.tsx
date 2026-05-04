@@ -29,6 +29,7 @@ export function ChatInput({ chatId, draft, setDraft, onSendMessage, onSendFile }
     const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
     const [uploadError, setUploadError] = useState<string | null>(null);
     const [isCompressing, setIsCompressing] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
 
     useEffect(() => { setText(draft); }, [draft]);
 
@@ -44,8 +45,9 @@ export function ChatInput({ chatId, draft, setDraft, onSendMessage, onSendFile }
     };
     
     const onEmojiClick = (emojiObject: any, event: MouseEvent) => {
-        setText(prevText => prevText + emojiObject.emoji);
-        setDraft(text + emojiObject.emoji);
+        const newText = text + emojiObject.emoji;
+        setText(newText);
+        setDraft(newText);
         setShowEmojiPicker(false);
         textareaRef.current?.focus();
     };
@@ -69,7 +71,6 @@ export function ChatInput({ chatId, draft, setDraft, onSendMessage, onSendFile }
         setUploadError(null);
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            // Lower the bitrate for smaller audio files
             mediaRecorderRef.current = new MediaRecorder(stream, { audioBitsPerSecond: 64000 }); 
             audioChunksRef.current = [];
 
@@ -141,6 +142,9 @@ export function ChatInput({ chatId, draft, setDraft, onSendMessage, onSendFile }
           }
           setUploadError(null);
           
+          let fileToSend = file;
+          let fileType: 'image' | 'video' = file.type.startsWith('image/') ? 'image' : 'video';
+
           if (file.type.startsWith('image/')) {
               setIsCompressing(true);
               try {
@@ -149,29 +153,36 @@ export function ChatInput({ chatId, draft, setDraft, onSendMessage, onSendFile }
                       maxWidthOrHeight: 1280,
                       useWebWorker: true,
                   }
-                  const compressedFile = await imageCompression(file, options);
-                  onSendFile(compressedFile, 'image');
+                  fileToSend = await imageCompression(file, options);
               } catch (error) {
                   console.error("Image compression error: ", error);
                   setUploadError("Could not compress the image.");
+                  setIsCompressing(false);
+                  return;
               } finally {
                   setIsCompressing(false);
               }
-          } else if (file.type.startsWith('video/')){
-              onSendFile(file, 'video');
-          } else {
-              // Potentially handle other file types here in the future
-              setUploadError(`Unsupported file type: ${file.type}`);
+          }
+
+          setIsUploading(true);
+          try {
+            await onSendFile(fileToSend, fileType);
+          } catch (error) {
+            console.error("File send error: ", error);
+            setUploadError("Could not send the file.");
+          } finally {
+            setIsUploading(false);
           }
       }
       if (e.target) e.target.value = ''; // Reset input
     };
     
     const showSendButton = text.trim() !== '' || recordingState !== 'idle';
+    const isProcessingFile = isCompressing || isUploading;
 
     return (
-        <footer className="shrink-0 p-2 border-t border-accent-cyan/10 bg-black/60 relative">
-            {isCompressing && (
+        <footer className="fixed bottom-0 left-0 right-0 md:left-1/3 p-4 bg-black/60 border-t border-accent-cyan/10 z-10 pb-18">
+            {(isProcessingFile) && (
                 <div className="absolute top-0 left-0 right-0 h-1 bg-accent-pink animate-pulse"></div>
             )}
             {uploadError && <p className="text-red-400 text-xs text-center pb-2">{uploadError}</p>}
@@ -194,8 +205,8 @@ export function ChatInput({ chatId, draft, setDraft, onSendMessage, onSendFile }
             <form onSubmit={handleSendText} className="flex items-end gap-2">
                 {recordingState === 'idle' && (
                     <div className="flex items-center">
-                         <button type="button" onClick={() => { setUploadError(null); fileInputRef.current?.click(); }} className={`p-2 text-gray-400 hover:text-accent-cyan shrink-0 ${isCompressing ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={isCompressing}>
-                            {isCompressing ? <Loader className="animate-spin" size={20} /> : <Paperclip size={20} />}
+                         <button type="button" onClick={() => { setUploadError(null); fileInputRef.current?.click(); }} className={`p-2 text-gray-400 hover:text-accent-cyan shrink-0 ${isProcessingFile ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={isProcessingFile}>
+                            {isProcessingFile ? <Loader className="animate-spin" size={20} /> : <Paperclip size={20} />}
                         </button>
                          <button type="button" onClick={() => setShowEmojiPicker(v => !v)} className="p-2 text-gray-400 hover:text-accent-cyan shrink-0">
                             <Smile size={20}/>
@@ -225,6 +236,7 @@ export function ChatInput({ chatId, draft, setDraft, onSendMessage, onSendFile }
                             placeholder="Type a message..." 
                             className="flex-1 bg-gray-700 rounded-xl px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-accent-cyan w-full pr-10 resize-none max-h-32"
                             rows={1}
+                            disabled={isProcessingFile}
                         />
                     )}
                 </div>
@@ -236,6 +248,7 @@ export function ChatInput({ chatId, draft, setDraft, onSendMessage, onSendFile }
                         type="button" 
                         onClick={recordingState !== 'idle' ? stopAndSendRecording : handleSendText} 
                         className="p-3 rounded-full bg-accent-cyan text-black shrink-0 self-end"
+                        disabled={isProcessingFile}
                     >
                         <Send size={20}/>
                     </button>
@@ -244,6 +257,7 @@ export function ChatInput({ chatId, draft, setDraft, onSendMessage, onSendFile }
                         type="button" 
                         onClick={startRecording} 
                         className="p-3 rounded-full bg-accent-pink text-white shrink-0 self-end"
+                        disabled={isProcessingFile}
                     >
                         <Mic size={20}/>
                     </button>
