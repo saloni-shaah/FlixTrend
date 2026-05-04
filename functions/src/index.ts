@@ -1,3 +1,4 @@
+
 import { initializeApp } from "firebase-admin/app";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import * as admin from "firebase-admin";
@@ -447,7 +448,27 @@ export const deleteMessage = onCall(async (request) => {
         throw new HttpsError("invalid-argument", "Missing required parameters.");
     }
 
-    const messageRef = db.collection('chats').doc(chatId).collection('messages').doc(messageId);
+    const chatRef = db.collection('chats').doc(chatId);
+    const chatDoc = await chatRef.get();
+
+    if (!chatDoc.exists) {
+        throw new HttpsError("not-found", "Chat not found.");
+    }
+
+    // Participant Check
+    if (chatId.includes('_')) {
+        const participantIds = chatId.split('_');
+        if (!participantIds.includes(uid)) {
+            throw new HttpsError("permission-denied", "You are not a member of this chat.");
+        }
+    } else {
+        const participants = chatDoc.data()?.participants;
+        if (!participants || !Array.isArray(participants) || !participants.includes(uid)) {
+            throw new HttpsError("permission-denied", "You are not a member of this chat.");
+        }
+    }
+
+    const messageRef = chatRef.collection('messages').doc(messageId);
 
     try {
         if (mode === 'everyone') {
@@ -455,6 +476,8 @@ export const deleteMessage = onCall(async (request) => {
             if (messageSnap.exists && messageSnap.data()?.sender === uid) {
                 await messageRef.delete();
                 return { success: true, message: 'Message deleted for everyone.' };
+            } else if (!messageSnap.exists) {
+                throw new HttpsError("not-found", "Message not found.");
             } else {
                 throw new HttpsError("permission-denied", "You can only delete your own messages for everyone.");
             }
@@ -683,13 +706,31 @@ export const onPostCreate = v1.firestore
     .onCreate(async (snap, context) => {
         const post = snap.data();
         const userId = post.userId;
+        if (!userId) {
+            logger.error("Post created without a userId.", {postId: context.params.postId});
+            return;
+        }
         const userRef = db.collection('users').doc(userId);
 
         try {
-            await userRef.update({ Posts_Count: FieldValue.increment(1) });
-            logger.info(`Incremented Posts_Count for user ${userId}`);
+            const userDoc = await userRef.get();
+            const userData = userDoc.data();
+            const postCount = userData?.Posts_Count ?? 0;
+
+            const updateData: {[key: string]: any} = {
+                Posts_Count: FieldValue.increment(1)
+            };
+
+            if (postCount === 0) {
+                updateData.accolades = FieldValue.arrayUnion('vibestarter');
+                logger.info(`Awarding "Vibe Starter" badge to user ${userId} on their first post.`);
+            }
+
+            await userRef.update(updateData);
+            logger.info(`Successfully updated user stats for post creation: ${userId}`);
+
         } catch (error) {
-            logger.error(`Error incrementing Posts_Count for user ${userId}:`, error);
+            logger.error(`Error in onPostCreate for user ${userId}:`, error);
         }
     });
 

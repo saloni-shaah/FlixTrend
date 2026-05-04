@@ -388,7 +388,7 @@ exports.deleteUserAccount = (0, https_1.onCall)(async (request) => {
     }
 });
 exports.deleteMessage = (0, https_1.onCall)(async (request) => {
-    var _a, _b;
+    var _a, _b, _c;
     const uid = (_a = request.auth) === null || _a === void 0 ? void 0 : _a.uid;
     if (!uid) {
         throw new https_1.HttpsError("unauthenticated", "You must be logged in.");
@@ -397,13 +397,34 @@ exports.deleteMessage = (0, https_1.onCall)(async (request) => {
     if (!chatId || !messageId || !mode) {
         throw new https_1.HttpsError("invalid-argument", "Missing required parameters.");
     }
-    const messageRef = db.collection('chats').doc(chatId).collection('messages').doc(messageId);
+    const chatRef = db.collection('chats').doc(chatId);
+    const chatDoc = await chatRef.get();
+    if (!chatDoc.exists) {
+        throw new https_1.HttpsError("not-found", "Chat not found.");
+    }
+    // Participant Check
+    if (chatId.includes('_')) {
+        const participantIds = chatId.split('_');
+        if (!participantIds.includes(uid)) {
+            throw new https_1.HttpsError("permission-denied", "You are not a member of this chat.");
+        }
+    }
+    else {
+        const participants = (_b = chatDoc.data()) === null || _b === void 0 ? void 0 : _b.participants;
+        if (!participants || !Array.isArray(participants) || !participants.includes(uid)) {
+            throw new https_1.HttpsError("permission-denied", "You are not a member of this chat.");
+        }
+    }
+    const messageRef = chatRef.collection('messages').doc(messageId);
     try {
         if (mode === 'everyone') {
             const messageSnap = await messageRef.get();
-            if (messageSnap.exists && ((_b = messageSnap.data()) === null || _b === void 0 ? void 0 : _b.sender) === uid) {
+            if (messageSnap.exists && ((_c = messageSnap.data()) === null || _c === void 0 ? void 0 : _c.sender) === uid) {
                 await messageRef.delete();
                 return { success: true, message: 'Message deleted for everyone.' };
+            }
+            else if (!messageSnap.exists) {
+                throw new https_1.HttpsError("not-found", "Message not found.");
             }
             else {
                 throw new https_1.HttpsError("permission-denied", "You can only delete your own messages for everyone.");
@@ -599,15 +620,30 @@ exports.onUnfollow = v1.firestore
 exports.onPostCreate = v1.firestore
     .document('posts/{postId}')
     .onCreate(async (snap, context) => {
+    var _a;
     const post = snap.data();
     const userId = post.userId;
+    if (!userId) {
+        firebase_functions_1.logger.error("Post created without a userId.", { postId: context.params.postId });
+        return;
+    }
     const userRef = db.collection('users').doc(userId);
     try {
-        await userRef.update({ Posts_Count: firestore_1.FieldValue.increment(1) });
-        firebase_functions_1.logger.info(`Incremented Posts_Count for user ${userId}`);
+        const userDoc = await userRef.get();
+        const userData = userDoc.data();
+        const postCount = (_a = userData === null || userData === void 0 ? void 0 : userData.Posts_Count) !== null && _a !== void 0 ? _a : 0;
+        const updateData = {
+            Posts_Count: firestore_1.FieldValue.increment(1)
+        };
+        if (postCount === 0) {
+            updateData.accolades = firestore_1.FieldValue.arrayUnion('vibestarter');
+            firebase_functions_1.logger.info(`Awarding "Vibe Starter" badge to user ${userId} on their first post.`);
+        }
+        await userRef.update(updateData);
+        firebase_functions_1.logger.info(`Successfully updated user stats for post creation: ${userId}`);
     }
     catch (error) {
-        firebase_functions_1.logger.error(`Error incrementing Posts_Count for user ${userId}:`, error);
+        firebase_functions_1.logger.error(`Error in onPostCreate for user ${userId}:`, error);
     }
 });
 exports.onPostDelete = v1.firestore
