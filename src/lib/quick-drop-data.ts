@@ -1,10 +1,17 @@
-export const quickEmojis = ['👍', '❤️', '😂', '🔥', '😢', '🙏'];
+// Best Gen-Z reactions — used in MessageItem emoji picker + QuickDropMenu
+export const GENZ_REACTIONS = ['💀','❤️','😭','🔥','✨','😮‍💨','💅','🫶','🥺','💯','😩','🤣'];
 
+// Shown in the quick-drop emoji grid (10 most-sent)
+export const quickEmojis = ['💀','❤️','😭','🔥','✨','😮‍💨','🫶','🥺','💯','😩'];
+
+// Quick phrase shortcuts
 export const quickPhrases = [
-    { display: 'ok', text: 'Okay' },
-    { display: 'np', text: 'No problem' },
-    { display: 'lol', text: 'LOL' },
-    { display: 'brb', text: 'Be right back' },
-    { display: 'omw', text: 'On my way' },
-    { display: 'ty', text: 'Thank you' },
+  { display: 'NGL',   text: 'ngl fr 💀' },
+  { display: 'OMW',   text: 'omw!! 🏃' },
+  { display: 'SLAY',  text: 'slay bestie ✨' },
+  { display: 'FR',    text: 'fr fr no cap 💯' },
+  { display: 'BRB',   text: 'brb rq ⏰' },
+  { display: 'LMK',   text: 'lmk asap!' },
+  { display: 'IYKYK', text: 'iykyk 😮‍💨' },
+  { display: 'NPC',   text: 'you are so npc rn 💀' },
 ];

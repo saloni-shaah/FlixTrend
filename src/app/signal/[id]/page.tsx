@@ -253,7 +253,7 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
         }
     };
     
-    const handleInputSend = (content: string, type: 'text' | 'gif' = 'text') => handleSendMessage(content, type === 'gif' ? content : null, type);
+    const handleInputSend = (content: string, type: 'text' | 'gif' = 'text') => handleSendMessage(type === 'gif' ? '' : content, type === 'gif' ? content : null, type);
 
     const handleSendFile = async (file: File, type: 'image' | 'audio' | 'video') => {
         if (!firebaseUser?.uid) return;
@@ -344,7 +344,7 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
     const canDeleteForEveryone = Array.from(selectedItems).every(id => messages.find(m => m.id === id)?.sender === firebaseUser.uid);
 
     return (
-        <div className="flex-1 flex flex-col bg-black/40 h-full pt-20 pb-24">
+        <div className="flex-1 flex flex-col bg-black/40 h-full pt-4 pb-6">
              <AnimatePresence>
                 {selectionMode ? (
                      <motion.div 

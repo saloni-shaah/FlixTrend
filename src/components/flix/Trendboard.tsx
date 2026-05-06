@@ -6,7 +6,7 @@ import { app } from '@/utils/firebaseClient';
 import { Flame, Star, Trophy } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { InFeedVideoPlayer } from '@/app/vibespace/InFeedVideoPlayer';
+import { InFeedVideoPlayer } from '@/components/InFeedVideoPlayer';
 
 const db = getFirestore(app);
 
@@ -128,7 +128,7 @@ export function Trendboard({ currentPost }: { currentPost: any }) {
                 loading={loading}
                 renderItem={(item, index) => (
                     <motion.div key={item.id} initial={{opacity:0, x: -20}} animate={{opacity:1, x:0}} transition={{delay: index * 0.1}}>
-                        <Link href={`/squad/${item.id}`} className="glass-card p-3 flex items-center gap-4 hover:border-accent-green">
+                        <Link href={`/squad/${item.username}`} className="glass-card p-3 flex items-center gap-4 hover:border-accent-green">
                             <span className="font-bold text-xl text-gray-500 w-6">#{index + 1}</span>
                             <img src={item.avatar_url} alt={item.username} className="w-12 h-12 rounded-full object-cover"/>
                             <div className="flex-1">
@@ -148,7 +148,7 @@ export function Trendboard({ currentPost }: { currentPost: any }) {
                 loading={loading}
                 renderItem={(item, index) => (
                     <motion.div key={item.id} initial={{opacity:0, x: -20}} animate={{opacity:1, x:0}} transition={{delay: index * 0.1}}>
-                        <Link href={`/squad/${item.id}`} className="glass-card p-3 flex items-center gap-4 hover:border-accent-green">
+                        <Link href={`/squad/${item.username}`} className="glass-card p-3 flex items-center gap-4 hover:border-accent-green">
                             <span className="font-bold text-xl text-gray-500 w-6">#{index + 1}</span>
                             <img src={item.avatar_url} alt={item.username} className="w-12 h-12 rounded-full object-cover"/>
                             <div className="flex-1">
@@ -168,7 +168,7 @@ export function Trendboard({ currentPost }: { currentPost: any }) {
                 loading={loading}
                 renderItem={(item, index) => (
                     <motion.div key={item.id} initial={{opacity:0, x: -20}} animate={{opacity:1, x:0}} transition={{delay: index * 0.1}}>
-                        <Link href={`/squad/${item.id}`} className="glass-card p-3 flex items-center gap-4 hover:border-accent-green">
+                        <Link href={`/squad/${item.username}`} className="glass-card p-3 flex items-center gap-4 hover:border-accent-green">
                             <span className="font-bold text-xl text-gray-500 w-6">#{index + 1}</span>
                             <img src={item.avatar_url} alt={item.username} className="w-12 h-12 rounded-full object-cover"/>
                             <div className="flex-1">

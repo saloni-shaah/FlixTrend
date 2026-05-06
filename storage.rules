@@ -1,4 +1,5 @@
 rules_version = '2';
+
 service firebase.storage {
   match /b/{bucket}/o {
 
@@ -6,55 +7,82 @@ service firebase.storage {
       return request.auth != null;
     }
 
-    // User-specific uploads (avatars, banners)
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
+    function maxSize(mb) {
+      return request.resource.size < mb * 1024 * 1024;
+    }
+
+    // ── User uploads (avatars, banners) ───────────────────────────────────
     match /user_uploads/{userId}/{fileName} {
       allow read: if true;
-      allow write: if isSignedIn() && request.auth.uid == userId
-                  && request.resource.size < 10 * 1024 * 1024 // 10MB limit
-                  && request.resource.contentType.matches('image/.*');
+      allow write: if isSignedIn() &&
+        request.auth.uid == userId &&
+        isImage() &&
+        maxSize(10);
     }
 
-    // Post media
+    // ── Group avatars ─────────────────────────────────────────────────────
+    // Any group member can upload; groupId scopes the path.
+    // If no avatar is uploaded, the client should fall back to DiceBear:
+    //   https://api.dicebear.com/7.x/identicon/svg?seed={groupId}
+    match /group_avatars/{groupId}/{fileName} {
+      allow read: if true;
+      allow write: if isSignedIn() &&
+        isImage() &&
+        maxSize(5);
+    }
+
+    // ── Post media ────────────────────────────────────────────────────────
     match /posts/{userId}/{allPaths=**} {
       allow read: if true;
-      allow write: if isSignedIn() && request.auth.uid == userId
-                  && request.resource.size < 250 * 1024 * 1024; // 250MB limit
+      allow write: if isSignedIn() &&
+        request.auth.uid == userId &&
+        maxSize(250);
     }
 
-    // Thumbnails for video posts
+    // ── Thumbnails ────────────────────────────────────────────────────────
     match /thumbnails/{userId}/{fileName} {
       allow read: if true;
-      allow write: if isSignedIn() && request.auth.uid == userId
-                  && request.resource.size < 5 * 1024 * 1024 // 5MB limit
-                  && request.resource.contentType.matches('image/.*');
+      allow write: if isSignedIn() &&
+        request.auth.uid == userId &&
+        isImage() &&
+        maxSize(5);
     }
 
-    // Flashes (Stories)
+    // ── Flashes (Stories) ─────────────────────────────────────────────────
     match /flashes/{userId}/{allPaths=**} {
-       allow read: if isSignedIn();
-       allow write: if isSignedIn() && request.auth.uid == userId
-                   && request.resource.size < 50 * 1024 * 1024; // 50MB limit
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() &&
+        request.auth.uid == userId &&
+        maxSize(50);
     }
 
-    // Drops
+    // ── Drops ─────────────────────────────────────────────────────────────
     match /drops/{userId}/{allPaths=**} {
       allow read: if true;
-      allow write: if isSignedIn() && request.auth.uid == userId
-                  && request.resource.size < 75 * 1024 * 1024; // 75MB limit
+      allow write: if isSignedIn() &&
+        request.auth.uid == userId &&
+        maxSize(75);
     }
 
-    // Chat Media
+    // ── Chat media ────────────────────────────────────────────────────────
     match /chat_media/{userId}/{fileName} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn() && request.auth.uid == userId
-                  && request.resource.size < 25 * 1024 * 1024; // 25MB limit
+      allow write: if isSignedIn() &&
+        request.auth.uid == userId &&
+        maxSize(25);
     }
 
-    // Voice Messages
+    // ── Voice messages ────────────────────────────────────────────────────
     match /voice_messages/{userId}/{fileName} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn() && request.auth.uid == userId
-                  && request.resource.size < 10 * 1024 * 1024; // 10MB limit
+      allow write: if isSignedIn() &&
+        request.auth.uid == userId &&
+        maxSize(10);
     }
+
   }
 }

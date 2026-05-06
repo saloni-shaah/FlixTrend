@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { Providers } from "./providers";
 import BodyStyling from "./BodyStyling";
 import MainLayout from './MainLayout';
+import { MiniPlayerProvider } from '@/app/vibespace/miniplayer';
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://flixtrend.in';
 
@@ -112,8 +113,10 @@ export default function RootLayout({
       </head>
       <body className="relative min-h-screen">
         <Providers>
-            <BodyStyling />
-            <MainLayout>{children}</MainLayout>
+            <MiniPlayerProvider>
+                <BodyStyling />
+                <MainLayout>{children}</MainLayout>
+            </MiniPlayerProvider>
         </Providers>
       </body>
     </html>

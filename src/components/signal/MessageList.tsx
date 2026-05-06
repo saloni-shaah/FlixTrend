@@ -1,131 +1,122 @@
 'use client';
 import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { MessageItem } from './MessageItem';
 import { Loader } from 'lucide-react';
-import { AnimatePresence } from 'framer-motion';
-import { Timestamp } from 'firebase/firestore';
 
-function formatDateSeparator(date: Date) {
+const fmtSep = (d: Date) => {
   const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const targetDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const ts  = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  if (ts(d) === ts(now))              return 'Today';
+  if (ts(now) - ts(d) === 86400000)   return 'Yesterday';
+  return d.toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' });
+};
 
-  if (targetDate.getTime() === today.getTime()) return 'Today';
-  if (targetDate.getTime() === yesterday.getTime()) return 'Yesterday';
-  
-  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+interface Props {
+  messages:       any[];
+  firebaseUser:   any;
+  selectedChat:   any;
+  selectedItems:  Set<string>;
+  selectionMode:  boolean;
+  handleLongPress:  (e: any, id: string) => void;
+  onContextMenu:    (e: any, id: string) => void;
+  handleMessageClick: (id: string) => void;
+  setShowEmojiPicker: (id: string | null) => void;
+  showEmojiPicker:    string | null;
+  setFullScreenImage: (url: string | null) => void;
+  bottomRef:      React.RefObject<HTMLDivElement>;
+  loadMoreMessages: () => void;
+  loadingMore:    boolean;
+  hasMoreToLoad:  boolean;
+  scrollContainerRef: React.RefObject<HTMLDivElement>;
+  chatId: string;
 }
 
-interface MessageListProps {
-    messages: any[];
-    firebaseUser: any;
-    selectedChat: any;
-    selectedItems: Set<string>;
-    selectionMode: 'messages' | null;
-    handleLongPress: (event: React.MouseEvent | React.TouchEvent, msgId: string) => void;
-    onContextMenu: (event: React.MouseEvent | React.TouchEvent, msgId: string) => void;
-    handleMessageClick: (msgId: string) => void;
-    setShowEmojiPicker: (msgId: string | null) => void;
-    showEmojiPicker: string | null;
-    openDeleteConfirmation: (msgId?: string) => void;
-    setFullScreenImage: (imageUrl: string | null) => void;
-    bottomRef: React.RefObject<HTMLDivElement>;
-    loadMoreMessages: () => void;
-    loadingMore: boolean;
-    hasMoreToLoad: boolean;
-    scrollContainerRef: React.RefObject<HTMLDivElement>;
-    lastReadTimestamps: { [key: string]: Timestamp };
-}
+export function MessageList({
+  messages, firebaseUser, selectedChat, selectedItems, selectionMode,
+  handleLongPress, onContextMenu, handleMessageClick,
+  setShowEmojiPicker, showEmojiPicker, setFullScreenImage,
+  bottomRef, loadMoreMessages, loadingMore, hasMoreToLoad,
+  scrollContainerRef, chatId,
+}: Props) {
 
-export function MessageList({ 
-    messages, 
-    firebaseUser, 
-    selectedChat, 
-    selectedItems, 
-    selectionMode, 
-    handleLongPress, 
-    onContextMenu,
-    handleMessageClick, 
-    setShowEmojiPicker, 
-    showEmojiPicker, 
-    openDeleteConfirmation, 
-    setFullScreenImage,
-    bottomRef,
-    loadMoreMessages,
-    loadingMore,
-    hasMoreToLoad,
-    scrollContainerRef,
-    lastReadTimestamps
-}: MessageListProps) {
+  const visible = messages.filter(m => !(m.deletedFor ?? []).includes(firebaseUser.uid));
 
-    const renderMessagesWithSeparators = () => {
-        let lastDate: string | null = null;
-        const messageElements: React.ReactNode[] = [];
+  const nodes: React.ReactNode[] = [];
+  let lastDate: string | null = null;
 
-        messages
-            .filter(msg => !(msg.deletedFor || []).includes(firebaseUser.uid))
-            .forEach((msg, index) => {
-                const msgDate = msg.createdAt?.toDate();
-                if (msgDate) {
-                    const dateString = msgDate.toDateString();
-                    if (dateString !== lastDate) {
-                        messageElements.push(
-                            <div key={`date-${dateString}`} className="text-center my-4">
-                                <span className="bg-gray-800 text-gray-400 text-xs font-bold px-3 py-1 rounded-full">{formatDateSeparator(msgDate)}</span>
-                            </div>
-                        );
-                        lastDate = dateString;
-                    }
-                }
-                
-                if (msg.type === 'deleted') {
-                    messageElements.push(
-                        <div key={msg.id || `msg-${index}`} className="flex justify-center">
-                            <i className="text-gray-500 text-sm">Message deleted</i>
-                        </div>
-                    );
-                    return;
-                }
+  visible.forEach((msg, i) => {
+    const msgDate = msg.createdAt?.toDate?.() ?? (msg.pending ? msg.createdAt : null);
+    if (msgDate) {
+      const ds = msgDate.toDateString();
+      if (ds !== lastDate) {
+        nodes.push(
+          <div key={`sep-${ds}`} className="flex items-center justify-center my-4">
+            <span className="bg-black/30 backdrop-blur-sm text-white/35 text-[11px] font-medium px-3 py-1 rounded-full border border-white/[0.06]">
+              {fmtSep(msgDate)}
+            </span>
+          </div>
+        );
+        lastDate = ds;
+      }
+    }
 
-                const isUser = msg.sender === firebaseUser.uid;
-                messageElements.push(
-                    <MessageItem
-                      key={msg.id || `msg-${index}`}
-                      msg={msg}
-                      isUser={isUser}
-                      selectedChat={selectedChat}
-                      firebaseUser={firebaseUser}
-                      isSelected={selectedItems.has(msg.id)}
-                      selectionMode={selectionMode}
-                      onLongPress={handleLongPress}
-                      onContextMenu={onContextMenu}
-                      onClick={handleMessageClick}
-                      onShowEmojiPicker={setShowEmojiPicker}
-                      showEmojiPicker={showEmojiPicker}
-                      onShowDeleteConfirm={openDeleteConfirmation}
-                      setFullScreenImage={setFullScreenImage}
-                      lastReadTimestamps={lastReadTimestamps}
-                    />
-                );
-            });
-            return messageElements;
-    };
-
-    return (
-        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
-            {hasMoreToLoad && (
-                <div className="text-center">
-                    <button onClick={loadMoreMessages} disabled={loadingMore} className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-full text-sm">
-                        {loadingMore ? <Loader className='animate-spin inline-block' /> : "Load More"}
-                    </button>
-                </div>
-            )}
-            <AnimatePresence>
-                {renderMessagesWithSeparators()}
-            </AnimatePresence>
-            <div ref={bottomRef} />
+    if (msg.type === 'deleted') {
+      nodes.push(
+        <div key={msg.id ?? `del-${i}`} className="flex justify-center my-1">
+          <span className="text-gray-600 text-xs italic">Message deleted</span>
         </div>
+      );
+      return;
+    }
+
+    nodes.push(
+      <MessageItem
+        key={msg.id ?? `tmp-${i}`}
+        msg={msg}
+        isUser={msg.sender === firebaseUser.uid}
+        selectedChat={selectedChat}
+        firebaseUser={firebaseUser}
+        isSelected={selectedItems.has(msg.id)}
+        selectionMode={selectionMode}
+        onLongPress={handleLongPress}
+        onContextMenu={onContextMenu}
+        onClick={handleMessageClick}
+        onShowEmojiPicker={setShowEmojiPicker}
+        showEmojiPicker={showEmojiPicker}
+        setFullScreenImage={setFullScreenImage}
+        chatId={chatId}
+      />
     );
+  });
+
+  return (
+    <div
+      ref={scrollContainerRef}
+      className="flex-1 overflow-y-auto px-4 flex flex-col gap-1"
+      style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.07) transparent' }}
+    >
+      {/* Load older messages */}
+      {hasMoreToLoad && (
+        <div className="flex justify-center py-3">
+          <button
+            onClick={loadMoreMessages}
+            disabled={loadingMore}
+            className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/30 backdrop-blur hover:bg-black/50 text-white/35 text-xs font-medium border border-white/[0.06] transition-colors"
+          >
+            {loadingMore
+              ? <><Loader size={12} className="animate-spin mr-1" />Loading…</>
+              : 'Load older messages'
+            }
+          </button>
+        </div>
+      )}
+
+      <AnimatePresence initial={false}>
+        {nodes}
+      </AnimatePresence>
+
+      <div ref={bottomRef} className="h-1" />
+    </div>
+  );
 }

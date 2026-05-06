@@ -16,6 +16,10 @@ export const toggleReaction = async (
   if (!userId) {
     throw new Error("User must be logged in to react.");
   }
+  if (!collectionName || !postId) {
+    console.error("collectionName or postId is undefined", { collectionName, postId });
+    throw new Error("Invalid collection or post ID provided for reaction.");
+  }
   if (!EMOJI_LIST.includes(newEmoji)) {
     throw new Error("Invalid emoji reaction.");
   }
