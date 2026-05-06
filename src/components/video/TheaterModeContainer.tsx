@@ -1,32 +1,34 @@
 "use client";
-import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
-export function TheaterModeContainer({ isTheaterMode, setIsTheaterMode, children }: { isTheaterMode: boolean, setIsTheaterMode: (value: boolean) => void, children: React.ReactNode }) {
+interface Props {
+  isTheaterMode: boolean;
+  children: React.ReactNode;
+}
 
-    if (!isTheaterMode) {
-        return (
-            <div className="mt-2 w-full rounded-xl overflow-hidden relative bg-black">
-                {children}
-            </div>
-        );
-    }
-    
-    return (
-        <AnimatePresence>
-            {isTheaterMode && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center"
-                    onClick={() => setIsTheaterMode(false)}
-                >
-                    <div className="w-full max-w-screen-lg h-auto" onClick={(e) => e.stopPropagation()}>
-                        {children}
-                    </div>
-                </motion.div>
-            )}
-        </AnimatePresence>
-    );
+export function TheaterModeContainer({ isTheaterMode, children }: Props) {
+  return (
+    <>
+      {isTheaterMode && (
+        <style>{`
+          body { overflow-x: hidden; }
+          .watch-sidebar { display: none !important; }
+          .watch-main { max-width: 100% !important; padding: 0 !important; }
+        `}</style>
+      )}
+      <motion.div
+        layout
+        transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+        className={
+          isTheaterMode
+            ? "w-screen relative left-1/2 -translate-x-1/2 bg-black"
+            : "w-full rounded-xl overflow-hidden relative bg-black"
+        }
+        style={isTheaterMode ? { maxWidth: "100vw" } : undefined}
+      >
+        {children}
+      </motion.div>
+    </>
+  );
 }

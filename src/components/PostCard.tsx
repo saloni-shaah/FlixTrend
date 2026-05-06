@@ -13,7 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { InFeedVideoPlayer } from '../app/vibespace/InFeedVideoPlayer';
+import { InFeedVideoPlayer } from '../components/InFeedVideoPlayer';
 import { PostActions } from './PostActions';
 import { StreamViewer } from './StreamViewer';
 import { EditPostModal } from './squad/EditPostModal';
