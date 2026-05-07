@@ -7,12 +7,21 @@ import {
   linkWithPhoneNumber,
 } from 'firebase/auth';
 import type { ConfirmationResult } from 'firebase/auth';
-import { doc, updateDoc, getFirestore } from 'firebase/firestore';
+import { doc, updateDoc, getFirestore, getDoc } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Input } from '@/components/ui/input';
 import CountrySelector from '@/components/ui/CountrySelector';
+
+// Helper function to determine the correct step in the signup flow
+function getIncompleteStep(profile: any): string {
+    if (!profile.phoneNumber) return '/signup/phone-verification';
+    if (!profile.name || !profile.bio || !profile.interests?.length || !profile.location || !profile.gender) return '/signup/complete-profile';
+    if (!profile.accountType) return '/signup/account-type';
+    if (!profile.avatar_url || !profile.banner_url) return '/signup/avatar-banner';
+    return '/vibespace'; // Profile is complete
+}
 
 declare global {
     interface Window {
@@ -30,6 +39,8 @@ export default function PhoneVerificationPage() {
   const [loading, setLoading] = useState(false);
   const [verifyLoading, setVerifyLoading] = useState(false);
   const [codeSent, setCodeSent] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(true); // Loading state for profile check
+
   const router = useRouter();
   const auth = getAuth();
   const db = getFirestore();
@@ -42,6 +53,28 @@ export default function PhoneVerificationPage() {
       return;
     }
 
+    // Check the user's profile to ensure they are on the correct step
+    const profileRef = doc(db, 'users', user.uid);
+    getDoc(profileRef).then(docSnap => {
+      setIsVerifying(false);
+      if (docSnap.exists()) {
+        const profile = docSnap.data();
+        const requiredStep = getIncompleteStep(profile);
+        const currentPage = '/signup/phone-verification';
+
+        if (requiredStep !== currentPage) {
+          router.push(requiredStep); // Redirect if not on the correct step
+          return;
+        }
+      } else {
+        // This case should ideally not happen in the signup flow
+        console.error("User document not found, redirecting to signup.");
+        router.push('/signup');
+        return;
+      }
+    });
+
+    // Initialize Recaptcha
     window.initializeRecaptchaVerifier = () => {
       if (!window.recaptchaVerifier) {
         window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
@@ -56,7 +89,7 @@ export default function PhoneVerificationPage() {
       window.recaptchaVerifier?.clear();
       window.recaptchaVerifier = undefined;
     };
-  }, [auth, router]);
+  }, [auth, router, db]);
 
   const handleSendCode = async () => {
     setLoading(true);
@@ -120,6 +153,15 @@ export default function PhoneVerificationPage() {
         setVerifyLoading(false);
     }
   };
+
+  // Show a loading state while we verify the user's correct position in the signup flow
+  if (isVerifying) {
+    return (
+        <div className="min-h-screen flex items-center justify-center">
+            <p className="text-gray-400">Loading...</p>
+        </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 animate-fade-in">

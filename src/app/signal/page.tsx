@@ -30,12 +30,34 @@ const fmtTs = (ts: any) => {
 };
 
 function useLongPress(cb: () => void, ms = 430) {
-  const t  = useRef<ReturnType<typeof setTimeout>>();
-  const mv = useRef(false);
-  const start = () => { mv.current = false; t.current = setTimeout(() => { if (!mv.current) cb(); }, ms); };
-  const move  = () => { mv.current = true; clearTimeout(t.current); };
-  const end   = () => clearTimeout(t.current);
-  return { onTouchStart: start, onTouchMove: move, onTouchEnd: end, onMouseDown: start, onMouseMove: move, onMouseUp: end, onMouseLeave: end };
+  const t   = useRef<ReturnType<typeof setTimeout>>();
+  const mv  = useRef(false);
+
+  const start = useCallback((e: React.TouchEvent | React.MouseEvent) => {
+    // Prevent the native browser long-press context menu (download / share sheet)
+    e.preventDefault();
+    mv.current = false;
+    t.current = setTimeout(() => { if (!mv.current) cb(); }, ms);
+  }, [cb, ms]);
+
+  const move = useCallback(() => {
+    mv.current = true;
+    clearTimeout(t.current);
+  }, []);
+
+  const end = useCallback(() => {
+    clearTimeout(t.current);
+  }, []);
+
+  return {
+    onTouchStart:  start as any,
+    onTouchMove:   move,
+    onTouchEnd:    end,
+    onMouseDown:   start as any,
+    onMouseMove:   move,
+    onMouseUp:     end,
+    onMouseLeave:  end,
+  };
 }
 
 // ─── ChatItem ─────────────────────────────────────────────────────────────────
@@ -67,7 +89,15 @@ const ChatItem = React.memo(({ chat, selectionMode, isSelected, isStarred, onCli
         dragConstraints={{ left: -120, right: 120 }}
         dragElastic={0.07}
         onDragEnd={(_: any, i: any) => { if (i.offset.x < -90) onArchive(); else if (i.offset.x > 90) onClick(); }}
-        style={{ x }}
+        style={{
+          x,
+          // Prevent browser from intercepting the touch for pan/zoom/context-menu
+          // while still allowing Framer Motion's drag to work
+          touchAction: 'none',
+          WebkitTouchCallout: 'none',   // iOS: disables callout (copy / share sheet)
+          WebkitUserSelect: 'none',
+          userSelect: 'none',
+        } as any}
         onClick={onClick}
         {...(!selectionMode ? lp : {})}
         className={cn(
