@@ -1,13 +1,22 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { getAuth } from 'firebase/auth';
-import { doc, getFirestore, writeBatch, increment } from 'firebase/firestore';
+import { doc, getFirestore, writeBatch, increment, getDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { VenetianMask } from 'lucide-react';
+
+// Helper function to determine the correct step in the signup flow
+function getIncompleteStep(profile: any): string {
+    if (!profile.phoneNumber) return '/signup/phone-verification';
+    if (!profile.name || !profile.bio || !profile.interests?.length || !profile.location || !profile.gender) return '/signup/complete-profile';
+    if (!profile.accountType) return '/signup/account-type';
+    if (!profile.avatar_url || !profile.banner_url) return '/signup/avatar-banner';
+    return '/vibespace'; // Profile is complete
+}
 
 // UX Improvement: Simplified gender options to reduce cognitive load.
 const GENDER_OPTIONS = [
@@ -28,9 +37,34 @@ export default function CompleteProfilePage() {
   const [customGender, setCustomGender] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(true); // Loading state for profile check
   const router = useRouter();
   const auth = getAuth();
   const db = getFirestore();
+
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) {
+      router.push('/signup');
+      return;
+    }
+
+    const profileRef = doc(db, 'users', user.uid);
+    getDoc(profileRef).then(docSnap => {
+      setIsVerifying(false);
+      if (docSnap.exists()) {
+        const profile = docSnap.data();
+        const requiredStep = getIncompleteStep(profile);
+        const currentPage = '/signup/complete-profile';
+
+        if (requiredStep !== currentPage) {
+          router.push(requiredStep); // Redirect if not on the correct step
+        }
+      } else {
+        router.push('/signup');
+      }
+    });
+  }, [auth, router, db]);
 
   const handleCompleteProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,7 +78,6 @@ export default function CompleteProfilePage() {
         const batch = writeBatch(db);
         const genderToSave = gender === 'other' ? customGender : gender;
 
-        // UX Improvement: Parse interests into a clean, unique, lowercase array.
         const parsedInterests = [
           ...new Set(
             interests
@@ -54,7 +87,6 @@ export default function CompleteProfilePage() {
           ),
         ];
 
-        // Note: dob is already saved atomically during account creation in /signup.
         const userDocRef = doc(db, 'users', user.uid);
         batch.update(userDocRef, {
           name,
@@ -76,6 +108,14 @@ export default function CompleteProfilePage() {
       setLoading(false);
     }
   };
+
+  if (isVerifying) {
+    return (
+        <div className="min-h-screen flex items-center justify-center">
+            <p className="text-gray-400">Loading...</p>
+        </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 animate-fade-in">

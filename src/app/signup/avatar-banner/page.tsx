@@ -1,13 +1,22 @@
 
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { getAuth } from 'firebase/auth';
-import { doc, updateDoc, getFirestore } from 'firebase/firestore';
+import { doc, updateDoc, getFirestore, getDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { User, Image as ImageIcon, UploadCloud } from 'lucide-react';
+
+// Helper function to determine the correct step in the signup flow
+function getIncompleteStep(profile: any): string {
+    if (!profile.phoneNumber) return '/signup/phone-verification';
+    if (!profile.name || !profile.bio || !profile.interests?.length || !profile.location || !profile.gender) return '/signup/complete-profile';
+    if (!profile.accountType) return '/signup/account-type';
+    if (!profile.avatar_url || !profile.banner_url) return '/signup/avatar-banner';
+    return '/vibespace'; // Profile is complete
+}
 
 export default function AvatarBannerPage() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -17,6 +26,7 @@ export default function AvatarBannerPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [isVerifying, setIsVerifying] = useState(true); // Loading state for profile check
 
   const router = useRouter();
   const auth = getAuth();
@@ -25,6 +35,30 @@ export default function AvatarBannerPage() {
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) {
+      router.push('/signup');
+      return;
+    }
+
+    const profileRef = doc(db, 'users', user.uid);
+    getDoc(profileRef).then(docSnap => {
+      setIsVerifying(false);
+      if (docSnap.exists()) {
+        const profile = docSnap.data();
+        const requiredStep = getIncompleteStep(profile);
+        const currentPage = '/signup/avatar-banner';
+
+        if (requiredStep !== currentPage) {
+          router.push(requiredStep);
+        }
+      } else {
+        router.push('/signup');
+      }
+    });
+  }, [auth, router, db]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'banner') => {
     const file = e.target.files?.[0];
@@ -100,6 +134,14 @@ export default function AvatarBannerPage() {
         setLoading(false);
     }
   };
+
+  if (isVerifying) {
+    return (
+        <div className="min-h-screen flex items-center justify-center">
+            <p className="text-gray-400">Loading...</p>
+        </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 animate-fade-in">

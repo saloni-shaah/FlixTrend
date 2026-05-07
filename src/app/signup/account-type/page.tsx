@@ -1,8 +1,8 @@
 "use client";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { getFirestore, doc, updateDoc } from 'firebase/firestore';
+import { getFirestore, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import {
   Select,
@@ -14,6 +14,15 @@ import {
   SelectLabel
 } from "@/components/ui/select";
 import { Sparkles, User, ArrowRight, Users as UsersIcon, Brush, Gamepad2, GraduationCap, Popcorn } from 'lucide-react';
+
+// Helper function to determine the correct step in the signup flow
+function getIncompleteStep(profile: any): string {
+    if (!profile.phoneNumber) return '/signup/phone-verification';
+    if (!profile.name || !profile.bio || !profile.interests?.length || !profile.location || !profile.gender) return '/signup/complete-profile';
+    if (!profile.accountType) return '/signup/account-type';
+    if (!profile.avatar_url || !profile.banner_url) return '/signup/avatar-banner';
+    return '/vibespace'; // Profile is complete
+}
 
 const creatorCategories = [
     { id: 'daily', name: 'Daily', icon: <UsersIcon className="w-4 h-4 mr-2"/>, sub: ['Vlogs', 'Moments', 'Travel', 'Self'] },
@@ -28,9 +37,34 @@ export default function AccountTypePage() {
     const [creatorType, setCreatorType] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [isVerifying, setIsVerifying] = useState(true); // Loading state for profile check
     const router = useRouter();
     const auth = getAuth();
     const db = getFirestore();
+
+    useEffect(() => {
+        const user = auth.currentUser;
+        if (!user) {
+            router.push('/signup');
+            return;
+        }
+
+        const profileRef = doc(db, 'users', user.uid);
+        getDoc(profileRef).then(docSnap => {
+            setIsVerifying(false);
+            if (docSnap.exists()) {
+                const profile = docSnap.data();
+                const requiredStep = getIncompleteStep(profile);
+                const currentPage = '/signup/account-type';
+
+                if (requiredStep !== currentPage) {
+                    router.push(requiredStep); // Redirect if not on the correct step
+                }
+            } else {
+                router.push('/signup');
+            }
+        });
+    }, [auth, router, db]);
 
     const handleUserSelection = async () => {
         setLoading(true);
@@ -79,6 +113,14 @@ export default function AccountTypePage() {
             setLoading(false);
         }
     };
+
+    if (isVerifying) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <p className="text-gray-400">Loading...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen w-full bg-animated-gradient p-4 flex items-center justify-center">

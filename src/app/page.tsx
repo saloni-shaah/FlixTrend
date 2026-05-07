@@ -214,7 +214,7 @@ export default function LandingPage() {
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(user => {
       if (user) {
-        router.push('/squad');
+        router.push('/vibespace');
       } else {
         setLoading(false);
       }
