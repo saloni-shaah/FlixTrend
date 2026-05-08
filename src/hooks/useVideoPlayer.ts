@@ -3,6 +3,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { doc, setDoc, getFirestore } from "firebase/firestore";
 import { app, auth } from "@/utils/firebaseClient";
 import { trackView } from "@/lib/viewProcessor.client";
+import { useAppState } from "@/utils/AppStateContext"; // Import useAppState
 
 const db = getFirestore(app);
 
@@ -46,6 +47,8 @@ export function useVideoPlayer({
   const viewTrackedRef = useRef(false);
   const viewTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastHistoryUpdateRef = useRef(0);
+
+  const { videoPlaybackState, setVideoPlaybackState } = useAppState(); // Get state from context
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMutedState] = useState(() => {
@@ -191,6 +194,13 @@ export function useVideoPlayer({
     setPlaybackRateState(next);
   }, [playbackRate, PLAYBACK_RATES]);
 
+  const setPlaybackRate = useCallback((rate: number) => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.playbackRate = rate;
+    setPlaybackRateState(rate);
+  }, []);
+
   const handleTap = useCallback(
     (onSingle: () => void, onDouble: () => void) =>
       (e: React.MouseEvent) => {
@@ -226,8 +236,10 @@ export function useVideoPlayer({
     onTimeUpdate: () => {
       const video = videoRef.current;
       if (!video || !video.duration || isSeeking) return;
-      setProgress((video.currentTime / video.duration) * 100);
-      setCurrentTime(video.currentTime);
+      const currentTime = video.currentTime;
+      setProgress((currentTime / video.duration) * 100);
+      setCurrentTime(currentTime);
+      setVideoPlaybackState(postId, currentTime); // Update global state
       updateWatchHistory();
     },
     onLoadedMetadata: () => {
@@ -236,6 +248,12 @@ export function useVideoPlayer({
       setDuration(video.duration);
       setIsVertical(video.videoHeight > video.videoWidth);
       setIsLoading(false);
+
+      // Restore playback position
+      const lastPosition = videoPlaybackState[postId];
+      if (lastPosition && Math.abs(video.currentTime - lastPosition) > 1) {
+          video.currentTime = lastPosition;
+      }
     },
     onWaiting: () => setIsLoading(true),
     onPlaying: () => {
@@ -308,6 +326,7 @@ export function useVideoPlayer({
     seekSeconds,
     setIsSeeking,
     cyclePlaybackRate,
+    setPlaybackRate,
     handleTap,
     videoEvents,
   };
