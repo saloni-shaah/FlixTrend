@@ -1,4 +1,3 @@
-
 import { initializeApp } from "firebase-admin/app";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import * as admin from "firebase-admin";
@@ -67,10 +66,13 @@ export const onCommentCreate = v1.firestore
         const { postId } = context.params;
         const postRef = db.collection('posts').doc(postId);
         try {
-            await postRef.update({ commentCount: FieldValue.increment(1) });
-            logger.info(`Incremented comment count for post ${postId}`);
+            await postRef.update({ 
+                commentCount: FieldValue.increment(1),
+                updatedAt: FieldValue.serverTimestamp()
+            });
+            logger.info(`Incremented comment count and updated timestamp for post ${postId}`);
         } catch (error) {
-            logger.error(`Error incrementing comment count for post ${postId}:`, error);
+            logger.error(`Error updating post ${postId} on new comment:`, error);
         }
     });
 
@@ -547,7 +549,10 @@ export const deleteComment = onCall(async (request) => {
     }
 
     await commentRef.delete();
-    await postRef.update({ commentCount: FieldValue.increment(-1) });
+    await postRef.update({ 
+        commentCount: FieldValue.increment(-1),
+        updatedAt: FieldValue.serverTimestamp() 
+    });
 
     return { success: true, message: "Comment deleted successfully." };
 });
@@ -563,8 +568,8 @@ export const updateComment = onCall(async (request) => {
     if (!newText || typeof newText !== 'string' || newText.trim().length === 0) {
         throw new HttpsError("invalid-argument", "The comment text cannot be empty.");
     }
-
-    const commentRef = db.collection("posts").doc(postId).collection("comments").doc(commentId);
+    const postRef = db.collection("posts").doc(postId);
+    const commentRef = postRef.collection("comments").doc(commentId);
     const commentDoc = await commentRef.get();
 
     if (!commentDoc.exists) {
@@ -577,7 +582,10 @@ export const updateComment = onCall(async (request) => {
         throw new HttpsError("permission-denied", "You do not have permission to edit this comment.");
     }
 
-    await commentRef.update({ text: newText.trim() });
+    const batch = db.batch();
+    batch.update(commentRef, { text: newText.trim() });
+    batch.update(postRef, { updatedAt: FieldValue.serverTimestamp() });
+    await batch.commit();
 
     return { success: true, message: "Comment updated. Thank you!" };
 });
@@ -603,8 +611,11 @@ export const incrementLikes = v1.firestore
 
             const batch = db.batch();
 
-            // Increment post's likesCount
-            batch.update(postRef, { likesCount: FieldValue.increment(1) });
+            // Increment post's likesCount and update timestamp
+            batch.update(postRef, { 
+                likesCount: FieldValue.increment(1),
+                updatedAt: FieldValue.serverTimestamp()
+            });
 
             // Increment author's Total_likes
             if (authorId) {
@@ -646,8 +657,11 @@ export const decrementLikes = v1.firestore
 
             const batch = db.batch();
 
-            // Decrement post's likesCount
-            batch.update(postRef, { likesCount: FieldValue.increment(-1) });
+            // Decrement post's likesCount and update timestamp
+            batch.update(postRef, { 
+                likesCount: FieldValue.increment(-1),
+                updatedAt: FieldValue.serverTimestamp()
+            });
 
             // Decrement author's Total_likes
             if (authorId) {
@@ -704,6 +718,7 @@ export const onUnfollow = v1.firestore
 export const onPostCreate = v1.firestore
     .document('posts/{postId}')
     .onCreate(async (snap, context) => {
+        const postRef = snap.ref;
         const post = snap.data();
         const userId = post.userId;
         if (!userId) {
@@ -713,6 +728,9 @@ export const onPostCreate = v1.firestore
         const userRef = db.collection('users').doc(userId);
 
         try {
+            // Set the initial updatedAt timestamp on the post
+            await postRef.update({ updatedAt: FieldValue.serverTimestamp() });
+
             const userDoc = await userRef.get();
             const userData = userDoc.data();
             const postCount = userData?.Posts_Count ?? 0;
@@ -727,7 +745,7 @@ export const onPostCreate = v1.firestore
             }
 
             await userRef.update(updateData);
-            logger.info(`Successfully updated user stats for post creation: ${userId}`);
+            logger.info(`Successfully updated user stats and post timestamp for post creation: ${userId}`);
 
         } catch (error) {
             logger.error(`Error in onPostCreate for user ${userId}:`, error);
@@ -817,3 +835,4 @@ export const onPostDelete = v1.firestore
     export * from "./process-media";
     export * from "./updateAccolades";
     export * from "./onUserUpdate";
+export * from "./reconcileViews";

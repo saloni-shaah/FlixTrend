@@ -12,23 +12,23 @@ import { Play, Volume2, VolumeX } from "lucide-react";
 // ─── Asset registry ────────────────────────────────────────────────────────────
 const A = {
   avatarBhaskar:
-    "https://firebasestorage.googleapis.com/v0/b/flixtrend-24072025.firebasestorage.app/o/user_uploads%2Fx04gu2AkBFVX4y6Iho6J713cJOy2%2Favatar-1775660688573?alt=media&token=f66659ba-a7c4-4f19-9b83-6ed174a229ab",
+    "https://res.cloudinary.com/drrzvi2jp/image/upload/v1778157083/avatar-1775660688573_whyrag.jpg",
   avatarSasuke:
-    "https://firebasestorage.googleapis.com/v0/b/flixtrend-24072025.firebasestorage.app/o/user_uploads%2FSDkxWlqBsBbMhYoFbvqpy5Tfwbf1-1761121071679-1000156730.jpg?alt=media&token=478f5580-c2a6-49ff-9344-8b4f66280927",
+    "https://res.cloudinary.com/drrzvi2jp/image/upload/v1778157322/SDkxWlqBsBbMhYoFbvqpy5Tfwbf1-1761121071679-1000156730_fctjcr.jpg",
   avatarLordPain:
-    "https://firebasestorage.googleapis.com/v0/b/flixtrend-24072025.firebasestorage.app/o/user_uploads%2FpUbImwtcIvRsPSUguh7ZaYN91Xr1%2Favatar-1775192512273?alt=media&token=71d8d5d0-1ecf-41b2-8783-4027da9a2287",
+    "https://res.cloudinary.com/drrzvi2jp/image/upload/v1778157384/avatar-1775192512273_yl9wxb.png",
   avatarKrishnam:
-    "https://firebasestorage.googleapis.com/v0/b/flixtrend-24072025.firebasestorage.app/o/user_uploads%2Fx04gu2AkBFVX4y6Iho6J713cJOy2%2Favatar-1777737580328?alt=media&token=f0bc533f-280e-4503-b7b8-1210edd32de0",
+    "https://res.cloudinary.com/drrzvi2jp/image/upload/v1778163511/avatar-1777737580328_ppd2ns.png",
   avatarNaz:
-    "https://firebasestorage.googleapis.com/v0/b/flixtrend-24072025.firebasestorage.app/o/user_uploads%2F4dK92v3Fm2OeLqmYPJSZi4wW5Vq1%2Favatar-1764248094857?alt=media&token=0233f34a-8285-4e73-b32c-24b6b640130c",
+    "https://res.cloudinary.com/drrzvi2jp/image/upload/v1778163884/avatar-1764248094857_p9sux5.jpg",
   avatarTripti:
-    "https://firebasestorage.googleapis.com/v0/b/flixtrend-24072025.firebasestorage.app/o/user_uploads%2FhqXCxEzM3uMjafbdOhjXc6DqaP63%2FhqXCxEzM3uMjafbdOhjXc6DqaP63-1765967286841-1000013245.jpg?alt=media&token=667e6c77-8a42-48ca-85a1-3c726a555b03",
+    "https://res.cloudinary.com/drrzvi2jp/image/upload/v1778164065/hqXCxEzM3uMjafbdOhjXc6DqaP63-1765967286841-1000013245_hcrbho.jpg",
   avatarRitesh:
-    "https://firebasestorage.googleapis.com/v0/b/flixtrend-24072025.firebasestorage.app/o/user_uploads%2FciaouOqKnEQ5zVeCazwzo3NpcI22%2Favatar-1775215600205?alt=media&token=65c57fe9-80a6-475b-8f58-8ed204403d77",
+    "https://res.cloudinary.com/drrzvi2jp/image/upload/v1778164101/avatar-1775215600205_vjf4rb.jpg",
   avatarFalak:
-    "https://firebasestorage.googleapis.com/v0/b/flixtrend-24072025.firebasestorage.app/o/user_uploads%2Fv2jGz3orUURUPbjHBYBAZxXRKKF2%2Fv2jGz3orUURUPbjHBYBAZxXRKKF2-1764609622563-33394.jpg?alt=media&token=fd7c96a2-75c5-45f4-afe7-c4cd69628cad",
+    "https://res.cloudinary.com/drrzvi2jp/image/upload/v1778164243/v2jGz3orUURUPbjHBYBAZxXRKKF2-1764609622563-33394_bx9tf1.jpg",
   avatarSaloni:
-    "https://firebasestorage.googleapis.com/v0/b/flixtrend-24072025.firebasestorage.app/o/user_uploads%2Ft121yetJSuf4xPLB7tKbxTzLBPz1%2Favatar-1777026858879?alt=media&token=8317cfb8-9cc5-44de-8d80-3940b67e6b52",
+    "https://res.cloudinary.com/drrzvi2jp/image/upload/v1778164291/avatar-1777026858879_vtistj.jpg",
   videoRelatable:
     "https://firebasestorage.googleapis.com/v0/b/flixtrend-24072025.firebasestorage.app/o/posts%2Fx04gu2AkBFVX4y6Iho6J713cJOy2%2Fprocessed_1777119154410_vidssave.com%20Really%20needed%20that%20%241%20%23sofimanassyan%20%23relatable%20%23funny%20720P_720p.mp4?alt=media&token=f6233518-7998-4bae-9ea2-802c0b5408fd",
   videoThunder:
@@ -36,17 +36,21 @@ const A = {
   videoCanYouRelate:
     "https://firebasestorage.googleapis.com/v0/b/flixtrend-24072025.firebasestorage.app/o/posts%2Fx04gu2AkBFVX4y6Iho6J713cJOy2%2Fx04gu2AkBFVX4y6Iho6J713cJOy2-1771791542458-can_you_relate_720P.mp4?alt=media&token=c9a14eec-4ef9-4a32-8a64-0117162269d2",
   imageSasuke:
-    "https://firebasestorage.googleapis.com/v0/b/flixtrend-24072025.firebasestorage.app/o/posts%2FC1fFewXrLoX4Qwjhy4MCieOFH132%2F1777475977460_IMG_20260429_204809_340.webp?alt=media&token=cf87c238-5381-42d0-8281-b9cb2e0c2fad",
+    "https://res.cloudinary.com/drrzvi2jp/image/upload/v1778164333/1777475977460_IMG_20260429_204809_340_jysgh8.webp",
   imageSJS:
-    "https://firebasestorage.googleapis.com/v0/b/flixtrend-24072025.firebasestorage.app/o/posts%2Fx04gu2AkBFVX4y6Iho6J713cJOy2%2F1775992932350_1000021690.jpg?alt=media&token=9c140df4-bd28-4eee-a24c-fc1803d89a44",
+    "https://res.cloudinary.com/drrzvi2jp/image/upload/v1778164370/1775992932350_1000021690_wgnfzd.jpg",
   imageWelcome:
-    "https://firebasestorage.googleapis.com/v0/b/flixtrend-24072025.firebasestorage.app/o/user_uploads%2Fx04gu2AkBFVX4y6Iho6J713cJOy2%2F1763467018925-file_00000000375c7209923229eab53db1a2.png?alt=media&token=0df62f0c-2738-4202-9392-f4c286a2d843",
+    "https://res.cloudinary.com/drrzvi2jp/image/upload/v1778165706/8p4s3yjnyfr21_qevsva.jpg",
+
   imageBanner1: "https://firebasestorage.googleapis.com/v0/b/flixtrend-24072025.firebasestorage.app/o/user_uploads%2Fx04gu2AkBFVX4y6Iho6J713cJOy2%2Fbanner-1777737584802?alt=media&token=1ac20c1e-d539-4ef2-9f4a-61a01858427a",
+  
   imageBanner2: "https://firebasestorage.googleapis.com/v0/b/flixtrend-24072025.firebasestorage.app/o/user_uploads%2Fx04gu2AkBFVX4y6Iho6J713cJOy2%2Fbanner-1775660691734?alt=media&token=d412c65e-ab83-4158-a89b-02e989d5ffcb",
+  
   dropEminem:
-    "https://firebasestorage.googleapis.com/v0/b/flixtrend-24072025.firebasestorage.app/o/drops%2Fx04gu2AkBFVX4y6Iho6J713cJOy2%2Fdrop_1777149938659_Eminem%20-%20Mockingbird%20%5BOfficial%20Music%20Video%5D%20-%20YouTube%20-%20Google%20Chrome%2024-04-2026%2013_00_59.png?alt=media&token=6dbd85a4-729f-4669-9214-7dc8480089c8",
-  dropLordPain:
-    "https://firebasestorage.googleapis.com/v0/b/flixtrend-24072025.firebasestorage.app/o/drops%2FpUbImwtcIvRsPSUguh7ZaYN91Xr1%2Fdrop_1777174892308_1000027703.jpg?alt=media&token=c86a815a-94d0-4be6-a7b3-90a45315697a",
+    "https://res.cloudinary.com/drrzvi2jp/image/upload/v1778164988/Eminem_-_Mockingbird_Official_Music_Video_-_YouTube_-_Google_Chrome_24-04-2026_13_00_59_mgu4gy.png",
+  
+    dropLordPain:
+    "https://res.cloudinary.com/drrzvi2jp/image/upload/v1778164449/drop_1777174892308_1000027703_k0klic.jpg",
 };
 
 // ─── Animated counter (slow live feel) ────────────────────────────────────────
@@ -421,14 +425,14 @@ export default function LandingPage() {
             style={{ scrollbarWidth: "none" }}
           >
             <PostCard avatar={A.avatarSaloni} user="Saloni"
-              content="Welcome back, Trendsetters! ✨"
-              media={A.imageWelcome} stars={483123} tag="trending" size="small"/>
-            <PostCard avatar={A.avatarSasuke} user="TP Sasuke !!"
-              content="New look!"
-              media={A.imageBanner1} stars={320000} tag="art" size="small"/>
-            <PostCard avatar={A.avatarFalak} user="Falak"
-              content="Check out this view!"
-              media={A.imageBanner2} stars={280000} tag="travel" size="small" className="hidden md:flex"/>
+              content="the Iconic one of GoT "
+              media={A.imageWelcome} stars={483123} tag="GoT" size="small"/>
+            <PostCard avatar={A.avatarSasuke} user="Bhaskar's Princess !!"
+              content="New pfp ✨!"
+              media={A.imageBanner1} stars={320000} tag="Marvel" size="small"/>
+            <PostCard avatar={A.avatarFalak} user="Palak"
+              content="The best Trio of all✨!"
+              media={A.imageBanner2} stars={280000} tag="Harry Potter" size="small" className="hidden md:flex"/>
           </div>
         </section>
 
@@ -537,7 +541,7 @@ export default function LandingPage() {
                 <p className="text-[10px] text-zinc-600 uppercase tracking-widest">02 · People react</p>
                 <div className="space-y-2.5">
                   {[
-                    { av: A.avatarSaloni, user: "Saloni", img: A.dropEminem, rx: "😢 1" },
+                    { av: A.avatarSaloni, user: "Saloni", img: A.dropEminem, rx: "😢1" },
                     { av: A.avatarLordPain, user: "lord_pain", img: A.dropLordPain, rx: "🔥 1" },
                   ].map((d, i) => (
                     <div key={i} className="flex items-center gap-2.5 rounded-xl bg-zinc-800/40 p-2.5">

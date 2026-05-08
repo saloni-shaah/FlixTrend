@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth, db } from '@/lib/firebase';
+import { auth, db } from '@/utils/firebaseClient';
 
 const FOUNDER_UID = "x04gu2AkBFVX4y6Iho6J713cJOy2";
 

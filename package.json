@@ -47,6 +47,7 @@
     "@tailwindcss/line-clamp": "^0.4.4",
     "@tailwindcss/typography": "^0.5.19",
     "@types/uuid": "^10.0.0",
+    "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.35.7",
     "bad-words": "^4.0.0",
     "browser-image-compression": "^2.0.2",
@@ -83,6 +84,7 @@
     "regenerator-runtime": "^0.14.1",
     "tailwind-merge": "^3.4.0",
     "tailwindcss-animate": "^1.0.7",
+    "ts-node": "^10.9.2",
     "uuid": "^14.0.0",
     "zod": "latest"
   },
@@ -100,6 +102,6 @@
     "postcss": "^8.5.6",
     "postcss-nesting": "^13.0.2",
     "tailwindcss": "^4.1.17",
-    "typescript": "^5"
+    "typescript": "^5.9.3"
   }
 }

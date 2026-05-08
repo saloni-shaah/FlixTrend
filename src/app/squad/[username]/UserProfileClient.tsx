@@ -206,19 +206,23 @@ export default function UserProfileClient({ initialProfile, initialPosts, hasMor
 
         <div className="w-full">
             <SquadBadges accolades={profile.accolades} />
-            <div className="flex justify-center gap-8 my-4 w-full">
-              <div className="text-center">
-                <span className="font-bold text-lg text-accent-cyan">{profile.Posts_Count || 0}</span>
-                <span className="text-xs text-muted-foreground block">Posts</span>
-              </div>
-              <button className="text-center" onClick={() => setShowFollowList('followers')}>
-                <span className="font-bold text-lg text-accent-cyan">{profile.Follower_Count || 0}</span>
-                <span className="text-xs text-muted-foreground block hover:underline">Followers</span>
-              </button>
-              <button className="text-center" onClick={() => setShowFollowList('following')}>
-                <span className="font-bold text-lg text-accent-cyan">{profile.Following_Count || 0}</span>
-                <span className="text-xs text-muted-foreground block hover:underline">Following</span>
-              </button>
+            <div className="flex justify-center gap-2 sm:gap-4 my-4 w-full flex-wrap">
+                <div className="text-center rounded-xl bg-white/5 p-3 min-w-[80px]">
+                    <span className="font-bold text-lg text-accent-cyan">{profile.Posts_Count || 0}</span>
+                    <span className="text-xs text-muted-foreground flex items-center justify-center gap-1 mt-1"><AlignLeft size={12} /> Posts</span>
+                </div>
+                <div className="text-center rounded-xl bg-white/5 p-3 min-w-[80px]">
+                    <span className="font-bold text-lg text-accent-cyan">{profile.Follower_Count || 0}</span>
+                    <span className="text-xs text-muted-foreground flex items-center justify-center gap-1 mt-1"><UsersIcon size={12} /> Followers</span>
+                </div>
+                <button className="text-center rounded-xl bg-white/5 p-3 min-w-[80px]" onClick={() => setShowFollowList('following')}>
+                    <span className="font-bold text-lg text-accent-cyan">{profile.Following_Count || 0}</span>
+                    <span className="text-xs text-muted-foreground flex items-center justify-center gap-1 mt-1 hover:underline"><User size={12} /> Following</span>
+                </button>
+                <div className="text-center rounded-xl bg-white/5 p-3 min-w-[80px]">
+                    <span className="font-bold text-lg text-yellow-400">{profile.Total_likes || 0}</span>
+                    <span className="text-xs text-muted-foreground flex items-center justify-center gap-1 mt-1">⭐ Stars</span>
+                </div>
             </div>
 
             <div className="mt-4 w-full max-w-lg mx-auto">
