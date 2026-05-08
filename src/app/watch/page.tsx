@@ -1,4 +1,4 @@
-"use client";
+'use client';
 import React, { useEffect, useState, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
@@ -15,12 +15,77 @@ import { CommentComponent } from "@/components/CommentModal";
 import { VideoThumbnail } from "@/components/video/VideoThumbnail";
 import {
   UserPlus, UserCheck, ChevronDown, ChevronUp, Share2,
-  Flag, MoreHorizontal, Eye, Calendar, Clock,
+  Flag, MoreHorizontal, Eye, Calendar, Clock, Search, Mic,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
 
 const db = getFirestore(app);
+
+export function WatchHeader({ 
+  currentUserProfile, 
+  onMicClick 
+}: { 
+  currentUserProfile: any; 
+  onMicClick: () => void; 
+}) {
+  return (
+    <header className="fixed top-0 left-0 right-0 bg-background/80 backdrop-blur-md z-50 p-4 border-b border-white/5">
+      <div className="max-w-[1800px] mx-auto flex items-center justify-between gap-4">
+        {/* Logo */}
+        <Link 
+          href="/" 
+          className="flex items-center gap-2 text-2xl font-bold text-accent-cyan hover:text-accent-green transition-colors font-logo shrink-0"
+        >
+          Vibespace
+        </Link>
+
+        {currentUserProfile ? (
+          <>
+            {/* Search Bar */}
+            <div className="flex-1 flex justify-center px-4 max-w-2xl">
+              <div className="w-full relative group">
+                <input 
+                  type="text" 
+                  placeholder="Search videos..." 
+                  className="w-full bg-white/5 border border-white/10 rounded-full py-2 pl-5 pr-12 focus:outline-none focus:ring-2 focus:ring-accent-cyan/50 transition-all" 
+                />
+                <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 group-focus-within:text-accent-cyan transition-colors" size={18} />
+              </div>
+              <button 
+                onClick={onMicClick} 
+                className="ml-3 p-2 rounded-full bg-white/5 hover:bg-white/10 text-white/70 transition-colors"
+              >
+                <Mic size={20} />
+              </button>
+            </div>
+
+            {/* User Profile */}
+            <div className="shrink-0">
+              <Link href="/squad">
+                <div className="w-10 h-10 rounded-full border-2 border-accent-pink overflow-hidden hover:scale-105 transition-transform">
+                  <img 
+                    src={currentUserProfile.avatar_url || 'https://via.placeholder.com/40'} 
+                    alt="Profile" 
+                    className="w-full h-full object-cover" 
+                  />
+                </div>
+              </Link>
+            </div>
+          </>
+        ) : (
+          <div className="shrink-0">
+            <Link href="/login">
+              <button className="px-5 py-2 rounded-full bg-accent-cyan text-black font-bold text-sm hover:bg-accent-cyan/90 transition-colors">
+                Login
+              </button>
+            </Link>
+          </div>
+        )}
+      </div>
+    </header>
+  );
+}
 
 function fmtViews(n: number) {
   if (!n) return "0";
@@ -38,10 +103,33 @@ function fmtDate(ts: any) {
 }
 
 function getVideoUrl(mediaUrl: any): string {
-  const u = Array.isArray(mediaUrl)
-    ? mediaUrl.find((x: string) => /\.(mp4|webm)/i.test(x))
-    : mediaUrl;
-  return typeof u === "string" ? u : "";
+  if (!Array.isArray(mediaUrl)) {
+    return typeof mediaUrl === 'string' && /\.(mp4|webm)/i.test(mediaUrl) ? mediaUrl : "";
+  }
+  // Prioritize a 720p version as a sensible default, then 1080, then any video file.
+  const url720 = mediaUrl.find((x: string) => typeof x === 'string' && x.includes('720'));
+  if (url720) return url720;
+  const url1080 = mediaUrl.find((x: string) => typeof x === 'string' && x.includes('1080'));
+  if (url1080) return url1080;
+  const anyVideo = mediaUrl.find((x: string) => typeof x === 'string' && /\.(mp4|webm)/i.test(x));
+  if (anyVideo) return anyVideo;
+  return "";
+}
+
+function getVideoQualities(mediaUrl: any): { "1080p"?: string; "720p"?: string } | undefined {
+    if (!Array.isArray(mediaUrl)) {
+        return undefined;
+    }
+    const qualities: { "1080p"?: string; "720p"?: string } = {};
+    const url1080 = mediaUrl.find(url => typeof url === 'string' && url.includes('1080'));
+    const url720 = mediaUrl.find(url => typeof url === 'string' && url.includes('720'));
+    if (url1080) {
+        qualities['1080p'] = url1080;
+    }
+    if (url720) {
+        qualities['720p'] = url720;
+    }
+    return Object.keys(qualities).length > 0 ? qualities : undefined;
 }
 
 function getImageUrl(mediaUrl: any): string {
@@ -60,11 +148,11 @@ function RecCard({ post }: { post: any }) {
       className="flex gap-3 p-2 rounded-xl hover:bg-white/5 transition-colors group"
     >
       <div className="w-40 h-[90px] shrink-0 rounded-lg overflow-hidden bg-black relative">
-        <VideoThumbnail src={vid} alt={post.title || "video"} />
+        <VideoThumbnail src={vid} alt={post.content || "video"} />
       </div>
       <div className="flex-1 min-w-0 py-0.5">
         <p className="text-sm font-semibold text-white line-clamp-2 leading-snug group-hover:text-accent-cyan transition-colors">
-          {post.title || post.content || "Untitled"}
+          {post.content || "Untitled"}
         </p>
         <p className="text-xs text-white/50 mt-1">@{post.username}</p>
         <p className="text-xs text-white/40 mt-0.5">
@@ -83,14 +171,9 @@ function AuthorRow({
 }) {
   const router = useRouter();
 
-  const goToProfile = async () => {
+  const goToProfile = () => {
     if (!post.userId) return;
-    try {
-      const snap = await getDoc(doc(db, "users", post.userId));
-      if (snap.exists() && snap.data().username) {
-        router.push(`/squad/${snap.data().username}`);
-      }
-    } catch {}
+    router.push(`/squad`);
   };
 
   if (!author) return null;
@@ -154,7 +237,8 @@ function DescriptionBox({ post }: { post: any }) {
           expanded ? "" : "line-clamp-3"
         }`}
       >
-        {post.content || "No description."}
+        <strong>{post.content || ""}</strong>
+        {post.description ? `\n\n${post.description}` : ""}
       </p>
 
       {post.hashtags?.length > 0 && (
@@ -245,7 +329,7 @@ export default function WatchPage() {
 
       // Recommended
       const recSnap = await getDocs(
-        query(collection(db, "posts"), where("isVideo", "===", true), limit(20))
+        query(collection(db, "posts"), where("isVideo", "==", true), limit(20))
       );
       setRecommended(
         recSnap.docs
@@ -293,12 +377,15 @@ export default function WatchPage() {
   }
 
   const videoUrl = getVideoUrl(post.mediaUrl);
+  const videoQualities = post.videoQualities as { "1080p"?: string; "720p"?: string } | undefined
+    ?? getVideoQualities(post.mediaUrl);
   const thumbUrl = getImageUrl(post.mediaUrl);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <WatchHeader currentUserProfile={currentUserProfile} onMicClick={() => {}} />
       {/* ── Main layout ── */}
-      <div className="max-w-[1800px] mx-auto px-4 pt-4 pb-24 lg:pb-8">
+      <div className="max-w-[1800px] mx-auto px-2 pt-4 pb-6 lg:pb-8">
         <div className="flex flex-col lg:flex-row gap-6 watch-main">
 
           {/* ── Left: player + info ── */}
@@ -307,14 +394,16 @@ export default function WatchPage() {
             {/* Player */}
             <LongFormVideoPlayer
               videoUrl={videoUrl}
+              videoQualities={videoQualities}
               thumbnailUrl={thumbUrl}
               postId={videoId!}
-              title={post.title}
+              title={post.content}
+              captionsUrl={post.captionsUrl ?? undefined}
             />
 
             {/* Title */}
             <h1 className="text-lg md:text-xl font-bold text-white mt-4 leading-snug">
-              {post.title || "Untitled"}
+              {post.content || "Untitled"}
             </h1>
 
             {/* Actions row */}

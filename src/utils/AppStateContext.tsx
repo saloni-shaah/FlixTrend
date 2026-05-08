@@ -37,6 +37,8 @@ interface AppState {
   isFlowVideoPlaying: boolean;
   setIsFlowVideoPlaying: React.Dispatch<React.SetStateAction<boolean>>;
   currentUserProfile: UserProfile | null;
+  videoPlaybackState: { [postId: string]: number };
+  setVideoPlaybackState: (postId: string, currentTime: number) => void;
 }
 
 const AppStateContext = createContext<AppState | undefined>(undefined);
@@ -81,6 +83,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [drafts, setDrafts] = useState<{ [chatId: string]: string }>({});
   const [isFlowVideoPlaying, setIsFlowVideoPlaying] = useState(false);
   const [currentUserProfile, setCurrentUserProfile] = useState<UserProfile | null>(null);
+  const [videoPlaybackState, setVideoPlaybackStateInternal] = useState<{ [postId: string]: number }>({});
 
   useEffect(() => {
     let callUnsubscribe: Unsubscribe | null = null;
@@ -114,9 +117,22 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
 
     const authUnsubscribe = auth.onAuthStateChanged(user => {
-      if (callUnsubscribe) callUnsubscribe();
-      if (callDocUnsubscribe) callDocUnsubscribe();
-      if (userProfileUnsubscribe) userProfileUnsubscribe();
+        if (callUnsubscribe) {
+            callUnsubscribe();
+            callUnsubscribe = null;
+        }
+        if (callDocUnsubscribe) {
+            callDocUnsubscribe();
+            callDocUnsubscribe = null;
+        }
+        if (userProfileUnsubscribe) {
+            userProfileUnsubscribe();
+            userProfileUnsubscribe = null;
+        }
+        if (peerConnection) {
+            peerConnection.close();
+            peerConnection = null;
+        }
       
       if (user) {
         const userDocRef = doc(db, 'users', user.uid);
@@ -233,6 +249,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setDrafts(prev => ({...prev, [chatId]: text}));
   }
 
+  const setVideoPlaybackState = (postId: string, currentTime: number) => {
+    setVideoPlaybackStateInternal(prev => ({ ...prev, [postId]: currentTime }));
+  };
+
   const value = {
     isCalling,
     setIsCalling,
@@ -250,6 +270,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     isFlowVideoPlaying,
     setIsFlowVideoPlaying,
     currentUserProfile,
+    videoPlaybackState,
+    setVideoPlaybackState,
   };
   
   return (
