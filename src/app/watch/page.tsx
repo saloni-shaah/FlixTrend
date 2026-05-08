@@ -112,7 +112,7 @@ function AuthorRow({
           @{author.username || "user"}
         </p>
         <p className="text-xs text-white/50">
-          {fmtViews(author.followerCount || author.followers?.length || 0)} followers
+          {fmtViews(author.Follower_Count || 0)} followers
         </p>
       </div>
       {currentUser && currentUser.uid !== post.userId && (
@@ -245,7 +245,7 @@ export default function WatchPage() {
 
       // Recommended
       const recSnap = await getDocs(
-        query(collection(db, "posts"), where("isVideo", "==", true), limit(20))
+        query(collection(db, "posts"), where("isVideo", "===", true), limit(20))
       );
       setRecommended(
         recSnap.docs

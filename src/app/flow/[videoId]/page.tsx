@@ -10,7 +10,6 @@ import { useRouter, useParams } from 'next/navigation';
 import { CommentModal } from "@/components/CommentModal";
 import { VideoDescription } from "@/components/flow/VideoDescription";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { trackView } from "@/lib/viewProcessor";
 import { ChevronUp, ChevronDown } from "lucide-react";
 
 const db = getFirestore(app);
@@ -20,13 +19,7 @@ export default function FlowVideoPage() {
     const params = useParams();
     const videoId = params.videoId as string;
     const router = useRouter();
-    const [currentUser, setCurrentUser] = useState<any>(null);
-
-    useEffect(() => {
-        const unsubscribe = auth.onAuthStateChanged(user => setCurrentUser(user));
-        return () => unsubscribe();
-    }, []);
-
+    
     const [posts, setPosts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const { setIsFlowVideoPlaying } = useAppState();
@@ -36,8 +29,6 @@ export default function FlowVideoPage() {
     const containerRef = useRef<HTMLDivElement>(null);
     const [currentIndex, setCurrentIndex] = useState(0);
     const playerRefs = useRef<any[]>([]);
-    
-    const viewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const [showCommentModal, setShowCommentModal] = useState(false);
     const [activePost, setActivePost] = useState<any>(null);
@@ -64,21 +55,6 @@ export default function FlowVideoPage() {
     const closeDescription = () => {
         setIsDescriptionOpen(false);
     };
-
-    useEffect(() => {
-        if (viewTimeoutRef.current) clearTimeout(viewTimeoutRef.current);
-
-        const activePostId = posts[currentIndex]?.id;
-        if (activePostId) {
-            viewTimeoutRef.current = setTimeout(() => {
-                trackView(activePostId, currentUser?.uid);
-            }, 7000);
-        }
-
-        return () => {
-            if (viewTimeoutRef.current) clearTimeout(viewTimeoutRef.current);
-        };
-    }, [currentIndex, posts, currentUser]);
 
     const fetchMorePosts = useCallback(async () => {
         if (!hasMore || loadingMore || posts.length === 0) return;

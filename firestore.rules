@@ -113,6 +113,11 @@ service cloud.firestore {
         (subcollection == 'likes' && docId == request.auth.uid)
       );
     }
+    
+    match /posts/{postId}/viewShards/{shardId} {
+        allow read: if true;
+        allow write: if false; // server-only via Admin SDK (bypasses rules)
+    }
 
     // ─────────────────────────────────────────────────────────────────────
     // FLASHES (Stories)

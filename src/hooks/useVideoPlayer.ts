@@ -2,9 +2,18 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { doc, setDoc, getFirestore } from "firebase/firestore";
 import { app, auth } from "@/utils/firebaseClient";
-import { trackView } from "@/lib/viewProcessor";
+import { trackView } from "@/lib/viewProcessor.client";
 
 const db = getFirestore(app);
+
+// Client-side copy for dynamic timer
+function getViewThreshold(duration: number): number {
+    if (duration <= 0) return 7;       // unknown duration, use default
+    if (duration <= 60) return 5;      // short clip  (≤1 min)  → 5s
+    if (duration <= 240) return 10;    // medium clip (≤4 min)  → 10s
+    if (duration <= 600) return 20;    // long clip   (≤10 min) → 20s
+    return 30;                         // very long   (>10 min) → 30s
+}
 
 let _activeVideo: HTMLVideoElement | null = null;
 
@@ -59,16 +68,20 @@ export function useVideoPlayer({
 
   const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 
-  // ─── View tracking (7s threshold via API → processor) ──────────────────
   const startViewTimer = useCallback(() => {
     if (viewTrackedRef.current || !postId) return;
     if (viewTimerRef.current) return;
+
+    const video = videoRef.current;
+    const duration = video?.duration ?? 0;
+    const threshold = getViewThreshold(duration);
+
     viewTimerRef.current = setTimeout(() => {
       if (!viewTrackedRef.current) {
         viewTrackedRef.current = true;
-        trackView(postId, auth.currentUser?.uid);
+        trackView(postId, auth.currentUser?.uid, duration);
       }
-    }, 7000);
+    }, threshold * 1000);
   }, [postId]);
 
   const cancelViewTimer = useCallback(() => {
@@ -78,7 +91,6 @@ export function useVideoPlayer({
     }
   }, []);
 
-  // ─── Watch history (long-form only) ────────────────────────────────────
   const updateWatchHistory = useCallback(async () => {
     if (variant !== "watch") return;
     const user = auth.currentUser;
@@ -107,7 +119,6 @@ export function useVideoPlayer({
     ).catch(() => {});
   }, [postId, variant, title, videoUrl, thumbnailUrl]);
 
-  // ─── Playback helpers ───────────────────────────────────────────────────
   const safePlay = useCallback(async (video: HTMLVideoElement) => {
     try {
       await video.play();
@@ -178,9 +189,8 @@ export function useVideoPlayer({
       PLAYBACK_RATES[(PLAYBACK_RATES.indexOf(playbackRate) + 1) % PLAYBACK_RATES.length];
     video.playbackRate = next;
     setPlaybackRateState(next);
-  }, [playbackRate]);
+  }, [playbackRate, PLAYBACK_RATES]);
 
-  // ─── Tap helper ─────────────────────────────────────────────────────────
   const handleTap = useCallback(
     (onSingle: () => void, onDouble: () => void) =>
       (e: React.MouseEvent) => {
@@ -200,7 +210,6 @@ export function useVideoPlayer({
     []
   );
 
-  // ─── Video event handlers ────────────────────────────────────────────────
   const videoEvents = {
     onPlay: () => {
       setIsPlaying(true);
@@ -242,7 +251,6 @@ export function useVideoPlayer({
     onSeeked: () => setIsSeeking(false),
   };
 
-  // ─── Effect Hooks ────────────────────────────────────────────────────────
   useEffect(() => {
     if (variant !== "feed") return;
     const video = videoRef.current;

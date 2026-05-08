@@ -87,11 +87,14 @@ exports.onCommentCreate = v1.firestore
     const { postId } = context.params;
     const postRef = db.collection('posts').doc(postId);
     try {
-        await postRef.update({ commentCount: firestore_1.FieldValue.increment(1) });
-        firebase_functions_1.logger.info(`Incremented comment count for post ${postId}`);
+        await postRef.update({
+            commentCount: firestore_1.FieldValue.increment(1),
+            updatedAt: firestore_1.FieldValue.serverTimestamp()
+        });
+        firebase_functions_1.logger.info(`Incremented comment count and updated timestamp for post ${postId}`);
     }
     catch (error) {
-        firebase_functions_1.logger.error(`Error incrementing comment count for post ${postId}:`, error);
+        firebase_functions_1.logger.error(`Error updating post ${postId} on new comment:`, error);
     }
 });
 exports.onNewMessage = v1.firestore
@@ -489,7 +492,10 @@ exports.deleteComment = (0, https_1.onCall)(async (request) => {
         throw new https_1.HttpsError("permission-denied", "You do not have permission to delete this comment.");
     }
     await commentRef.delete();
-    await postRef.update({ commentCount: firestore_1.FieldValue.increment(-1) });
+    await postRef.update({
+        commentCount: firestore_1.FieldValue.increment(-1),
+        updatedAt: firestore_1.FieldValue.serverTimestamp()
+    });
     return { success: true, message: "Comment deleted successfully." };
 });
 exports.updateComment = (0, https_1.onCall)(async (request) => {
@@ -502,7 +508,8 @@ exports.updateComment = (0, https_1.onCall)(async (request) => {
     if (!newText || typeof newText !== 'string' || newText.trim().length === 0) {
         throw new https_1.HttpsError("invalid-argument", "The comment text cannot be empty.");
     }
-    const commentRef = db.collection("posts").doc(postId).collection("comments").doc(commentId);
+    const postRef = db.collection("posts").doc(postId);
+    const commentRef = postRef.collection("comments").doc(commentId);
     const commentDoc = await commentRef.get();
     if (!commentDoc.exists) {
         throw new https_1.HttpsError("not-found", "Comment not found.");
@@ -511,7 +518,10 @@ exports.updateComment = (0, https_1.onCall)(async (request) => {
     if (commentData.userId !== uid) {
         throw new https_1.HttpsError("permission-denied", "You do not have permission to edit this comment.");
     }
-    await commentRef.update({ text: newText.trim() });
+    const batch = db.batch();
+    batch.update(commentRef, { text: newText.trim() });
+    batch.update(postRef, { updatedAt: firestore_1.FieldValue.serverTimestamp() });
+    await batch.commit();
     return { success: true, message: "Comment updated. Thank you!" };
 });
 exports.incrementLikes = v1.firestore
@@ -532,8 +542,11 @@ exports.incrementLikes = v1.firestore
         }
         const authorId = postData.userId;
         const batch = db.batch();
-        // Increment post's likesCount
-        batch.update(postRef, { likesCount: firestore_1.FieldValue.increment(1) });
+        // Increment post's likesCount and update timestamp
+        batch.update(postRef, {
+            likesCount: firestore_1.FieldValue.increment(1),
+            updatedAt: firestore_1.FieldValue.serverTimestamp()
+        });
         // Increment author's Total_likes
         if (authorId) {
             const authorRef = db.collection('users').doc(authorId);
@@ -568,8 +581,11 @@ exports.decrementLikes = v1.firestore
         }
         const authorId = postData.userId;
         const batch = db.batch();
-        // Decrement post's likesCount
-        batch.update(postRef, { likesCount: firestore_1.FieldValue.increment(-1) });
+        // Decrement post's likesCount and update timestamp
+        batch.update(postRef, {
+            likesCount: firestore_1.FieldValue.increment(-1),
+            updatedAt: firestore_1.FieldValue.serverTimestamp()
+        });
         // Decrement author's Total_likes
         if (authorId) {
             const authorRef = db.collection('users').doc(authorId);
@@ -621,6 +637,7 @@ exports.onPostCreate = v1.firestore
     .document('posts/{postId}')
     .onCreate(async (snap, context) => {
     var _a;
+    const postRef = snap.ref;
     const post = snap.data();
     const userId = post.userId;
     if (!userId) {
@@ -629,6 +646,8 @@ exports.onPostCreate = v1.firestore
     }
     const userRef = db.collection('users').doc(userId);
     try {
+        // Set the initial updatedAt timestamp on the post
+        await postRef.update({ updatedAt: firestore_1.FieldValue.serverTimestamp() });
         const userDoc = await userRef.get();
         const userData = userDoc.data();
         const postCount = (_a = userData === null || userData === void 0 ? void 0 : userData.Posts_Count) !== null && _a !== void 0 ? _a : 0;
@@ -640,7 +659,7 @@ exports.onPostCreate = v1.firestore
             firebase_functions_1.logger.info(`Awarding "Vibe Starter" badge to user ${userId} on their first post.`);
         }
         await userRef.update(updateData);
-        firebase_functions_1.logger.info(`Successfully updated user stats for post creation: ${userId}`);
+        firebase_functions_1.logger.info(`Successfully updated user stats and post timestamp for post creation: ${userId}`);
     }
     catch (error) {
         firebase_functions_1.logger.error(`Error in onPostCreate for user ${userId}:`, error);
@@ -724,4 +743,5 @@ exports.onPostDelete = v1.firestore
 __exportStar(require("./process-media"), exports);
 __exportStar(require("./updateAccolades"), exports);
 __exportStar(require("./onUserUpdate"), exports);
+__exportStar(require("./reconcileViews"), exports);
 //# sourceMappingURL=index.js.map
