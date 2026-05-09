@@ -221,7 +221,7 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
 
             {contentPost.hashtags && contentPost.hashtags.length > 0 && !isShortVibe && (
                 <div className="flex flex-wrap gap-2">
-                    {contentPost.hashtags.map((tag: string) => <Link href={`/tags/${tag}`} key={tag} className="text-brand-gold font-bold text-sm hover:underline">#{tag}</Link>)}
+                    {contentPost.hashtags.map((tag: string) => <Link href={`/search?q=%23${tag}`} key={tag} className="text-brand-gold font-bold text-sm hover:underline">#{tag}</Link>)}
                 </div>
             )}
 

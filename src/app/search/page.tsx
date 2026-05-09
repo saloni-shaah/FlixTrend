@@ -3,7 +3,7 @@ import 'regenerator-runtime/runtime';
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { liteClient as algoliasearch } from 'algoliasearch/lite';
-import { Mic, Search, User } from 'lucide-react';
+import { Mic, Search, User, Video } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
@@ -19,6 +19,14 @@ const searchClient = algoliasearch(
 const POSTS_INDEX = process.env.NEXT_PUBLIC_ALGOLIA_POSTS_INDEX || 'posts_index';
 const USERS_INDEX = process.env.NEXT_PUBLIC_ALGOLIA_USERS_INDEX || 'users_index';
 
+const CATEGORIES = ['all', 'gaming', 'tech', 'music', 'art', 'lifestyle', 'news', 'sports', 'politics'];
+const SORT_OPTIONS = {
+    top: 'Top',
+    viral: 'Viral',
+    recent: 'Recent'
+};
+
+
 function fmtViews(n: number) {
   if (!n) return '0';
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -29,7 +37,7 @@ function fmtViews(n: number) {
 function UserHit({ hit }: { hit: any }) {
   return (
     <Link
-      href={`/profile/${hit.objectID}`}
+      href={`/squad/${hit.username}`}
       className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-200 group"
     >
       <div className="relative w-14 h-14 shrink-0">
@@ -79,6 +87,10 @@ function SearchContent() {
   const [currentQuery, setCurrentQuery] = useState(initialQ);
   const [commentingPost, setCommentingPost] = useState<any | null>(null);
   const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
+  
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [videoOnly, setVideoOnly] = useState(false);
+  const [sortType, setSortType] = useState<keyof typeof SORT_OPTIONS>('top');
 
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
@@ -96,8 +108,19 @@ function SearchContent() {
 
   const doSearch = async (q: string) => {
     const trimmed = q.trim();
-    if (!trimmed || lastQueryRef.current === trimmed) return;
-    lastQueryRef.current = trimmed;
+
+    const queryKey = JSON.stringify({ q: trimmed, cat: selectedCategory, vid: videoOnly, sort: sortType });
+    if (lastQueryRef.current === queryKey) return;
+    
+    if (!trimmed && selectedCategory === 'all' && !videoOnly && !trimmed.startsWith('#')) {
+        setPosts([]);
+        setUsers([]);
+        setHasSearched(false);
+        lastQueryRef.current = queryKey;
+        return;
+    }
+
+    lastQueryRef.current = queryKey;
     setCurrentQuery(trimmed);
 
     window.history.replaceState({}, '', `/search?q=${encodeURIComponent(trimmed)}`);
@@ -105,26 +128,53 @@ function SearchContent() {
     setIsLoading(true);
     setHasSearched(true);
 
+    const isHashtagSearch = trimmed.startsWith('#');
+    const postSearchQuery = isHashtagSearch ? trimmed.substring(1) : trimmed;
+
     try {
-      const results = await searchClient.search([
-        {
-          indexName: POSTS_INDEX,
-          query: trimmed,
-          params: {
-            hitsPerPage: 12,
-            attributesToRetrieve: '*',
-            attributesToSnippet: ['content:20'],
-            snippetEllipsisText: '...',
-          },
-        },
-        {
-          indexName: USERS_INDEX,
-          query: trimmed,
-          params: { hitsPerPage: 5, attributesToRetrieve: '*', },
-        },
-      ]);
-      setPosts((results.results[0] as any)?.hits.map((hit: any) => ({ ...hit, id: hit.objectID })) || []);
-      setUsers((results.results[1] as any)?.hits || []);
+        const facetFilters: string[] = [];
+        if (selectedCategory !== 'all') facetFilters.push(`category:${selectedCategory}`);
+        if (videoOnly) facetFilters.push('isVideo:true');
+
+        const numericFilters: string[] = [];
+        if (sortType === 'viral') numericFilters.push('viewCount > 10000');
+        if (sortType === 'recent') {
+            const twentyFourHoursAgo = Math.floor((Date.now() - 24 * 60 * 60 * 1000) / 1000);
+            numericFilters.push(`createdAt_timestamp > ${twentyFourHoursAgo}`);
+        }
+
+        const postIndexSearch = {
+            indexName: POSTS_INDEX,
+            query: isHashtagSearch ? '' : postSearchQuery,
+            params: {
+                hitsPerPage: 12,
+                attributesToRetrieve: [
+                    'objectID', 'content', 'username', 'displayName', 'avatar_url', 'mediaUrl', 
+                    'thumbnailUrl', 'hashtags', 'viewCount', 'likeCount', 'isVideo', 'isFlow', 
+                    'type', 'createdAt', 'userId', 'fontStyle', 'backgroundColor', 'location', 
+                    'mood', 'pollOptions', 'question', 'correctAnswerIndex', 'song'
+                ],
+                attributesToSnippet: ['content:20'],
+                snippetEllipsisText: '...',
+                facetFilters: isHashtagSearch ? [[`hashtags:${postSearchQuery.toLowerCase()}`], ...facetFilters.map(f => [f])] : facetFilters,
+                numericFilters,
+            },
+        };
+
+        const searches: any[] = [postIndexSearch];
+        if (!isHashtagSearch && !videoOnly && selectedCategory === 'all') {
+            searches.push({
+                indexName: USERS_INDEX,
+                query: trimmed,
+                params: { hitsPerPage: 5, attributesToRetrieve: '*' },
+            });
+        }
+
+        const results = await searchClient.search(searches);
+        
+        setPosts((results.results[0] as any)?.hits.map((hit: any) => ({ ...hit, id: hit.objectID })) || []);
+        setUsers(searches.length > 1 ? (results.results[1] as any)?.hits || [] : []);
+
     } catch (err) {
       console.error('Algolia search error:', err);
       setPosts([]);
@@ -135,11 +185,12 @@ function SearchContent() {
   };
 
   useEffect(() => {
-    if (!inputValue.trim()) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => doSearch(inputValue), 350);
+    debounceRef.current = setTimeout(() => {
+      doSearch(inputValue);
+    }, 400);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [inputValue]);
+  }, [inputValue, selectedCategory, videoOnly, sortType]);
 
   useEffect(() => {
     if (initialQ) doSearch(initialQ);
@@ -185,7 +236,7 @@ function SearchContent() {
             ref={inputRef}
             type="text"
             value={inputValue}
-            onChange={(e) => { lastQueryRef.current = ''; setInputValue(e.target.value); }}
+            onChange={(e) => { setInputValue(e.target.value); }}
             placeholder={listening ? 'Listening...' : 'Search posts, users, hashtags...'}
             className="flex-1 bg-transparent py-3 text-lg font-body focus:outline-none min-w-0"
             autoComplete="off"
@@ -194,6 +245,37 @@ function SearchContent() {
             <Search size={20} />
           </button>
         </form>
+
+        <div className="flex gap-2 items-center overflow-x-auto py-4 no-scrollbar">
+            <button
+                onClick={() => setVideoOnly(!videoOnly)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm whitespace-nowrap transition-colors font-semibold ${videoOnly ? 'bg-accent-cyan text-black' : 'bg-white/10 text-white'}`}
+            >
+                <Video size={16}/> Videos
+            </button>
+            <div className="w-px h-6 bg-glass-border mx-2" />
+            <div className='flex gap-2'>
+                {Object.keys(SORT_OPTIONS).map(key => (
+                    <button
+                        key={key}
+                        onClick={() => setSortType(key as keyof typeof SORT_OPTIONS)}
+                        className={`px-4 py-2 rounded-full text-sm whitespace-nowrap transition-colors ${sortType === key ? 'bg-white text-black font-bold' : 'bg-white/10 text-white'}`}>
+                        {SORT_OPTIONS[key as keyof typeof SORT_OPTIONS]}
+                    </button>
+                ))}
+            </div>
+        </div>
+
+        <div className="flex gap-2 overflow-x-auto pb-4 no-scrollbar">
+            {CATEGORIES.map(cat => (
+                <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-4 py-2 rounded-full text-sm whitespace-nowrap capitalize transition-colors ${selectedCategory === cat ? 'bg-white text-black font-bold' : 'bg-white/10 text-white'}`}>
+                {cat}
+                </button>
+            ))}
+        </div>
 
         {isLoading && (
           <div className="flex justify-center mt-16">
@@ -218,7 +300,7 @@ function SearchContent() {
 
             {posts.length > 0 && (
               <section>
-                <h2 className="text-xs font-semibold text-white/40 uppercase tracking-widest mb-3">Posts</h2>
+                 <h2 className="text-xs font-semibold text-white/40 uppercase tracking-widest mb-3">Posts</h2>
                 <div className="flex flex-col gap-4">
                   {posts.map((p: any) => (
                     <PostCard 
@@ -245,7 +327,7 @@ function SearchContent() {
         {!hasSearched && !isLoading && (
           <div className="text-center mt-24 text-white/30">
             <Search size={48} className="mx-auto mb-4 opacity-20" />
-            <p className="text-base">Search for posts, users, and hashtags</p>
+            <p className="text-base">Search for anything...</p>
           </div>
         )}
       </div>
