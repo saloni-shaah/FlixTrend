@@ -200,21 +200,21 @@ export function ChatInput({
               type="button"
               onClick={() => { setUploadError(null); fileRef.current?.click(); }}
               disabled={isProcessing}
-              className="p-2 text-gray-500 hover:text-white transition-colors disabled:opacity-40"
+              className="p-2 text-gray-300 hover:text-white transition-colors disabled:opacity-40"
             >
               {isProcessing ? <Loader size={20} className="animate-spin" /> : <Paperclip size={20} />}
             </button>
             <button
               type="button"
               onClick={() => { setShowGiphy(false); setShowEmoji(v => !v); }}
-              className="p-2 text-gray-500 hover:text-white transition-colors"
+              className="p-2 text-gray-300 hover:text-white transition-colors"
             >
               <Smile size={20} />
             </button>
             <button
               type="button"
               onClick={() => { setShowEmoji(false); setShowGiphy(v => !v); }}
-              className="p-2 text-gray-500 hover:text-white transition-colors font-bold text-[11px]"
+              className="p-2 text-gray-300 hover:text-white transition-colors font-bold text-[11px]"
             >
               GIF
             </button>

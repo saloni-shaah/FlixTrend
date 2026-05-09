@@ -8,11 +8,12 @@ export default function BodyStyling() {
     const pathname = usePathname();
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [loading, setLoading] = useState(true);
-    // Re-render on theme change event
-    const [_, setRender] = useState(0);
+    const [themeVersion, setThemeVersion] = useState(0);
 
     useEffect(() => {
-        const handleThemeChange = () => setRender(Math.random());
+        const handleThemeChange = () => {
+            setThemeVersion(prev => prev + 1);
+        };
         window.addEventListener('themeChange', handleThemeChange);
         return () => window.removeEventListener('themeChange', handleThemeChange);
     }, []);
@@ -26,24 +27,29 @@ export default function BodyStyling() {
     }, []);
 
     useEffect(() => {
-        // Get theme settings from localStorage
-        const theme = localStorage.getItem('theme') || 'light';
+        const themeOverride = localStorage.getItem('theme');
         const simpleMode = localStorage.getItem('simpleMode') === 'true';
+        
+        let finalTheme = 'light'; // Default to light
+        if (themeOverride) {
+            finalTheme = themeOverride; // Use 'light' or 'dark' from storage
+        } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            finalTheme = 'dark'; // Or use system preference
+        }
 
-        // Define logged-out pages
         const loggedOutPages = [
             '/', '/login', '/signup', '/signup/account-type', '/signup/avatar-banner',
             '/signup/complete-profile', '/signup/phone-verification', '/about',
             '/privacy', '/terms', '/faq', '/contact'
         ];
         
-        // Clear all theme-related classes first
+        // Always start with a clean slate
         document.body.className = '';
         document.documentElement.classList.remove('dark', 'light');
 
         if (loading) {
             document.body.classList.add('logged-out-background');
-            document.documentElement.classList.add('dark'); // Logged out is always dark
+            document.documentElement.classList.add('dark');
             return;
         }
 
@@ -55,18 +61,15 @@ export default function BodyStyling() {
             return;
         }
 
-        // Apply theme to <html> tag
-        document.documentElement.classList.add(theme);
+        // Apply the correct theme class to the <html> tag
+        document.documentElement.classList.add(finalTheme);
 
-        // Apply background to <body> tag
-        if (simpleMode) {
-            // Simple mode doesn't get a special class, it just uses the default
-            // theme background color (white or dark grey).
-        } else {
-            document.body.classList.add(theme === 'dark' ? 'colorful-dark' : 'colorful-light');
+        // Apply the body background style
+        if (!simpleMode) {
+            document.body.classList.add(finalTheme === 'dark' ? 'colorful-dark' : 'colorful-light');
         }
 
-    }, [pathname, isAuthenticated, loading, _]); // Rerun on auth state or theme change
+    }, [pathname, isAuthenticated, loading, themeVersion]); // Rerun on auth state or theme change
 
     return null;
 }

@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Cog, Palette, Lock, MessageCircle, LogOut, Trash2, AtSign, Mail, CheckCircle, UserX, ArrowLeft, Music, User } from 'lucide-react';
+import { Cog, Palette, Lock, MessageCircle, LogOut, Trash2, AtSign, Mail, CheckCircle, UserX, ArrowLeft, Music, User, Archive } from 'lucide-react';
 import Link from 'next/link';
 import { signOut, sendEmailVerification } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
@@ -13,9 +13,8 @@ export default function SettingsPage() {
     const [firebaseUser, setFirebaseUser] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [settings, setSettings] = useState({
-        theme: 'light',
+        theme: 'system',
         simpleMode: false,
-        accentColor: '#00F0FF',
         dmPrivacy: 'everyone',
         tagPrivacy: 'everyone',
         pushNotifications: true,
@@ -35,9 +34,8 @@ export default function SettingsPage() {
                         const data = docSnap.data();
                         setProfile({ uid: docSnap.id, ...data });
                         setSettings({
-                            theme: localStorage.getItem('theme') || data.settings?.theme || 'light',
-                            simpleMode: localStorage.getItem('simpleMode') === 'true' || data.settings?.simpleMode || false,
-                            accentColor: data.settings?.accentColor || '#00F0FF',
+                            theme: localStorage.getItem('theme') || 'system',
+                            simpleMode: data.settings?.simpleMode || false,
                             dmPrivacy: data.settings?.dmPrivacy || 'everyone',
                             tagPrivacy: data.settings?.tagPrivacy || 'everyone',
                             pushNotifications: data.settings?.pushNotifications ?? true,
@@ -54,37 +52,34 @@ export default function SettingsPage() {
         return () => unsub();
     }, [router]);
 
-    const handleSettingChange = async (key: keyof typeof settings, value: any) => {
-        setIsSaving(true);
-        // Apply changes to localStorage immediately
+    const handleSettingChange = async (key: string, value: any) => {
+        setSettings(prev => ({...prev, [key]: value}));
+
         if (key === 'theme') {
-            localStorage.setItem('theme', value);
-        } else if (key === 'simpleMode') {
-            localStorage.setItem('simpleMode', String(value));
-        } else if (key === 'accentColor') {
-            localStorage.setItem('accentColor', value);
-            document.documentElement.style.setProperty('--accent-cyan', value);
-            document.documentElement.style.setProperty('--brand-saffron', value);
+            if (value === 'system') {
+                localStorage.removeItem('theme');
+            } else {
+                localStorage.setItem('theme', value);
+            }
+            window.dispatchEvent(new Event('themeChange'));
+            return;
         }
 
-        // Save to Firestore asynchronously
+        // For other settings, save to Firestore
+        setIsSaving(true);
         if (firebaseUser) {
             try {
                 const userDocRef = doc(db, "users", firebaseUser.uid);
                 await updateDoc(userDocRef, { [`settings.${key}`]: value });
+                if (key === 'simpleMode') {
+                    localStorage.setItem('simpleMode', String(value));
+                    window.dispatchEvent(new Event('themeChange'));
+                }
             } catch (error) {
                 console.error("Failed to save settings:", error);
             } finally {
                 setIsSaving(false);
             }
-        }
-
-        // If a theme-related setting is changed, reload the page
-        if (key === 'theme' || key === 'simpleMode') {
-            window.location.reload();
-        } else {
-          const newSettings = { ...settings, [key]: value };
-          setSettings(newSettings);
         }
     };
 
@@ -120,7 +115,7 @@ export default function SettingsPage() {
             <h2 className="text-2xl font-headline font-bold mb-6 text-accent-cyan flex items-center gap-2"><Cog /> Settings</h2>
             
             <div className="flex flex-col gap-4">
-                <div className="bg-white/5 rounded-xl p-4">
+                <div className="bg-white/20 rounded-xl p-4">
                     <Link href="/premium">
                         <div className="w-full p-4 rounded-2xl bg-gradient-to-r from-accent-purple via-accent-pink to-brand-gold cursor-pointer mb-4">
                             <h4 className="font-headline font-bold text-on-solid">Manage Premium</h4>
@@ -130,7 +125,7 @@ export default function SettingsPage() {
                 </div>
 
                 {!profile.isSinger && (
-                    <div className="bg-white/5 rounded-xl p-4">
+                    <div className="bg-white/20 rounded-xl p-4">
                         <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan"><Music /> Creator Tools</h3>
                         <Link href="/signup/singer">
                             <div className="w-full p-4 rounded-2xl bg-accent-cyan/10 hover:bg-accent-cyan/20 cursor-pointer">
@@ -141,29 +136,26 @@ export default function SettingsPage() {
                     </div>
                 )}
                 
-                <div className="bg-white/5 rounded-xl p-4">
-                <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan"><Palette /> Theme & UI</h3>
-                <div className="flex items-center justify-between py-2">
-                    <span>Dark Mode</span>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" checked={settings.theme === 'dark'} onChange={(e) => handleSettingChange('theme', e.target.checked ? 'dark' : 'light')} className="sr-only peer" />
-                    <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-accent-cyan peer-checked:after:translate-x-full after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-cyan"></div>
-                    </label>
-                </div>
-                <div className="flex items-center justify-between py-2">
-                    <span>Simple Mode</span>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" checked={settings.simpleMode} onChange={(e) => handleSettingChange('simpleMode', e.target.checked)} className="sr-only peer" />
-                    <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-accent-cyan peer-checked:after:translate-x-full after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-cyan"></div>
-                    </label>
-                </div>
-                <div className="flex items-center justify-between py-2">
-                    <span>Accent Color</span>
-                    <input type="color" value={settings.accentColor} onChange={(e) => handleSettingChange('accentColor', e.target.value)} className="w-10 h-10 bg-transparent border-none rounded-full cursor-pointer"/>
-                </div>
+                <div className="bg-white/20 rounded-xl p-4">
+                    <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan"><Palette /> Theme & UI</h3>
+                    <div className="flex items-center justify-between py-2">
+                        <span>Theme</span>
+                        <select value={settings.theme} onChange={(e) => handleSettingChange('theme', e.target.value)} className="input-glass text-sm">
+                            <option value="system">System</option>
+                            <option value="light">Light</option>
+                            <option value="dark">Dark</option>
+                        </select>
+                    </div>
+                    <div className="flex items-center justify-between py-2">
+                        <span>Simple Mode</span>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" checked={settings.simpleMode} onChange={(e) => handleSettingChange('simpleMode', e.target.checked)} className="sr-only peer" />
+                        <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-accent-cyan peer-checked:after:translate-x-full after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-cyan"></div>
+                        </label>
+                    </div>
                 </div>
                 
-                <div className="bg-white/5 rounded-xl p-4">
+                <div className="bg-white/20 rounded-xl p-4">
                 <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan"><Lock /> Privacy & Security</h3>
                     {firebaseUser?.emailVerified ? (
                         <div className="flex items-center justify-between py-2 text-green-400">
@@ -200,12 +192,22 @@ export default function SettingsPage() {
                 </div>
                 </div>
 
-                <div className="bg-white/5 rounded-xl p-4">
+                <div className="bg-white/20 rounded-xl p-4">
                     <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan"><User /> Account Information</h3>
                     <Link href="/settings/additional">
                         <div className="w-full p-4 rounded-2xl bg-accent-cyan/10 hover:bg-accent-cyan/20 cursor-pointer">
                             <h4 className="font-headline font-bold text-accent-cyan">Update Profile</h4>
                             <p className="text-xs text-on-solid-muted">Change your username, age, and gender.</p>
+                        </div>
+                    </Link>
+                </div>
+
+                <div className="bg-white/20 rounded-xl p-4">
+                    <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan"><Archive /> Archived Chats</h3>
+                    <Link href="/settings/archived-chats">
+                        <div className="w-full p-4 rounded-2xl bg-accent-cyan/10 hover:bg-accent-cyan/20 cursor-pointer">
+                            <h4 className="font-headline font-bold text-accent-cyan">Manage Archived Chats</h4>
+                            <p className="text-xs text-on-solid-muted">View and unarchive your chats.</p>
                         </div>
                     </Link>
                 </div>

@@ -26,7 +26,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onPostDelete = exports.onPostCreate = exports.onUnfollow = exports.onFollow = exports.decrementLikes = exports.incrementLikes = exports.updateComment = exports.deleteComment = exports.updatePost = exports.deleteMessage = exports.deleteUserAccount = exports.checkEmail = exports.checkPhone = exports.checkUsername = exports.cleanupStaleDocuments = exports.cleanupOldDrops = exports.selectNextPrompt = exports.cleanupExpiredFlashes = exports.onChatDelete = exports.onUserDelete = exports.onNewDropPrompt = exports.onNewFollower = exports.onNewMessage = exports.onCommentCreate = void 0;
+exports.updateComment = exports.deleteComment = exports.updatePost = exports.deleteMessage = exports.deleteUserAccount = exports.checkEmail = exports.checkPhone = exports.checkUsername = exports.cleanupStaleDocuments = exports.cleanupOldDrops = exports.selectNextPrompt = exports.cleanupExpiredFlashes = exports.onUserDelete = exports.onChatDelete = exports.onPostDelete = exports.onPostCreate = exports.decrementLikes = exports.incrementLikes = exports.onUnfollow = exports.onFollow = exports.onCommentCreate = void 0;
 const app_1 = require("firebase-admin/app");
 const firestore_1 = require("firebase-admin/firestore");
 const admin = __importStar(require("firebase-admin"));
@@ -34,45 +34,27 @@ const v1 = __importStar(require("firebase-functions/v1"));
 const https_1 = require("firebase-functions/v2/https");
 const firebase_functions_1 = require("firebase-functions");
 const storage_1 = require("firebase-admin/storage");
-// Initialize Firebase Admin SDK
 (0, app_1.initializeApp)();
 const db = admin.firestore();
 const storage = (0, storage_1.getStorage)();
-const messaging = admin.messaging();
-// --- Helper Functions ---
-async function sendPushNotification(userId, title, body, data = {}) {
-    var _a;
+function parseStoragePath(url) {
     try {
-        const userDoc = await db.collection('users').doc(userId).get();
-        const fcmToken = (_a = userDoc.data()) === null || _a === void 0 ? void 0 : _a.fcmToken;
-        if (!fcmToken) {
-            firebase_functions_1.logger.info(`No FCM token found for user ${userId}. Skipping notification.`);
-            return;
-        }
-        const message = {
-            token: fcmToken,
-            notification: { title, body },
-            data: Object.assign(Object.assign({}, data), { click_action: "FLIXTREND_NOTIFICATION_CLICK" }),
-            android: {
-                priority: "high",
-                notification: {
-                    channelId: "flixtrend_general",
-                    clickAction: "FLIXTREND_NOTIFICATION_CLICK",
-                }
-            }
-        };
-        await messaging.send(message);
-        firebase_functions_1.logger.info(`Notification sent to user ${userId}`);
+        const decoded = decodeURIComponent(url);
+        const oIdx = decoded.indexOf('/o/');
+        if (oIdx === -1)
+            return null;
+        const raw = decoded.substring(oIdx + 3);
+        const qIdx = raw.indexOf('?');
+        return qIdx === -1 ? raw : raw.substring(0, qIdx);
     }
-    catch (error) {
-        firebase_functions_1.logger.error(`Error sending notification to user ${userId}:`, error);
+    catch (_a) {
+        return null;
     }
 }
 async function deleteSubcollection(collectionRef) {
     const snapshot = await collectionRef.limit(500).get();
-    if (snapshot.empty) {
+    if (snapshot.empty)
         return;
-    }
     const batch = collectionRef.firestore.batch();
     snapshot.docs.forEach(doc => batch.delete(doc.ref));
     await batch.commit();
@@ -80,301 +62,411 @@ async function deleteSubcollection(collectionRef) {
         await deleteSubcollection(collectionRef);
     }
 }
-// --- V1 Cloud Functions ---
+// ─────────────────────────────────────────────────────────────────────────────
+// COMMENTS
+// ─────────────────────────────────────────────────────────────────────────────
 exports.onCommentCreate = v1.firestore
     .document('posts/{postId}/comments/{commentId}')
     .onCreate(async (snap, context) => {
     const { postId } = context.params;
-    const postRef = db.collection('posts').doc(postId);
     try {
-        await postRef.update({
+        await db.collection('posts').doc(postId).update({
             commentCount: firestore_1.FieldValue.increment(1),
-            updatedAt: firestore_1.FieldValue.serverTimestamp()
+            updatedAt: firestore_1.FieldValue.serverTimestamp(),
         });
-        firebase_functions_1.logger.info(`Incremented comment count and updated timestamp for post ${postId}`);
     }
     catch (error) {
         firebase_functions_1.logger.error(`Error updating post ${postId} on new comment:`, error);
     }
 });
-exports.onNewMessage = v1.firestore
-    .document('chats/{chatId}/messages/{messageId}')
-    .onCreate(async (snap, context) => {
-    var _a;
-    const message = snap.data();
-    const { chatId } = context.params;
-    const senderId = message.sender;
-    if (chatId.includes('_')) {
-        const recipientId = chatId.split('_').find(id => id !== senderId);
-        if (recipientId) {
-            const senderSnap = await db.collection('users').doc(senderId).get();
-            const senderName = ((_a = senderSnap.data()) === null || _a === void 0 ? void 0 : _a.name) || "Someone";
-            let body = message.text || "Sent a media message";
-            if (message.type === 'audio')
-                body = "🎙️ Sent a voice message";
-            if (message.type === 'image')
-                body = "📷 Sent an image";
-            await sendPushNotification(recipientId, senderName, body, { type: 'message', targetId: chatId });
-        }
-    }
-});
-exports.onNewFollower = v1.firestore
+// ─────────────────────────────────────────────────────────────────────────────
+// FOLLOWERS
+// ─────────────────────────────────────────────────────────────────────────────
+exports.onFollow = v1.firestore
     .document('users/{userId}/followers/{followerId}')
     .onCreate(async (snap, context) => {
-    var _a;
     const { userId, followerId } = context.params;
-    const followerSnap = await db.collection('users').doc(followerId).get();
-    const followerName = ((_a = followerSnap.data()) === null || _a === void 0 ? void 0 : _a.name) || "Someone";
-    await sendPushNotification(userId, "New Follower!", `${followerName} is now following your squad.`, { type: 'profile', targetId: followerId });
+    try {
+        await db.collection('users').doc(userId).update({ Follower_Count: firestore_1.FieldValue.increment(1) });
+        await db.collection('users').doc(followerId).update({ Following_Count: firestore_1.FieldValue.increment(1) });
+    }
+    catch (error) {
+        firebase_functions_1.logger.error(`Error updating follow counts:`, error);
+    }
 });
-exports.onNewDropPrompt = v1.firestore
-    .document('dropPrompts/{promptId}')
+exports.onUnfollow = v1.firestore
+    .document('users/{userId}/followers/{followerId}')
+    .onDelete(async (snap, context) => {
+    var _a, _b, _c, _d;
+    const { userId, followerId } = context.params;
+    try {
+        const batch = db.batch();
+        const userSnap = await db.collection('users').doc(userId).get();
+        const followerSnap = await db.collection('users').doc(followerId).get();
+        const currentFollowers = (_b = (_a = userSnap.data()) === null || _a === void 0 ? void 0 : _a.Follower_Count) !== null && _b !== void 0 ? _b : 0;
+        const currentFollowing = (_d = (_c = followerSnap.data()) === null || _c === void 0 ? void 0 : _c.Following_Count) !== null && _d !== void 0 ? _d : 0;
+        batch.update(db.collection('users').doc(userId), {
+            Follower_Count: Math.max(0, currentFollowers - 1),
+        });
+        batch.update(db.collection('users').doc(followerId), {
+            Following_Count: Math.max(0, currentFollowing - 1),
+        });
+        await batch.commit();
+    }
+    catch (error) {
+        firebase_functions_1.logger.error(`Error updating unfollow counts:`, error);
+    }
+});
+// ─────────────────────────────────────────────────────────────────────────────
+// LIKES
+// ─────────────────────────────────────────────────────────────────────────────
+exports.incrementLikes = v1.firestore
+    .document('posts/{postId}/likes/{userId}')
     .onCreate(async (snap, context) => {
-    const prompt = snap.data();
-    const usersSnap = await db.collection('users').where('fcmToken', '!=', null).get();
-    const notifications = usersSnap.docs.map(userDoc => sendPushNotification(userDoc.id, "New Drop Challenge!", prompt.text, { type: 'drop', targetId: context.params.promptId }));
-    await Promise.all(notifications);
+    var _a;
+    const { postId, userId } = context.params;
+    const postRef = db.collection('posts').doc(postId);
+    try {
+        const postDoc = await postRef.get();
+        if (!postDoc.exists)
+            return;
+        const authorId = (_a = postDoc.data()) === null || _a === void 0 ? void 0 : _a.userId;
+        const batch = db.batch();
+        batch.update(postRef, {
+            likesCount: firestore_1.FieldValue.increment(1),
+            updatedAt: firestore_1.FieldValue.serverTimestamp(),
+        });
+        if (authorId) {
+            batch.update(db.collection('users').doc(authorId), {
+                Total_likes: firestore_1.FieldValue.increment(1),
+            });
+        }
+        const currentYear = new Date().getFullYear().toString();
+        batch.set(db.collection('users').doc(userId).collection('likedPosts').doc(currentYear), { postIds: firestore_1.FieldValue.arrayUnion(postId) }, { merge: true });
+        await batch.commit();
+    }
+    catch (error) {
+        firebase_functions_1.logger.error(`Error processing like for post ${postId}:`, error);
+    }
 });
-exports.onUserDelete = v1.auth.user().onDelete(async (user) => {
-    firebase_functions_1.logger.info(`User ${user.uid} is being deleted. Cleaning up data.`);
-    const userRef = db.collection('users').doc(user.uid);
-    await userRef.delete();
+exports.decrementLikes = v1.firestore
+    .document('posts/{postId}/likes/{userId}')
+    .onDelete(async (snap, context) => {
+    var _a, _b, _c;
+    const { postId, userId } = context.params;
+    const postRef = db.collection('posts').doc(postId);
+    try {
+        const postDoc = await postRef.get();
+        if (!postDoc.exists)
+            return;
+        const postData = postDoc.data();
+        const authorId = postData === null || postData === void 0 ? void 0 : postData.userId;
+        const currentLikes = (_a = postData === null || postData === void 0 ? void 0 : postData.likesCount) !== null && _a !== void 0 ? _a : 0;
+        const batch = db.batch();
+        batch.update(postRef, {
+            likesCount: Math.max(0, currentLikes - 1),
+            updatedAt: firestore_1.FieldValue.serverTimestamp(),
+        });
+        if (authorId) {
+            const authorDoc = await db.collection('users').doc(authorId).get();
+            const currentTotal = (_c = (_b = authorDoc.data()) === null || _b === void 0 ? void 0 : _b.Total_likes) !== null && _c !== void 0 ? _c : 0;
+            batch.update(db.collection('users').doc(authorId), {
+                Total_likes: Math.max(0, currentTotal - 1),
+            });
+        }
+        const currentYear = new Date().getFullYear().toString();
+        batch.update(db.collection('users').doc(userId).collection('likedPosts').doc(currentYear), { postIds: firestore_1.FieldValue.arrayRemove(postId) });
+        await batch.commit();
+    }
+    catch (error) {
+        firebase_functions_1.logger.error(`Error processing unlike for post ${postId}:`, error);
+    }
 });
+// ─────────────────────────────────────────────────────────────────────────────
+// POSTS
+// ─────────────────────────────────────────────────────────────────────────────
+exports.onPostCreate = v1.firestore
+    .document('posts/{postId}')
+    .onCreate(async (snap, context) => {
+    var _a, _b;
+    const post = snap.data();
+    const userId = post.userId;
+    if (!userId) {
+        firebase_functions_1.logger.error('Post created without a userId.', { postId: context.params.postId });
+        return;
+    }
+    const userRef = db.collection('users').doc(userId);
+    try {
+        await snap.ref.update({ updatedAt: firestore_1.FieldValue.serverTimestamp() });
+        const userDoc = await userRef.get();
+        const postCount = (_b = (_a = userDoc.data()) === null || _a === void 0 ? void 0 : _a.Posts_Count) !== null && _b !== void 0 ? _b : 0;
+        const updateData = { Posts_Count: firestore_1.FieldValue.increment(1) };
+        if (postCount === 0) {
+            updateData.accolades = firestore_1.FieldValue.arrayUnion('vibestarter');
+        }
+        await userRef.update(updateData);
+    }
+    catch (error) {
+        firebase_functions_1.logger.error(`Error in onPostCreate for user ${userId}:`, error);
+    }
+});
+exports.onPostDelete = v1.firestore
+    .document('posts/{postId}')
+    .onDelete(async (snap, context) => {
+    var _a, _b;
+    const { postId } = context.params;
+    const post = snap.data();
+    const userId = post.userId;
+    const bucket = storage.bucket();
+    for (const sub of ['comments', 'likes', 'stars', 'relays']) {
+        await deleteSubcollection(db.collection('posts').doc(postId).collection(sub));
+    }
+    if (userId) {
+        try {
+            const userDoc = await db.collection('users').doc(userId).get();
+            const current = (_b = (_a = userDoc.data()) === null || _a === void 0 ? void 0 : _a.Posts_Count) !== null && _b !== void 0 ? _b : 0;
+            await db.collection('users').doc(userId).update({
+                Posts_Count: Math.max(0, current - 1),
+            });
+        }
+        catch (error) {
+            firebase_functions_1.logger.error(`Error decrementing Posts_Count for user ${userId}:`, error);
+        }
+    }
+    const deletePromises = [];
+    const mediaUrls = Array.isArray(post.mediaUrl) ? post.mediaUrl : post.mediaUrl ? [post.mediaUrl] : [];
+    for (const url of mediaUrls) {
+        const path = parseStoragePath(url);
+        if (path)
+            deletePromises.push(bucket.file(path).delete().catch(err => firebase_functions_1.logger.error(`Failed to delete ${path}:`, err)));
+    }
+    if (post.videoQualities) {
+        for (const url of Object.values(post.videoQualities)) {
+            const path = parseStoragePath(url);
+            if (path)
+                deletePromises.push(bucket.file(path).delete().catch(err => firebase_functions_1.logger.error(`Failed to delete ${path}:`, err)));
+        }
+    }
+    if (post.rawMediaUrl) {
+        const path = parseStoragePath(post.rawMediaUrl);
+        if (path)
+            deletePromises.push(bucket.file(path).delete().catch(err => firebase_functions_1.logger.error(`Failed to delete ${path}:`, err)));
+    }
+    await Promise.all(deletePromises);
+});
+// ─────────────────────────────────────────────────────────────────────────────
+// CHAT
+// ─────────────────────────────────────────────────────────────────────────────
 exports.onChatDelete = v1.firestore
     .document('users/{userId}/deletedChats/{chatId}')
     .onCreate(async (snap, context) => {
+    var _a, _b;
     const { chatId } = context.params;
-    const chatData = snap.data();
-    const participants = chatData.participants || [];
-    if (participants.length === 0) {
-        firebase_functions_1.logger.info(`Chat ${chatId} has no participants listed. Skipping cleanup.`);
+    const participants = (_b = (_a = snap.data()) === null || _a === void 0 ? void 0 : _a.participants) !== null && _b !== void 0 ? _b : [];
+    if (participants.length === 0)
         return;
-    }
-    const allDeletedChecks = participants.map(async (pId) => {
-        const deletedDocRef = db.collection('users').doc(pId).collection('deletedChats').doc(chatId);
-        const docSnap = await deletedDocRef.get();
-        return docSnap.exists;
-    });
-    const allDeletedResults = await Promise.all(allDeletedChecks);
-    if (allDeletedResults.every(Boolean)) {
-        firebase_functions_1.logger.info(`All participants have deleted chat ${chatId}. Purging messages.`);
-        const chatMessagesRef = db.collection('chats').doc(chatId).collection('messages');
-        await deleteSubcollection(chatMessagesRef);
-        firebase_functions_1.logger.info(`Successfully purged messages for chat ${chatId}.`);
-    }
-    else {
-        firebase_functions_1.logger.info(`Chat ${chatId} still active for some participants. Not purging.`);
+    const checks = await Promise.all(participants.map(pId => db.collection('users').doc(pId).collection('deletedChats').doc(chatId).get()
+        .then(d => d.exists)));
+    if (checks.every(Boolean)) {
+        await deleteSubcollection(db.collection('chats').doc(chatId).collection('messages'));
     }
 });
-exports.cleanupExpiredFlashes = v1.pubsub.schedule('every 2 hours').onRun(async (context) => {
-    firebase_functions_1.logger.info('Running expired flashes cleanup job.');
-    const now = firestore_1.Timestamp.now();
-    const expiredFlashesQuery = db.collection('flashes').where('expiresAt', '<=', now);
-    const expiredFlashesSnap = await expiredFlashesQuery.get();
-    if (expiredFlashesSnap.empty) {
-        firebase_functions_1.logger.info('No expired flashes to clean up.');
-        return null;
+// ─────────────────────────────────────────────────────────────────────────────
+// AUTH CLEANUP
+// ─────────────────────────────────────────────────────────────────────────────
+exports.onUserDelete = v1.auth.user().onDelete(async (user) => {
+    const uid = user.uid;
+    firebase_functions_1.logger.info(`User ${uid} deleted. Starting full cleanup.`);
+    const userRef = db.collection('users').doc(uid);
+    const bucket = storage.bucket();
+    for (const sub of ['followers', 'following', 'likedPosts', 'notifications', 'deletedChats', 'playlists']) {
+        await deleteSubcollection(userRef.collection(sub));
     }
+    const postsSnap = await db.collection('posts').where('userId', '==', uid).get();
+    for (const postDoc of postsSnap.docs) {
+        const post = postDoc.data();
+        const urls = Array.isArray(post.mediaUrl) ? post.mediaUrl : post.mediaUrl ? [post.mediaUrl] : [];
+        await Promise.all(urls.map(url => {
+            const path = parseStoragePath(url);
+            return path ? bucket.file(path).delete().catch(() => { }) : Promise.resolve();
+        }));
+        for (const sub of ['comments', 'likes', 'stars', 'relays']) {
+            await deleteSubcollection(postDoc.ref.collection(sub));
+        }
+        await postDoc.ref.delete();
+    }
+    const usernameSnap = await db.collection('usernames').where('uid', '==', uid).get();
+    const batch = db.batch();
+    usernameSnap.docs.forEach(d => batch.delete(d.ref));
+    batch.delete(userRef);
+    await batch.commit();
+    firebase_functions_1.logger.info(`Full cleanup done for user ${uid}.`);
+});
+// ─────────────────────────────────────────────────────────────────────────────
+// SCHEDULED JOBS
+// ─────────────────────────────────────────────────────────────────────────────
+exports.cleanupExpiredFlashes = v1.pubsub.schedule('every 2 hours').onRun(async () => {
+    const now = firestore_1.Timestamp.now();
+    const snap = await db.collection('flashes').where('expiresAt', '<=', now).get();
+    if (snap.empty)
+        return null;
     const batch = db.batch();
     const deletePromises = [];
-    expiredFlashesSnap.forEach(docSnap => {
+    snap.forEach(docSnap => {
         const flashData = docSnap.data();
         batch.delete(docSnap.ref);
         if (flashData.mediaUrl) {
-            try {
-                const fileUrl = new URL(flashData.mediaUrl);
-                const filePath = decodeURIComponent(fileUrl.pathname.split('/').pop() || '');
-                if (filePath) {
-                    const fileRef = storage.bucket().file(filePath);
-                    deletePromises.push(fileRef.delete().catch(err => firebase_functions_1.logger.error(`Failed to delete storage file ${filePath}:`, err)));
-                }
-            }
-            catch (error) {
-                firebase_functions_1.logger.error(`Invalid mediaUrl for flash ${docSnap.id}: ${flashData.mediaUrl}`, error);
+            const path = parseStoragePath(flashData.mediaUrl);
+            if (path) {
+                deletePromises.push(storage.bucket().file(path).delete().catch(err => firebase_functions_1.logger.error(`Failed to delete flash storage file ${path}:`, err)));
             }
         }
     });
     deletePromises.push(batch.commit());
     await Promise.all(deletePromises);
-    firebase_functions_1.logger.info(`Cleanup complete. Deleted ${expiredFlashesSnap.size} expired flashes.`);
+    firebase_functions_1.logger.info(`Deleted ${snap.size} expired flashes.`);
     return null;
 });
-exports.selectNextPrompt = v1.pubsub.schedule('0 23 * * *').timeZone('Asia/Kolkata').onRun(async (context) => {
-    firebase_functions_1.logger.info("Running daily prompt selection function.");
+exports.selectNextPrompt = v1.pubsub.schedule('0 23 * * *').timeZone('Asia/Kolkata').onRun(async () => {
     const now = admin.firestore.Timestamp.now();
     const yesterday = new admin.firestore.Timestamp(now.seconds - 86400, now.nanoseconds);
-    const activePromptQuery = db.collection('dropPrompts').where('expiresAt', '>', yesterday).orderBy('expiresAt', 'desc').limit(1);
-    const activePromptSnap = await activePromptQuery.get();
-    if (activePromptSnap.empty) {
-        firebase_functions_1.logger.info("No active prompt found. Cannot determine poll to process.");
+    const activeSnap = await db.collection('dropPrompts')
+        .where('expiresAt', '>', yesterday)
+        .orderBy('expiresAt', 'desc')
+        .limit(1)
+        .get();
+    if (activeSnap.empty)
         return;
-    }
-    const activePrompt = activePromptSnap.docs[0];
-    const pollQuery = db.collection('drop_polls').where('promptId', '==', activePrompt.id).limit(1);
-    const pollSnap = await pollQuery.get();
-    if (pollSnap.empty) {
-        firebase_functions_1.logger.warn("No poll found for the active prompt. No new prompt will be created.");
+    const activePrompt = activeSnap.docs[0];
+    const pollSnap = await db.collection('drop_polls').where('promptId', '==', activePrompt.id).limit(1).get();
+    if (pollSnap.empty)
         return;
-    }
     const pollDoc = pollSnap.docs[0];
     const poll = pollDoc.data();
     const votesSnap = await pollDoc.ref.collection('votes').get();
-    let winnerText = poll.options[0].text; // Default to first option
+    let winnerText = poll.options[0].text;
     if (!votesSnap.empty) {
         const voteCounts = new Map();
-        votesSnap.forEach(voteDoc => {
-            const vote = voteDoc.data();
-            voteCounts.set(vote.optionIdx, (voteCounts.get(vote.optionIdx) || 0) + 1);
+        votesSnap.forEach(v => {
+            const idx = v.data().optionIdx;
+            voteCounts.set(idx, (voteCounts.get(idx) || 0) + 1);
         });
-        const winnerIdx = [...voteCounts.entries()].reduce((a, e) => e[1] > a[1] ? e : a)[0];
+        const winnerIdx = [...voteCounts.entries()].reduce((a, e) => (e[1] > a[1] ? e : a))[0];
         winnerText = poll.options[winnerIdx].text;
     }
-    await createNewPrompt(winnerText);
-    firebase_functions_1.logger.info(`Cleaning up poll ${pollDoc.id} and its votes.`);
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await db.collection('dropPrompts').add({
+        text: winnerText,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        expiresAt: admin.firestore.Timestamp.fromDate(expiresAt),
+    });
     await deleteSubcollection(pollDoc.ref.collection('votes'));
     const batch = db.batch();
     batch.delete(activePrompt.ref);
     batch.delete(pollDoc.ref);
     await batch.commit();
-    firebase_functions_1.logger.info("Successfully selected new prompt and cleaned up old documents.");
 });
-async function createNewPrompt(text) {
-    const now = new Date();
-    const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-    await db.collection('dropPrompts').add({
-        text: text,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        expiresAt: admin.firestore.Timestamp.fromDate(expiresAt),
-    });
-    firebase_functions_1.logger.info(`New prompt created: "${text}"`);
-}
-exports.cleanupOldDrops = v1.pubsub.schedule('0 23 * * *').timeZone('Asia/Kolkata').onRun(async (context) => {
-    firebase_functions_1.logger.info("Running weekly cleanup of old drops.");
+exports.cleanupOldDrops = v1.pubsub.schedule('30 22 * * *').timeZone('Asia/Kolkata').onRun(async () => {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     const timestamp = admin.firestore.Timestamp.fromDate(sevenDaysAgo);
-    const oldDropsQuery = db.collection('drops').where('createdAt', '<=', timestamp);
-    const oldDropsSnap = await oldDropsQuery.get();
-    if (oldDropsSnap.empty) {
-        firebase_functions_1.logger.info("No old drops to clean up.");
+    const snap = await db.collection('drops').where('createdAt', '<=', timestamp).get();
+    if (snap.empty)
         return;
-    }
     const bucket = storage.bucket();
     const deletePromises = [];
-    oldDropsSnap.forEach(doc => {
+    snap.forEach(doc => {
         const drop = doc.data();
         if (drop.mediaUrl && Array.isArray(drop.mediaUrl)) {
             drop.mediaUrl.forEach((url) => {
-                var _a;
-                try {
-                    const filePath = (_a = new URL(url).pathname.split('/').pop()) === null || _a === void 0 ? void 0 : _a.split('?')[0];
-                    if (filePath) {
-                        deletePromises.push(bucket.file(decodeURIComponent(filePath)).delete().catch(err => firebase_functions_1.logger.error("Failed to delete storage file:", err)));
-                    }
-                }
-                catch (e) {
-                    firebase_functions_1.logger.warn(`Could not parse or delete storage URL ${url}:`, e);
+                const path = parseStoragePath(url);
+                if (path) {
+                    deletePromises.push(bucket.file(path).delete().catch(err => firebase_functions_1.logger.error('Failed to delete storage file:', err)));
                 }
             });
         }
         deletePromises.push(doc.ref.delete());
     });
     await Promise.all(deletePromises);
-    firebase_functions_1.logger.info(`Cleanup complete. Deleted ${oldDropsSnap.size} old drops.`);
+    firebase_functions_1.logger.info(`Deleted ${snap.size} old drops.`);
 });
-exports.cleanupStaleDocuments = v1.pubsub.schedule('30 23 * * *').timeZone('Asia/Kolkata').onRun(async (context) => {
-    firebase_functions_1.logger.info("Running cleanup for documents older than 48 hours.");
-    const fortyEightHoursAgo = new Date();
-    fortyEightHoursAgo.setHours(fortyEightHoursAgo.getHours() - 48);
+exports.cleanupStaleDocuments = v1.pubsub.schedule('30 23 * * *').timeZone('Asia/Kolkata').onRun(async () => {
+    const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
     const timestamp = admin.firestore.Timestamp.fromDate(fortyEightHoursAgo);
-    // Cleanup old drop prompts
-    const oldPromptsQuery = db.collection('dropPrompts').where('createdAt', '<=', timestamp);
-    const oldPromptsSnap = await oldPromptsQuery.get();
+    const oldPromptsSnap = await db.collection('dropPrompts').where('createdAt', '<=', timestamp).get();
     if (!oldPromptsSnap.empty) {
         const batch = db.batch();
-        oldPromptsSnap.forEach(doc => batch.delete(doc.ref));
+        oldPromptsSnap.docs.forEach(doc => batch.delete(doc.ref));
         await batch.commit();
-        firebase_functions_1.logger.info(`Deleted ${oldPromptsSnap.size} old drop prompts.`);
     }
-    // Cleanup old drop polls
-    const oldPollsQuery = db.collection('drop_polls').where('createdAt', '<=', timestamp);
-    const oldPollsSnap = await oldPollsQuery.get();
+    const oldPollsSnap = await db.collection('drop_polls').where('createdAt', '<=', timestamp).get();
     if (!oldPollsSnap.empty) {
-        const deletePromises = oldPollsSnap.docs.map(doc => deleteSubcollection(doc.ref.collection('votes')));
-        await Promise.all(deletePromises);
+        await Promise.all(oldPollsSnap.docs.map(doc => deleteSubcollection(doc.ref.collection('votes'))));
         const batch = db.batch();
         oldPollsSnap.docs.forEach(doc => batch.delete(doc.ref));
         await batch.commit();
-        firebase_functions_1.logger.info(`Deleted ${oldPollsSnap.size} old drop polls.`);
     }
     return null;
 });
-// --- V2 Callable Functions ---
-exports.checkUsername = (0, https_1.onCall)(async (request) => {
+// ─────────────────────────────────────────────────────────────────────────────
+// CALLABLE FUNCTIONS
+// ─────────────────────────────────────────────────────────────────────────────
+exports.checkUsername = (0, https_1.onCall)({ enforceAppCheck: true }, async (request) => {
     const { username } = request.data;
     if (!username || typeof username !== 'string') {
-        throw new https_1.HttpsError("invalid-argument", "A valid username must be provided.");
+        throw new https_1.HttpsError('invalid-argument', 'A valid username must be provided.');
     }
     const snapshot = await db.collection('usernames').doc(username.toLowerCase()).get();
     return { exists: snapshot.exists };
 });
-exports.checkPhone = (0, https_1.onCall)(async (request) => {
+exports.checkPhone = (0, https_1.onCall)({ enforceAppCheck: true }, async (request) => {
     const { phoneNumber } = request.data;
     if (!phoneNumber || typeof phoneNumber !== 'string') {
-        throw new https_1.HttpsError("invalid-argument", "A valid phone number must be provided.");
+        throw new https_1.HttpsError('invalid-argument', 'A valid phone number must be provided.');
     }
     try {
         const user = await admin.auth().getUserByPhoneNumber(phoneNumber);
         return { exists: !!user };
     }
     catch (error) {
-        if (error.code === 'auth/user-not-found') {
+        if (error.code === 'auth/user-not-found')
             return { exists: false };
-        }
-        throw new https_1.HttpsError("internal", "An error occurred while checking the phone number.");
+        throw new https_1.HttpsError('internal', 'An error occurred while checking the phone number.');
     }
 });
-exports.checkEmail = (0, https_1.onCall)(async (request) => {
+exports.checkEmail = (0, https_1.onCall)({ enforceAppCheck: true }, async (request) => {
     const { email } = request.data;
     if (!email || typeof email !== 'string') {
-        throw new https_1.HttpsError("invalid-argument", "A valid email must be provided.");
+        throw new https_1.HttpsError('invalid-argument', 'A valid email must be provided.');
     }
     try {
         const user = await admin.auth().getUserByEmail(email);
         return { exists: !!user };
     }
     catch (error) {
-        if (error.code === 'auth/user-not-found') {
+        if (error.code === 'auth/user-not-found')
             return { exists: false };
-        }
-        throw new https_1.HttpsError("internal", "An error occurred while checking the email.");
+        throw new https_1.HttpsError('internal', 'An error occurred while checking the email.');
     }
 });
 exports.deleteUserAccount = (0, https_1.onCall)(async (request) => {
-    var _a, _b;
+    var _a;
     const uid = (_a = request.auth) === null || _a === void 0 ? void 0 : _a.uid;
-    if (!uid) {
-        throw new https_1.HttpsError("unauthenticated", "Authentication is required to delete an account.");
-    }
+    if (!uid)
+        throw new https_1.HttpsError('unauthenticated', 'Authentication required.');
     try {
         const bucket = storage.bucket();
-        const postsQuery = db.collection('posts').where('userId', '==', uid);
-        const postsSnap = await postsQuery.get();
+        const postsSnap = await db.collection('posts').where('userId', '==', uid).get();
         const batch = db.batch();
         for (const postDoc of postsSnap.docs) {
             const postData = postDoc.data();
-            if (postData.mediaUrl) {
-                const urls = Array.isArray(postData.mediaUrl) ? postData.mediaUrl : [postData.mediaUrl];
-                for (const url of urls) {
-                    try {
-                        const filePath = (_b = new URL(url).pathname.split('/').pop()) === null || _b === void 0 ? void 0 : _b.split('?')[0];
-                        if (filePath) {
-                            await bucket.file(`user_uploads/${decodeURIComponent(filePath)}`).delete().catch(err => firebase_functions_1.logger.warn(`Could not delete storage file ${filePath}:`, err));
-                        }
-                    }
-                    catch (e) {
-                        firebase_functions_1.logger.warn(`Could not parse or delete storage URL ${url}:`, e);
-                    }
+            const urls = Array.isArray(postData.mediaUrl)
+                ? postData.mediaUrl
+                : postData.mediaUrl ? [postData.mediaUrl] : [];
+            for (const url of urls) {
+                const path = parseStoragePath(url);
+                if (path) {
+                    await bucket.file(path).delete().catch(err => firebase_functions_1.logger.warn(`Could not delete storage file ${path}:`, err));
                 }
             }
             batch.delete(postDoc.ref);
@@ -382,85 +474,46 @@ exports.deleteUserAccount = (0, https_1.onCall)(async (request) => {
         batch.delete(db.collection('users').doc(uid));
         await batch.commit();
         await admin.auth().deleteUser(uid);
-        firebase_functions_1.logger.info(`Successfully deleted account and all data for user ${uid}.`);
         return { success: true, message: 'Account deleted successfully.' };
     }
     catch (error) {
         firebase_functions_1.logger.error(`Error deleting user account ${uid}:`, error);
-        throw new https_1.HttpsError("internal", "Failed to delete account. Please try again later.");
+        throw new https_1.HttpsError('internal', 'Failed to delete account. Please try again later.');
     }
 });
+// ─────────────────────────────────────────────────────────────────────────────
+// DELETE MESSAGE
+// "delete for me"      → client-side updateDoc (no function call)
+// "delete for everyone"→ this function; verifies sender === uid then hard-deletes
+// ─────────────────────────────────────────────────────────────────────────────
 exports.deleteMessage = (0, https_1.onCall)(async (request) => {
-    var _a, _b, _c;
+    var _a, _b;
     const uid = (_a = request.auth) === null || _a === void 0 ? void 0 : _a.uid;
-    if (!uid) {
-        throw new https_1.HttpsError("unauthenticated", "You must be logged in.");
+    if (!uid)
+        throw new https_1.HttpsError('unauthenticated', 'You must be logged in.');
+    const { chatId, messageId } = request.data;
+    if (!chatId || !messageId)
+        throw new https_1.HttpsError('invalid-argument', 'Missing required parameters.');
+    const messageRef = db.collection('chats').doc(chatId).collection('messages').doc(messageId);
+    const messageSnap = await messageRef.get();
+    if (!messageSnap.exists)
+        throw new https_1.HttpsError('not-found', 'Message not found.');
+    if (((_b = messageSnap.data()) === null || _b === void 0 ? void 0 : _b.sender) !== uid) {
+        throw new https_1.HttpsError('permission-denied', 'You can only delete your own messages for everyone.');
     }
-    const { chatId, messageId, mode } = request.data;
-    if (!chatId || !messageId || !mode) {
-        throw new https_1.HttpsError("invalid-argument", "Missing required parameters.");
-    }
-    const chatRef = db.collection('chats').doc(chatId);
-    const chatDoc = await chatRef.get();
-    if (!chatDoc.exists) {
-        throw new https_1.HttpsError("not-found", "Chat not found.");
-    }
-    // Participant Check
-    if (chatId.includes('_')) {
-        const participantIds = chatId.split('_');
-        if (!participantIds.includes(uid)) {
-            throw new https_1.HttpsError("permission-denied", "You are not a member of this chat.");
-        }
-    }
-    else {
-        const participants = (_b = chatDoc.data()) === null || _b === void 0 ? void 0 : _b.participants;
-        if (!participants || !Array.isArray(participants) || !participants.includes(uid)) {
-            throw new https_1.HttpsError("permission-denied", "You are not a member of this chat.");
-        }
-    }
-    const messageRef = chatRef.collection('messages').doc(messageId);
-    try {
-        if (mode === 'everyone') {
-            const messageSnap = await messageRef.get();
-            if (messageSnap.exists && ((_c = messageSnap.data()) === null || _c === void 0 ? void 0 : _c.sender) === uid) {
-                await messageRef.delete();
-                return { success: true, message: 'Message deleted for everyone.' };
-            }
-            else if (!messageSnap.exists) {
-                throw new https_1.HttpsError("not-found", "Message not found.");
-            }
-            else {
-                throw new https_1.HttpsError("permission-denied", "You can only delete your own messages for everyone.");
-            }
-        }
-        else if (mode === 'me') {
-            await messageRef.update({
-                deletedFor: firestore_1.FieldValue.arrayUnion(uid)
-            });
-            return { success: true, message: 'Message deleted for you.' };
-        }
-        else {
-            throw new https_1.HttpsError("invalid-argument", "Invalid deletion mode specified.");
-        }
-    }
-    catch (error) {
-        firebase_functions_1.logger.error("Error deleting message:", error);
-        if (error instanceof https_1.HttpsError) {
-            throw error;
-        }
-        throw new https_1.HttpsError("internal", "Could not delete message.");
-    }
+    await messageRef.delete();
+    return { success: true };
 });
 exports.updatePost = (0, https_1.onCall)(async (request) => {
     var _a, _b;
     const uid = (_a = request.auth) === null || _a === void 0 ? void 0 : _a.uid;
     const { postId, newData } = request.data;
     if (!uid)
-        throw new https_1.HttpsError("unauthenticated", "Authentication required.");
-    const postRef = db.collection("posts").doc(postId);
+        throw new https_1.HttpsError('unauthenticated', 'Authentication required.');
+    const postRef = db.collection('posts').doc(postId);
     const postDoc = await postRef.get();
     if (!postDoc.exists || ((_b = postDoc.data()) === null || _b === void 0 ? void 0 : _b.userId) !== uid) {
-        throw new https_1.HttpsError("permission-denied", "You cannot edit this post.");
+        throw new https_1.HttpsError('permission-denied', 'You cannot edit this post.');
     }
     const allowedFields = ['title', 'caption', 'content', 'hashtags', 'mentions', 'description', 'mood', 'location'];
     const sanitizedData = {};
@@ -475,271 +528,55 @@ exports.updatePost = (0, https_1.onCall)(async (request) => {
     return { success: true };
 });
 exports.deleteComment = (0, https_1.onCall)(async (request) => {
-    var _a;
+    var _a, _b, _c;
     const uid = (_a = request.auth) === null || _a === void 0 ? void 0 : _a.uid;
     const { postId, commentId } = request.data;
-    if (!uid) {
-        throw new https_1.HttpsError("unauthenticated", "You must be logged in to delete a comment.");
-    }
-    const postRef = db.collection("posts").doc(postId);
-    const commentRef = postRef.collection("comments").doc(commentId);
+    if (!uid)
+        throw new https_1.HttpsError('unauthenticated', 'You must be logged in to delete a comment.');
+    const postRef = db.collection('posts').doc(postId);
+    const commentRef = postRef.collection('comments').doc(commentId);
     const commentDoc = await commentRef.get();
-    if (!commentDoc.exists) {
-        throw new https_1.HttpsError("not-found", "Comment not found.");
-    }
-    const commentData = commentDoc.data();
-    if (uid !== commentData.userId) {
-        throw new https_1.HttpsError("permission-denied", "You do not have permission to delete this comment.");
+    if (!commentDoc.exists)
+        throw new https_1.HttpsError('not-found', 'Comment not found.');
+    if (commentDoc.data().userId !== uid) {
+        throw new https_1.HttpsError('permission-denied', 'You do not have permission to delete this comment.');
     }
     await commentRef.delete();
+    const postDoc = await postRef.get();
+    const current = (_c = (_b = postDoc.data()) === null || _b === void 0 ? void 0 : _b.commentCount) !== null && _c !== void 0 ? _c : 0;
     await postRef.update({
-        commentCount: firestore_1.FieldValue.increment(-1),
-        updatedAt: firestore_1.FieldValue.serverTimestamp()
+        commentCount: Math.max(0, current - 1),
+        updatedAt: firestore_1.FieldValue.serverTimestamp(),
     });
-    return { success: true, message: "Comment deleted successfully." };
+    return { success: true, message: 'Comment deleted successfully.' };
 });
 exports.updateComment = (0, https_1.onCall)(async (request) => {
     var _a;
     const uid = (_a = request.auth) === null || _a === void 0 ? void 0 : _a.uid;
     const { postId, commentId, newText } = request.data;
-    if (!uid) {
-        throw new https_1.HttpsError("unauthenticated", "You must be logged in to edit a comment.");
-    }
+    if (!uid)
+        throw new https_1.HttpsError('unauthenticated', 'You must be logged in to edit a comment.');
     if (!newText || typeof newText !== 'string' || newText.trim().length === 0) {
-        throw new https_1.HttpsError("invalid-argument", "The comment text cannot be empty.");
+        throw new https_1.HttpsError('invalid-argument', 'Comment text cannot be empty.');
     }
-    const postRef = db.collection("posts").doc(postId);
-    const commentRef = postRef.collection("comments").doc(commentId);
+    const postRef = db.collection('posts').doc(postId);
+    const commentRef = postRef.collection('comments').doc(commentId);
     const commentDoc = await commentRef.get();
-    if (!commentDoc.exists) {
-        throw new https_1.HttpsError("not-found", "Comment not found.");
-    }
-    const commentData = commentDoc.data();
-    if (commentData.userId !== uid) {
-        throw new https_1.HttpsError("permission-denied", "You do not have permission to edit this comment.");
+    if (!commentDoc.exists)
+        throw new https_1.HttpsError('not-found', 'Comment not found.');
+    if (commentDoc.data().userId !== uid) {
+        throw new https_1.HttpsError('permission-denied', 'You do not have permission to edit this comment.');
     }
     const batch = db.batch();
     batch.update(commentRef, { text: newText.trim() });
     batch.update(postRef, { updatedAt: firestore_1.FieldValue.serverTimestamp() });
     await batch.commit();
-    return { success: true, message: "Comment updated. Thank you!" };
+    return { success: true, message: 'Comment updated.' };
 });
-exports.incrementLikes = v1.firestore
-    .document('posts/{postId}/likes/{userId}')
-    .onCreate(async (snap, context) => {
-    const { postId, userId } = context.params;
-    const postRef = db.collection('posts').doc(postId);
-    try {
-        const postDoc = await postRef.get();
-        if (!postDoc.exists) {
-            firebase_functions_1.logger.error(`Post ${postId} not found.`);
-            return;
-        }
-        const postData = postDoc.data();
-        if (!postData) {
-            firebase_functions_1.logger.error(`Post data for ${postId} is undefined.`);
-            return;
-        }
-        const authorId = postData.userId;
-        const batch = db.batch();
-        // Increment post's likesCount and update timestamp
-        batch.update(postRef, {
-            likesCount: firestore_1.FieldValue.increment(1),
-            updatedAt: firestore_1.FieldValue.serverTimestamp()
-        });
-        // Increment author's Total_likes
-        if (authorId) {
-            const authorRef = db.collection('users').doc(authorId);
-            batch.update(authorRef, { Total_likes: firestore_1.FieldValue.increment(1) });
-        }
-        // Add to user's likedPosts subcollection
-        const currentYear = new Date().getFullYear().toString();
-        const likedPostsRef = db.collection('users').doc(userId).collection('likedPosts').doc(currentYear);
-        batch.set(likedPostsRef, { postIds: firestore_1.FieldValue.arrayUnion(postId) }, { merge: true });
-        await batch.commit();
-        firebase_functions_1.logger.info(`Successfully processed like for post ${postId} by user ${userId}`);
-    }
-    catch (error) {
-        firebase_functions_1.logger.error(`Error processing like for post ${postId}:`, error);
-    }
-});
-exports.decrementLikes = v1.firestore
-    .document('posts/{postId}/likes/{userId}')
-    .onDelete(async (snap, context) => {
-    const { postId, userId } = context.params;
-    const postRef = db.collection('posts').doc(postId);
-    try {
-        const postDoc = await postRef.get();
-        if (!postDoc.exists) {
-            firebase_functions_1.logger.error(`Post ${postId} not found.`);
-            return;
-        }
-        const postData = postDoc.data();
-        if (!postData) {
-            firebase_functions_1.logger.error(`Post data for ${postId} is undefined.`);
-            return;
-        }
-        const authorId = postData.userId;
-        const batch = db.batch();
-        // Decrement post's likesCount and update timestamp
-        batch.update(postRef, {
-            likesCount: firestore_1.FieldValue.increment(-1),
-            updatedAt: firestore_1.FieldValue.serverTimestamp()
-        });
-        // Decrement author's Total_likes
-        if (authorId) {
-            const authorRef = db.collection('users').doc(authorId);
-            batch.update(authorRef, { Total_likes: firestore_1.FieldValue.increment(-1) });
-        }
-        // Remove from user's likedPosts subcollection
-        const currentYear = new Date().getFullYear().toString();
-        const likedPostsRef = db.collection('users').doc(userId).collection('likedPosts').doc(currentYear);
-        batch.update(likedPostsRef, { postIds: firestore_1.FieldValue.arrayRemove(postId) });
-        await batch.commit();
-        firebase_functions_1.logger.info(`Successfully processed unlike for post ${postId} by user ${userId}`);
-    }
-    catch (error) {
-        firebase_functions_1.logger.error(`Error processing unlike for post ${postId}:`, error);
-    }
-});
-// --- New Cloud Functions for counting ---
-exports.onFollow = v1.firestore
-    .document('users/{userId}/followers/{followerId}')
-    .onCreate(async (snap, context) => {
-    const { userId, followerId } = context.params;
-    const userRef = db.collection('users').doc(userId);
-    const followerRef = db.collection('users').doc(followerId);
-    try {
-        await userRef.update({ Follower_Count: firestore_1.FieldValue.increment(1) });
-        await followerRef.update({ Following_Count: firestore_1.FieldValue.increment(1) });
-        firebase_functions_1.logger.info(`Updated counts for ${userId} and ${followerId}`);
-    }
-    catch (error) {
-        firebase_functions_1.logger.error(`Error updating follow counts:`, error);
-    }
-});
-exports.onUnfollow = v1.firestore
-    .document('users/{userId}/followers/{followerId}')
-    .onDelete(async (snap, context) => {
-    const { userId, followerId } = context.params;
-    const userRef = db.collection('users').doc(userId);
-    const followerRef = db.collection('users').doc(followerId);
-    try {
-        await userRef.update({ Follower_Count: firestore_1.FieldValue.increment(-1) });
-        await followerRef.update({ Following_Count: firestore_1.FieldValue.increment(-1) });
-        firebase_functions_1.logger.info(`Updated counts for ${userId} and ${followerId}`);
-    }
-    catch (error) {
-        firebase_functions_1.logger.error(`Error updating unfollow counts:`, error);
-    }
-});
-exports.onPostCreate = v1.firestore
-    .document('posts/{postId}')
-    .onCreate(async (snap, context) => {
-    var _a;
-    const postRef = snap.ref;
-    const post = snap.data();
-    const userId = post.userId;
-    if (!userId) {
-        firebase_functions_1.logger.error("Post created without a userId.", { postId: context.params.postId });
-        return;
-    }
-    const userRef = db.collection('users').doc(userId);
-    try {
-        // Set the initial updatedAt timestamp on the post
-        await postRef.update({ updatedAt: firestore_1.FieldValue.serverTimestamp() });
-        const userDoc = await userRef.get();
-        const userData = userDoc.data();
-        const postCount = (_a = userData === null || userData === void 0 ? void 0 : userData.Posts_Count) !== null && _a !== void 0 ? _a : 0;
-        const updateData = {
-            Posts_Count: firestore_1.FieldValue.increment(1)
-        };
-        if (postCount === 0) {
-            updateData.accolades = firestore_1.FieldValue.arrayUnion('vibestarter');
-            firebase_functions_1.logger.info(`Awarding "Vibe Starter" badge to user ${userId} on their first post.`);
-        }
-        await userRef.update(updateData);
-        firebase_functions_1.logger.info(`Successfully updated user stats and post timestamp for post creation: ${userId}`);
-    }
-    catch (error) {
-        firebase_functions_1.logger.error(`Error in onPostCreate for user ${userId}:`, error);
-    }
-});
-exports.onPostDelete = v1.firestore
-    .document('posts/{postId}')
-    .onDelete(async (snap, context) => {
-    const { postId } = context.params;
-    const post = snap.data();
-    const userId = post.userId;
-    const bucket = storage.bucket();
-    firebase_functions_1.logger.info(`Post ${postId} is being deleted. Cleaning up associated data.`);
-    // 1. Delete Subcollections
-    const subcollections = ['comments', 'likes', 'stars', 'relays'];
-    for (const sub of subcollections) {
-        const ref = db.collection('posts').doc(postId).collection(sub);
-        await deleteSubcollection(ref);
-    }
-    firebase_functions_1.logger.info(`Deleted subcollections for post ${postId}.`);
-    // 2. Decrement user's post count
-    if (userId) {
-        const userRef = db.collection('users').doc(userId);
-        try {
-            await userRef.update({ Posts_Count: firestore_1.FieldValue.increment(-1) });
-            firebase_functions_1.logger.info(`Decremented Posts_Count for user ${userId}`);
-        }
-        catch (error) {
-            firebase_functions_1.logger.error(`Error decrementing Posts_Count for user ${userId}:`, error);
-        }
-    }
-    // 3. Delete media from Cloud Storage
-    const deletePromises = [];
-    const mediaUrls = Array.isArray(post.mediaUrl) ? post.mediaUrl : (post.mediaUrl ? [post.mediaUrl] : []);
-    for (const url of mediaUrls) {
-        try {
-            const decodedUrl = decodeURIComponent(url);
-            const path = decodedUrl.substring(decodedUrl.indexOf('/o/') + 3, decodedUrl.indexOf('?'));
-            if (path) {
-                deletePromises.push(bucket.file(path).delete());
-            }
-        }
-        catch (e) {
-            firebase_functions_1.logger.error(`Failed to parse or delete media URL ${url}:`, e);
-        }
-    }
-    if (post.videoQualities) {
-        for (const quality in post.videoQualities) {
-            const url = post.videoQualities[quality];
-            try {
-                const decodedUrl = decodeURIComponent(url);
-                const path = decodedUrl.substring(decodedUrl.indexOf('/o/') + 3, decodedUrl.indexOf('?'));
-                if (path) {
-                    deletePromises.push(bucket.file(path).delete());
-                }
-            }
-            catch (e) {
-                firebase_functions_1.logger.error(`Failed to parse or delete processed video URL ${url}:`, e);
-            }
-        }
-    }
-    if (post.rawMediaUrl) {
-        try {
-            const decodedUrl = decodeURIComponent(post.rawMediaUrl);
-            const path = decodedUrl.substring(decodedUrl.indexOf('/o/') + 3, decodedUrl.indexOf('?'));
-            if (path) {
-                deletePromises.push(bucket.file(path).delete());
-            }
-        }
-        catch (e) {
-            firebase_functions_1.logger.error(`Failed to parse or delete raw media URL ${post.rawMediaUrl}:`, e);
-        }
-    }
-    if (deletePromises.length > 0) {
-        await Promise.all(deletePromises).catch(err => {
-            firebase_functions_1.logger.error(`Failed to delete one or more storage files for post ${postId}:`, err);
-        });
-        firebase_functions_1.logger.info(`Successfully deleted storage files for post ${postId}.`);
-    }
-});
+// ─────────────────────────────────────────────────────────────────────────────
+// Re-exports
+// ─────────────────────────────────────────────────────────────────────────────
+__exportStar(require("./notifications"), exports);
 __exportStar(require("./process-media"), exports);
 __exportStar(require("./updateAccolades"), exports);
 __exportStar(require("./onUserUpdate"), exports);

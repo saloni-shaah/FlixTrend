@@ -262,14 +262,14 @@ export const MessageItem = React.memo(({
             {isUser && seenStatus !== 'none' && (
               <div className="relative vb" data-tip={getSeenTooltipText()}>
                 <div className="flex items-center">
-                  {(seenStatus === 'sent' || seenStatus === 'delivered') && (
+                  {seenStatus === 'sent' && (
                     <Check size={16} className="text-gray-500" />
                   )}
+                  {seenStatus === 'delivered' && (
+                    <Check size={16} className="text-blue-400" />
+                  )}
                   {seenStatus === 'all_seen' && (
-                    <div className="flex items-center">
-                      <Eye size={15} className="text-blue-400" />
-                      <Eye size={15} className="text-blue-400 -ml-2" />
-                    </div>
+                    <Eye size={15} className="text-blue-500" />
                   )}
                 </div>
               </div>
