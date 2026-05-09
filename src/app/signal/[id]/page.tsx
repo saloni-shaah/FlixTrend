@@ -30,6 +30,11 @@ interface ChatUser {
   lastSeen?: any;
 }
 
+interface PendingDelete {
+    forEveryone: boolean;
+    items: string[];
+}
+
 const debounce = (func, delay) => {
     let timeout;
     return function(...args) {
@@ -55,6 +60,12 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
     const [loadingMore, setLoadingMore] = useState(false);
     const [hasMoreToLoad, setHasMoreToLoad] = useState(true);
 
+    // Undo state
+    const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
+    const [undoCountdown, setUndoCountdown] = useState(5);
+    const undoTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const undoIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
     const bottomRef = useRef<HTMLDivElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -68,6 +79,14 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
         const handleGlobalClick = () => setLongPressMenu(null);
         window.addEventListener('click', handleGlobalClick);
         return () => window.removeEventListener('click', handleGlobalClick);
+    }, []);
+
+    // Cleanup undo timers on unmount
+    useEffect(() => {
+        return () => {
+            if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
+            if (undoIntervalRef.current) clearInterval(undoIntervalRef.current);
+        };
     }, []);
 
     useEffect(() => {
@@ -234,6 +253,14 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
         setMessages(prev => [...prev, tempMessage]);
 
         try {
+            // Ensure the parent chat document exists for DMs
+            if (!selectedChat.isGroup) {
+                await setDoc(doc(db, "chats", chatId), {
+                    participants: [firebaseUser.uid, selectedChat.id],
+                    createdAt: serverTimestamp(),
+                }, { merge: true });
+            }
+
             const newDocRef = doc(collection(db, "chats", chatId, "messages"));
             await setDoc(newDocRef, { 
                 clientId,
@@ -277,24 +304,57 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
         setLongPressMenu(null);
     };
 
-    const handleDeleteMessages = async (forEveryone: boolean) => {
-        const functions = getFunctions(app);
-        const deleteMessage = httpsCallable(functions, 'deleteMessage');
-
-        const items = Array.from(selectedItems);
-        const promises = items.map(messageId => 
-            deleteMessage({ chatId, messageId, mode: forEveryone ? 'everyone' : 'me' })
-        );
-
+    // Executes the actual delete after undo window expires
+    const executeDelete = async (forEveryone: boolean, items: string[]) => {
         try {
-            await Promise.all(promises);
+            if (forEveryone) {
+                const functions = getFunctions(app);
+                const deleteMessageFn = httpsCallable(functions, 'deleteMessage');
+                await Promise.all(items.map(messageId => deleteMessageFn({ chatId, messageId })));
+            } else {
+                await Promise.all(
+                    items.map(messageId =>
+                        updateDoc(doc(db, "chats", chatId, "messages", messageId), {
+                            deletedFor: arrayUnion(firebaseUser.uid),
+                        })
+                    )
+                );
+            }
         } catch (error) {
             console.error("Error deleting messages:", error);
             alert("An error occurred. Please try again.");
-        } finally {
-            cancelSelection();
-            setShowDeleteConfirm(false);
         }
+    };
+
+    const handleDeleteMessages = (forEveryone: boolean) => {
+        const items = Array.from(selectedItems);
+        cancelSelection();
+        setShowDeleteConfirm(false);
+
+        // Clear any existing undo timer
+        if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
+        if (undoIntervalRef.current) clearInterval(undoIntervalRef.current);
+
+        setPendingDelete({ forEveryone, items });
+        setUndoCountdown(5);
+
+        undoIntervalRef.current = setInterval(() => {
+            setUndoCountdown(prev => prev - 1);
+        }, 1000);
+
+        undoTimeoutRef.current = setTimeout(() => {
+            clearInterval(undoIntervalRef.current!);
+            setPendingDelete(prev => {
+                if (prev) executeDelete(prev.forEveryone, prev.items);
+                return null;
+            });
+        }, 5000);
+    };
+
+    const handleUndo = () => {
+        if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
+        if (undoIntervalRef.current) clearInterval(undoIntervalRef.current);
+        setPendingDelete(null);
     };
 
     const handleMessageClick = (msgId: string) => {
@@ -325,7 +385,7 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
         event.preventDefault();
         event.stopPropagation();
         
-        if (selectionMode) return; // Don't show menu in selection mode
+        if (selectionMode) return;
 
         let x: number, y: number;
         if ('touches' in event && event.touches.length > 0) {
@@ -345,42 +405,41 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
 
     return (
         <div className="flex-1 flex flex-col bg-black/40 h-full pt-4 pb-6">
-             <AnimatePresence>
+            <AnimatePresence>
                 {selectionMode ? (
-                     <motion.div 
-                         initial={{ opacity: 0, y: -60 }}
-                         animate={{ opacity: 1, y: 0 }}
-                         exit={{ opacity: 0, y: -60 }}
-                         transition={{ duration: 0.3, ease: "easeInOut" }}
-                         className="fixed top-0 left-0 right-0 z-20 p-3 flex items-center justify-between bg-black/70 backdrop-blur-md border-b border-white/10"
-                     >
+                    <motion.div 
+                        initial={{ opacity: 0, y: -60 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -60 }}
+                        transition={{ duration: 0.3, ease: "easeInOut" }}
+                        className="fixed top-0 left-0 right-0 z-20 p-3 flex items-center justify-between bg-black/70 backdrop-blur-md border-b border-white/10"
+                    >
                         <button onClick={cancelSelection} className="p-2 rounded-full hover:bg-white/10"><X size={24} /></button>
                         <motion.span layout className="font-bold text-lg text-white">{selectedItems.size} selected</motion.span>
                         <button onClick={() => setShowDeleteConfirm(true)} className="p-2 rounded-full hover:bg-red-500/20 text-red-500"><Trash2 size={24} /></button>
                     </motion.div>
                 ) : (
-                     <ChatHeader selectedChat={selectedChat} />
+                    <ChatHeader selectedChat={selectedChat} />
                 )}
             </AnimatePresence>
-
 
             <MessageList {...{messages, firebaseUser, selectedChat, selectedItems, selectionMode, handleLongPress: handleLongPressOrContextMenu, onContextMenu: handleLongPressOrContextMenu, handleMessageClick, setShowEmojiPicker, showEmojiPicker, setFullScreenImage, bottomRef, loadMoreMessages, loadingMore, hasMoreToLoad, scrollContainerRef}} />
 
             <ChatInput {...{chatId, onSendMessage: handleInputSend, onSendFile: handleSendFile, draft: drafts[chatId] || '', setDraft: (text: string) => setDraft(chatId, text)}} />
 
             {longPressMenu && (
-                 <Popover open={true} onOpenChange={() => setLongPressMenu(null)}>
-                     <PopoverTrigger asChild><div style={{ position: 'fixed', left: longPressMenu.x, top: longPressMenu.y }} /></PopoverTrigger>
-                     <PopoverContent onClick={(e) => e.stopPropagation()} className="w-auto p-1 bg-gray-900/80 backdrop-blur-sm border border-white/10 rounded-xl shadow-xl">
-                         <div className="flex items-center gap-1">
+                <Popover open={true} onOpenChange={() => setLongPressMenu(null)}>
+                    <PopoverTrigger asChild><div style={{ position: 'fixed', left: longPressMenu.x, top: longPressMenu.y }} /></PopoverTrigger>
+                    <PopoverContent onClick={(e) => e.stopPropagation()} className="w-auto p-1 bg-gray-900/80 backdrop-blur-sm border border-white/10 rounded-xl shadow-xl">
+                        <div className="flex items-center gap-1">
                             <button onClick={() => startSelection(longPressMenu.msgId)} className="p-2 rounded-full hover:bg-white/10"><CheckSquare size={18}/></button>
                             <button onClick={() => {setShowEmojiPicker(longPressMenu.msgId); setLongPressMenu(null);}} className="p-2 rounded-full hover:bg-white/10"><Smile size={18}/></button>
                             {messages.find(m => m.id === longPressMenu.msgId)?.sender === firebaseUser.uid && 
                                 <button onClick={() => { startSelection(longPressMenu.msgId); setShowDeleteConfirm(true); }} className="p-2 rounded-full hover:bg-white/10 text-red-500"><Trash2 size={18}/></button>
                             }
-                         </div>
-                     </PopoverContent>
-                 </Popover>
+                        </div>
+                    </PopoverContent>
+                </Popover>
             )}
 
             <AlertDialog open={showDeleteConfirm} onOpenChange={(open) => !open && setShowDeleteConfirm(false)}>
@@ -398,6 +457,30 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* 5-second undo toast */}
+            <AnimatePresence>
+                {pendingDelete && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 40 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 40 }}
+                        transition={{ duration: 0.2 }}
+                        className="fixed bottom-24 left-4 right-4 z-50 flex items-center justify-between bg-gray-900 border border-white/10 rounded-xl px-4 py-3 shadow-2xl"
+                    >
+                        <span className="text-sm text-white/80">
+                            {pendingDelete.forEveryone ? 'Deleted for everyone' : 'Deleted for you'}
+                            <span className="ml-2 text-white/40">· {undoCountdown}s</span>
+                        </span>
+                        <button
+                            onClick={handleUndo}
+                            className="text-sm font-semibold text-cyan-400 hover:text-cyan-300 transition-colors ml-4"
+                        >
+                            Undo
+                        </button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             <FullScreenImageViewer imageUrl={fullScreenImage} onClose={() => setFullScreenImage(null)} />
         </div>
