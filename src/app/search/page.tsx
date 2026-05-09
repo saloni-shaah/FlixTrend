@@ -1,15 +1,19 @@
 'use client';
 import 'regenerator-runtime/runtime';
 import React, { useState, useEffect, useRef, Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { liteClient as algoliasearch } from 'algoliasearch/lite';
-import { Mic, Search, Play, Hash, User } from 'lucide-react';
+import { Mic, Search, User } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
+import { PostCard } from '@/components/PostCard';
+import { CommentModal } from '@/components/CommentModal';
+import { FullScreenImageViewer } from '@/components/FullScreenImageViewer';
 
 const searchClient = algoliasearch(
-  process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || '',
-  process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_KEY || ''
+  process.env.NEXT_PUBLIC_ALGOLIA_APP_ID!,
+  process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_KEY!
 );
 
 const POSTS_INDEX = process.env.NEXT_PUBLIC_ALGOLIA_POSTS_INDEX || 'posts_index';
@@ -22,75 +26,49 @@ function fmtViews(n: number) {
   return String(n);
 }
 
-function PostHit({ hit }: { hit: any }) {
-  const isVideo = hit.isVideo || (hit.mediaUrl && JSON.stringify(hit.mediaUrl).match(/\.(mp4|webm)/i));
-  const href = isVideo ? `/watch?v=${hit.objectID}` : `/post/${hit.objectID}`;
-  return (
-    <Link
-      href={href}
-      className="flex gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors group"
-    >
-      <div className="w-28 h-16 shrink-0 rounded-lg bg-gradient-to-tr from-accent-pink/20 to-accent-green/20 flex items-center justify-center overflow-hidden">
-        {isVideo ? (
-          <Play size={24} className="text-white/40 group-hover:text-accent-cyan transition-colors" />
-        ) : (
-          <Hash size={24} className="text-white/40 group-hover:text-accent-cyan transition-colors" />
-        )}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-white group-hover:text-accent-cyan transition-colors line-clamp-2 leading-snug">
-          {hit.content || 'Untitled'}
-        </p>
-        <p className="text-xs text-white/50 mt-1">@{hit.username}</p>
-        {hit.viewCount > 0 && (
-          <p className="text-xs text-white/30 mt-0.5">{fmtViews(hit.viewCount)} views</p>
-        )}
-        {hit.hashtags?.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-1.5">
-            {hit.hashtags.slice(0, 4).map((tag: string) => (
-              <span key={tag} className="text-xs text-accent-cyan/70">#{tag}</span>
-            ))}
-          </div>
-        )}
-      </div>
-    </Link>
-  );
-}
-
 function UserHit({ hit }: { hit: any }) {
   return (
     <Link
       href={`/profile/${hit.objectID}`}
-      className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors group"
+      className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-200 group"
     >
-      <div className="w-12 h-12 shrink-0 rounded-full overflow-hidden bg-gradient-to-tr from-accent-pink to-accent-green">
+      <div className="relative w-14 h-14 shrink-0">
         {hit.avatar_url ? (
-          <img src={hit.avatar_url} alt={hit.username} className="w-full h-full object-cover" />
+          <Image src={hit.avatar_url} alt={hit.username} fill className="rounded-full object-cover" unoptimized />
         ) : (
-          <span className="w-full h-full flex items-center justify-center text-white font-bold text-lg">
-            {hit.username?.[0]?.toUpperCase() || <User size={18} />}
-          </span>
+          <div className="w-full h-full rounded-full bg-gradient-to-tr from-accent-pink to-accent-green flex items-center justify-center">
+            <User size={20} className="text-white" />
+          </div>
+        )}
+        {hit.isPremium && (
+          <div className="absolute -bottom-1 -right-1 bg-brand-gold text-black text-[10px] px-1.5 py-0.5 rounded-full font-bold leading-none">
+            PRO
+          </div>
         )}
       </div>
+
       <div className="flex-1 min-w-0">
-        <p className="font-semibold text-white group-hover:text-accent-cyan transition-colors truncate">
-          @{hit.username}
-        </p>
-        {hit.bio && <p className="text-sm text-white/50 line-clamp-1 mt-0.5">{hit.bio}</p>}
-        {hit.Follower_Count > 0 && (
-          <p className="text-xs text-white/30 mt-0.5">{fmtViews(hit.Follower_Count)} followers</p>
-        )}
+        <div className="flex items-center gap-1">
+          <p className="font-semibold text-white truncate">@{hit.username}</p>
+          {hit.isPremium && <span className="text-brand-gold text-xs">✔</span>}
+        </div>
+        {hit.name && <p className="text-sm text-white/60 truncate">{hit.name}</p>}
+        {hit.bio && <p className="text-sm text-white/40 line-clamp-1 mt-0.5">{hit.bio}</p>}
+        <div className="flex gap-3 mt-1 text-xs text-white/30">
+          {hit.Follower_Count > 0 && <span>{fmtViews(hit.Follower_Count)} followers</span>}
+          {hit.Total_likes > 0 && <span>{fmtViews(hit.Total_likes)} likes</span>}
+        </div>
       </div>
-      <span className="shrink-0 text-xs px-3 py-1.5 rounded-full border border-white/20 text-white/60 group-hover:border-accent-cyan/50 group-hover:text-accent-cyan transition-colors">
+
+      <button className="shrink-0 px-4 py-1.5 rounded-full bg-white text-black text-sm font-semibold hover:scale-105 transition-transform">
         Follow
-      </span>
+      </button>
     </Link>
   );
 }
 
 function SearchContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const initialQ = searchParams.get('q') || '';
 
   const [inputValue, setInputValue] = useState(initialQ);
@@ -99,49 +77,54 @@ function SearchContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [currentQuery, setCurrentQuery] = useState(initialQ);
+  const [commentingPost, setCommentingPost] = useState<any | null>(null);
+  const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
+
   const inputRef = useRef<HTMLInputElement>(null);
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const lastQueryRef = useRef('');
 
-  const {
-    transcript,
-    listening,
-    resetTranscript,
-    browserSupportsSpeechRecognition,
-  } = useSpeechRecognition();
+  const { transcript, listening, resetTranscript, browserSupportsSpeechRecognition } = useSpeechRecognition();
 
   useEffect(() => {
-    if (transcript) setInputValue(transcript);
-  }, [transcript]);
+    if (listening && transcript) setInputValue(transcript);
+  }, [transcript, listening]);
 
-  // When mic stops and has content, auto-search
   useEffect(() => {
-    if (!listening && transcript.trim()) {
-      doSearch(transcript.trim());
-    }
+    if (!listening && transcript.trim()) doSearch(transcript.trim());
   }, [listening]);
 
   const doSearch = async (q: string) => {
     const trimmed = q.trim();
-    if (!trimmed) return;
+    if (!trimmed || lastQueryRef.current === trimmed) return;
+    lastQueryRef.current = trimmed;
     setCurrentQuery(trimmed);
-    router.replace(`/search?q=${encodeURIComponent(trimmed)}`, { scroll: false });
+
+    window.history.replaceState({}, '', `/search?q=${encodeURIComponent(trimmed)}`);
+
     setIsLoading(true);
     setHasSearched(true);
 
     try {
-      const results = await (searchClient as any).search([
+      const results = await searchClient.search([
         {
           indexName: POSTS_INDEX,
           query: trimmed,
-          params: { hitsPerPage: 12, attributesToRetrieve: ['objectID', 'content', 'username', 'userId', 'isVideo', 'mediaUrl', 'hashtags', 'viewCount', 'publishAt'] },
+          params: {
+            hitsPerPage: 12,
+            attributesToRetrieve: '*',
+            attributesToSnippet: ['content:20'],
+            snippetEllipsisText: '...',
+          },
         },
         {
           indexName: USERS_INDEX,
           query: trimmed,
-          params: { hitsPerPage: 5, attributesToRetrieve: ['objectID', 'username', 'avatar_url', 'bio', 'Follower_Count'] },
+          params: { hitsPerPage: 5, attributesToRetrieve: '*', },
         },
       ]);
-      setPosts(results.results[0]?.hits || []);
-      setUsers(results.results[1]?.hits || []);
+      setPosts((results.results[0] as any)?.hits.map((hit: any) => ({ ...hit, id: hit.objectID })) || []);
+      setUsers((results.results[1] as any)?.hits || []);
     } catch (err) {
       console.error('Algolia search error:', err);
       setPosts([]);
@@ -151,7 +134,13 @@ function SearchContent() {
     }
   };
 
-  // Run search on initial load if URL has query
+  useEffect(() => {
+    if (!inputValue.trim()) return;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => doSearch(inputValue), 350);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [inputValue]);
+
   useEffect(() => {
     if (initialQ) doSearch(initialQ);
     else inputRef.current?.focus();
@@ -159,6 +148,8 @@ function SearchContent() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    lastQueryRef.current = '';
     doSearch(inputValue);
   };
 
@@ -169,6 +160,7 @@ function SearchContent() {
     } else {
       resetTranscript();
       setInputValue('');
+      lastQueryRef.current = '';
       SpeechRecognition.startListening({ continuous: false });
     }
   };
@@ -178,18 +170,12 @@ function SearchContent() {
   return (
     <div className="min-h-screen bg-background text-foreground pt-6 pb-16 px-4">
       <div className="max-w-3xl mx-auto">
-        {/* Search bar */}
-        <form
-          onSubmit={handleSubmit}
-          className="input-glass flex items-center px-4 w-full"
-        >
+        <form onSubmit={handleSubmit} className="input-glass flex items-center px-4 w-full">
           <button
             type="button"
             onClick={handleMic}
             disabled={!browserSupportsSpeechRecognition}
-            className={`p-2 rounded-full shrink-0 transition-colors ${
-              listening ? 'text-red-500 animate-pulse' : 'text-gray-400 hover:text-brand-saffron'
-            }`}
+            className={`p-2 rounded-full shrink-0 transition-colors ${listening ? 'text-red-500 animate-pulse' : 'text-gray-400 hover:text-brand-saffron'}`}
             aria-label="Voice search"
           >
             <Mic size={20} />
@@ -199,65 +185,53 @@ function SearchContent() {
             ref={inputRef}
             type="text"
             value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
+            onChange={(e) => { lastQueryRef.current = ''; setInputValue(e.target.value); }}
             placeholder={listening ? 'Listening...' : 'Search posts, users, hashtags...'}
             className="flex-1 bg-transparent py-3 text-lg font-body focus:outline-none min-w-0"
             autoComplete="off"
           />
-          <button
-            type="submit"
-            className="p-2 rounded-full text-brand-gold hover:bg-brand-gold/10 shrink-0 transition-colors"
-            aria-label="Search"
-          >
+          <button type="submit" className="p-2 rounded-full text-brand-gold hover:bg-brand-gold/10 shrink-0 transition-colors" aria-label="Search">
             <Search size={20} />
           </button>
         </form>
 
-        {/* Loading */}
         {isLoading && (
           <div className="flex justify-center mt-16">
             <div className="animate-spin rounded-full h-10 w-10 border-2 border-accent-cyan border-t-transparent" />
           </div>
         )}
 
-        {/* Results */}
         {!isLoading && hasSearched && (
           <>
             <p className="text-sm text-white/30 mt-4 mb-6">
-              {totalResults > 0
-                ? `About ${totalResults} results for "${currentQuery}"`
-                : `No results for "${currentQuery}"`}
+              {totalResults > 0 ? `About ${totalResults} results for "${currentQuery}"` : `No results for "${currentQuery}"`}
             </p>
 
-            {/* Users */}
             {users.length > 0 && (
               <section className="mb-8">
-                <h2 className="text-xs font-semibold text-white/40 uppercase tracking-widest mb-3">
-                  People
-                </h2>
+                <h2 className="text-xs font-semibold text-white/40 uppercase tracking-widest mb-3">People</h2>
                 <div className="flex flex-col gap-2">
-                  {users.map((u: any) => (
-                    <UserHit key={u.objectID} hit={u} />
-                  ))}
+                  {users.map((u: any) => <UserHit key={u.objectID} hit={u} />)}
                 </div>
               </section>
             )}
 
-            {/* Posts */}
             {posts.length > 0 && (
               <section>
-                <h2 className="text-xs font-semibold text-white/40 uppercase tracking-widest mb-3">
-                  Posts
-                </h2>
-                <div className="flex flex-col gap-2">
+                <h2 className="text-xs font-semibold text-white/40 uppercase tracking-widest mb-3">Posts</h2>
+                <div className="flex flex-col gap-4">
                   {posts.map((p: any) => (
-                    <PostHit key={p.objectID} hit={p} />
+                    <PostCard 
+                      key={p.objectID} 
+                      post={p} 
+                      onCommentClick={() => setCommentingPost(p)}
+                      onImageClick={(url: string) => setFullScreenImage(url)}
+                    />
                   ))}
                 </div>
               </section>
             )}
 
-            {/* Empty */}
             {totalResults === 0 && (
               <div className="text-center mt-24 text-white/40">
                 <Search size={48} className="mx-auto mb-4 opacity-20" />
@@ -268,7 +242,6 @@ function SearchContent() {
           </>
         )}
 
-        {/* Idle state */}
         {!hasSearched && !isLoading && (
           <div className="text-center mt-24 text-white/30">
             <Search size={48} className="mx-auto mb-4 opacity-20" />
@@ -276,6 +249,16 @@ function SearchContent() {
           </div>
         )}
       </div>
+      {commentingPost && (
+        <CommentModal 
+          post={commentingPost} 
+          postId={commentingPost.id} 
+          postAuthorId={commentingPost.userId}
+          collectionName="posts"
+          onClose={() => setCommentingPost(null)} 
+        />
+      )}
+      <FullScreenImageViewer imageUrl={fullScreenImage} onClose={() => setFullScreenImage(null)} />
     </div>
   );
 }
