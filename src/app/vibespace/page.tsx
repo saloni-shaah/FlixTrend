@@ -1,4 +1,3 @@
-
 "use client";
 import 'regenerator-runtime/runtime';
 import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
@@ -35,7 +34,7 @@ function VibeSpaceContent() {
   const [posts, setPosts] = useState<any[]>([]);
   const [flashes, setFlashes] = useState<any[]>([]);
   const [selectedFlashUser, setSelectedFlashUser] = useState<any | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -64,21 +63,34 @@ function VibeSpaceContent() {
   useEffect(() => {
     setHasMounted(true);
   }, []);
-  
+
+  // When mic stops and has content, navigate to search
   useEffect(() => {
-    setSearchTerm(transcript);
-  }, [transcript]);
+    if (!listening && transcript.trim()) {
+      router.push(`/search?q=${encodeURIComponent(transcript.trim())}`);
+    }
+  }, [listening]);
+
+  // Keep input in sync while mic is active
+  useEffect(() => {
+    if (listening && transcript) setSearchInput(transcript);
+  }, [transcript, listening]);
 
   const handleMicClick = () => {
-    if (!browserSupportsSpeechRecognition) {
-      console.error("Speech recognition is not supported by this browser.");
-      return;
-    }
+    if (!browserSupportsSpeechRecognition) return;
     if (listening) {
       SpeechRecognition.stopListening();
     } else {
       resetTranscript();
+      setSearchInput('');
       SpeechRecognition.startListening({ continuous: false });
+    }
+  };
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchInput.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchInput.trim())}`);
     }
   };
 
@@ -201,7 +213,7 @@ function VibeSpaceContent() {
     const groupedFlashes = flashes.reduce((acc: any, flash) => {
         if (!acc[flash.userId]) {
             acc[flash.userId] = {
-                id: flash.userId, // FIX: Pass the user ID for consistency
+                id: flash.userId,
                 username: flash.username,
                 avatar_url: flash.avatar_url,
                 flashes: []
@@ -212,15 +224,6 @@ function VibeSpaceContent() {
     }, {});
 
     const flashUsers = Object.values(groupedFlashes);
-
-    const filteredPosts = searchTerm.trim()
-        ? posts.filter(
-            (post) =>
-              (post.content && post.content.toLowerCase().includes(searchTerm.toLowerCase())) ||
-              (post.username && post.username.toLowerCase().includes(searchTerm.toLowerCase())) ||
-              (post.hashtags && post.hashtags.some((h: string) => h.toLowerCase().includes(searchTerm.toLowerCase())))
-          )
-        : posts;
     
     const flashesContainerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.08 }}};
     const flashItemVariants = { hidden: { opacity: 0, scale: 0.5 }, visible: { opacity: 1, scale: 1 }};
@@ -289,8 +292,12 @@ function VibeSpaceContent() {
         <h1 className="sr-only">Vibespace - The heart of FlixTrend</h1>
       <div className="w-full max-w-2xl mx-auto">
         <motion.div className="flex justify-center items-center mb-6 w-full" initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-            <div className={`input-glass w-full flex items-center px-4 transition-all duration-300 ${isSearchFocused ? 'ring-2 ring-brand-saffron' : ''}`}>
+            <form
+              onSubmit={handleSearchSubmit}
+              className={`input-glass w-full flex items-center px-4 transition-all duration-300 ${isSearchFocused ? 'ring-2 ring-brand-saffron' : ''}`}
+            >
                   <button 
+                    type="button"
                     className={`p-1 rounded-full transition-colors text-gray-400 ${listening ? 'text-red-500 animate-pulse' : 'hover:text-brand-saffron'}`} 
                     aria-label="Voice search" 
                     onClick={handleMicClick}
@@ -301,19 +308,19 @@ function VibeSpaceContent() {
                   <div className="w-px h-6 bg-glass-border mx-3"></div>
                   <input
                     type="text"
-                    className="flex-1 bg-transparent py-3 text-lg font-body focus:outline-none"
+                    className="flex-1 bg-transparent py-3 text-lg font-body focus:outline-none min-w-0"
                     placeholder={listening ? "Listening..." : "Search posts..."}
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
                     onFocus={() => setIsSearchFocused(true)}
                     onBlur={() => setIsSearchFocused(false)}
                   />
                   <motion.div whileHover={{ scale: 1.1, rotate: 10 }}>
-                    <button className="p-2 rounded-full text-brand-gold hover:bg-brand-gold/10">
+                    <button type="submit" className="p-2 rounded-full text-brand-gold hover:bg-brand-gold/10">
                         <Search />
                     </button>
                   </motion.div>
-              </div>
+              </form>
         </motion.div>
 
         {renderCategoryFilters()}
@@ -371,8 +378,8 @@ function VibeSpaceContent() {
               <VibeSpaceLoader />
             ) : (
               <div className="w-full max-w-xl flex flex-col gap-4">
-                {filteredPosts.length > 0 ? filteredPosts.map((post, index) => (
-                    <PostCard key={post.id} post={post} allPosts={filteredPosts} postIndex={index} />
+                {posts.length > 0 ? posts.map((post, index) => (
+                    <PostCard key={post.id} post={post} allPosts={posts} postIndex={index} />
                 )) : (
                     <div className="text-center text-gray-400 p-8 glass-card">No posts found in this category yet.</div>
                 )}
