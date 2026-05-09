@@ -1,4 +1,5 @@
 'use client';
+import 'regenerator-runtime/runtime';
 import React, { useEffect, useState, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
@@ -19,16 +20,56 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
+import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 
 const db = getFirestore(app);
 
 export function WatchHeader({ 
-  currentUserProfile, 
-  onMicClick 
+  currentUserProfile,
 }: { 
   currentUserProfile: any; 
-  onMicClick: () => void; 
 }) {
+  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+
+  const {
+    transcript,
+    listening,
+    resetTranscript,
+    browserSupportsSpeechRecognition,
+  } = useSpeechRecognition();
+
+  // Keep input in sync while mic active
+  useEffect(() => {
+    if (listening && transcript) setSearchQuery(transcript);
+  }, [transcript, listening]);
+
+  // Auto-search when mic stops
+  useEffect(() => {
+    if (!listening && transcript.trim()) {
+      router.push(`/search?q=${encodeURIComponent(transcript.trim())}`);
+    }
+  }, [listening]);
+
+  const handleMicClick = () => {
+    if (!browserSupportsSpeechRecognition) return;
+    if (listening) {
+      SpeechRecognition.stopListening();
+    } else {
+      resetTranscript();
+      setSearchQuery('');
+      SpeechRecognition.startListening({ continuous: false });
+    }
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
+
   return (
     <header className="fixed top-0 left-0 right-0 bg-background/80 backdrop-blur-md z-50 p-4 border-b border-white/5">
       <div className="max-w-[1800px] mx-auto flex items-center justify-between gap-4">
@@ -44,20 +85,34 @@ export function WatchHeader({
           <>
             {/* Search Bar */}
             <div className="flex-1 flex justify-center px-4 max-w-2xl">
-              <div className="w-full relative group">
+              <form onSubmit={handleSearch} className={`w-full flex items-center bg-white/5 border rounded-full transition-all ${isSearchFocused ? 'border-accent-cyan/50 ring-2 ring-accent-cyan/20' : 'border-white/10'}`}>
+                <button
+                  type="button"
+                  onClick={handleMicClick}
+                  disabled={!browserSupportsSpeechRecognition}
+                  className={`p-2 pl-4 rounded-full shrink-0 transition-colors ${listening ? 'text-red-500 animate-pulse' : 'text-white/40 hover:text-white/80'}`}
+                  aria-label="Voice search"
+                >
+                  <Mic size={18} />
+                </button>
+                <div className="w-px h-5 bg-white/10 mx-2 shrink-0" />
                 <input 
                   type="text" 
-                  placeholder="Search videos..." 
-                  className="w-full bg-white/5 border border-white/10 rounded-full py-2 pl-5 pr-12 focus:outline-none focus:ring-2 focus:ring-accent-cyan/50 transition-all" 
+                  placeholder={listening ? 'Listening...' : 'Search videos...'}
+                  className="flex-1 bg-transparent py-2 focus:outline-none transition-all min-w-0 text-sm"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => setIsSearchFocused(true)}
+                  onBlur={() => setIsSearchFocused(false)}
                 />
-                <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 group-focus-within:text-accent-cyan transition-colors" size={18} />
-              </div>
-              <button 
-                onClick={onMicClick} 
-                className="ml-3 p-2 rounded-full bg-white/5 hover:bg-white/10 text-white/70 transition-colors"
-              >
-                <Mic size={20} />
-              </button>
+                <button
+                  type="submit"
+                  className="p-2 pr-4 shrink-0 text-white/40 hover:text-accent-cyan transition-colors"
+                  aria-label="Search"
+                >
+                  <Search size={18} />
+                </button>
+              </form>
             </div>
 
             {/* User Profile */}
@@ -106,7 +161,6 @@ function getVideoUrl(mediaUrl: any): string {
   if (!Array.isArray(mediaUrl)) {
     return typeof mediaUrl === 'string' && /\.(mp4|webm)/i.test(mediaUrl) ? mediaUrl : "";
   }
-  // Prioritize a 720p version as a sensible default, then 1080, then any video file.
   const url720 = mediaUrl.find((x: string) => typeof x === 'string' && x.includes('720'));
   if (url720) return url720;
   const url1080 = mediaUrl.find((x: string) => typeof x === 'string' && x.includes('1080'));
@@ -123,12 +177,8 @@ function getVideoQualities(mediaUrl: any): { "1080p"?: string; "720p"?: string }
     const qualities: { "1080p"?: string; "720p"?: string } = {};
     const url1080 = mediaUrl.find(url => typeof url === 'string' && url.includes('1080'));
     const url720 = mediaUrl.find(url => typeof url === 'string' && url.includes('720'));
-    if (url1080) {
-        qualities['1080p'] = url1080;
-    }
-    if (url720) {
-        qualities['720p'] = url720;
-    }
+    if (url1080) qualities['1080p'] = url1080;
+    if (url720) qualities['720p'] = url720;
     return Object.keys(qualities).length > 0 ? qualities : undefined;
 }
 
@@ -383,7 +433,7 @@ export default function WatchPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <WatchHeader currentUserProfile={currentUserProfile} onMicClick={() => {}} />
+      <WatchHeader currentUserProfile={currentUserProfile} />
       {/* ── Main layout ── */}
       <div className="max-w-[1800px] mx-auto px-2 pt-4 pb-6 lg:pb-8">
         <div className="flex flex-col lg:flex-row gap-6 watch-main">
