@@ -240,6 +240,12 @@ service cloud.firestore {
         allow delete: if isOwner(userId);
       }
 
+      // DM read receipts — lastReadAt per user, replaces per-message readBy
+      match /readReceipts/{uid} {
+        allow read:  if isSignedIn() && isParticipant();
+        allow write: if isOwner(uid) && isParticipant() && onlyKeysChanged(['lastReadAt']);
+      }
+
       match /messages/{messageId} {
         allow read: if isSignedIn() && isParticipant();
 
