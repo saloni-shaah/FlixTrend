@@ -35,6 +35,10 @@ interface PendingDelete {
     items: string[];
 }
 
+// groupMemberReads: userId → the Date up to which they have read
+// A message is "read" by user X if message.createdAt <= groupMemberReads[X]
+export type GroupMemberReads = Record<string, Date>;
+
 const debounce = (func: (...args: any[]) => any, delay: number) => {
     let timeout: ReturnType<typeof setTimeout>;
     return function(...args: any[]) {
@@ -59,10 +63,11 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
     const [loadingMore, setLoadingMore] = useState(false);
     const [hasMoreToLoad, setHasMoreToLoad] = useState(true);
 
-    // DM read receipts — other user's lastReadAt timestamp
+    // DM: track when the other user last read
     const [otherUserLastReadAt, setOtherUserLastReadAt] = useState<Date | null>(null);
+    // Group: map of userId → lastReadAt Date (replaces per-message readBy arrays)
+    const [groupMemberReads, setGroupMemberReads] = useState<GroupMemberReads>({});
 
-    // Undo state
     const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
     const [undoCountdown, setUndoCountdown] = useState(5);
     const undoTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -70,7 +75,47 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
 
     const bottomRef = useRef<HTMLDivElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const prevMessageCount = useRef(0);
     const isGroupChat = !chatId.includes('_');
+
+    // ─── Scroll helpers ───────────────────────────────────────────────────────
+    const scrollToBottomInstant = useCallback(() => {
+        const container = scrollContainerRef.current;
+        if (!container) return;
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            container.scrollTop = container.scrollHeight;
+        }));
+    }, []);
+
+    const scrollToBottomSmooth = useCallback(() => {
+        const container = scrollContainerRef.current;
+        if (!container) return;
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+        }));
+    }, []);
+
+    // ─── Master scroll effect ─────────────────────────────────────────────────
+    useEffect(() => {
+        if (loadingMore) return;
+        const container = scrollContainerRef.current;
+        if (!container) return;
+
+        const prev = prevMessageCount.current;
+        const curr = messages.length;
+        prevMessageCount.current = curr;
+
+        if (prev === 0 && curr > 0) {
+            scrollToBottomInstant();
+            return;
+        }
+        if (curr > prev) {
+            const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+            if (distanceFromBottom < 150) scrollToBottomSmooth();
+        }
+    }, [messages, loadingMore, scrollToBottomInstant, scrollToBottomSmooth]);
+
+    useEffect(() => { prevMessageCount.current = 0; }, [chatId]);
 
     // ─── Cleanup undo timers on unmount ───────────────────────────────────────
     useEffect(() => {
@@ -121,8 +166,8 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                         const uniqueTempMessages = tempMessages.filter(m => !serverClientIds.has(m.clientId));
                         const combined = [...serverMessages, ...uniqueTempMessages];
                         combined.sort((a, b) => {
-                            const aTime = a.createdAt?.toDate?.() || (a.pending ? a.createdAt.getTime() : 0);
-                            const bTime = b.createdAt?.toDate?.() || (b.pending ? b.createdAt.getTime() : 0);
+                            const aTime = a.createdAt?.toDate?.()?.getTime() ?? (a.pending ? (a.createdAt as Date).getTime() : 0);
+                            const bTime = b.createdAt?.toDate?.()?.getTime() ?? (b.pending ? (b.createdAt as Date).getTime() : 0);
                             return aTime - bTime;
                         });
                         return combined;
@@ -131,9 +176,7 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                     setOldestDoc(serverDocs[serverDocs.length - 1]);
                     setHasMoreToLoad(serverDocs.length === 50);
                 },
-                (error) => {
-                    console.error("Messages snapshot error:", error);
-                }
+                (error) => console.error("Messages snapshot error:", error)
             );
         };
 
@@ -144,10 +187,8 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
     // ─── DM: subscribe to the other user's lastReadAt ────────────────────────
     useEffect(() => {
         if (isGroupChat || !firebaseUser?.uid) return;
-
         const otherUid = chatId.split('_').find(id => id !== firebaseUser.uid);
         if (!otherUid) return;
-
         const receiptRef = doc(db, "chats", chatId, "readReceipts", otherUid);
         const unsub = onSnapshot(receiptRef, (snap) => {
             if (snap.exists()) {
@@ -155,11 +196,10 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                 setOtherUserLastReadAt(ts?.toDate?.() ?? null);
             }
         });
-
         return () => unsub();
     }, [chatId, firebaseUser.uid, isGroupChat]);
 
-    // ─── DM: IntersectionObserver on bottomRef → write lastReadAt once ────────
+    // ─── DM: IntersectionObserver on bottomRef → write lastReadAt ────────────
     useEffect(() => {
         if (isGroupChat || !firebaseUser?.uid || !bottomRef.current) return;
 
@@ -170,50 +210,57 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                     { lastReadAt: serverTimestamp() },
                     { merge: true }
                 );
-            } catch (e) {
-                console.error("lastReadAt write failed:", e);
-            }
+            } catch (e) { console.error("DM lastReadAt write failed:", e); }
         }, 1000);
 
         const observer = new IntersectionObserver(
             ([entry]) => { if (entry.isIntersecting) writeLastReadAt(); },
             { threshold: 0.1 }
         );
-
         observer.observe(bottomRef.current);
         return () => observer.disconnect();
     }, [chatId, firebaseUser.uid, isGroupChat]);
 
-    // ─── Group: debounced readBy update (unchanged) ───────────────────────────
-    const debouncedMarkAsRead = React.useRef(
-        debounce(async (messageId: string) => {
-            if (!firebaseUser?.uid || !isGroupChat) return;
-            try {
-                const messageRef = doc(db, "chats", chatId, "messages", messageId);
-                const msgSnap = await getDoc(messageRef);
-                if (!msgSnap.exists()) return;
-                const data = msgSnap.data();
-                if (!data.readBy || !Array.isArray(data.readBy)) {
-                    await updateDoc(messageRef, { readBy: [firebaseUser.uid] });
-                } else if (!data.readBy.includes(firebaseUser.uid)) {
-                    await updateDoc(messageRef, { readBy: arrayUnion(firebaseUser.uid) });
-                }
-            } catch (error: any) {
-                if (error.code !== 'permission-denied') {
-                    console.error("Mark read failed:", error);
-                }
-            }
-        }, 2000)
-    ).current;
-
+    // ─── Group: subscribe to groupReads subcollection ────────────────────────
+    // One doc per member: chats/{chatId}/groupReads/{userId} = { lastReadAt }
+    // Replaces the old per-message readBy array entirely.
+    // Cost: O(members) reads on open, O(1) write per visibility event — never per-message.
     useEffect(() => {
-        if (!isGroupChat || !messages.length || !firebaseUser?.uid) return;
-        const lastMsg = messages[messages.length - 1];
-        if (lastMsg && lastMsg.id && !lastMsg.pending && lastMsg.sender !== firebaseUser.uid) {
-            const isRead = (lastMsg.readBy || []).includes(firebaseUser.uid);
-            if (!isRead) debouncedMarkAsRead(lastMsg.id);
-        }
-    }, [messages, chatId, firebaseUser.uid, isGroupChat, debouncedMarkAsRead]);
+        if (!isGroupChat || !firebaseUser?.uid) return;
+
+        const groupReadsRef = collection(db, "chats", chatId, "groupReads");
+        const unsub = onSnapshot(groupReadsRef, (snap) => {
+            const reads: GroupMemberReads = {};
+            snap.docs.forEach(d => {
+                const ts = d.data()?.lastReadAt;
+                if (ts) reads[d.id] = ts.toDate();
+            });
+            setGroupMemberReads(reads);
+        });
+        return () => unsub();
+    }, [chatId, firebaseUser.uid, isGroupChat]);
+
+    // ─── Group: write our lastReadAt when bottom is visible ──────────────────
+    useEffect(() => {
+        if (!isGroupChat || !firebaseUser?.uid || !bottomRef.current) return;
+
+        const writeGroupRead = debounce(async () => {
+            try {
+                await setDoc(
+                    doc(db, "chats", chatId, "groupReads", firebaseUser.uid),
+                    { lastReadAt: serverTimestamp() },
+                    { merge: true }
+                );
+            } catch (e) { console.error("groupReads write failed:", e); }
+        }, 1500);
+
+        const observer = new IntersectionObserver(
+            ([entry]) => { if (entry.isIntersecting) writeGroupRead(); },
+            { threshold: 0.1 }
+        );
+        observer.observe(bottomRef.current);
+        return () => observer.disconnect();
+    }, [chatId, firebaseUser.uid, isGroupChat]);
 
     // ─── Load more ────────────────────────────────────────────────────────────
     const loadMoreMessages = async () => {
@@ -263,14 +310,13 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
             type,
             reactions: {},
             deletedFor: [],
-            // readBy only needed for groups
-            ...(isGroupChat ? { readBy: [firebaseUser.uid] } : {}),
             text: text.trim(),
             mediaUrl,
             pending: true,
         };
 
         setMessages(prev => [...prev, tempMessage]);
+        scrollToBottomSmooth();
 
         try {
             if (!isGroupChat) {
@@ -288,8 +334,6 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                 type,
                 reactions: {},
                 deletedFor: [],
-                // readBy only for groups
-                ...(isGroupChat ? { readBy: [firebaseUser.uid] } : {}),
                 text: text.trim() || "",
                 mediaUrl: mediaUrl || null,
             });
@@ -398,15 +442,22 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
         event.preventDefault();
         event.stopPropagation();
         if (selectionMode) return;
+
         let x: number, y: number;
         if ('touches' in event && event.touches.length > 0) {
-            x = event.touches[0].pageX;
-            y = event.touches[0].pageY;
+            x = event.touches[0].clientX;
+            y = event.touches[0].clientY;
         } else {
-            x = (event as React.MouseEvent).pageX;
-            y = (event as React.MouseEvent).pageY;
+            x = (event as React.MouseEvent).clientX;
+            y = (event as React.MouseEvent).clientY;
         }
-        setLongPressMenu({ x, y, msgId });
+
+        const menuWidth = 130;
+        const menuHeight = 48;
+        const clampedX = Math.min(x, window.innerWidth - menuWidth - 8);
+        const clampedY = Math.min(y, window.innerHeight - menuHeight - 8);
+
+        setLongPressMenu({ x: clampedX, y: clampedY, msgId });
     };
 
     if (!selectedChat) return <ChatHeader selectedChat={null} />;
@@ -453,8 +504,10 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                     loadingMore,
                     hasMoreToLoad,
                     scrollContainerRef,
-                    // DM read receipt — pass to MessageList to show ticks
+                    // DM receipt
                     otherUserLastReadAt: isGroupChat ? null : otherUserLastReadAt,
+                    // Group receipts — pass the whole map; MessageItem does the timestamp comparison
+                    groupMemberReads: isGroupChat ? groupMemberReads : null,
                 }}
             />
 
@@ -471,10 +524,13 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
             {longPressMenu && (
                 <Popover open={true} onOpenChange={() => setLongPressMenu(null)}>
                     <PopoverTrigger asChild>
-                        <div style={{ position: 'fixed', left: longPressMenu.x, top: longPressMenu.y }} />
+                        <div style={{ position: 'fixed', left: longPressMenu.x, top: longPressMenu.y, width: 1, height: 1 }} />
                     </PopoverTrigger>
                     <PopoverContent
                         onClick={(e) => e.stopPropagation()}
+                        side="top"
+                        align="start"
+                        sideOffset={4}
                         className="w-auto p-1 bg-gray-900/80 backdrop-blur-sm border border-white/10 rounded-xl shadow-xl"
                     >
                         <div className="flex items-center gap-1">
@@ -504,7 +560,6 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                 </AlertDialogContent>
             </AlertDialog>
 
-            {/* 5-second undo toast */}
             <AnimatePresence>
                 {pendingDelete && (
                     <motion.div
