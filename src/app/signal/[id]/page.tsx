@@ -35,8 +35,6 @@ interface PendingDelete {
     items: string[];
 }
 
-// groupMemberReads: userId → the Date up to which they have read
-// A message is "read" by user X if message.createdAt <= groupMemberReads[X]
 export type GroupMemberReads = Record<string, Date>;
 
 const debounce = (func: (...args: any[]) => any, delay: number) => {
@@ -63,9 +61,7 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
     const [loadingMore, setLoadingMore] = useState(false);
     const [hasMoreToLoad, setHasMoreToLoad] = useState(true);
 
-    // DM: track when the other user last read
     const [otherUserLastReadAt, setOtherUserLastReadAt] = useState<Date | null>(null);
-    // Group: map of userId → lastReadAt Date (replaces per-message readBy arrays)
     const [groupMemberReads, setGroupMemberReads] = useState<GroupMemberReads>({});
 
     const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
@@ -75,49 +71,41 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
 
     const bottomRef = useRef<HTMLDivElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
-    const prevMessageCount = useRef(0);
+    const prevScrollHeightRef = useRef<number | null>(null);
+    const hasScrolledInitially = useRef(false);
     const isGroupChat = !chatId.includes('_');
 
-    // ─── Scroll helpers ───────────────────────────────────────────────────────
-    const scrollToBottomInstant = useCallback(() => {
-        const container = scrollContainerRef.current;
-        if (!container) return;
-        requestAnimationFrame(() => requestAnimationFrame(() => {
-            container.scrollTop = container.scrollHeight;
-        }));
-    }, []);
-
-    const scrollToBottomSmooth = useCallback(() => {
-        const container = scrollContainerRef.current;
-        if (!container) return;
-        requestAnimationFrame(() => requestAnimationFrame(() => {
-            container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
-        }));
-    }, []);
-
-    // ─── Master scroll effect ─────────────────────────────────────────────────
     useEffect(() => {
-        if (loadingMore) return;
-        const container = scrollContainerRef.current;
-        if (!container) return;
+        hasScrolledInitially.current = false;
+        prevScrollHeightRef.current = null;
+    }, [chatId]);
 
-        const prev = prevMessageCount.current;
-        const curr = messages.length;
-        prevMessageCount.current = curr;
+    useEffect(() => {
+        if (!messages.length || !bottomRef.current) return;
 
-        if (prev === 0 && curr > 0) {
-            scrollToBottomInstant();
+        if (!hasScrolledInitially.current) {
+            let attempts = 0;
+            const tryScroll = () => {
+                if (bottomRef.current) {
+                    bottomRef.current.scrollIntoView({ behavior: 'instant' });
+                    attempts++;
+                    if (attempts < 10) setTimeout(tryScroll, 100);
+                    else hasScrolledInitially.current = true;
+                }
+            };
+            tryScroll();
             return;
         }
-        if (curr > prev) {
-            const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
-            if (distanceFromBottom < 150) scrollToBottomSmooth();
+
+        const container = scrollContainerRef.current;
+        if (!container) return;
+        const distanceFromBottom = container.scrollHeight - container.clientHeight - container.scrollTop;
+        if (distanceFromBottom <= 150) {
+            bottomRef.current.scrollIntoView({ behavior: 'instant' });
         }
-    }, [messages, loadingMore, scrollToBottomInstant, scrollToBottomSmooth]);
+    }, [messages, selectedChat]);
 
-    useEffect(() => { prevMessageCount.current = 0; }, [chatId]);
 
-    // ─── Cleanup undo timers on unmount ───────────────────────────────────────
     useEffect(() => {
         return () => {
             if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
@@ -131,7 +119,6 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
         return () => window.removeEventListener('click', handleGlobalClick);
     }, []);
 
-    // ─── Chat setup + messages snapshot ──────────────────────────────────────
     useEffect(() => {
         let chatUnsubscribe: () => void;
 
@@ -184,7 +171,6 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
         return () => { if (chatUnsubscribe) chatUnsubscribe(); };
     }, [chatId, firebaseUser.uid]);
 
-    // ─── DM: subscribe to the other user's lastReadAt ────────────────────────
     useEffect(() => {
         if (isGroupChat || !firebaseUser?.uid) return;
         const otherUid = chatId.split('_').find(id => id !== firebaseUser.uid);
@@ -199,7 +185,6 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
         return () => unsub();
     }, [chatId, firebaseUser.uid, isGroupChat]);
 
-    // ─── DM: IntersectionObserver on bottomRef → write lastReadAt ────────────
     useEffect(() => {
         if (isGroupChat || !firebaseUser?.uid || !bottomRef.current) return;
 
@@ -221,10 +206,6 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
         return () => observer.disconnect();
     }, [chatId, firebaseUser.uid, isGroupChat]);
 
-    // ─── Group: subscribe to groupReads subcollection ────────────────────────
-    // One doc per member: chats/{chatId}/groupReads/{userId} = { lastReadAt }
-    // Replaces the old per-message readBy array entirely.
-    // Cost: O(members) reads on open, O(1) write per visibility event — never per-message.
     useEffect(() => {
         if (!isGroupChat || !firebaseUser?.uid) return;
 
@@ -240,7 +221,6 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
         return () => unsub();
     }, [chatId, firebaseUser.uid, isGroupChat]);
 
-    // ─── Group: write our lastReadAt when bottom is visible ──────────────────
     useEffect(() => {
         if (!isGroupChat || !firebaseUser?.uid || !bottomRef.current) return;
 
@@ -262,7 +242,6 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
         return () => observer.disconnect();
     }, [chatId, firebaseUser.uid, isGroupChat]);
 
-    // ─── Load more ────────────────────────────────────────────────────────────
     const loadMoreMessages = async () => {
         if (loadingMore || !hasMoreToLoad || !scrollContainerRef.current) return;
         setLoadingMore(true);
@@ -296,7 +275,6 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
         }
     };
 
-    // ─── Send message ─────────────────────────────────────────────────────────
     const handleSendMessage = async (text: string, mediaUrl: string | null = null, type: 'text' | 'image' | 'audio' | 'gif' | 'video' = 'text') => {
         if (!firebaseUser?.uid) return;
         if ((!text.trim() && !mediaUrl) || !selectedChat) return;
@@ -316,7 +294,6 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
         };
 
         setMessages(prev => [...prev, tempMessage]);
-        scrollToBottomSmooth();
 
         try {
             if (!isGroupChat) {
@@ -363,7 +340,6 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
         }
     };
 
-    // ─── Selection & delete ───────────────────────────────────────────────────
     const cancelSelection = () => {
         setSelectionMode(false);
         setSelectedItems(new Set());
@@ -504,10 +480,7 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                     loadingMore,
                     hasMoreToLoad,
                     scrollContainerRef,
-                    // DM receipt
-                    otherUserLastReadAt: isGroupChat ? null : otherUserLastReadAt,
-                    // Group receipts — pass the whole map; MessageItem does the timestamp comparison
-                    groupMemberReads: isGroupChat ? groupMemberReads : null,
+                    chatId: chatId
                 }}
             />
 

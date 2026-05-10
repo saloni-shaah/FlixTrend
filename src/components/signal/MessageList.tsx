@@ -1,6 +1,5 @@
 'use client';
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { MessageItem } from './MessageItem';
 import { Loader } from 'lucide-react';
 
@@ -96,7 +95,6 @@ export function MessageList({
       className="flex-1 overflow-y-auto px-4 flex flex-col gap-1"
       style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.07) transparent' }}
     >
-      {/* Load older messages */}
       {hasMoreToLoad && (
         <div className="flex justify-center py-3">
           <button
@@ -112,9 +110,7 @@ export function MessageList({
         </div>
       )}
 
-      <AnimatePresence initial={false}>
-        {nodes}
-      </AnimatePresence>
+      {nodes}
 
       <div ref={bottomRef} className="h-1" />
     </div>
