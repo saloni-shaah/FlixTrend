@@ -234,6 +234,19 @@ service cloud.firestore {
         );
       }
 
+      // ── Chat document itself (DM bootstrap) ──────────────────────────
+      allow read: if isSignedIn() && isParticipant();
+
+      // DMs: either participant can create/merge the chat doc
+      allow create: if isSignedIn() &&
+        chatId.matches('^[^_]+_[^_]+$') &&
+        request.auth.uid in chatId.split('_');
+
+      // Allow merge-updates (e.g. setDoc with merge:true) from participants
+      allow update: if isSignedIn() &&
+        chatId.matches('^[^_]+_[^_]+$') &&
+        request.auth.uid in chatId.split('_');
+
       match /typing/{userId} {
         allow read:   if isSignedIn() && isParticipant();
         allow write:  if isOwner(userId) && isParticipant();
@@ -246,6 +259,22 @@ service cloud.firestore {
         allow write: if isOwner(uid) && isParticipant() && onlyKeysChanged(['lastReadAt']);
       }
 
+      match /groupReads/{uid} {
+        allow read: if isSignedIn() &&
+          isParticipant();
+
+        allow create: if isOwner(uid) &&
+          isParticipant();
+
+        allow update: if isOwner(uid) &&
+          isParticipant() &&
+          onlyKeysChanged([
+            'lastReadAt'
+          ]);
+
+        allow delete: if isOwner(uid);
+      }
+
       match /messages/{messageId} {
         allow read: if isSignedIn() && isParticipant();
 
@@ -256,7 +285,10 @@ service cloud.firestore {
 
         allow update: if isSignedIn() &&
           isParticipant() &&
-          onlyKeysChanged(['reactions', 'deletedFor', 'readBy']);
+          onlyKeysChanged([
+            'reactions',
+            'deletedFor'
+          ]);
 
         allow delete: if isSignedIn() &&
           resource.data.sender == request.auth.uid;
