@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { getFirestore, collection, query, onSnapshot, orderBy, doc, serverTimestamp, updateDoc, getDoc, limit, startAfter, getDocs, setDoc, arrayUnion } from "firebase/firestore";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { auth, app } from "@/utils/firebaseClient";
-import { Loader, X, Trash2, Smile, CheckSquare } from "lucide-react";
+import { Loader, X, Trash2, Smile, CheckSquare, CornerDownRight, Star } from "lucide-react";
 import { useAppState } from "@/utils/AppStateContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -49,6 +49,7 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
     const { drafts, setDraft } = useAppState();
     const [selectedChat, setSelectedChat] = useState<ChatUser | null>(null);
     const [messages, setMessages] = useState<any[]>([]);
+    const [replyingTo, setReplyingTo] = useState<any | null>(null);
 
     const [selectionMode, setSelectionMode] = useState<boolean>(false);
     const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
@@ -56,6 +57,7 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
     const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
     const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
     const [longPressMenu, setLongPressMenu] = useState<{ x: number, y: number, msgId: string } | null>(null);
+    const [starredMessages, setStarredMessages] = useState<Set<string>>(new Set());
 
     const [oldestDoc, setOldestDoc] = useState<any>(null);
     const [loadingMore, setLoadingMore] = useState(false);
@@ -146,6 +148,13 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                 (snap) => {
                     const serverDocs = snap.docs;
                     const serverMessages = serverDocs.map(d => ({ id: d.id, ...d.data() }));
+                    const newStarredMessages = new Set<string>();
+                    serverMessages.forEach(msg => {
+                        if (msg.isStarred) {
+                            newStarredMessages.add(msg.id);
+                        }
+                    });
+                    setStarredMessages(newStarredMessages);
 
                     setMessages(prev => {
                         const tempMessages = prev.filter(m => m.pending);
@@ -291,9 +300,11 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
             text: text.trim(),
             mediaUrl,
             pending: true,
+            replyTo: replyingTo ? replyingTo.id : null,
         };
 
         setMessages(prev => [...prev, tempMessage]);
+        setReplyingTo(null);
 
         try {
             if (!isGroupChat) {
@@ -313,6 +324,7 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                 deletedFor: [],
                 text: text.trim() || "",
                 mediaUrl: mediaUrl || null,
+                replyTo: replyingTo ? replyingTo.id : null,
             });
         } catch (e) {
             console.error(e);
@@ -414,6 +426,25 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
         setLongPressMenu(null);
     };
 
+    const handleReply = (message: any) => {
+        setReplyingTo(message);
+        setLongPressMenu(null);
+    };
+
+    const toggleStar = async (msgId: string) => {
+        const newStarredMessages = new Set(starredMessages);
+        if (newStarredMessages.has(msgId)) {
+          newStarredMessages.delete(msgId);
+        } else {
+          newStarredMessages.add(msgId);
+        }
+        setStarredMessages(newStarredMessages);
+    
+        const msgRef = doc(db, 'chats', chatId, 'messages', msgId);
+        await updateDoc(msgRef, { isStarred: newStarredMessages.has(msgId) });
+        setLongPressMenu(null);
+      };
+
     const handleLongPressOrContextMenu = (event: React.MouseEvent | React.TouchEvent, msgId: string) => {
         event.preventDefault();
         event.stopPropagation();
@@ -469,6 +500,7 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                     selectedChat,
                     selectedItems,
                     selectionMode,
+                    starredMessages,
                     handleLongPress: handleLongPressOrContextMenu,
                     onContextMenu: handleLongPressOrContextMenu,
                     handleMessageClick,
@@ -480,7 +512,8 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                     loadingMore,
                     hasMoreToLoad,
                     scrollContainerRef,
-                    chatId: chatId
+                    chatId: chatId,
+                    onReply: handleReply,
                 }}
             />
 
@@ -491,6 +524,8 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                     onSendFile: handleSendFile,
                     draft: drafts[chatId] || '',
                     setDraft: (text: string) => setDraft(chatId, text),
+                    replyingTo,
+                    cancelReply: () => setReplyingTo(null),
                 }}
             />
 
@@ -507,8 +542,10 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                         className="w-auto p-1 bg-gray-900/80 backdrop-blur-sm border border-white/10 rounded-xl shadow-xl"
                     >
                         <div className="flex items-center gap-1">
+                            <button onClick={() => toggleStar(longPressMenu.msgId)} className="p-2 rounded-full hover:bg-white/10"><Star size={18} className={starredMessages.has(longPressMenu.msgId) ? 'text-yellow-400' : ''} /></button>
                             <button onClick={() => startSelection(longPressMenu.msgId)} className="p-2 rounded-full hover:bg-white/10"><CheckSquare size={18} /></button>
                             <button onClick={() => { setShowEmojiPicker(longPressMenu.msgId); setLongPressMenu(null); }} className="p-2 rounded-full hover:bg-white/10"><Smile size={18} /></button>
+                            <button onClick={() => handleReply(messages.find(m => m.id === longPressMenu.msgId))} className="p-2 rounded-full hover:bg-white/10"><CornerDownRight size={18} /></button>
                             {messages.find(m => m.id === longPressMenu.msgId)?.sender === firebaseUser.uid &&
                                 <button onClick={() => { startSelection(longPressMenu.msgId); setShowDeleteConfirm(true); }} className="p-2 rounded-full hover:bg-white/10 text-red-500"><Trash2 size={18} /></button>
                             }

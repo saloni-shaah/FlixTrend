@@ -287,7 +287,8 @@ service cloud.firestore {
           isParticipant() &&
           onlyKeysChanged([
             'reactions',
-            'deletedFor'
+            'deletedFor',
+            'isStarred'
           ]);
 
         allow delete: if isSignedIn() &&

@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Paperclip, Smile, Mic, Send, Trash2, Pause, Play, X, Loader } from 'lucide-react';
+import { Paperclip, Smile, Mic, Send, Trash2, Pause, Play, X, Loader, CornerDownRight } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import Picker from 'emoji-picker-react';
 import { GiphyPicker } from './GiphyPicker';
@@ -16,10 +16,12 @@ interface ChatInputProps {
   onSendMessage: (text: string, type?: 'text' | 'gif') => void;
   onSendFile:    (file: File, type: 'image' | 'audio' | 'video') => Promise<void> | void;
   onTyping?:     () => void;
+  replyingTo?:   any;
+  cancelReply?:  () => void;
 }
 
 export function ChatInput({
-  chatId, draft, setDraft, onSendMessage, onSendFile, onTyping,
+  chatId, draft, setDraft, onSendMessage, onSendFile, onTyping, replyingTo, cancelReply
 }: ChatInputProps) {
   const [showEmoji,   setShowEmoji]   = useState(false);
   const [showGiphy,   setShowGiphy]   = useState(false);
@@ -37,6 +39,12 @@ export function ChatInput({
   useEffect(() => {
     resize();
   }, [draft]);
+
+  useEffect(() => {
+    if (replyingTo) {
+        textareaRef.current?.focus();
+    }
+  }, [replyingTo]);
 
   const resize = () => {
     const el = textareaRef.current;
@@ -159,6 +167,24 @@ export function ChatInput({
 
   return (
     <footer className="fixed bottom-0 left-0 right-0 md:left-[360px] z-10 bg-black/50 backdrop-blur-2xl border-t border-white/[0.06] pb-16">
+        {replyingTo && (
+            <div className="bg-black/30 px-3 py-2.5 text-sm text-gray-300 flex justify-between items-center border-b border-white/[0.06]">
+                <div className="flex items-center gap-3 min-w-0">
+                    <CornerDownRight size={20} className="text-gray-400 flex-shrink-0" />
+                    <div className="text-sm overflow-hidden">
+                        <p className="font-semibold text-accent-cyan">
+                            Replying
+                        </p>
+                        <p className="text-white/60 line-clamp-1 whitespace-pre-wrap">
+                            {replyingTo.text || (replyingTo.type || 'message')}
+                        </p>
+                    </div>
+                </div>
+                <button onClick={cancelReply} className="p-1.5 rounded-full hover:bg-white/10 flex-shrink-0">
+                    <X size={16} />
+                </button>
+            </div>
+        )}
 
       {isProcessing && (
         <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-accent-pink to-accent-cyan animate-pulse" />
