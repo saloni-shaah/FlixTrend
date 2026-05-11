@@ -156,6 +156,14 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
   const renderPostContent = (p: any) => {
     const contentPost = p.type === 'relay' ? p.originalPost : p;
     
+    if (!contentPost) {
+      return (
+        <div className="text-muted-foreground p-4 border border-dashed border-gray-600 rounded-lg">
+          This relayed content is no longer available. It may have been deleted by the original poster.
+        </div>
+      );
+    }
+
     const initials = author.displayName?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || author.username?.slice(0, 2).toUpperCase() || "U";
     const mediaUrls = Array.isArray(contentPost.mediaUrl) ? contentPost.mediaUrl : (contentPost.mediaUrl ? [contentPost.mediaUrl] : []);
     const mediaContent = contentPost.type === "media" && mediaUrls.length > 0 && !isShortVibe;
