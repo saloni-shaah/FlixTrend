@@ -1,346 +1,463 @@
 'use client';
 import 'regenerator-runtime/runtime';
-import React, { useState, useEffect, useRef, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { liteClient as algoliasearch } from 'algoliasearch/lite';
-import { Mic, Search, User, Video } from 'lucide-react';
+import { Mic, Search, Video, Hash, X } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import { PostCard } from '@/components/PostCard';
 import { CommentModal } from '@/components/CommentModal';
 import { FullScreenImageViewer } from '@/components/FullScreenImageViewer';
+import VerifiedBadge from '@/components/verifiedbadge';
+import { FollowButton } from '@/components/FollowButton';
 
+// ─── Algolia client (2 indices only, no replicas) ───────────────────────────
 const searchClient = algoliasearch(
   process.env.NEXT_PUBLIC_ALGOLIA_APP_ID!,
   process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_KEY!
 );
-
 const POSTS_INDEX = process.env.NEXT_PUBLIC_ALGOLIA_POSTS_INDEX || 'posts_index';
 const USERS_INDEX = process.env.NEXT_PUBLIC_ALGOLIA_USERS_INDEX || 'users_index';
 
-const CATEGORIES = ['all', 'gaming', 'tech', 'music', 'art', 'lifestyle', 'news', 'sports', 'politics'];
-const SORT_OPTIONS = {
-    top: 'Top',
-    viral: 'Viral',
-    recent: 'Recent'
-};
+// Only what PostCard actually needs
+const POST_ATTRS = [
+  'objectID', 'content', 'caption', 'username', 'displayName', 'avatar_url',
+  'mediaUrl', 'thumbnailUrl', 'hashtags', 'viewCount', 'likesCount', 'isVideo',
+  'type', 'createdAt', 'userId', 'fontStyle', 'backgroundColor',
+  'pollOptions', 'question', 'correctAnswerIndex', 'song', 'mood',
+];
 
+const USER_ATTRS = ['objectID', 'name', 'username', 'bio', 'avatar_url', 'isPremium', 'Follower_Count'];
 
-function fmtViews(n: number) {
+const TYPE_FILTERS = [
+  { id: 'all',   label: 'All'   },
+  { id: 'media', label: 'Media' },
+  { id: 'text',  label: 'Text'  },
+  { id: 'poll',  label: 'Poll'  },
+  { id: 'relay', label: 'Relay' },
+];
+
+const SORT_OPTIONS = [
+  { id: 'top',    label: 'Top',    key: 'likesCount' },
+  { id: 'viral',  label: 'Viral',  key: 'viewCount'  },
+  { id: 'recent', label: 'Recent', key: 'createdAt'  },
+] as const;
+
+type SortId = (typeof SORT_OPTIONS)[number]['id'];
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function fmt(n: number) {
   if (!n) return '0';
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  if (n >= 1_000)     return `${(n / 1_000).toFixed(1)}K`;
   return String(n);
 }
 
-function UserHit({ hit }: { hit: any }) {
+function clientSort(hits: any[], sortId: SortId) {
+  const key = SORT_OPTIONS.find(s => s.id === sortId)!.key;
+  return [...hits].sort((a, b) => (b[key] || 0) - (a[key] || 0));
+}
+
+// ─── User card (horizontal, compact) ─────────────────────────────────────────
+function UserCard({ hit }: { hit: any }) {
   return (
-    <Link
-      href={`/squad/${hit.username}`}
-      className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-200 group"
-    >
-      <div className="relative w-14 h-14 shrink-0">
-        {hit.avatar_url ? (
-          <Image src={hit.avatar_url} alt={hit.username} fill className="rounded-full object-cover" unoptimized />
-        ) : (
-          <div className="w-full h-full rounded-full bg-gradient-to-tr from-accent-pink to-accent-green flex items-center justify-center">
-            <User size={20} className="text-white" />
+    <Link href={`/squad/${hit.username}`} className="block">
+      <div className="glass-card p-4 flex items-center gap-3 hover:border-accent-cyan transition-all">
+        <div className="relative shrink-0">
+          <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center text-white text-lg font-bold">
+            {hit.avatar_url
+              ? <Image src={hit.avatar_url} alt={hit.username} fill className="object-cover" unoptimized />
+              : <span>{hit.name?.[0] || hit.username?.[0] || 'U'}</span>}
           </div>
-        )}
-        {hit.isPremium && (
-          <div className="absolute -bottom-1 -right-1 bg-brand-gold text-black text-[10px] px-1.5 py-0.5 rounded-full font-bold leading-none">
-            PRO
-          </div>
-        )}
-      </div>
-
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1">
-          <p className="font-semibold text-white truncate">@{hit.username}</p>
-          {hit.isPremium && <span className="text-brand-gold text-xs">✔</span>}
+          {hit.isPremium && (
+            <div className="absolute -bottom-1 -right-1"><VerifiedBadge /></div>
+          )}
         </div>
-        {hit.name && <p className="text-sm text-white/60 truncate">{hit.name}</p>}
-        {hit.bio && <p className="text-sm text-white/40 line-clamp-1 mt-0.5">{hit.bio}</p>}
-        <div className="flex gap-3 mt-1 text-xs text-white/30">
-          {hit.Follower_Count > 0 && <span>{fmtViews(hit.Follower_Count)} followers</span>}
-          {hit.Total_likes > 0 && <span>{fmtViews(hit.Total_likes)} likes</span>}
+        <div className="flex-1 min-w-0">
+          <div className="font-headline text-accent-cyan text-sm truncate">{hit.name}</div>
+          <div className="text-xs text-gray-400">@{hit.username}</div>
+          {hit.bio && <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{hit.bio}</p>}
+          {(hit.Follower_Count || 0) > 0 && (
+            <p className="text-xs text-gray-600">{fmt(hit.Follower_Count)} followers</p>
+          )}
+        </div>
+        <div className="shrink-0">
+          <FollowButton profileUser={hit} />
         </div>
       </div>
-
-      <button className="shrink-0 px-4 py-1.5 rounded-full bg-white text-black text-sm font-semibold hover:scale-105 transition-transform">
-        Follow
-      </button>
     </Link>
   );
 }
 
+// ─── Main search content ──────────────────────────────────────────────────────
 function SearchContent() {
   const searchParams = useSearchParams();
   const initialQ = searchParams.get('q') || '';
 
-  const [inputValue, setInputValue] = useState(initialQ);
-  const [posts, setPosts] = useState<any[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
-  const [currentQuery, setCurrentQuery] = useState(initialQ);
-  const [commentingPost, setCommentingPost] = useState<any | null>(null);
-  const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
-  
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [videoOnly, setVideoOnly] = useState(false);
-  const [sortType, setSortType] = useState<keyof typeof SORT_OPTIONS>('top');
+  const [input, setInput]               = useState(initialQ);
+  const [posts, setPosts]               = useState<any[]>([]);
+  const [users, setUsers]               = useState<any[]>([]);
+  const [loading, setLoading]           = useState(false);
+  const [hasSearched, setHasSearched]   = useState(false);
+  const [currentQ, setCurrentQ]         = useState(initialQ);
+  const [commentPost, setCommentPost]   = useState<any | null>(null);
+  const [fullImg, setFullImg]           = useState<string | null>(null);
+  const [suggestions, setSuggestions]   = useState<any[]>([]);
+  const [showSug, setShowSug]           = useState(false);
+  const [typeFilter, setTypeFilter]     = useState('all');
+  const [videoOnly, setVideoOnly]       = useState(false);
+  const [sortBy, setSortBy]             = useState<SortId>('top');
 
-  const inputRef = useRef<HTMLInputElement>(null);
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
-  const lastQueryRef = useRef('');
+  const inputRef       = useRef<HTMLInputElement>(null);
+  const debounceRef    = useRef<NodeJS.Timeout | null>(null);
+  const lastKeyRef     = useRef('');
+  const autocompleteRef = useRef<HTMLDivElement>(null);
 
   const { transcript, listening, resetTranscript, browserSupportsSpeechRecognition } = useSpeechRecognition();
 
-  useEffect(() => {
-    if (listening && transcript) setInputValue(transcript);
-  }, [transcript, listening]);
+  useEffect(() => { if (listening && transcript) setInput(transcript); }, [transcript, listening]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (!listening && transcript.trim()) runSearch(transcript.trim()); }, [listening]);
 
-  useEffect(() => {
-    if (!listening && transcript.trim()) doSearch(transcript.trim());
-  }, [listening]);
-
-  const doSearch = async (q: string) => {
+  // ── Core search (1 request = posts + optional users) ──
+  const runSearch = useCallback(async (q: string) => {
     const trimmed = q.trim();
+    setShowSug(false);
 
-    const queryKey = JSON.stringify({ q: trimmed, cat: selectedCategory, vid: videoOnly, sort: sortType });
-    if (lastQueryRef.current === queryKey) return;
-    
-    if (!trimmed && selectedCategory === 'all' && !videoOnly && !trimmed.startsWith('#')) {
-        setPosts([]);
-        setUsers([]);
-        setHasSearched(false);
-        lastQueryRef.current = queryKey;
-        return;
+    const key = `${trimmed}|${typeFilter}|${videoOnly}`;
+    if (lastKeyRef.current === key) return;
+
+    if (!trimmed && typeFilter === 'all' && !videoOnly) {
+      setPosts([]); setUsers([]); setHasSearched(false);
+      lastKeyRef.current = key;
+      return;
     }
 
-    lastQueryRef.current = queryKey;
-    setCurrentQuery(trimmed);
-
+    lastKeyRef.current = key;
+    setCurrentQ(trimmed);
     window.history.replaceState({}, '', `/search?q=${encodeURIComponent(trimmed)}`);
-
-    setIsLoading(true);
+    setLoading(true);
     setHasSearched(true);
 
-    const isHashtagSearch = trimmed.startsWith('#');
-    const postSearchQuery = isHashtagSearch ? trimmed.substring(1) : trimmed;
+    const isHashtag   = trimmed.startsWith('#');
+    const postQuery   = isHashtag ? '' : trimmed;
+    const hashFacet   = isHashtag ? trimmed.slice(1).toLowerCase() : null;
+
+    const facets: string[][] = [];
+    if (typeFilter !== 'all') facets.push([`type:${typeFilter}`]);
+    if (videoOnly)             facets.push(['isVideo:true']);
+    if (hashFacet)             facets.push([`hashtags:${hashFacet}`]);
+
+    const queries: any[] = [
+      {
+        indexName: POSTS_INDEX,
+        query: postQuery,
+        params: {
+          hitsPerPage: 30,                                  // fetch 30 → client-sort → show 15
+          attributesToRetrieve: POST_ATTRS,
+          facetFilters: facets.length ? facets : undefined,
+        },
+      },
+    ];
+
+    // Search users only for plain text queries (not hashtag/video/type filtered)
+    const searchUsers = !isHashtag && !videoOnly && typeFilter === 'all';
+    if (searchUsers) {
+      queries.push({
+        indexName: USERS_INDEX,
+        query: trimmed,
+        params: { hitsPerPage: 6, attributesToRetrieve: USER_ATTRS },
+      });
+    }
 
     try {
-        const facetFilters: string[] = [];
-        if (selectedCategory !== 'all') facetFilters.push(`category:${selectedCategory}`);
-        if (videoOnly) facetFilters.push('isVideo:true');
-
-        const numericFilters: string[] = [];
-        if (sortType === 'viral') numericFilters.push('viewCount > 10000');
-        if (sortType === 'recent') {
-            const twentyFourHoursAgo = Math.floor((Date.now() - 24 * 60 * 60 * 1000) / 1000);
-            numericFilters.push(`createdAt_timestamp > ${twentyFourHoursAgo}`);
-        }
-
-        const postIndexSearch = {
-            indexName: POSTS_INDEX,
-            query: isHashtagSearch ? '' : postSearchQuery,
-            params: {
-                hitsPerPage: 12,
-                attributesToRetrieve: [
-                    'objectID', 'content', 'username', 'displayName', 'avatar_url', 'mediaUrl', 
-                    'thumbnailUrl', 'hashtags', 'viewCount', 'likeCount', 'isVideo', 'isFlow', 
-                    'type', 'createdAt', 'userId', 'fontStyle', 'backgroundColor', 'location', 
-                    'mood', 'pollOptions', 'question', 'correctAnswerIndex', 'song'
-                ],
-                attributesToSnippet: ['content:20'],
-                snippetEllipsisText: '...',
-                facetFilters: isHashtagSearch ? [[`hashtags:${postSearchQuery.toLowerCase()}`], ...facetFilters.map(f => [f])] : facetFilters,
-                numericFilters,
-            },
-        };
-
-        const searches: any[] = [postIndexSearch];
-        if (!isHashtagSearch && !videoOnly && selectedCategory === 'all') {
-            searches.push({
-                indexName: USERS_INDEX,
-                query: trimmed,
-                params: { hitsPerPage: 5, attributesToRetrieve: '*' },
-            });
-        }
-
-        const results = await searchClient.search(searches);
-        
-        setPosts((results.results[0] as any)?.hits.map((hit: any) => ({ ...hit, id: hit.objectID })) || []);
-        setUsers(searches.length > 1 ? (results.results[1] as any)?.hits || [] : []);
-
+      const { results } = await searchClient.search(queries);
+      const rawPosts = ((results[0] as any)?.hits || []).map((h: any) => ({ ...h, id: h.objectID }));
+      setPosts(clientSort(rawPosts, sortBy).slice(0, 15));
+      setUsers(searchUsers ? ((results[1] as any)?.hits || []) : []);
     } catch (err) {
-      console.error('Algolia search error:', err);
-      setPosts([]);
-      setUsers([]);
+      console.error('Search error:', err);
+      setPosts([]); setUsers([]);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [typeFilter, videoOnly, sortBy]);
 
+  // ── Autocomplete (users + hashtag facets, no extra index) ──
+  const fetchSuggestions = useCallback(async (q: string) => {
+    if (q.length < 2) { setSuggestions([]); setShowSug(false); return; }
+    try {
+      const [userRes, tagRes] = await Promise.all([
+        searchClient.search([{
+          indexName: USERS_INDEX,
+          query: q,
+          params: { hitsPerPage: 3, attributesToRetrieve: ['username', 'name', 'avatar_url'] },
+        }]),
+        searchClient.searchForFacetValues([{
+          indexName: POSTS_INDEX,
+          params: { facetName: 'hashtags', facetQuery: q.replace(/^#/, ''), maxFacetHits: 3 },
+        }]),
+      ]);
+      const userHits = ((userRes.results[0] as any)?.hits || []).map((h: any) => ({ ...h, _type: 'user' }));
+      const tagHits  = (((tagRes as any)[0])?.facetHits || []).map((h: any) => ({ value: h.value, count: h.count, _type: 'hashtag' }));
+      const all = [...userHits, ...tagHits];
+      setSuggestions(all);
+      setShowSug(all.length > 0);
+    } catch { setSuggestions([]); setShowSug(false); }
+  }, []);
+
+  // debounce autocomplete
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      doSearch(inputValue);
-    }, 400);
+      if (input.trim() && document.activeElement === inputRef.current) fetchSuggestions(input);
+    }, 300);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [inputValue, selectedCategory, videoOnly, sortType]);
+  }, [input, fetchSuggestions]);
+
+  // close autocomplete on outside click
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (autocompleteRef.current && !autocompleteRef.current.contains(e.target as Node)) setShowSug(false);
+    };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+
+  // re-sort without re-fetching when sortBy changes
+  useEffect(() => {
+    setPosts(prev => clientSort([...prev], sortBy));
+  }, [sortBy]);
+
+  // re-search when type or video filter changes
+  useEffect(() => {
+    if (hasSearched && currentQ) { lastKeyRef.current = ''; runSearch(currentQ); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [typeFilter, videoOnly]);
 
   useEffect(() => {
-    if (initialQ) doSearch(initialQ);
+    if (initialQ) runSearch(initialQ);
     else inputRef.current?.focus();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    lastQueryRef.current = '';
-    doSearch(inputValue);
+    lastKeyRef.current = '';
+    runSearch(input);
   };
 
   const handleMic = () => {
     if (!browserSupportsSpeechRecognition) return;
-    if (listening) {
-      SpeechRecognition.stopListening();
-    } else {
-      resetTranscript();
-      setInputValue('');
-      lastQueryRef.current = '';
-      SpeechRecognition.startListening({ continuous: false });
-    }
+    if (listening) SpeechRecognition.stopListening();
+    else { resetTranscript(); setInput(''); lastKeyRef.current = ''; SpeechRecognition.startListening({ continuous: false }); }
   };
 
-  const totalResults = posts.length + users.length;
+  const handleSuggestion = (s: any) => {
+    const q = s._type === 'hashtag' ? `#${s.value}` : s.username;
+    setInput(q);
+    runSearch(q);
+  };
+
+  const clearInput = () => {
+    setInput(''); setPosts([]); setUsers([]); setHasSearched(false); lastKeyRef.current = '';
+    inputRef.current?.focus();
+  };
+
+  const total = posts.length + users.length;
 
   return (
-    <div className="min-h-screen bg-background text-foreground pt-6 pb-16 px-4">
-      <div className="max-w-3xl mx-auto">
-        <form onSubmit={handleSubmit} className="input-glass flex items-center px-4 w-full">
-          <button
-            type="button"
-            onClick={handleMic}
-            disabled={!browserSupportsSpeechRecognition}
-            className={`p-2 rounded-full shrink-0 transition-colors ${listening ? 'text-red-500 animate-pulse' : 'text-gray-400 hover:text-brand-saffron'}`}
-            aria-label="Voice search"
-          >
-            <Mic size={20} />
-          </button>
-          <div className="w-px h-6 bg-glass-border mx-3 shrink-0" />
-          <input
-            ref={inputRef}
-            type="text"
-            value={inputValue}
-            onChange={(e) => { setInputValue(e.target.value); }}
-            placeholder={listening ? 'Listening...' : 'Search posts, users, hashtags...'}
-            className="flex-1 bg-transparent py-3 text-lg font-body focus:outline-none min-w-0"
-            autoComplete="off"
-          />
-          <button type="submit" className="p-2 rounded-full text-brand-gold hover:bg-brand-gold/10 shrink-0 transition-colors" aria-label="Search">
-            <Search size={20} />
-          </button>
-        </form>
+    <div className="min-h-screen bg-transparent text-white pt-6 pb-20 px-4">
+      <div className="max-w-2xl mx-auto">
 
-        <div className="flex gap-2 items-center overflow-x-auto py-4 no-scrollbar">
+        {/* ── Search bar ── */}
+        <div className="relative w-full" ref={autocompleteRef}>
+          <form onSubmit={handleSubmit} className="input-glass flex items-center px-4 w-full">
             <button
-                onClick={() => setVideoOnly(!videoOnly)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm whitespace-nowrap transition-colors font-semibold ${videoOnly ? 'bg-accent-cyan text-black' : 'bg-white/10 text-white'}`}
+              type="button" onClick={handleMic}
+              disabled={!browserSupportsSpeechRecognition}
+              className={`p-2 rounded-full shrink-0 transition-colors ${
+                listening ? 'text-red-500 animate-pulse' : 'text-gray-400 hover:text-brand-saffron'
+              }`}
+              aria-label="Voice search"
             >
-                <Video size={16}/> Videos
+              <Mic size={20} />
             </button>
-            <div className="w-px h-6 bg-glass-border mx-2" />
-            <div className='flex gap-2'>
-                {Object.keys(SORT_OPTIONS).map(key => (
-                    <button
-                        key={key}
-                        onClick={() => setSortType(key as keyof typeof SORT_OPTIONS)}
-                        className={`px-4 py-2 rounded-full text-sm whitespace-nowrap transition-colors ${sortType === key ? 'bg-white text-black font-bold' : 'bg-white/10 text-white'}`}>
-                        {SORT_OPTIONS[key as keyof typeof SORT_OPTIONS]}
-                    </button>
-                ))}
-            </div>
-        </div>
+            <div className="w-px h-6 bg-glass-border mx-3 shrink-0" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              placeholder={listening ? 'Listening...' : 'Search posts, creators, #hashtags...'}
+              className="flex-1 bg-transparent py-3 text-base font-body focus:outline-none min-w-0"
+              autoComplete="off"
+              spellCheck={false}
+            />
+            {input && (
+              <button type="button" onClick={clearInput} className="p-2 text-gray-500 hover:text-white shrink-0 transition-colors" aria-label="Clear">
+                <X size={16} />
+              </button>
+            )}
+            <button type="submit" className="p-2 rounded-full text-brand-gold hover:bg-brand-gold/10 shrink-0 transition-colors" aria-label="Search">
+              <Search size={20} />
+            </button>
+          </form>
 
-        <div className="flex gap-2 overflow-x-auto pb-4 no-scrollbar">
-            {CATEGORIES.map(cat => (
+          {/* Autocomplete dropdown */}
+          {showSug && (
+            <div className="absolute top-full mt-2 w-full bg-background-light border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden">
+              {suggestions.map((s, i) => (
                 <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-4 py-2 rounded-full text-sm whitespace-nowrap capitalize transition-colors ${selectedCategory === cat ? 'bg-white text-black font-bold' : 'bg-white/10 text-white'}`}>
-                {cat}
+                  key={i}
+                  onMouseDown={e => { e.preventDefault(); handleSuggestion(s); }}
+                  className="w-full text-left px-4 py-2.5 flex items-center gap-3 hover:bg-white/5 transition-colors"
+                >
+                  {s._type === 'user' ? (
+                    <>
+                      <Image
+                        src={s.avatar_url || 'https://www.gravatar.com/avatar/?d=mp'}
+                        alt={s.username} width={32} height={32}
+                        className="rounded-full object-cover shrink-0" unoptimized
+                      />
+                      <span className="font-semibold text-sm">{s.name}</span>
+                      <span className="text-xs text-gray-400">@{s.username}</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center shrink-0">
+                        <Hash size={14} className="text-accent-cyan" />
+                      </div>
+                      <span className="font-semibold text-sm">#{s.value}</span>
+                      <span className="text-xs text-gray-400">{fmt(s.count)} posts</span>
+                    </>
+                  )}
                 </button>
-            ))}
+              ))}
+            </div>
+          )}
         </div>
 
-        {isLoading && (
-          <div className="flex justify-center mt-16">
+        {/* ── Filters row ── */}
+        <div className="flex items-center gap-2 overflow-x-auto py-4 no-scrollbar">
+          {/* Video toggle */}
+          <button
+            onClick={() => setVideoOnly(v => !v)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-colors ${
+              videoOnly ? 'bg-accent-cyan text-black' : 'border border-white/20 text-white'
+            }`}
+          >
+            <Video size={13} /> Videos
+          </button>
+
+          <div className="w-px h-5 bg-glass-border shrink-0" />
+
+          {/* Type filter */}
+          {TYPE_FILTERS.map(t => (
+            <button
+              key={t.id}
+              onClick={() => setTypeFilter(t.id)}
+              className={`px-3 py-1.5 rounded-full text-xs whitespace-nowrap shrink-0 transition-colors ${
+                typeFilter === t.id ? 'bg-white text-black font-bold' : 'border border-white/20 text-white'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+
+          <div className="w-px h-5 bg-glass-border shrink-0" />
+
+          {/* Sort */}
+          {SORT_OPTIONS.map(s => (
+            <button
+              key={s.id}
+              onClick={() => setSortBy(s.id)}
+              className={`px-3 py-1.5 rounded-full text-xs whitespace-nowrap shrink-0 transition-colors ${
+                sortBy === s.id ? 'bg-brand-gold text-black font-bold' : 'border border-white/20 text-white'
+              }`}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Loading ── */}
+        {loading && (
+          <div className="flex justify-center mt-20">
             <div className="animate-spin rounded-full h-10 w-10 border-2 border-accent-cyan border-t-transparent" />
           </div>
         )}
 
-        {!isLoading && hasSearched && (
+        {/* ── Results ── */}
+        {!loading && hasSearched && (
           <>
-            <p className="text-sm text-white/30 mt-4 mb-6">
-              {totalResults > 0 ? `About ${totalResults} results for "${currentQuery}"` : `No results for "${currentQuery}"`}
+            <p className="text-xs text-white/25 text-center mb-5">
+              {total > 0
+                ? `${total} results for "${currentQ}"`
+                : `No results for "${currentQ}"`}
             </p>
 
+            {/* People */}
             {users.length > 0 && (
-              <section className="mb-8">
-                <h2 className="text-xs font-semibold text-white/40 uppercase tracking-widest mb-3">People</h2>
+              <section className="mb-6">
+                <p className="text-[10px] font-semibold text-white/30 uppercase tracking-widest mb-2 px-1">People</p>
                 <div className="flex flex-col gap-2">
-                  {users.map((u: any) => <UserHit key={u.objectID} hit={u} />)}
+                  {users.map((u: any) => <UserCard key={u.objectID} hit={u} />)}
                 </div>
               </section>
             )}
 
+            {/* Posts */}
             {posts.length > 0 && (
               <section>
-                 <h2 className="text-xs font-semibold text-white/40 uppercase tracking-widest mb-3">Posts</h2>
+                <p className="text-[10px] font-semibold text-white/30 uppercase tracking-widest mb-2 px-1">Posts</p>
                 <div className="flex flex-col gap-4">
                   {posts.map((p: any) => (
-                    <PostCard 
-                      key={p.objectID} 
-                      post={p} 
-                      onCommentClick={() => setCommentingPost(p)}
-                      onImageClick={(url: string) => setFullScreenImage(url)}
+                    <PostCard
+                      key={p.objectID}
+                      post={p}
+                      onCommentClick={() => setCommentPost(p)}
+                      onImageClick={(url: string) => setFullImg(url)}
                     />
                   ))}
                 </div>
               </section>
             )}
 
-            {totalResults === 0 && (
-              <div className="text-center mt-24 text-white/40">
-                <Search size={48} className="mx-auto mb-4 opacity-20" />
-                <p className="text-xl font-semibold mb-1">No results found</p>
-                <p className="text-sm">Try different keywords or check your spelling</p>
+            {/* Empty state */}
+            {total === 0 && (
+              <div className="text-center mt-24 text-white/30">
+                <Search size={40} className="mx-auto mb-3 opacity-20" />
+                <p className="font-semibold text-sm">No results found</p>
+                <p className="text-xs mt-1">Try different keywords or a #hashtag</p>
               </div>
             )}
           </>
         )}
 
-        {!hasSearched && !isLoading && (
-          <div className="text-center mt-24 text-white/30">
-            <Search size={48} className="mx-auto mb-4 opacity-20" />
-            <p className="text-base">Search for anything...</p>
+        {/* ── Idle state ── */}
+        {!hasSearched && !loading && (
+          <div className="text-center mt-28 text-white/25">
+            <Search size={40} className="mx-auto mb-3 opacity-20" />
+            <p className="text-sm">Search posts, creators or #hashtags</p>
           </div>
         )}
       </div>
-      {commentingPost && (
-        <CommentModal 
-          post={commentingPost} 
-          postId={commentingPost.id} 
-          postAuthorId={commentingPost.userId}
+
+      {commentPost && (
+        <CommentModal
+          post={commentPost}
+          postId={commentPost.id}
+          postAuthorId={commentPost.userId}
           collectionName="posts"
-          onClose={() => setCommentingPost(null)} 
+          onClose={() => setCommentPost(null)}
         />
       )}
-      <FullScreenImageViewer imageUrl={fullScreenImage} onClose={() => setFullScreenImage(null)} />
+      <FullScreenImageViewer imageUrl={fullImg} onClose={() => setFullImg(null)} />
     </div>
   );
 }
@@ -348,7 +465,7 @@ function SearchContent() {
 export default function SearchPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-transparent flex items-center justify-center">
         <div className="animate-spin rounded-full h-10 w-10 border-2 border-accent-cyan border-t-transparent" />
       </div>
     }>
