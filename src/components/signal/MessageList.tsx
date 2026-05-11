@@ -17,6 +17,7 @@ interface Props {
   selectedChat:   any;
   selectedItems:  Set<string>;
   selectionMode:  boolean;
+  starredMessages: Set<string>;
   handleLongPress:  (e: any, id: string) => void;
   onContextMenu:    (e: any, id: string) => void;
   handleMessageClick: (id: string) => void;
@@ -29,14 +30,15 @@ interface Props {
   hasMoreToLoad:  boolean;
   scrollContainerRef: React.RefObject<HTMLDivElement>;
   chatId: string;
+  onReply: (message: any) => void;
 }
 
 export function MessageList({
-  messages, firebaseUser, selectedChat, selectedItems, selectionMode,
+  messages, firebaseUser, selectedChat, selectedItems, selectionMode, starredMessages,
   handleLongPress, onContextMenu, handleMessageClick,
   setShowEmojiPicker, showEmojiPicker, setFullScreenImage,
   bottomRef, loadMoreMessages, loadingMore, hasMoreToLoad,
-  scrollContainerRef, chatId,
+  scrollContainerRef, chatId, onReply
 }: Props) {
 
   const visible = messages.filter(m => !(m.deletedFor ?? []).includes(firebaseUser.uid));
@@ -78,6 +80,7 @@ export function MessageList({
         firebaseUser={firebaseUser}
         isSelected={selectedItems.has(msg.id)}
         selectionMode={selectionMode}
+        isStarred={starredMessages.has(msg.id)}
         onLongPress={handleLongPress}
         onContextMenu={onContextMenu}
         onClick={handleMessageClick}
@@ -85,6 +88,8 @@ export function MessageList({
         showEmojiPicker={showEmojiPicker}
         setFullScreenImage={setFullScreenImage}
         chatId={chatId}
+        onReply={onReply}
+        messages={messages}
       />
     );
   });

@@ -568,3 +568,4 @@ export * from './process-media';
 export * from './updateAccolades';
 export * from './onUserUpdate';
 export * from './reconcileViews';
+export * from './disappearingMessages';

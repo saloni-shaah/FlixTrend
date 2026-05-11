@@ -6,7 +6,8 @@ import { getFirestore, doc, runTransaction } from 'firebase/firestore';
 import { app } from '@/utils/firebaseClient';
 import { AudioPlayer } from './AudioPlayer';
 import { GENZ_REACTIONS } from '@/lib/quick-drop-data';
-import { Eye, Check } from 'lucide-react';
+import { Eye, Check, Video, Mic, ImageIcon, Music2, Star } from 'lucide-react';
+import { Camera } from 'lucide-react';
 
 const db = getFirestore(app);
 
@@ -31,6 +32,40 @@ const useLongPress = (cb: (e: React.MouseEvent | React.TouchEvent) => void, ms =
   return { onTouchStart: start, onTouchMove: move, onTouchEnd: end, onMouseDown: start, onMouseMove: move, onMouseUp: end, onMouseLeave: end };
 };
 
+// ── Reply preview accent colors (cycles by sender hash) ─────────────────────
+const REPLY_ACCENTS = [
+  { bar: '#b1f2ff', name: '#b1f2ff', bg: 'rgba(177,242,255,0.08)' },
+  { bar: '#f9a8d4', name: '#f9a8d4', bg: 'rgba(249,168,212,0.08)' },
+  { bar: '#86efac', name: '#86efac', bg: 'rgba(134,239,172,0.08)' },
+  { bar: '#fde68a', name: '#fde68a', bg: 'rgba(253,230,138,0.08)' },
+  { bar: '#c4b5fd', name: '#c4b5fd', bg: 'rgba(196,181,253,0.08)' },
+];
+const getAccent = (sender: string) => {
+  let h = 0;
+  for (let i = 0; i < sender.length; i++) h = (Math.imul(31, h) + sender.charCodeAt(i)) | 0;
+  return REPLY_ACCENTS[Math.abs(h) % REPLY_ACCENTS.length];
+};
+
+// ── Scroll & flash replied-to message ───────────────────────────────────────
+const scrollToAndFlash = (id: string) => {
+  const el = document.getElementById(`message-${id}`);
+  if (!el) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  const bubble = el.querySelector('.message-bubble-content') as HTMLElement | null;
+  if (!bubble) return;
+  bubble.style.transition = 'none';
+  bubble.style.outline = '2px solid rgba(177,242,255,0.6)';
+  bubble.style.boxShadow = '0 0 18px 4px rgba(177,242,255,0.18)';
+  requestAnimationFrame(() => {
+    bubble.style.transition = 'outline 0.7s ease, box-shadow 0.7s ease';
+    setTimeout(() => {
+      bubble.style.outline = '2px solid transparent';
+      bubble.style.boxShadow = 'none';
+      setTimeout(() => { bubble.style.transition = ''; bubble.style.outline = ''; bubble.style.boxShadow = ''; }, 750);
+    }, 950);
+  });
+};
+
 interface Props {
   msg:            any;
   isUser:         boolean;
@@ -38,6 +73,7 @@ interface Props {
   firebaseUser:   any;
   isSelected:     boolean;
   selectionMode:  boolean;
+  isStarred:      boolean;
   onLongPress:    (e: React.MouseEvent | React.TouchEvent, id: string) => void;
   onContextMenu:  (e: React.MouseEvent | React.TouchEvent, id: string) => void;
   onClick:        (id: string) => void;
@@ -45,18 +81,32 @@ interface Props {
   showEmojiPicker:   string | null;
   setFullScreenImage: (url: string) => void;
   chatId: string;
+  onReply: (message: any) => void;
+  messages: any[];
 }
 
 export const MessageItem = React.memo(({
-  msg, isUser, selectedChat, firebaseUser, isSelected, selectionMode,
+  msg, isUser, selectedChat, firebaseUser, isSelected, selectionMode, isStarred,
   onLongPress, onContextMenu, onClick,
-  onShowEmojiPicker, showEmojiPicker, setFullScreenImage, chatId,
+  onShowEmojiPicker, showEmojiPicker, setFullScreenImage, chatId, onReply, messages
 }: Props) => {
 
   const lp = useLongPress(e => {
     if (selectionMode) onClick(msg.id);
     else onLongPress(e, msg.id);
   });
+
+  const repliedToMessage = msg.replyTo ? messages.find(m => m.id === msg.replyTo) : null;
+
+  // ── Compute replied-to sender's display name ───────────────────────────────
+  const repliedToDisplayName = React.useMemo(() => {
+    if (!repliedToMessage) return '';
+    if (repliedToMessage.sender === firebaseUser?.uid) return 'You';
+    if (selectedChat.groupType === 'anonymous')    return genAnon(repliedToMessage.sender, selectedChat.id);
+    if (selectedChat.groupType === 'pseudonymous') return selectedChat.pseudonyms?.[repliedToMessage.sender] || 'Anon';
+    if (selectedChat.isGroup) return selectedChat.memberInfo?.[repliedToMessage.sender]?.name || selectedChat.memberInfo?.[repliedToMessage.sender]?.username || 'Member';
+    return selectedChat.name || selectedChat.username || 'User';
+  }, [repliedToMessage, selectedChat, firebaseUser]);
 
   const displayName = React.useMemo(() => {
     if (selectedChat.groupType === 'anonymous')   return genAnon(msg.sender, selectedChat.id);
@@ -69,7 +119,6 @@ export const MessageItem = React.memo(({
   const handleReact = async (emoji: string) => {
     if (!firebaseUser?.uid || !msg.id) return;
 
-    // Construct the correct chat ID inside the function to avoid dependency on props.
     const resolvedChatId = selectedChat.isGroup
       ? selectedChat.id
       : [firebaseUser.uid, selectedChat.id].sort().join('_');
@@ -94,26 +143,16 @@ export const MessageItem = React.memo(({
         );
 
         if (existingReaction === emoji) {
-          // Toggle off: Remove user from the existing reaction array
           if (Array.isArray(reactions[emoji])) {
             reactions[emoji] = reactions[emoji].filter((uid: string) => uid !== userId);
-            if (reactions[emoji].length === 0) {
-              delete reactions[emoji];
-            }
+            if (reactions[emoji].length === 0) delete reactions[emoji];
           }
         } else {
-          // Change reaction or add a new one
-          // First, remove the old reaction if there was one
           if (existingReaction && Array.isArray(reactions[existingReaction])) {
             reactions[existingReaction] = reactions[existingReaction].filter((uid: string) => uid !== userId);
-            if (reactions[existingReaction].length === 0) {
-              delete reactions[existingReaction];
-            }
+            if (reactions[existingReaction].length === 0) delete reactions[existingReaction];
           }
-          // Now, add the new reaction
-          if (!Array.isArray(reactions[emoji])) {
-            reactions[emoji] = [];
-          }
+          if (!Array.isArray(reactions[emoji])) reactions[emoji] = [];
           reactions[emoji].push(userId);
         }
 
@@ -127,19 +166,12 @@ export const MessageItem = React.memo(({
 
   const getSeenStatus = () => {
     if (!isUser || msg.sender === 'system' || !msg.createdAt) return 'none';
-  
     const readers = msg.readBy || [];
-  
     const otherParticipants = selectedChat.isGroup 
       ? selectedChat.members.filter((id: string) => id !== firebaseUser.uid)
       : [selectedChat.id];
-  
-    if (otherParticipants.every((id: string) => readers.includes(id))) {
-      return 'all_seen';
-    }
-  
+    if (otherParticipants.every((id: string) => readers.includes(id))) return 'all_seen';
     if (readers.length > 0) return 'delivered';
-  
     return 'sent';
   };
 
@@ -147,14 +179,10 @@ export const MessageItem = React.memo(({
 
   const getSeenTooltipText = () => {
     switch (seenStatus) {
-      case 'all_seen':
-        return 'Seen by everyone';
-      case 'delivered':
-        return 'Delivered';
-      case 'sent':
-        return 'Sent';
-      default:
-        return '';
+      case 'all_seen': return 'Seen by everyone';
+      case 'delivered': return 'Delivered';
+      case 'sent': return 'Sent';
+      default: return '';
     }
   };
 
@@ -173,8 +201,97 @@ export const MessageItem = React.memo(({
     );
   }
 
+  // ── Reply preview subcomponent ───────────────────────────────────────────
+  const ReplyPreview = repliedToMessage ? (() => {
+    const accent = getAccent(repliedToMessage.sender);
+    const isImageReply = repliedToMessage.type === 'image' || repliedToMessage.type === 'gif';
+    const isVideoReply = repliedToMessage.type === 'video';
+    const isAudioReply = repliedToMessage.type === 'audio';
+    const hasMedia = isImageReply || isVideoReply || isAudioReply;
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: -4, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.15 }}
+        onClick={e => { e.stopPropagation(); scrollToAndFlash(repliedToMessage.id); }}
+        className="cursor-pointer mb-2 rounded-xl overflow-hidden"
+        style={{
+          background: accent.bg,
+          backdropFilter: 'blur(8px)',
+          border: '1px solid rgba(255,255,255,0.07)',
+        }}
+        whileHover={{ scale: 1.015 }}
+        whileTap={{ scale: 0.98 }}
+      >
+        <div className="flex items-stretch gap-0">
+          {/* Gradient accent bar */}
+          <div
+            className="w-[3.5px] flex-shrink-0 rounded-l-xl"
+            style={{
+              background: `linear-gradient(180deg, ${accent.bar}, ${accent.bar}88)`,
+              boxShadow: `0 0 8px 1px ${accent.bar}55`,
+            }}
+          />
+
+          <div className="flex items-center gap-2 px-2.5 py-2 flex-1 min-w-0">
+            {/* Text content */}
+            <div className="flex-1 min-w-0">
+              <span
+                className="text-[11px] font-bold tracking-wide block mb-0.5"
+                style={{ color: accent.name }}
+              >
+                {repliedToDisplayName}
+              </span>
+              {repliedToMessage.text ? (
+                <p className="text-[12px] leading-tight line-clamp-2 text-white/60 truncate">
+                  {repliedToMessage.text}
+                </p>
+              ) : (
+                <span className="flex items-center gap-1.5 text-[12px] text-white/50 italic">
+                  {isImageReply && <><ImageIcon size={12} /><span>Photo</span></>}
+                  {isVideoReply && <><Video size={12} /><span>Video</span></>}
+                  {isAudioReply && <><Music2 size={12} /><span>Voice message</span></>}
+                </span>
+              )}
+            </div>
+
+            {/* Media thumbnail */}
+            {isImageReply && repliedToMessage.mediaUrl && (
+              <div className="flex-shrink-0">
+                <img
+                  src={repliedToMessage.mediaUrl}
+                  alt=""
+                  className="w-10 h-10 rounded-lg object-cover"
+                  style={{ border: `1.5px solid ${accent.bar}44` }}
+                />
+              </div>
+            )}
+            {isVideoReply && (
+              <div
+                className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center"
+                style={{ background: 'rgba(255,255,255,0.07)', border: `1.5px solid ${accent.bar}44` }}
+              >
+                <Video size={16} className="text-white/60" />
+              </div>
+            )}
+            {isAudioReply && (
+              <div
+                className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center"
+                style={{ background: 'rgba(255,255,255,0.07)', border: `1.5px solid ${accent.bar}44` }}
+              >
+                <Music2 size={16} className="text-white/60" />
+              </div>
+            )}
+          </div>
+        </div>
+      </motion.div>
+    );
+  })() : null;
+
   return (
     <motion.div
+      id={`message-${msg.id}`}
       layout="position"
       initial={{ opacity: 0, y: 8, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -189,7 +306,6 @@ export const MessageItem = React.memo(({
         isSelected && 'bg-accent-cyan/20 rounded-xl',
       )}
     >
-      {/* Selection dot */}
       <AnimatePresence>
         {selectionMode && (
           <motion.div
@@ -208,27 +324,25 @@ export const MessageItem = React.memo(({
         )}
       </AnimatePresence>
 
-      {/* Bubble column */}
       <div className={cn('flex flex-col max-w-[78%] md:max-w-[65%] relative', isUser ? 'items-end' : 'items-start')}>
-
-        {/* Group sender name */}
         {!isUser && selectedChat.isGroup && (
           <span className="text-[11px] font-semibold text-accent-pink px-1 mb-0.5">
             {displayName}
           </span>
         )}
 
-        {/* Bubble */}
-        <div className={cn(
-          'relative px-3.5 py-2.5 rounded-2xl text-[14.5px] leading-relaxed transition-all',
-          isUser
-            ? 'bg-gradient-to-br from-accent-pink/75 to-purple-700/75 text-black'
-            : 'bg-gray-700 text-white',
-          messageFont,
-          msg.pending && 'opacity-55',
-        )}>
+        <div
+          className={cn(
+            'message-bubble-content relative px-3.5 py-2.5 rounded-2xl text-[14.5px] leading-relaxed transition-all',
+            isUser
+              ? 'bg-gradient-to-br from-accent-pink/75 to-purple-700/75 text-black'
+              : 'bg-gray-700 text-white',
+            messageFont,
+            msg.pending && 'opacity-55',
+          )}>
 
-          {/* ── Media ─────────────────────────────────────────────────── */}
+          {ReplyPreview}
+
           {(msg.type === 'image' || msg.type === 'gif') && (
             <motion.img
               src={msg.mediaUrl} alt=""
@@ -256,21 +370,15 @@ export const MessageItem = React.memo(({
 
           {msg.text && <p className="break-words whitespace-pre-wrap">{msg.text}</p>}
 
-          {/* ── Time + Seen Status ─────────────────────────────────────── */}
           <div className={cn('flex items-center gap-1.5 mt-1.5', isUser ? 'justify-end' : 'justify-start')}>
+            {isStarred && <Star size={12} className="text-yellow-400"/>}
             <span className={cn('text-[10px]', isUser ? 'text-black/50' : 'text-white/50')}>{timeStr}</span>
             {isUser && seenStatus !== 'none' && (
               <div className="relative vb" data-tip={getSeenTooltipText()}>
                 <div className="flex items-center">
-                  {seenStatus === 'sent' && (
-                    <Check size={16} className="text-gray-500" />
-                  )}
-                  {seenStatus === 'delivered' && (
-                    <Check size={16} className="text-blue-400" />
-                  )}
-                  {seenStatus === 'all_seen' && (
-                    <Eye size={15} className="text-blue-500" />
-                  )}
+                  {seenStatus === 'sent' && <Check size={16} className="text-gray-500" />}
+                  {seenStatus === 'delivered' && <Check size={16} className="text-blue-400" />}
+                  {seenStatus === 'all_seen' && <Eye size={15} className="text-blue-500" />}
                 </div>
               </div>
             )}
@@ -278,7 +386,6 @@ export const MessageItem = React.memo(({
           </div>
         </div>
 
-        {/* ── Reactions ───────────────────────────────────────────────── */}
         {hasReactions && (
           <div className={cn('flex flex-wrap gap-1 mt-1', isUser ? 'justify-end' : 'justify-start')}>
             {Object.entries(msg.reactions).map(([emoji, uids]: [string, any]) =>
@@ -302,7 +409,6 @@ export const MessageItem = React.memo(({
           </div>
         )}
 
-        {/* ── Inline emoji picker ─────────────────────────────────────── */}
         <AnimatePresence>
           {showEmojiPicker === msg.id && (
             <motion.div

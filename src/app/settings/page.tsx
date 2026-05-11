@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Cog, Palette, Lock, MessageCircle, LogOut, Trash2, AtSign, Mail, CheckCircle, UserX, ArrowLeft, Music, User, Archive } from 'lucide-react';
+import { Cog, Palette, Lock, MessageCircle, LogOut, AtSign, Mail, CheckCircle, ArrowLeft, Music, User, Archive, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { signOut, sendEmailVerification } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
@@ -19,6 +19,7 @@ export default function SettingsPage() {
         tagPrivacy: 'everyone',
         pushNotifications: true,
         emailNotifications: false,
+        disappearingMessages: 90, // default to 90 days
     });
     const [isSaving, setIsSaving] = useState(false);
     const [resendStatus, setResendStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
@@ -40,6 +41,7 @@ export default function SettingsPage() {
                             tagPrivacy: data.settings?.tagPrivacy || 'everyone',
                             pushNotifications: data.settings?.pushNotifications ?? true,
                             emailNotifications: data.settings?.emailNotifications ?? false,
+                            disappearingMessages: data.settings?.disappearingMessages || 90,
                         });
                     }
                      setLoading(false);
@@ -154,6 +156,26 @@ export default function SettingsPage() {
                         </label>
                     </div>
                 </div>
+
+                <div className="bg-white/20 rounded-xl p-4">
+                    <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan"><Zap /> Signal Optimization</h3>
+                    <div className="flex items-center justify-between py-2">
+                        <span>Disappearing Messages</span>
+                        <select value={settings.disappearingMessages} onChange={(e) => handleSettingChange('disappearingMessages', parseInt(e.target.value, 10))} className="input-glass text-sm">
+                            <option value={90}>90 days</option>
+                            <option value={30}>30 days</option>
+                            <option value={21}>21 days</option>
+                            <option value={7}>7 days</option>
+                            <option value={1}>1 day</option>
+                        </select>
+                    </div>
+                    <Link href="/settings/archived-chats">
+                        <div className="w-full p-4 rounded-2xl bg-accent-cyan/10 hover:bg-accent-cyan/20 cursor-pointer mt-4">
+                            <h4 className="font-headline font-bold text-accent-cyan">Manage Archived Chats</h4>
+                            <p className="text-xs text-on-solid-muted">View and unarchive your chats.</p>
+                        </div>
+                    </Link>
+                </div>
                 
                 <div className="bg-white/20 rounded-xl p-4">
                 <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan"><Lock /> Privacy & Security</h3>
@@ -198,16 +220,6 @@ export default function SettingsPage() {
                         <div className="w-full p-4 rounded-2xl bg-accent-cyan/10 hover:bg-accent-cyan/20 cursor-pointer">
                             <h4 className="font-headline font-bold text-accent-cyan">Update Profile</h4>
                             <p className="text-xs text-on-solid-muted">Change your username, age, and gender.</p>
-                        </div>
-                    </Link>
-                </div>
-
-                <div className="bg-white/20 rounded-xl p-4">
-                    <h3 className="flex items-center gap-2 mb-2 font-bold text-accent-cyan"><Archive /> Archived Chats</h3>
-                    <Link href="/settings/archived-chats">
-                        <div className="w-full p-4 rounded-2xl bg-accent-cyan/10 hover:bg-accent-cyan/20 cursor-pointer">
-                            <h4 className="font-headline font-bold text-accent-cyan">Manage Archived Chats</h4>
-                            <p className="text-xs text-on-solid-muted">View and unarchive your chats.</p>
                         </div>
                     </Link>
                 </div>
