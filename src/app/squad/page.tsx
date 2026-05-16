@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useEffect, useState, Suspense, useRef, useCallback } from "react";
 import { auth, app } from "@/utils/firebaseClient";
@@ -192,7 +193,11 @@ function SquadPageContent() {
     try {
       const idToken = await auth.currentUser?.getIdToken();
       const response = await fetch('/api/create-session-token', {
-        headers: { Authorization: `Bearer ${idToken}` },
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ idToken }),
       });
 
       if (!response.ok) throw new Error('Failed to create session token');
@@ -315,7 +320,7 @@ function SquadPageContent() {
 
                     {postTypeFilter !== 'all' && (
                         <div className="flex justify-center gap-2 p-1 rounded-full bg-secondary text-xs">
-                            <button onClick={() => setSortby('latest')} className={`px-3 py-1 rounded-full font-bold transition-colors flex items-center gap-1 ${sortBy === 'latest' ? 'bg-accent-cyan/20 text-accent-cyan' : 'text-muted-foreground'}`}><ArrowUp size={12}/>Latest</button>
+                            <button onClick={() => setSortBy('latest')} className={`px-3 py-1 rounded-full font-bold transition-colors flex items-center gap-1 ${sortBy === 'latest' ? 'bg-accent-cyan/20 text-accent-cyan' : 'text-muted-foreground'}`}><ArrowUp size={12}/>Latest</button>
                             <button onClick={() => setSortBy('oldest')} className={`px-3 py-1 rounded-full font-bold transition-colors flex items-center gap-1 ${sortBy === 'oldest' ? 'bg-accent-cyan/20 text-accent-cyan' : 'text-muted-foreground'}`}><ArrowDown size={12}/>Oldest</button>
                             <button onClick={() => setSortBy('popular')} className={`px-3 py-1 rounded-full font-bold transition-colors flex items-center gap-1 ${sortBy === 'popular' ? 'bg-accent-cyan/20 text-accent-cyan' : 'text-muted-foreground'}`}><TrendingUp size={12}/>Popular</button>
                         </div>

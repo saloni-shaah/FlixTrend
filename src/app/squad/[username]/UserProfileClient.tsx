@@ -11,6 +11,7 @@ import { FollowListModal } from "@/components/FollowListModal";
 import { SquadBadges } from "@/components/squad/badges";
 import { FullScreenImageViewer } from "@/components/FullScreenImageViewer";
 import VerifiedBadge from "@/components/verifiedbadge";
+import Head from 'next/head';
 
 const db = getFirestore(app);
 
@@ -168,8 +169,40 @@ export default function UserProfileClient({ initialProfile, initialPosts, hasMor
   const isPremium = profile.isPremium && (!premiumUntilTimestamp || premiumUntilTimestamp > Date.now());
   const isOwnProfile = firebaseUser?.uid === uid;
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    name: profile.name,
+    alternateName: profile.username,
+    url: `https://flixtrend.in/squad/${profile.username}`,
+    image: profile.avatar_url,
+    description: profile.bio,
+    mainEntityOfPage: {
+      '@type': 'ProfilePage',
+      '@id': `https://flixtrend.in/squad/${profile.username}`,
+    },
+    interactionStatistic: [
+      {
+        '@type': 'InteractionCounter',
+        interactionType: 'https://schema.org/FollowAction',
+        userInteractionCount: profile.Follower_Count || 0,
+      },
+      {
+        '@type': 'InteractionCounter',
+        interactionType: 'https://schema.org/LikeAction',
+        userInteractionCount: profile.Total_likes || 0,
+      },
+    ],
+  };
+
   return (
     <>
+      <Head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </Head>
     <div className="flex flex-col w-full pb-24">
       {showFollowList && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" onClick={() => setShowFollowList(null)} />} 
       <div className="relative h-40 md:h-60 w-full rounded-2xl overflow-hidden mb-8 glass-card cursor-pointer" onClick={() => setFullScreenImage(profile.banner_url)}>
