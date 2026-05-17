@@ -14,12 +14,18 @@ import { isAbusive } from '@/utils/moderation';
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-const creatorCategoryMap: { [key: string]: string } = {
+const creatorCategoryMap: Record<string, string> = {
     'vlogs': 'daily', 'moments': 'daily', 'travel': 'daily', 'self': 'daily',
     'art': 'creative', 'photos': 'creative', 'design': 'creative', 'writing': 'creative',
     'gaming': 'play', 'challenges': 'play', 'comedy': 'play', 'reactions': 'play',
     'tips': 'learn', 'tech': 'learn', 'study': 'learn', 'explainers': 'learn',
     'music': 'culture', 'movies': 'culture', 'trends': 'culture', 'community': 'culture'
+};
+
+const uploadFile = async (file: File, path: string) => {
+    const fileRef = storageRef(storage, path);
+    await uploadBytes(fileRef, file);
+    return getDownloadURL(fileRef);
 };
 
 function PostPreview({ postData }: { postData: any }) {
@@ -89,22 +95,22 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
         setIsScheduling(!!postData.scheduleDate);
     }, [postData.scheduleDate]);
 
-    const uploadFile = async (file: File, path: string) => {
-        const fileRef = storageRef(storage, path);
-        await uploadBytes(fileRef, file);
-        return getDownloadURL(fileRef);
-    };
-
     const handleSubmit = async () => {
         setIsPublishing(true);
         setError(null);
         const user = auth.currentUser;
         if (!user) { alert("You must be logged in to post."); setIsPublishing(false); return; }
         
-        if (isAbusive(postData.content) || isAbusive(postData.hashtags)){
+        if (isAbusive(postData.content) || isAbusive(postData.hashtags) || isAbusive(postData.caption) || isAbusive(postData.description) || isAbusive(postData.question)){
              setError("Your post contains inappropriate language and cannot be posted.");
              setIsPublishing(false);
              return;
+        }
+
+        if (isScheduling && !scheduleDate) {
+            setError("Please pick a date to schedule.");
+            setIsPublishing(false);
+            return;
         }
 
         try {
@@ -118,8 +124,19 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
             const hashtags = (postData.hashtags || "").split(/[\s,]+/).map((h:string) => h.replace('#', '')).filter(Boolean);
 
             if (postData.postType === 'flash') {
-                const createdAt = postData.scheduleDate ? Timestamp.fromDate(postData.scheduleDate) : serverTimestamp();
-                const expiresAt = new Date((postData.scheduleDate || new Date()).getTime() + 24 * 60 * 60 * 1000);
+                let scheduledAt;
+                let expiresAt;
+
+                if (isScheduling && scheduleDate) {
+                    const [hours, minutes] = scheduleTime.split(':');
+                    const finalDate = new Date(scheduleDate);
+                    finalDate.setHours(parseInt(hours), parseInt(minutes));
+                    scheduledAt = Timestamp.fromDate(finalDate);
+                    expiresAt = new Date(finalDate.getTime() + 24 * 60 * 60 * 1000);
+                } else {
+                    scheduledAt = serverTimestamp();
+                    expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+                }
                 
                 let finalMediaUrl: string | null = null;
 
@@ -127,8 +144,6 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                     const file = postData.mediaFiles[0];
                     const mediaPath = `flashes/${user.uid}/${Date.now()}_${file.name}`;
                     finalMediaUrl = await uploadFile(file, mediaPath);
-                } else if (postData.mediaUrl && !postData.mediaUrl[0].startsWith('blob:')) {
-                    finalMediaUrl = postData.mediaUrl[0];
                 }
 
                 if (!finalMediaUrl) {
@@ -144,9 +159,9 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                     caption: postData.caption || "",
                     content: postData.caption || "",
                     hashtags,
-                    createdAt,
+                    createdAt: scheduledAt,
+                    publishAt: scheduledAt,
                     expiresAt,
-                    publishAt: createdAt,
                     location: postData.location || null,
                     mediaUrl: finalMediaUrl,
                     song: postData.song || null,
@@ -186,17 +201,8 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                 }
             }
             
-            let createdAt = serverTimestamp();
-            let publishAt;
-            if (isScheduling && scheduleDate && postData.postType !== 'live') {
-                const [hours, minutes] = scheduleTime.split(':');
-                const finalDate = new Date(scheduleDate);
-                finalDate.setHours(parseInt(hours, 10));
-                finalDate.setMinutes(parseInt(minutes, 10));
-                publishAt = Timestamp.fromDate(finalDate);
-            } else {
-                publishAt = createdAt;
-            }
+            const createdAt = serverTimestamp();
+            const publishAt = createdAt;
 
             const livekitRoomName = postData.postType === 'live' ? `${user.uid}-${Date.now()}` : null;
             const collectionName = 'posts';
@@ -216,8 +222,6 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                 viewCount: 0,
                 creatorType: creatorType,
                 category: mainCategory,
-                processingComplete: !postData.isVideo,
-                videoQualities: {},
                 
                 ...(postData.postType === 'text' && { 
                     backgroundColor: postData.backgroundColor || null, 
@@ -233,6 +237,8 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                     isVideo: postData.isVideo || false,
                     videoDuration: postData.videoDuration || null,
                     isPortrait: postData.isPortrait || false,
+                    processingComplete: !postData.isVideo,
+                    videoQualities: {},
                 }),
                 ...(postData.postType === 'poll' && { 
                     question: postData.question,
@@ -242,7 +248,7 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                 ...(postData.postType === 'live' && { 
                     livekitRoomName: livekitRoomName, 
                     thumbnailUrl: finalThumbnailUrl,
-                    liveStatus: (isScheduling && publishAt > serverTimestamp()) ? 'scheduled' : 'live'
+                    liveStatus: 'live'
                 }),
             };
             
@@ -262,7 +268,7 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
         }
     };
     
-    const shouldShowScheduling = postData.postType !== 'live';
+    const shouldShowScheduling = postData.postType === 'flash';
     const getButtonText = () => {
         if (isPublishing) return 'Publishing...';
         if (postData.postType === 'live') return 'Go Live';
@@ -325,14 +331,14 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                                     />
                                     </PopoverContent>
                                 </Popover>
-                                {postData.postType !== 'flash' && (
-                                    <input 
-                                        type="time"
-                                        value={scheduleTime}
-                                        onChange={(e) => setScheduleTime(e.target.value)}
-                                        className="input-glass"
-                                    />
-                                )}
+                                
+                                <input 
+                                    type="time"
+                                    value={scheduleTime}
+                                    onChange={(e) => setScheduleTime(e.target.value)}
+                                    className="input-glass"
+                                />
+                                
                             </motion.div>
                         )}
                     </div>

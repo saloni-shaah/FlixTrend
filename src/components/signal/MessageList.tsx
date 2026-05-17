@@ -31,6 +31,7 @@ interface Props {
   scrollContainerRef: React.RefObject<HTMLDivElement>;
   chatId: string;
   onReply: (message: any) => void;
+  readReceipts: Record<string, Date>;
 }
 
 export function MessageList({
@@ -38,7 +39,8 @@ export function MessageList({
   handleLongPress, onContextMenu, handleMessageClick,
   setShowEmojiPicker, showEmojiPicker, setFullScreenImage,
   bottomRef, loadMoreMessages, loadingMore, hasMoreToLoad,
-  scrollContainerRef, chatId, onReply
+  scrollContainerRef, chatId, onReply,
+  readReceipts
 }: Props) {
 
   const visible = messages.filter(m => !(m.deletedFor ?? []).includes(firebaseUser.uid));
@@ -90,6 +92,7 @@ export function MessageList({
         chatId={chatId}
         onReply={onReply}
         messages={messages}
+        readReceipts={readReceipts}
       />
     );
   });

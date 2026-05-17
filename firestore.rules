@@ -255,8 +255,14 @@ service cloud.firestore {
 
       // DM read receipts — lastReadAt per user, replaces per-message readBy
       match /readReceipts/{uid} {
-        allow read:  if isSignedIn() && isParticipant();
-        allow write: if isOwner(uid) && isParticipant() && onlyKeysChanged(['lastReadAt']);
+        allow read: if isSignedIn() && isParticipant();
+        
+        allow create: if isOwner(uid) && isParticipant();
+        
+        allow update: if isOwner(uid) && isParticipant() 
+          && onlyKeysChanged(['lastReadAt']);
+          
+        allow delete: if isOwner(uid);
       }
 
       match /groupReads/{uid} {

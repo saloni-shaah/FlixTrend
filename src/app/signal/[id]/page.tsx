@@ -1,7 +1,7 @@
 'use client';
 import React, { useEffect, useState, Suspense, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getFirestore, collection, query, onSnapshot, orderBy, doc, serverTimestamp, updateDoc, getDoc, limit, startAfter, getDocs, setDoc, arrayUnion } from "firebase/firestore";
+import { getFirestore, collection, query, onSnapshot, orderBy, doc, serverTimestamp, updateDoc, getDoc, limit, startAfter, getDocs, setDoc, arrayUnion, deleteDoc } from "firebase/firestore";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { auth, app } from "@/utils/firebaseClient";
 import { Loader, X, Trash2, Smile, CheckSquare, CornerDownRight, Star } from "lucide-react";
@@ -11,6 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { v4 as uuid } from 'uuid';
+import { cn } from '@/lib/utils';
 
 import { ChatHeader } from "@/components/signal/ChatHeader";
 import { MessageList } from "@/components/signal/MessageList";
@@ -28,22 +29,13 @@ interface ChatUser {
   isGroup?: boolean;
   status?: 'online' | 'offline';
   lastSeen?: any;
+  members?: string[];
 }
 
 interface PendingDelete {
     forEveryone: boolean;
     items: string[];
 }
-
-export type GroupMemberReads = Record<string, Date>;
-
-const debounce = (func: (...args: any[]) => any, delay: number) => {
-    let timeout: ReturnType<typeof setTimeout>;
-    return function(...args: any[]) {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func(...args), delay);
-    };
-};
 
 function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string }) {
     const { drafts, setDraft } = useAppState();
@@ -62,9 +54,7 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
     const [oldestDoc, setOldestDoc] = useState<any>(null);
     const [loadingMore, setLoadingMore] = useState(false);
     const [hasMoreToLoad, setHasMoreToLoad] = useState(true);
-
-    const [otherUserLastReadAt, setOtherUserLastReadAt] = useState<Date | null>(null);
-    const [groupMemberReads, setGroupMemberReads] = useState<GroupMemberReads>({});
+    const [readReceipts, setReadReceipts] = useState<Record<string, Date>>({});
 
     const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
     const [undoCountdown, setUndoCountdown] = useState(5);
@@ -73,14 +63,21 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
 
     const bottomRef = useRef<HTMLDivElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
-    const prevScrollHeightRef = useRef<number | null>(null);
     const hasScrolledInitially = useRef(false);
     const isGroupChat = !chatId.includes('_');
 
     useEffect(() => {
         hasScrolledInitially.current = false;
-        prevScrollHeightRef.current = null;
     }, [chatId]);
+
+    const updateReadReceipt = useCallback(() => {
+        if (!firebaseUser?.uid || !chatId) return;
+        setDoc(
+            doc(db, "chats", chatId, "readReceipts", firebaseUser.uid),
+            { lastReadAt: serverTimestamp() },
+            { merge: true }
+        ).catch(console.error);
+    }, [chatId, firebaseUser?.uid]);
 
     useEffect(() => {
         if (!messages.length || !bottomRef.current) return;
@@ -91,8 +88,12 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                 if (bottomRef.current) {
                     bottomRef.current.scrollIntoView({ behavior: 'instant' });
                     attempts++;
-                    if (attempts < 10) setTimeout(tryScroll, 100);
-                    else hasScrolledInitially.current = true;
+                    if (attempts < 5) {
+                        setTimeout(tryScroll, 100);
+                    } else {
+                        hasScrolledInitially.current = true;
+                        updateReadReceipt();
+                    }
                 }
             };
             tryScroll();
@@ -104,9 +105,9 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
         const distanceFromBottom = container.scrollHeight - container.clientHeight - container.scrollTop;
         if (distanceFromBottom <= 150) {
             bottomRef.current.scrollIntoView({ behavior: 'instant' });
+            updateReadReceipt();
         }
-    }, [messages, selectedChat]);
-
+    }, [messages, selectedChat, updateReadReceipt]);
 
     useEffect(() => {
         return () => {
@@ -123,6 +124,7 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
 
     useEffect(() => {
         let chatUnsubscribe: () => void;
+        let starredUnsubscribe: () => void;
 
         const setupChat = async () => {
             if (!firebaseUser?.uid) return;
@@ -144,112 +146,59 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                 limit(50)
             );
 
-            chatUnsubscribe = onSnapshot(q,
-                (snap) => {
-                    const serverDocs = snap.docs;
-                    const serverMessages = serverDocs.map(d => ({ id: d.id, ...d.data() }));
-                    const newStarredMessages = new Set<string>();
-                    serverMessages.forEach(msg => {
-                        if (msg.isStarred) {
-                            newStarredMessages.add(msg.id);
-                        }
+            chatUnsubscribe = onSnapshot(q, (snap) => {
+                const serverMsgs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                setMessages(prev => {
+                    const tempMsgs = prev.filter(m => m.pending);
+                    const serverClientIds = new Set(serverMsgs.map(m => m.clientId));
+                    const uniqueTempMsgs = tempMsgs.filter(m => !serverClientIds.has(m.clientId));
+                    const combined = [...serverMsgs, ...uniqueTempMsgs];
+                    combined.sort((a, b) => {
+                        const aTime = a.createdAt?.toDate?.()?.getTime() ?? (a.pending ? (a.createdAt as Date).getTime() : 0);
+                        const bTime = b.createdAt?.toDate?.()?.getTime() ?? (b.pending ? (b.createdAt as Date).getTime() : 0);
+                        return aTime - bTime;
                     });
-                    setStarredMessages(newStarredMessages);
+                    return combined;
+                });
+                setOldestDoc(snap.docs[snap.docs.length - 1]);
+                setHasMoreToLoad(snap.docs.length === 50);
+            }, (err) => console.error("Messages snapshot err:", err));
 
-                    setMessages(prev => {
-                        const tempMessages = prev.filter(m => m.pending);
-                        const serverClientIds = new Set(serverMessages.map(m => m.clientId));
-                        const uniqueTempMessages = tempMessages.filter(m => !serverClientIds.has(m.clientId));
-                        const combined = [...serverMessages, ...uniqueTempMessages];
-                        combined.sort((a, b) => {
-                            const aTime = a.createdAt?.toDate?.()?.getTime() ?? (a.pending ? (a.createdAt as Date).getTime() : 0);
-                            const bTime = b.createdAt?.toDate?.()?.getTime() ?? (b.pending ? (b.createdAt as Date).getTime() : 0);
-                            return aTime - bTime;
-                        });
-                        return combined;
-                    });
-
-                    setOldestDoc(serverDocs[serverDocs.length - 1]);
-                    setHasMoreToLoad(serverDocs.length === 50);
-                },
-                (error) => console.error("Messages snapshot error:", error)
-            );
+            const starredQuery = query(collection(db, "users", firebaseUser.uid, "starredMessages"));
+            starredUnsubscribe = onSnapshot(starredQuery, (snap) => {
+                const newStarred = new Set<string>();
+                snap.forEach(doc => newStarred.add(doc.id));
+                setStarredMessages(newStarred);
+            });
         };
 
         setupChat();
-        return () => { if (chatUnsubscribe) chatUnsubscribe(); };
+        return () => {
+            if (chatUnsubscribe) chatUnsubscribe();
+            if (starredUnsubscribe) starredUnsubscribe();
+        };
     }, [chatId, firebaseUser.uid]);
 
     useEffect(() => {
-        if (isGroupChat || !firebaseUser?.uid) return;
-        const otherUid = chatId.split('_').find(id => id !== firebaseUser.uid);
-        if (!otherUid) return;
-        const receiptRef = doc(db, "chats", chatId, "readReceipts", otherUid);
-        const unsub = onSnapshot(receiptRef, (snap) => {
-            if (snap.exists()) {
-                const ts = snap.data()?.lastReadAt;
-                setOtherUserLastReadAt(ts?.toDate?.() ?? null);
-            }
-        });
-        return () => unsub();
-    }, [chatId, firebaseUser.uid, isGroupChat]);
+        if (!firebaseUser?.uid || !chatId) return;
 
-    useEffect(() => {
-        if (isGroupChat || !firebaseUser?.uid || !bottomRef.current) return;
-
-        const writeLastReadAt = debounce(async () => {
-            try {
-                await setDoc(
-                    doc(db, "chats", chatId, "readReceipts", firebaseUser.uid),
-                    { lastReadAt: serverTimestamp() },
-                    { merge: true }
-                );
-            } catch (e) { console.error("DM lastReadAt write failed:", e); }
-        }, 1000);
-
-        const observer = new IntersectionObserver(
-            ([entry]) => { if (entry.isIntersecting) writeLastReadAt(); },
-            { threshold: 0.1 }
+        const unsub = onSnapshot(
+            collection(db, "chats", chatId, "readReceipts"),
+            (snap) => {
+                const receipts: Record<string, Date> = {};
+                snap.forEach(d => {
+                    const data = d.data();
+                    if (data.lastReadAt) {
+                        receipts[d.id] = data.lastReadAt.toDate();
+                    }
+                });
+                setReadReceipts(receipts);
+            },
+            (err) => console.error("readReceipts snapshot error:", err)
         );
-        observer.observe(bottomRef.current);
-        return () => observer.disconnect();
-    }, [chatId, firebaseUser.uid, isGroupChat]);
 
-    useEffect(() => {
-        if (!isGroupChat || !firebaseUser?.uid) return;
-
-        const groupReadsRef = collection(db, "chats", chatId, "groupReads");
-        const unsub = onSnapshot(groupReadsRef, (snap) => {
-            const reads: GroupMemberReads = {};
-            snap.docs.forEach(d => {
-                const ts = d.data()?.lastReadAt;
-                if (ts) reads[d.id] = ts.toDate();
-            });
-            setGroupMemberReads(reads);
-        });
         return () => unsub();
-    }, [chatId, firebaseUser.uid, isGroupChat]);
-
-    useEffect(() => {
-        if (!isGroupChat || !firebaseUser?.uid || !bottomRef.current) return;
-
-        const writeGroupRead = debounce(async () => {
-            try {
-                await setDoc(
-                    doc(db, "chats", chatId, "groupReads", firebaseUser.uid),
-                    { lastReadAt: serverTimestamp() },
-                    { merge: true }
-                );
-            } catch (e) { console.error("groupReads write failed:", e); }
-        }, 1500);
-
-        const observer = new IntersectionObserver(
-            ([entry]) => { if (entry.isIntersecting) writeGroupRead(); },
-            { threshold: 0.1 }
-        );
-        observer.observe(bottomRef.current);
-        return () => observer.disconnect();
-    }, [chatId, firebaseUser.uid, isGroupChat]);
+    }, [chatId, firebaseUser?.uid]);
 
     const loadMoreMessages = async () => {
         if (loadingMore || !hasMoreToLoad || !scrollContainerRef.current) return;
@@ -326,6 +275,7 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                 mediaUrl: mediaUrl || null,
                 replyTo: replyingTo ? replyingTo.id : null,
             });
+            updateReadReceipt();
         } catch (e) {
             console.error(e);
             setMessages(prev => prev.filter(m => m.clientId !== clientId));
@@ -432,18 +382,19 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
     };
 
     const toggleStar = async (msgId: string) => {
-        const newStarredMessages = new Set(starredMessages);
-        if (newStarredMessages.has(msgId)) {
-          newStarredMessages.delete(msgId);
-        } else {
-          newStarredMessages.add(msgId);
-        }
-        setStarredMessages(newStarredMessages);
-    
-        const msgRef = doc(db, 'chats', chatId, 'messages', msgId);
-        await updateDoc(msgRef, { isStarred: newStarredMessages.has(msgId) });
+        if (!firebaseUser?.uid) return;
+        const starredDocRef = doc(db, "users", firebaseUser.uid, "starredMessages", msgId);
+        try {
+            if (starredMessages.has(msgId)) {
+                await deleteDoc(starredDocRef);
+            } else {
+                const message = messages.find(m => m.id === msgId);
+                if (!message) return;
+                await setDoc(starredDocRef, { ...message, starredAt: serverTimestamp() });
+            }
+        } catch (e) { console.error(e); }
         setLongPressMenu(null);
-      };
+    };
 
     const handleLongPressOrContextMenu = (event: React.MouseEvent | React.TouchEvent, msgId: string) => {
         event.preventDefault();
@@ -514,6 +465,7 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                     scrollContainerRef,
                     chatId: chatId,
                     onReply: handleReply,
+                    readReceipts,
                 }}
             />
 
@@ -542,7 +494,7 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                         className="w-auto p-1 bg-gray-900/80 backdrop-blur-sm border border-white/10 rounded-xl shadow-xl"
                     >
                         <div className="flex items-center gap-1">
-                            <button onClick={() => toggleStar(longPressMenu.msgId)} className="p-2 rounded-full hover:bg-white/10"><Star size={18} className={starredMessages.has(longPressMenu.msgId) ? 'text-yellow-400' : ''} /></button>
+                            <button onClick={() => toggleStar(longPressMenu.msgId)} className="p-2 rounded-full hover:bg-white/10"><Star size={18} className={cn(starredMessages.has(longPressMenu.msgId) ? 'text-yellow-400 fill-yellow-400' : '')} /></button>
                             <button onClick={() => startSelection(longPressMenu.msgId)} className="p-2 rounded-full hover:bg-white/10"><CheckSquare size={18} /></button>
                             <button onClick={() => { setShowEmojiPicker(longPressMenu.msgId); setLongPressMenu(null); }} className="p-2 rounded-full hover:bg-white/10"><Smile size={18} /></button>
                             <button onClick={() => handleReply(messages.find(m => m.id === longPressMenu.msgId))} className="p-2 rounded-full hover:bg-white/10"><CornerDownRight size={18} /></button>
