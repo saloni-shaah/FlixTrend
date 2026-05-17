@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { getFirestore, collection, query, onSnapshot, orderBy, doc, serverTimestamp, updateDoc, getDoc, limit, startAfter, getDocs, setDoc, arrayUnion, deleteDoc } from "firebase/firestore";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { auth, app } from "@/utils/firebaseClient";
-import { Loader, X, Trash2, Smile, CheckSquare, CornerDownRight, Star } from "lucide-react";
+import { Loader, X, Trash2, Smile, CheckSquare, CornerDownRight, Star, Copy } from "lucide-react";
 import { useAppState } from "@/utils/AppStateContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -381,6 +381,18 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
         setLongPressMenu(null);
     };
 
+    const handleCopy = useCallback((msgId: string) => {
+        const messageToCopy = messages.find(m => m.id === msgId);
+        if (messageToCopy && messageToCopy.text) {
+            navigator.clipboard.writeText(messageToCopy.text)
+                .catch(err => {
+                    console.error('Failed to copy message: ', err);
+                    alert('Failed to copy message.');
+                });
+        }
+        setLongPressMenu(null);
+    }, [messages]);
+
     const toggleStar = async (msgId: string) => {
         if (!firebaseUser?.uid) return;
         const starredDocRef = doc(db, "users", firebaseUser.uid, "starredMessages", msgId);
@@ -410,7 +422,7 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
             y = (event as React.MouseEvent).clientY;
         }
 
-        const menuWidth = 130;
+        const menuWidth = 150; // Adjusted for new button
         const menuHeight = 48;
         const clampedX = Math.min(x, window.innerWidth - menuWidth - 8);
         const clampedY = Math.min(y, window.innerHeight - menuHeight - 8);
@@ -423,6 +435,8 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
     const canDeleteForEveryone = Array.from(selectedItems).every(
         id => messages.find(m => m.id === id)?.sender === firebaseUser.uid
     );
+    
+    const messageForMenu = longPressMenu ? messages.find(m => m.id === longPressMenu.msgId) : null;
 
     return (
         <div className="flex-1 flex flex-col bg-black/40 h-full pt-4 pb-6">
@@ -481,7 +495,7 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                 }}
             />
 
-            {longPressMenu && (
+            {longPressMenu && messageForMenu && (
                 <Popover open={true} onOpenChange={() => setLongPressMenu(null)}>
                     <PopoverTrigger asChild>
                         <div style={{ position: 'fixed', left: longPressMenu.x, top: longPressMenu.y, width: 1, height: 1 }} />
@@ -494,11 +508,14 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                         className="w-auto p-1 bg-gray-900/80 backdrop-blur-sm border border-white/10 rounded-xl shadow-xl"
                     >
                         <div className="flex items-center gap-1">
+                            {messageForMenu.text && (
+                                <button onClick={() => handleCopy(longPressMenu.msgId)} className="p-2 rounded-full hover:bg-white/10"><Copy size={18} /></button>
+                            )}
                             <button onClick={() => toggleStar(longPressMenu.msgId)} className="p-2 rounded-full hover:bg-white/10"><Star size={18} className={cn(starredMessages.has(longPressMenu.msgId) ? 'text-yellow-400 fill-yellow-400' : '')} /></button>
                             <button onClick={() => startSelection(longPressMenu.msgId)} className="p-2 rounded-full hover:bg-white/10"><CheckSquare size={18} /></button>
                             <button onClick={() => { setShowEmojiPicker(longPressMenu.msgId); setLongPressMenu(null); }} className="p-2 rounded-full hover:bg-white/10"><Smile size={18} /></button>
-                            <button onClick={() => handleReply(messages.find(m => m.id === longPressMenu.msgId))} className="p-2 rounded-full hover:bg-white/10"><CornerDownRight size={18} /></button>
-                            {messages.find(m => m.id === longPressMenu.msgId)?.sender === firebaseUser.uid &&
+                            <button onClick={() => handleReply(messageForMenu)} className="p-2 rounded-full hover:bg-white/10"><CornerDownRight size={18} /></button>
+                            {messageForMenu.sender === firebaseUser.uid &&
                                 <button onClick={() => { startSelection(longPressMenu.msgId); setShowDeleteConfirm(true); }} className="p-2 rounded-full hover:bg-white/10 text-red-500"><Trash2 size={18} /></button>
                             }
                         </div>
