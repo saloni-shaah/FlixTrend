@@ -3,10 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getFirestore, doc, increment, writeBatch } from "firebase/firestore";
-import { app } from "@/utils/firebaseClient";
-
-const db = getFirestore(app);
+import { useDropView } from "@/hooks/useDropView";
 
 export function MediaViewer({
   post,
@@ -24,6 +21,7 @@ export function MediaViewer({
   onPrev: () => void;
 }) {
   const [showLike, setShowLike] = useState(false);
+  useDropView(post.id);
 
   const isVideo = useCallback((url: string) => {
     if (!url) return false;
@@ -59,15 +57,6 @@ export function MediaViewer({
       img.src = media[nextIndex];
     }
   }, [currentMediaIndex, media, isVideo]);
-
-  useEffect(() => {
-    if (post.id) {
-      const postRef = doc(db, "drops", post.id);
-      const batch = writeBatch(db);
-      batch.update(postRef, { viewCount: increment(1) });
-      batch.commit().catch(console.error);
-    }
-  }, [post.id]);
 
   const currentMediaUrl = media[currentMediaIndex];
 
