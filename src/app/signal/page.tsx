@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   getFirestore, collection, query, onSnapshot, doc,
   addDoc, serverTimestamp, where, getDocs, updateDoc,
-  arrayUnion, arrayRemove, getDoc, limit, orderBy,
+  arrayUnion, arrayRemove, getDoc, limit, orderBy, getCountFromServer,
 } from 'firebase/firestore';
 import { auth, app } from '@/utils/firebaseClient';
 import { Users, Search, X, Compass, Archive, MoreVertical, Star, Plus, MessageSquarePlus, Inbox } from 'lucide-react';
@@ -226,15 +226,31 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
 
   const processChatData = useCallback(async (chatDoc: any, isGroup: boolean) => {
     const chatData = { id: chatDoc.id, ...chatDoc.data(), isGroup };
-    const chatId   = isGroup ? chatDoc.id : [firebaseUser.uid, chatDoc.id].sort().join('_');
-    const [lastSnap, unreadSnap] = await Promise.all([
-      getDocs(query(collection(db, 'chats', chatId, 'messages'), orderBy('createdAt', 'desc'), limit(1))),
-      getDocs(query(collection(db, 'chats', chatId, 'messages'), where('sender', '!=', firebaseUser.uid), orderBy('sender'), orderBy('createdAt', 'desc'), limit(30))),
+    const chatId = isGroup ? chatDoc.id : [firebaseUser.uid, chatDoc.id].sort().join('_');
+
+    const [lastMessageSnap, receiptSnap] = await Promise.all([
+        getDocs(query(collection(db, 'chats', chatId, 'messages'), orderBy('createdAt', 'desc'), limit(1))),
+        getDoc(doc(db, 'chats', chatId, 'readReceipts', firebaseUser.uid))
     ]);
-    const lastMessage = lastSnap.empty ? null : lastSnap.docs[0].data();
-    const unreadCount = unreadSnap.docs.filter(d => !(d.data().readBy ?? []).includes(firebaseUser.uid)).length;
+
+    const lastMessage = lastMessageSnap.empty ? null : lastMessageSnap.docs[0].data();
+    const lastReadAt = receiptSnap.exists() ? receiptSnap.data().lastReadAt : null;
+
+    let unreadCount = 0;
+    if (lastMessage && lastMessage.sender !== firebaseUser.uid) {
+        if (!lastReadAt || (lastMessage.createdAt && lastMessage.createdAt.toDate() > lastReadAt.toDate())) {
+            const unreadQuery = query(
+                collection(db, 'chats', chatId, 'messages'),
+                where('sender', '!=', firebaseUser.uid),
+                ...(lastReadAt ? [where('createdAt', '>', lastReadAt)] : [])
+            );
+            const countSnap = await getCountFromServer(unreadQuery);
+            unreadCount = countSnap.data().count;
+        }
+    }
+
     return { ...chatData, lastMessage, unreadCount, _chatId: chatId };
-  }, [firebaseUser.uid]);
+}, [firebaseUser.uid]);
 
   const sortChats = useCallback((list: any[], starred: string[]) =>
     [...list].sort((a, b) => {

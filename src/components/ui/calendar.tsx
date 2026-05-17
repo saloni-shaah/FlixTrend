@@ -1,65 +1,115 @@
+// components/ui/calendar.tsx  — replace entirely
+"use client";
+import React, { useState } from 'react';
+import { ChevronLeft, ChevronRight, Calendar as CalIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-"use client"
+const DAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+const MONTHS = ['January','February','March','April','May','June',
+                'July','August','September','October','November','December'];
 
-import * as React from "react"
-import { ChevronLeft, ChevronRight } from "lucide-react"
-import { DayPicker, type DayPickerProps, type CustomComponents } from "react-day-picker"
-
-import { cn } from "@/lib/utils"
-import { buttonVariants } from "@/components/ui/button"
-
-export type CalendarProps = DayPickerProps
-
-function Calendar({
-  className,
-  classNames,
-  showOutsideDays = true,
-  ...props
-}: CalendarProps) {
-  return (
-    <DayPicker
-      showOutsideDays={showOutsideDays}
-      className={cn("p-3", className)}
-      classNames={{
-        months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-        month: "space-y-4",
-        caption: "flex justify-center pt-1 relative items-center",
-        caption_label: "text-sm font-medium",
-        nav: "space-x-1 flex items-center",
-        nav_button: cn(
-          buttonVariants({ variant: "outline" }),
-          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
-        ),
-        nav_button_previous: "absolute left-1",
-        nav_button_next: "absolute right-1",
-        table: "w-full border-collapse space-y-1",
-        head_row: "flex",
-        head_cell:
-          "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
-        row: "flex w-full mt-2",
-        cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
-        day: cn(
-          buttonVariants({ variant: "ghost" }),
-          "h-9 w-9 p-0 font-normal aria-selected:opacity-100"
-        ),
-        day_selected:
-          "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-        day_today: "bg-accent text-accent-foreground",
-        day_outside: "text-muted-foreground opacity-50",
-        day_disabled: "text-muted-foreground opacity-50",
-        day_range_middle:
-          "aria-selected:bg-accent aria-selected:text-accent-foreground",
-        day_hidden: "invisible",
-        ...classNames,
-      }}
-      components={{
-        IconLeft: (props) => <ChevronLeft className="h-4 w-4" {...props} />,
-        IconRight: (props) => <ChevronRight className="h-4 w-4" {...props} />,
-      }}
-      {...props}
-    />
-  )
+interface CalendarProps {
+  selected?: Date;
+  onSelect: (date: Date | undefined) => void;
+  disabled?: (date: Date) => boolean;
+  className?: string;
 }
-Calendar.displayName = "Calendar"
 
-export { Calendar }
+export function Calendar({ selected, onSelect, disabled, className }: CalendarProps) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const [viewYear, setViewYear] = useState(selected?.getFullYear() ?? today.getFullYear());
+  const [viewMonth, setViewMonth] = useState(selected?.getMonth() ?? today.getMonth());
+
+  const prevMonth = () => {
+    if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
+    else setViewMonth(m => m - 1);
+  };
+  const nextMonth = () => {
+    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); }
+    else setViewMonth(m => m + 1);
+  };
+
+  const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const prevDays = new Date(viewYear, viewMonth, 0).getDate();
+
+  const cells: { date: Date; outside: boolean }[] = [];
+  for (let i = firstDay - 1; i >= 0; i--)
+    cells.push({ date: new Date(viewYear, viewMonth - 1, prevDays - i), outside: true });
+  for (let d = 1; d <= daysInMonth; d++)
+    cells.push({ date: new Date(viewYear, viewMonth, d), outside: false });
+  while (cells.length < 42)
+    cells.push({ date: new Date(viewYear, viewMonth + 1, cells.length - firstDay - daysInMonth + 1), outside: true });
+
+  const quickPicks = [
+    { label: 'Today', date: new Date(today) },
+    { label: 'Tomorrow', date: new Date(today.getTime() + 86400000) },
+    { label: 'Next week', date: new Date(today.getTime() + 7 * 86400000) },
+  ];
+
+  return (
+    <div className={cn('p-4 w-full', className)}>
+      {/* Quick picks */}
+      <div className="flex gap-2 mb-4 flex-wrap">
+        {quickPicks.map(q => (
+          <button
+            key={q.label}
+            onClick={() => { onSelect(q.date); setViewMonth(q.date.getMonth()); setViewYear(q.date.getFullYear()); }}
+            className="px-3 py-1 text-xs rounded-full border border-glass-border text-gray-300 hover:border-accent-cyan hover:text-accent-cyan transition-colors"
+          >
+            {q.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <button onClick={prevMonth} className="w-8 h-8 flex items-center justify-center rounded-lg border border-glass-border text-gray-400 hover:border-accent-cyan hover:text-accent-cyan transition-colors">
+          <ChevronLeft size={16} />
+        </button>
+        <span className="text-sm font-semibold text-white">{MONTHS[viewMonth]} {viewYear}</span>
+        <button onClick={nextMonth} className="w-8 h-8 flex items-center justify-center rounded-lg border border-glass-border text-gray-400 hover:border-accent-cyan hover:text-accent-cyan transition-colors">
+          <ChevronRight size={16} />
+        </button>
+      </div>
+
+      {/* Day headers */}
+      <div className="grid grid-cols-7 mb-2">
+        {DAYS.map(d => (
+          <div key={d} className="text-center text-[10px] font-semibold text-accent-cyan uppercase tracking-wider py-1">{d}</div>
+        ))}
+      </div>
+
+      {/* Cells */}
+      <div className="grid grid-cols-7 gap-1">
+        {cells.map(({ date, outside }, i) => {
+          const isDisabled = disabled?.(date) ?? false;
+          const isToday = date.toDateString() === today.toDateString();
+          const isSelected = selected && date.toDateString() === selected.toDateString();
+
+          return (
+            <button
+              key={i}
+              disabled={isDisabled}
+              onClick={() => onSelect(date)}
+              className={cn(
+                'aspect-square flex items-center justify-center rounded-xl text-sm transition-all relative',
+                outside && 'text-gray-600',
+                !outside && !isDisabled && 'text-gray-200',
+                isDisabled && 'text-gray-700 cursor-not-allowed opacity-40',
+                isToday && !isSelected && 'border border-glass-border font-semibold',
+                isSelected && 'bg-accent-cyan text-black font-bold',
+                !isSelected && !isDisabled && !outside && 'hover:bg-white/10 hover:text-accent-cyan',
+              )}
+            >
+              {date.getDate()}
+              {isToday && !isSelected && (
+                <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-accent-cyan" />
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

@@ -15,13 +15,12 @@ interface ChatInputProps {
   setDraft:      (t: string) => void;
   onSendMessage: (text: string, type?: 'text' | 'gif') => void;
   onSendFile:    (file: File, type: 'image' | 'audio' | 'video') => Promise<void> | void;
-  onTyping?:     () => void;
   replyingTo?:   any;
   cancelReply?:  () => void;
 }
 
 export function ChatInput({
-  chatId, draft, setDraft, onSendMessage, onSendFile, onTyping, replyingTo, cancelReply
+  chatId, draft, setDraft, onSendMessage, onSendFile, replyingTo, cancelReply
 }: ChatInputProps) {
   const [showEmoji,   setShowEmoji]   = useState(false);
   const [showGiphy,   setShowGiphy]   = useState(false);
@@ -57,7 +56,6 @@ export function ChatInput({
     const v = e.target.value;
     setDraft(v); setUploadError(null);
     resize();
-    onTyping?.();
   };
 
   const onEmojiClick = (obj: any) => {
