@@ -11,6 +11,49 @@ import { Camera } from 'lucide-react';
 
 const db = getFirestore(app);
 
+const LinkifiedText = React.memo(({ text }: { text: string }) => {
+    if (!text) return null;
+
+    const combinedRegex = /(\b(?:https?:\/\/|www\.)[^\s<>"{}|\\^`[\]]+)|(\b(?:\+\d{1,3}\s*)?(?:\(\d{3}\)|\d{3})[\s.-]?\d{3}[\s.-]?\d{4}\b)/gi;
+
+    const parts: (string | JSX.Element)[] = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = combinedRegex.exec(text)) !== null) {
+        if (match.index > lastIndex) {
+            parts.push(text.substring(lastIndex, match.index));
+        }
+
+        const matchedText = match[0];
+        
+        if (match[1]) { // It's a URL
+             const href = matchedText.startsWith('www.') ? `http://${matchedText}` : matchedText;
+             parts.push(
+                <a href={href} key={match.index} target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline" onClick={e => e.stopPropagation()}>
+                    {matchedText}
+                </a>
+            );
+        } 
+        else if (match[2]) { // It's a phone number
+             parts.push(
+                <a href={`tel:${matchedText.replace(/\D/g, '')}`} key={match.index} className="text-cyan-400 hover:underline" onClick={e => e.stopPropagation()}>
+                    {matchedText}
+                </a>
+            );
+        }
+
+        lastIndex = combinedRegex.lastIndex;
+    }
+
+    if (lastIndex < text.length) {
+        parts.push(text.substring(lastIndex));
+    }
+
+    return <p className="break-words whitespace-pre-wrap">{parts.map((part, i) => <React.Fragment key={i}>{part}</React.Fragment>)}</p>;
+});
+LinkifiedText.displayName = 'LinkifiedText';
+
 const ANON = ['Ram','Shyam','Sita','Mohan','Krishna','Radha','Anchal','Anaya','Advik','Diya','Rohan','Priya','Arjun','Saanvi','Kabir'];
 const genAnon = (uid: string, chatId: string) => {
   const h = (s: string) => { let v = 0; for (let i = 0; i < s.length; i++) v = (Math.imul(31, v) + s.charCodeAt(i)) | 0; return v; };
@@ -296,7 +339,7 @@ export const MessageItem = React.memo(({
           {msg.type === 'video' && <video src={msg.mediaUrl} controls className="rounded-lg max-w-full h-auto mb-1 block" style={{ maxHeight: 300 }} onClick={e => e.stopPropagation()}/>}
           {msg.type === 'audio' && <div className="mb-1" onClick={e => e.stopPropagation()}><AudioPlayer src={msg.mediaUrl} isUser={isUser} /></div>}
 
-          {msg.text && <p className="break-words whitespace-pre-wrap">{msg.text}</p>}
+          {msg.text && <LinkifiedText text={msg.text} />}
 
           <div className={cn('flex items-center gap-1.5 mt-1', isUser ? 'justify-end' : 'justify-start')}>
             {isStarred && <Star size={12} className="text-yellow-400"/>}

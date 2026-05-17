@@ -1,17 +1,18 @@
 'use client';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Send, Volume2, VolumeX, Pause, Play, Music } from 'lucide-react';
+import { X, Send, Volume2, VolumeX, Pause, Play, Music, Eye } from 'lucide-react';
 import { auth, app } from '@/utils/firebaseClient';
-import { getFirestore, addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, addDoc, collection, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
 import Image from 'next/image';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 const db = getFirestore(app);
+
+const getChatId = (uid1: string, uid2: string) => [uid1, uid2].sort().join("_");
 
 function FlashInteraction({ flash, currentUser, onClose }: { flash: any; currentUser: any; onClose: () => void }) {
     const [message, setMessage] = useState('');
     const emojis = ['❤️', '😂', '😮', '😢', '🔥', '👍'];
-    const getChatId = (uid1: string, uid2: string) => [uid1, uid2].sort().join("_");
 
     const handleSend = async (text: string) => {
         if (!text.trim() || !currentUser || !flash) return;
@@ -70,30 +71,50 @@ export default function FlashPlayer({ usersWithFlashes, onClose, initialUserInde
     const [isPaused, setIsPaused] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isMuted, setIsMuted] = useState(false);
-    const [preloadUrl, setPreloadUrl] = useState<string | null>(null);
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const animationFrameRef = useRef<number | null>(null);
+    const preloadedVideosRef = useRef<HTMLVideoElement[]>([]);
+    const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const isHoldingRef = useRef(false);
 
     const currentUserFlashes = usersWithFlashes[currentUserIndex]?.flashes || [];
     const currentFlash = currentUserFlashes[currentFlashIndex];
     const currentUser = auth.currentUser;
     const isOwnFlash = currentUser?.uid === usersWithFlashes[currentUserIndex]?.id;
-    const isVideo = currentFlash?.mediaUrl?.includes('.mp4') || currentFlash?.mediaUrl?.includes('.webm');
 
-    const cleanup = useCallback(() => {
-        if (audioRef.current) {
-            audioRef.current.pause();
-            audioRef.current.src = '';
-            audioRef.current = null;
+    const urlString = currentFlash?.mediaUrl;
+    let isVideo = false;
+    if (urlString) {
+        try {
+            const path = new URL(urlString).pathname;
+            isVideo = path.endsWith('.mp4') || path.endsWith('.webm');
+        } catch (e) {
+            console.error("Invalid URL for media:", urlString);
+            isVideo = urlString.includes('.mp4') || urlString.includes('.webm');
         }
-        if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-        setIsLoading(true);
-        setProgress(0);
-    }, []);
+    }
+
+    useEffect(() => {
+        if (!currentFlash || !currentUser || isOwnFlash || !currentFlash.id) {
+            return;
+        }
+        const flashRef = doc(db, 'flashes', currentFlash.id);
+        if (currentFlash.viewedBy && currentFlash.viewedBy[currentUser.uid]) {
+            return;
+        }
+        updateDoc(flashRef, {
+            viewCount: increment(1),
+            [`viewedBy.${currentUser.uid}`]: true
+        }).catch(err => {
+            console.error("Error updating view count:", err);
+        });
+
+    }, [currentFlash, currentUser, isOwnFlash]);
 
     const goToNextFlash = useCallback(() => {
+        if (isHoldingRef.current) return;
         if (currentFlashIndex < currentUserFlashes.length - 1) {
             setCurrentFlashIndex(prev => prev + 1);
         } else if (currentUserIndex < usersWithFlashes.length - 1) {
@@ -105,6 +126,7 @@ export default function FlashPlayer({ usersWithFlashes, onClose, initialUserInde
     }, [currentFlashIndex, currentUserFlashes.length, currentUserIndex, usersWithFlashes.length, onClose]);
 
     const goToPrevFlash = useCallback(() => {
+        if (isHoldingRef.current) return;
         if (currentFlashIndex > 0) {
             setCurrentFlashIndex(prev => prev - 1);
         } else if (currentUserIndex > 0) {
@@ -115,30 +137,86 @@ export default function FlashPlayer({ usersWithFlashes, onClose, initialUserInde
     }, [currentFlashIndex, currentUserIndex, usersWithFlashes]);
     
     useEffect(() => {
-        const isLastFlash = currentFlashIndex === currentUserFlashes.length - 1;
-        const hasNextUser = currentUserIndex < usersWithFlashes.length - 1;
-        setPreloadUrl(isLastFlash && hasNextUser ? usersWithFlashes[currentUserIndex + 1]?.flashes?.[0]?.mediaUrl || null : null);
+        setIsLoading(true);
+    }, [currentFlash]);
+    
+    useEffect(() => {
+        preloadedVideosRef.current.forEach(v => {
+            v.src = '';
+            v.remove();
+        });
+        preloadedVideosRef.current = [];
+        
+        const nextFlashes: any[] = [];
+        if (currentFlashIndex + 1 < currentUserFlashes.length) {
+            nextFlashes.push(currentUserFlashes[currentFlashIndex + 1]);
+        }
+        if (currentUserIndex + 1 < usersWithFlashes.length) {
+            nextFlashes.push(usersWithFlashes[currentUserIndex + 1]?.flashes?.[0]);
+        }
+
+        nextFlashes.filter(Boolean).forEach(flash => {
+            if (!flash.mediaUrl) return;
+            let isPreloadVideo = false;
+            try {
+                const path = new URL(flash.mediaUrl).pathname;
+                isPreloadVideo = path.endsWith('.mp4') || path.endsWith('.webm');
+            } catch (e) {
+                isPreloadVideo = flash.mediaUrl.includes('.mp4') || flash.mediaUrl.includes('.webm');
+            }
+
+            if (isPreloadVideo) {
+                const v = document.createElement('video');
+                v.src = flash.mediaUrl;
+                v.preload = 'auto';
+                preloadedVideosRef.current.push(v);
+            } else {
+                const img = new Image();
+                img.src = flash.mediaUrl;
+            }
+        });
     }, [currentFlashIndex, currentUserIndex, currentUserFlashes, usersWithFlashes]);
 
     useEffect(() => {
-        cleanup();
-        if (currentFlash?.song?.preview_url) {
-            audioRef.current = new Audio(currentFlash.song.preview_url);
-            audioRef.current.muted = isMuted;
-            audioRef.current.volume = isVideo ? 0.2 : 1.0;
-
-            const snippetStart = currentFlash.song.snippetStart || 0;
-            audioRef.current.currentTime = snippetStart;
-            
-            if (!isPaused) audioRef.current.play().catch(e => {});
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.src = '';
+            audioRef.current = null;
         }
-        return () => cleanup();
-    }, [currentFlash, isVideo, isPaused, isMuted, cleanup]);
+        if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+        setProgress(0);
 
+        if (currentFlash?.song?.preview_url) {
+            const audio = new Audio(currentFlash.song.preview_url);
+            audio.volume = isVideo ? 0.2 : 1.0;
+            audio.muted = isMuted;
+            audio.currentTime = currentFlash.song.snippetStart || 0;
+            audio.play().catch(() => {});
+            audioRef.current = audio;
+        }
+    }, [currentFlash]);
+
+    useEffect(() => {
+        if (isVideo && videoRef.current) {
+            videoRef.current.load();
+            videoRef.current.play().catch(() => {});
+        }
+    }, [currentFlash?.mediaUrl, isVideo]);
+    
     useEffect(() => {
         if (audioRef.current) audioRef.current.muted = isMuted;
         if (videoRef.current) videoRef.current.muted = isMuted;
     }, [isMuted]);
+
+    useEffect(() => {
+        if (isPaused) {
+            videoRef.current?.pause();
+            audioRef.current?.pause();
+        } else {
+            videoRef.current?.play().catch(() => {});
+            audioRef.current?.play().catch(() => {});
+        }
+    }, [isPaused]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -178,52 +256,72 @@ export default function FlashPlayer({ usersWithFlashes, onClose, initialUserInde
         return () => { if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current); };
     }, [isVideo, isPaused, isLoading, goToNextFlash, currentFlash]);
 
-    useEffect(() => {
-        const video = videoRef.current;
-        const audio = audioRef.current;
-        if (isPaused) {
-            video?.pause();
-            audio?.pause();
-            if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-        } else if (!isLoading) {
-            video?.play().catch(() => {});
-            audio?.play().catch(() => {});
-        }
-    }, [isPaused, isLoading]);
-
     const handleMediaLoad = () => setIsLoading(false);
-    const handleTimeUpdate = () => setProgress(videoRef.current ? (videoRef.current.currentTime / videoRef.current.duration) * 100 : 0);
+    const handleTimeUpdate = () => {
+        if (videoRef.current && videoRef.current.duration) {
+            setProgress((videoRef.current.currentTime / videoRef.current.duration) * 100);
+        }
+    };
+    
+    const handlePressStart = () => {
+        isHoldingRef.current = false;
+        holdTimerRef.current = setTimeout(() => {
+            isHoldingRef.current = true;
+            setIsPaused(true);
+        }, 150);
+    };
+
+    const handlePressEnd = () => {
+        if (holdTimerRef.current) {
+            clearTimeout(holdTimerRef.current);
+            holdTimerRef.current = null;
+        }
+        if (isHoldingRef.current) {
+            isHoldingRef.current = false;
+            setIsPaused(false);
+        }
+    };
+
 
     if (!currentFlash) return null;
 
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center" onClick={(e) => { if(e.target === e.currentTarget) onClose(); }}>
-            {preloadUrl && <link rel="preload" href={preloadUrl} as={preloadUrl.includes('.mp4') ? 'video' : 'image'} />}
 
             <div className="relative w-full max-w-sm h-[95vh] max-h-[800px] bg-neutral-900 rounded-2xl overflow-hidden shadow-2xl">
                 <div className="absolute inset-0 w-full h-full scale-110 blur-2xl opacity-50">
-                     {isVideo ? <video src={currentFlash.mediaUrl} className="w-full h-full object-cover" autoPlay playsInline muted loop /> : <Image src={currentFlash.mediaUrl} alt="background" fill style={{ objectFit: 'cover' }} unoptimized />}
+                     {isVideo ? <div className="w-full h-full bg-black" /> : <Image src={currentFlash.mediaUrl} alt="background" fill style={{ objectFit: 'cover' }} unoptimized />}
                 </div>
 
-                <AnimatePresence mode="wait">
-                    <motion.div
-                        key={currentUserIndex + currentFlashIndex}
-                        initial={{ x: 300, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        exit={{ x: -300, opacity: 0 }}
-                        transition={{ type: "spring", damping: 20, stiffness: 100 }}
-                        className="relative w-full h-full flex items-center justify-center"
-                    >
-                        {isLoading && <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-white"></div></div>}
-                        {isPaused && !isLoading && <div className="absolute inset-0 flex items-center justify-center bg-black/30 z-20"><Play size={48} className="text-white/80" /></div>}
+                <div className="relative w-full h-full flex items-center justify-center">
+                    {isLoading && <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-white"></div></div>}
+                    {isPaused && !isLoading && <div className="absolute inset-0 flex items-center justify-center bg-black/30 z-20"><Play size={48} className="text-white/80" /></div>}
 
-                        {isVideo ? (
-                            <video ref={videoRef} src={currentFlash.mediaUrl} className="relative z-10 w-full h-full object-contain" onCanPlay={handleMediaLoad} onTimeUpdate={handleTimeUpdate} onEnded={goToNextFlash} autoPlay playsInline muted={isMuted} />
-                        ) : (
-                            <Image src={currentFlash.mediaUrl} alt="flash content" fill style={{ objectFit: 'contain' }} className="relative z-10" onLoad={handleMediaLoad} unoptimized />
-                        )}
-                    </motion.div>
-                </AnimatePresence>
+                    <video
+                        ref={videoRef}
+                        src={isVideo ? currentFlash.mediaUrl : ''}
+                        className="relative z-10 w-full h-full object-contain"
+                        onCanPlay={handleMediaLoad}
+                        onTimeUpdate={handleTimeUpdate}
+                        onEnded={goToNextFlash}
+                        autoPlay
+                        playsInline
+                        muted={isMuted}
+                        preload="auto"
+                    />
+                    {!isVideo && currentFlash && (
+                        <Image
+                            src={currentFlash.mediaUrl}
+                            alt="flash content"
+                            fill
+                            style={{ objectFit: 'contain' }}
+                            className="relative z-10"
+                            onLoad={handleMediaLoad}
+                            unoptimized
+                            priority
+                        />
+                    )}
+                </div>
 
                 <div className="absolute top-0 left-0 right-0 p-3 z-40 bg-gradient-to-b from-black/50 to-transparent">
                     <div className="flex items-center gap-2 mb-3">
@@ -233,10 +331,15 @@ export default function FlashPlayer({ usersWithFlashes, onClose, initialUserInde
                         <div className="flex items-center gap-3 overflow-hidden">
                             <HexAvatar src={usersWithFlashes[currentUserIndex]?.avatar_url || '/default-avatar.png'} />
                             <div className="flex flex-col overflow-hidden">
-                                <span className="font-bold text-white text-shadow truncate">{usersWithFlashes[currentUserIndex]?.displayName || usersWithFlashes[currentUserIndex]?.name || 'User'}</span>
+                                 <div className="flex items-center gap-2">
+                                    <span className="font-bold text-white text-shadow truncate">{usersWithFlashes[currentUserIndex]?.displayName || 'User'}</span>
+                                     {currentFlash?.location && (
+                                        <span className="text-xs bg-white/20 text-white rounded-full px-2 py-0.5 shrink-0">{currentFlash?.location}</span>
+                                    )}
+                                </div>
                                 {currentFlash?.song && (
-                                    <div className="text-xs text-white/80 text-shadow flex items-center gap-1.5 pt-0.5 whitespace-nowrap">
-                                        <Music size={12} />
+                                    <div className="flex items-center gap-2 text-xs text-white/80 text-shadow pt-0.5 whitespace-nowrap">
+                                        {currentFlash.song.albumArt ? <Image src={currentFlash.song.albumArt} alt={currentFlash.song.name} width={20} height={20} className="rounded shrink-0" unoptimized /> : <Music size={12} />}
                                         <span className="truncate">{currentFlash.song.name} - {currentFlash.song.artists.join(', ')}</span>
                                     </div>
                                 )}
@@ -250,15 +353,20 @@ export default function FlashPlayer({ usersWithFlashes, onClose, initialUserInde
                 </div>
 
                 <div className="absolute inset-0 z-30 flex">
-                    <div className="w-1/3 h-full" onClick={goToPrevFlash} onMouseDown={() => setIsPaused(true)} onMouseUp={() => setIsPaused(false)} onTouchStart={() => setIsPaused(true)} onTouchEnd={() => setIsPaused(false)}></div>
-                    <div className="w-1/3 h-full" onMouseDown={() => setIsPaused(true)} onMouseUp={() => setIsPaused(false)} onTouchStart={() => setIsPaused(true)} onTouchEnd={() => setIsPaused(false)}></div>
-                    <div className="w-1/3 h-full" onClick={goToNextFlash} onMouseDown={() => setIsPaused(true)} onMouseUp={() => setIsPaused(false)} onTouchStart={() => setIsPaused(true)} onTouchEnd={() => setIsPaused(false)}></div>
+                     <div className="w-1/3 h-full" onClick={goToPrevFlash} onMouseDown={handlePressStart} onMouseUp={handlePressEnd} onTouchStart={handlePressStart} onTouchEnd={handlePressEnd}></div>
+                     <div className="w-1/3 h-full" onMouseDown={handlePressStart} onMouseUp={handlePressEnd} onTouchStart={handlePressStart} onTouchEnd={handlePressEnd}></div>
+                     <div className="w-1/3 h-full" onClick={goToNextFlash} onMouseDown={handlePressStart} onMouseUp={handlePressEnd} onTouchStart={handlePressStart} onTouchEnd={handlePressEnd}></div>
                 </div>
 
+                {isOwnFlash && (currentFlash.viewCount > 0 || currentFlash.viewedBy) && (
+                    <div className="absolute bottom-4 left-4 z-40 text-white text-sm flex items-center gap-2 bg-black/40 backdrop-blur-sm p-1.5 rounded-lg">
+                        <Eye size={16} />
+                        <span>{currentFlash.viewCount ?? Object.keys(currentFlash.viewedBy || {}).length}</span>
+                    </div>
+                )}
+
+
                 {!isOwnFlash && <FlashInteraction flash={currentFlash} currentUser={currentUser} onClose={onClose} />}
-            </div>
-            <div className="hidden">
-                {currentUserFlashes.slice(currentFlashIndex + 1, currentFlashIndex + 3).map((f, i) => f.mediaUrl.includes('.jpg') || f.mediaUrl.includes('.png') ? <img key={i} src={f.mediaUrl} alt=""/> : null)}
             </div>
         </motion.div>
     );
