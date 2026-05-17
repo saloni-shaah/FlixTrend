@@ -43,12 +43,12 @@ export function DropActions({ post, onCommentClick }: { post: any; onCommentClic
                         <span>{post.commentCount || 0}</span>
                     </button>
                     
-                    <ReactionButton postId={post.id} collectionName="drops" />
-
                     <button className={cn('flex items-center gap-1.5 font-bold transition-all text-lg', textClass, 'hover:text-accent-cyan')} onClick={(e) => { e.stopPropagation(); setShowShareModal(true); }}>
                         <Share size={iconSize} />
                         <span>{shareCount > 0 ? shareCount : ''}</span>
                     </button>
+
+                    <ReactionButton postId={post.id} collectionName="drops" />
                 </div>
             </div>
             {showShareModal && (

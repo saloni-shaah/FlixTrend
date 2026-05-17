@@ -146,40 +146,41 @@ function DropPageContent() {
   return (
     <div className="container mx-auto p-4 max-w-2xl">
         <div className="w-full glass-card p-6 mb-8 flex flex-col items-center text-center">
-            <div className="flex items-center gap-3 text-lg font-bold text-accent-cyan mb-3">
+            <div className="flex items-center gap-3 text-lg font-bold text-gray-400 mb-3">
                 <Sparkles className="h-6 w-6" />
                 <h1 className="font-headline">Daily Drop</h1>
             </div>
-            <p className="text-white/90 text-xl">{prompt.text}</p>
+            <p className="text-gray-500 text-xl">{prompt.text}</p>
             <CountdownTimer expiryDate={prompt.expiresAt} />
         </div>
 
-        {poll && (
-            <div className="mb-6">
-                <DropPollCard poll={poll} />
-            </div>
-        )}
-
         {userHasPosted ? (
-            <div className="flex flex-col gap-6">
-                {!poll && (
-                    <div className="mb-6 text-center">
-                         <button
-                            onClick={() => router.push(`/drop/create?promptId=${prompt.id}&type=poll`)}
-                            className="btn-glass bg-accent-green/90 font-bold py-3 px-8 rounded-full transition-transform hover:scale-105 text-lg flex items-center gap-2 mx-auto"
-                         >
-                            <CircleDollarSign size={20}/> Conduct Tomorrow's Poll
-                         </button>
+            <>
+                {poll && (
+                    <div className="mb-6">
+                        <DropPollCard poll={poll} />
                     </div>
                 )}
-                {drops.length > 0 ? (
-                    drops.map(drop => <DropCard key={drop.id} post={drop} />)
-                ) : (
-                     <div className="text-center text-gray-400 p-8 glass-card">
-                        <p>No drops have been submitted yet.</p>
-                    </div>
-                )}
-            </div>
+                <div className="flex flex-col gap-6">
+                    {!poll && (
+                        <div className="mb-6 text-center">
+                             <button
+                                onClick={() => router.push(`/drop/create?promptId=${prompt.id}&type=poll`)}
+                                className="btn-glass bg-accent-green/90 font-bold py-3 px-8 rounded-full transition-transform hover:scale-105 text-lg flex items-center gap-2 mx-auto"
+                             >
+                                <CircleDollarSign size={20}/> Conduct Tomorrow's Poll
+                             </button>
+                        </div>
+                    )}
+                    {drops.length > 0 ? (
+                        drops.map(drop => <DropCard key={drop.id} post={drop} />)
+                    ) : (
+                         <div className="text-center text-gray-400 p-8 glass-card">
+                            <p>No drops have been submitted yet.</p>
+                        </div>
+                    )}
+                </div>
+            </>
         ) : (
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
