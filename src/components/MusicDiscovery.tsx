@@ -1,17 +1,14 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Play, Pause, Music, Search, MoreHorizontal } from 'lucide-react';
-import { getFirestore, collection, query, onSnapshot, orderBy, where, updateDoc, arrayUnion, doc } from 'firebase/firestore';
+import { getFirestore, collection, query, onSnapshot, orderBy, where, updateDoc, arrayUnion, doc, getDocs, limit, startAfter, serverTimestamp, addDoc } from 'firebase/firestore';
 import { auth, app } from '@/utils/firebaseClient';
 import { useMusicPlayer } from '@/utils/MusicPlayerContext';
 import { useRouter } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
 
 const db = getFirestore(app);
-
-// NOTE: The AddMusicModal and related Cloudinary upload functions have been removed from this file.
-// All music uploads are now handled by MusicUploadForm.tsx in the Creator Studio.
 
 function AddToPlaylistModal({ song, onClose }: { song: any; onClose: () => void }) {
     const [playlists, setPlaylists] = useState<any[]>([]);
@@ -32,13 +29,14 @@ function AddToPlaylistModal({ song, onClose }: { song: any; onClose: () => void 
 
     const handleCreatePlaylist = async () => {
         if (!newPlaylistName.trim() || !currentUser) return;
-        await addDoc(collection(db, "users", currentUser.uid, "playlists"), {
+        const newPlaylistRef = await addDoc(collection(db, "users", currentUser.uid, "playlists"), {
             name: newPlaylistName,
             owner: currentUser.uid,
             createdAt: serverTimestamp(),
             songIds: [song.id],
             Playlist_Type: "song"
         });
+        console.log("New playlist created with ID:", newPlaylistRef.id);
         setNewPlaylistName('');
         setShowNewPlaylist(false);
         onClose();
@@ -86,24 +84,87 @@ function AddToPlaylistModal({ song, onClose }: { song: any; onClose: () => void 
     );
 }
 
+const INITIAL_LOAD_SIZE = 20;
+const SUBSEQUENT_LOAD_SIZE = 8;
+
 export function MusicDiscovery() {
     const [songs, setSongs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [lastVisible, setLastVisible] = useState<any>(null);
+    const [hasMore, setHasMore] = useState(true);
     const [showPlaylistModal, setShowPlaylistModal] = useState<any | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [openMenuSongId, setOpenMenuSongId] = useState<string | null>(null);
     const { activeSong, isPlaying, playSong, toggleSong, addToQueue } = useMusicPlayer();
     const router = useRouter();
     const { toast } = useToast();
+    const observerRef = useRef(null);
+
+    const fetchSongs = useCallback(async (initial = false) => {
+        if (!hasMore && !initial) return;
+        
+        if (initial) {
+            setLoading(true);
+        } else {
+            setLoadingMore(true);
+        }
+
+        let q = query(
+            collection(db, "songs"), 
+            orderBy("createdAt", "desc"),
+            limit(initial ? INITIAL_LOAD_SIZE : SUBSEQUENT_LOAD_SIZE)
+        );
+
+        if (!initial && lastVisible) {
+            q = query(
+                collection(db, "songs"), 
+                orderBy("createdAt", "desc"), 
+                startAfter(lastVisible), 
+                limit(SUBSEQUENT_LOAD_SIZE)
+            );
+        }
+
+        try {
+            const documentSnapshots = await getDocs(q);
+            const newSongs = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const lastDoc = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+
+            setSongs(prev => initial ? newSongs : [...prev, ...newSongs]);
+            setLastVisible(lastDoc);
+            setHasMore(documentSnapshots.docs.length === (initial ? INITIAL_LOAD_SIZE : SUBSEQUENT_LOAD_SIZE));
+        } catch (error) {
+            console.error("Error fetching songs: ", error);
+        } finally {
+            if (initial) setLoading(false);
+            setLoadingMore(false);
+        }
+    }, [lastVisible, hasMore]);
 
     useEffect(() => {
-        const q = query(collection(db, "songs"), orderBy("createdAt", "desc"));
-        const unsub = onSnapshot(q, (snapshot) => {
-            setSongs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-            setLoading(false);
-        });
-        return () => unsub();
+        fetchSongs(true);
     }, []);
+
+    const handleObserver = useCallback((entries: any) => {
+        const target = entries[0];
+        if (target.isIntersecting && hasMore && !loadingMore && !loading) {
+            fetchSongs();
+        }
+    }, [fetchSongs, hasMore, loadingMore, loading]);
+
+    useEffect(() => {
+        const option = {
+            root: null,
+            rootMargin: "20px",
+            threshold: 0
+        };
+        const observer = new IntersectionObserver(handleObserver, option);
+        if (observerRef.current) observer.observe(observerRef.current);
+        
+        return () => {
+            if (observerRef.current) observer.unobserve(observerRef.current);
+        };
+    }, [handleObserver]);
     
     const handlePlayPause = (song: any, index: number) => {
         if (activeSong?.id === song.id) {
@@ -145,7 +206,7 @@ export function MusicDiscovery() {
                 </span>
             </div>
 
-            {filteredSongs.length === 0 ? (
+            {filteredSongs.length === 0 && !loading && !loadingMore ? (
                 <div className="text-center text-gray-400 mt-16">
                     <Music size={64} className="mx-auto mb-4"/>
                     <h3 className="text-xl font-bold">{searchTerm ? "No Results Found" : "The Stage is Empty"}</h3>
@@ -169,7 +230,7 @@ export function MusicDiscovery() {
                                             handlePlayPause(song, index); 
                                         }}
                                     >
-                                        {activeSong?.id === song.id && isPlaying ? <Pause size={32} /> : <Play size={32} />}
+                                        {activeSong?.id === song.id && isPlaying ? <Pause size={32} /> : <Play size={32} />} 
                                     </button>
                                 </div>
                                 
@@ -220,8 +281,10 @@ export function MusicDiscovery() {
                     ))}
                 </div>
             )}
+            <div ref={observerRef} style={{ height: '20px' }} />
+            {loadingMore && <div className="text-center text-accent-cyan animate-pulse py-4">Loading more music...</div>}
+            {!hasMore && songs.length > 0 && <div className="text-center text-gray-500 py-8">You've reached the end of the library.</div>}
             
-            {/* The Add Song button has been removed. Users now upload via the Creator Studio. */}
             {showPlaylistModal && <AddToPlaylistModal song={showPlaylistModal} onClose={() => setShowPlaylistModal(null)} />}
         </div>
     );
