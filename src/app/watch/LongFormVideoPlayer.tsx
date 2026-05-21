@@ -16,7 +16,7 @@ import { useMiniPlayer } from "@/app/vibespace/miniplayer";
 
 interface Props {
   videoUrl: string;
-  videoQualities?: { "1080p"?: string; "720p"?: string };
+  videoQualities?: { [key: string]: string };
   thumbnailUrl?: string;
   postId: string;
   title?: string;
@@ -42,7 +42,7 @@ export function LongFormVideoPlayer({
   const [captionsEnabled, setCaptionsEnabled] = useState(false);
   const [isPiP, setIsPiP] = useState(false);
   const [seekIndicator, setSeekIndicator] = useState<"left" | "right" | null>(null);
-  const [selectedQuality, setSelectedQuality] = useState<"auto" | "1080p" | "720p">("auto");
+  const [selectedQuality, setSelectedQuality] = useState<string>("auto");
   const [isLooping, setIsLooping] = useState(false);
 
   const {
@@ -68,25 +68,43 @@ export function LongFormVideoPlayer({
 
   // ── Quality ───────────────────────────────────────────────────────────────
   const availableQualities = useMemo(() => {
-    const q: ("auto" | "1080p" | "720p")[] = ["auto"];
-    if (videoQualities?.["1080p"]) q.push("1080p");
-    if (videoQualities?.["720p"]) q.push("720p");
-    return q;
+    if (!videoQualities) return [];
+    const qualities = Object.keys(videoQualities);
+    qualities.sort((a, b) => parseInt(b.replace('p', '')) - parseInt(a.replace('p', '')));
+    return ["auto", ...qualities];
   }, [videoQualities]);
 
-  const activeQuality = selectedQuality === "auto" ? autoQuality : selectedQuality;
+  const autoQualitySrc = useMemo(() => {
+    if (!videoQualities || Object.keys(videoQualities).length === 0) return videoUrl;
+    const sortedAvailable = Object.keys(videoQualities).sort((a, b) => parseInt(b.replace('p', '')) - parseInt(a.replace('p', '')));
+    const idealQualityNum = parseInt(autoQuality.replace('p', ''));
+    for (const q of sortedAvailable) {
+      const qNum = parseInt(q.replace('p', ''));
+      if (qNum <= idealQualityNum) return videoQualities[q];
+    }
+    return videoQualities[sortedAvailable[sortedAvailable.length - 1]];
+  }, [autoQuality, videoQualities, videoUrl]);
+
+  const activeSrc = useMemo(() => {
+    return selectedQuality === "auto"
+      ? autoQualitySrc
+      : videoQualities?.[selectedQuality] ?? videoUrl;
+  }, [selectedQuality, autoQualitySrc, videoQualities, videoUrl]);
+
+  const activeQualityLabel = useMemo(() => {
+    if (selectedQuality !== "auto") return selectedQuality;
+    if (!videoQualities) return "auto";
+    const match = Object.entries(videoQualities).find(([, v]) => v === autoQualitySrc);
+    return match ? match[0] : autoQuality;
+  }, [selectedQuality, autoQualitySrc, videoQualities, autoQuality]);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    const newSrc =
-      selectedQuality !== "auto" && videoQualities?.[selectedQuality]
-        ? videoQualities[selectedQuality]!
-        : videoQualities?.["720p"] ?? videoUrl;
-    if (video.src === newSrc) return;
+    if (video.src === activeSrc) return;
     const savedTime = video.currentTime;
     const wasPlaying = !video.paused;
-    video.src = newSrc;
+    video.src = activeSrc;
     const onLoaded = () => {
       video.currentTime = savedTime;
       if (wasPlaying) video.play().catch(() => {});
@@ -94,7 +112,7 @@ export function LongFormVideoPlayer({
     };
     video.addEventListener("loadedmetadata", onLoaded);
     video.load();
-  }, [selectedQuality, videoQualities, videoUrl, videoRef]);
+  }, [activeSrc, videoRef]);
 
   // ── Loop ──────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -343,7 +361,7 @@ export function LongFormVideoPlayer({
 
           <OptimizedVideo
             ref={videoRef}
-            src={videoQualities?.[activeQuality as "1080p" | "720p"] ?? videoUrl}
+            src={activeSrc}
             poster={thumbnailUrl}
             className="w-full h-full object-contain"
             playsInline preload="metadata" controlsList="nodownload"
@@ -410,7 +428,7 @@ export function LongFormVideoPlayer({
                 {/* Quality badge top-right */}
                 {availableQualities.length > 1 && (
                   <div className="px-2 py-1 rounded-md bg-black/30 backdrop-blur-md border border-white/10 text-white/60 text-[10px] font-semibold">
-                    {activeQuality.toUpperCase()}
+                    {activeQualityLabel.toUpperCase()}
                   </div>
                 )}
                 {/* Shortcuts button */}
@@ -528,7 +546,7 @@ export function LongFormVideoPlayer({
                                 onClick={() => setSelectedQuality(q)}
                                 className={`px-2.5 py-1 rounded-full text-xs transition ${selectedQuality === q ? "bg-purple-500/80 text-white" : "bg-white/10 hover:bg-white/20"}`}
                               >
-                                {q === "auto" ? `Auto · ${autoQuality}` : q}
+                                {q === "auto" ? `Auto · ${activeQualityLabel}` : q}
                               </button>
                             ))}
                           </div>

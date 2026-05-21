@@ -18,6 +18,7 @@ import LikedPostsTab from "@/components/squad/LikedPostsTab";
 import { FollowButton } from "@/components/FollowButton";
 import { FullScreenImageViewer } from "@/components/FullScreenImageViewer";
 import VerifiedBadge from "@/components/verifiedbadge";
+import { NotificationFAB } from '@/components/squad/NotificationFAB';
 
 const db = getFirestore(app);
 const INITIAL_POSTS_PER_PAGE = 5;
@@ -229,8 +230,9 @@ function SquadPageContent() {
 
   return (
     <>
+      <NotificationFAB user={firebaseUser} />
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col w-full items-center pb-24">
-          {isCreator && <motion.button onClick={handleCreatorStudioClick} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.5 }} className="fixed top-4 right-4 z-30 btn-glass-icon bg-purple-500/50 text-white" aria-label="Creator Studio" whileHover={{ scale: 1.1, rotate: -15 }} whileTap={{ scale: 0.9 }}><BarChart3 /></motion.button>}
+          {isCreator && <motion.button onClick={handleCreatorStudioClick} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.5 }} className="fixed top-4 right-4 z-50 btn-glass-icon bg-purple-500/50 text-white" aria-label="Creator Studio" whileHover={{ scale: 1.1, rotate: -15 }} whileTap={{ scale: 0.9 }}><BarChart3 /></motion.button>}
           {showFollowList && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" onClick={() => setShowFollowList(null)} />}
           <Link href="/settings"><motion.button initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.5 }} className="fixed bottom-24 right-4 z-30 btn-glass-icon" aria-label="Settings" whileHover={{ scale: 1.1, rotate: 15 }} whileTap={{ scale: 0.9 }}><Cog /></motion.button></Link>
 

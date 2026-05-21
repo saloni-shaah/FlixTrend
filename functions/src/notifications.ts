@@ -6,10 +6,6 @@ import * as v1 from "firebase-functions/v1";
 const db = admin.firestore();
 const messaging = admin.messaging();
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────────────────────────────────────
-
 interface NotificationData {
     type: string;
     targetId: string;
@@ -23,36 +19,32 @@ interface NotificationSettings {
     comments?: boolean;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Rate limiting
-// Pushes with the same rateLimitKey are throttled to 1 per 60 seconds.
-// The Firestore notification doc is ALWAYS written — only FCM push is throttled.
-// ─────────────────────────────────────────────────────────────────────────────
-
 const RATE_LIMIT_SECONDS = 60;
+const rateLimitCache = new Map<string, number>();
 
 async function isPushRateLimited(userId: string, key: string): Promise<boolean> {
+    const cacheKey = `${userId}:${key}`;
+    const cached = rateLimitCache.get(cacheKey);
+    const now = Date.now();
+
+    if (cached && now - cached < RATE_LIMIT_SECONDS * 1000) return true;
+
     const ref = db
         .collection('users')
         .doc(userId)
         .collection('_notifRateLimit')
         .doc(key);
-
-    const now = Timestamp.now();
-    const cutoff = Timestamp.fromMillis(now.toMillis() - RATE_LIMIT_SECONDS * 1000);
     const snap = await ref.get();
 
-    if (snap.exists && snap.data()!.lastSent.toMillis() > cutoff.toMillis()) {
+    if (snap.exists && snap.data()!.lastSent.toMillis() > now - RATE_LIMIT_SECONDS * 1000) {
+        rateLimitCache.set(cacheKey, now);
         return true;
     }
 
-    await ref.set({ lastSent: now });
+    rateLimitCache.set(cacheKey, now);
+    await ref.set({ lastSent: admin.firestore.Timestamp.now() });
     return false;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Core sender
-// ─────────────────────────────────────────────────────────────────────────────
 
 export async function sendNotification(
     userId: string,
@@ -60,17 +52,17 @@ export async function sendNotification(
     body: string,
     data: NotificationData,
     options: {
-        /** Deterministic doc ID prevents duplicate notifications on retries */
         dedupId?: string;
-        /** Pushes with the same key are throttled to 1 per 60s */
         rateLimitKey?: string;
     } = {}
 ) {
     try {
-        // 1. Load user + check notification preferences
         const userDoc = await db.collection('users').doc(userId).get();
         const userData = userDoc.data();
-        if (!userData) return;
+        if (!userData) {
+            logger.warn(`User doc not found for ${userId} — skipping notification`);
+            return;
+        }
 
         const settings: NotificationSettings = userData.notificationSettings ?? {};
         const typeMap: Record<string, keyof NotificationSettings> = {
@@ -80,14 +72,14 @@ export async function sendNotification(
             comment: 'comments',
         };
         const settingKey = typeMap[data.type];
+        if (!settingKey && data.type !== 'accolade') {
+            logger.warn(`Unknown notification type: ${data.type}`);
+        }
         if (settingKey && settings[settingKey] === false) {
             logger.info(`User ${userId} muted '${data.type}' notifications. Skipping.`);
             return;
         }
 
-        // 2. Write to Firestore subcollection (always written, with dedup support)
-        // expiresAt: 30 days — also set a Firestore TTL policy on this field
-        // in Firebase Console → Firestore → TTL policies → collection group: notifications
         const expiresAt = Timestamp.fromMillis(Date.now() + 30 * 24 * 60 * 60 * 1000);
         const notifCollection = db.collection('users').doc(userId).collection('notifications');
         const notifRef = options.dedupId ? notifCollection.doc(options.dedupId) : notifCollection.doc();
@@ -99,16 +91,14 @@ export async function sendNotification(
             isRead: false,
             createdAt: FieldValue.serverTimestamp(),
             expiresAt,
-        }, { merge: true }); // merge: true so dedup rewrites cleanly without error
+        }, { merge: true });
 
-        // 3. Resolve FCM tokens (multi-device: fcmTokens[] with fcmToken fallback)
         const fcmTokens: string[] = userData.fcmTokens ?? (userData.fcmToken ? [userData.fcmToken] : []);
         if (fcmTokens.length === 0) {
             logger.info(`No FCM tokens for user ${userId}. Notification saved to Firestore only.`);
             return;
         }
 
-        // 4. Rate limit check (only throttles push, Firestore write already done above)
         if (options.rateLimitKey) {
             const limited = await isPushRateLimited(userId, options.rateLimitKey);
             if (limited) {
@@ -117,7 +107,6 @@ export async function sendNotification(
             }
         }
 
-        // 5. Send to all devices
         const message: admin.messaging.MulticastMessage = {
             tokens: fcmTokens,
             notification: { title, body },
@@ -135,8 +124,12 @@ export async function sendNotification(
         };
 
         const response = await messaging.sendEachForMulticast(message);
+        
+        if (response.successCount === 0) {
+            logger.error(`All FCM sends failed for user ${userId}`, 
+            response.responses.map(r => r.error?.code));
+        }
 
-        // 6. Remove stale/invalid tokens automatically
         const staleTokens = fcmTokens.filter((_, idx) => {
             const err = response.responses[idx]?.error?.code;
             return (
@@ -158,13 +151,6 @@ export async function sendNotification(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Triggers
-// ─────────────────────────────────────────────────────────────────────────────
-
-// FOLLOW
-// dedupId: "follow_{followerId}" — retries and double-follow edge cases won't
-// create duplicate notification docs
 export const onNewFollowerNotification = v1.firestore
     .document('users/{userId}/followers/{followerId}')
     .onCreate(async (snap, context) => {
@@ -184,10 +170,6 @@ export const onNewFollowerNotification = v1.firestore
         );
     });
 
-// MESSAGE
-// Reads participants[] from chat doc — works for 1:1 AND group chats
-// Falls back to splitting the chatId for legacy format
-// Rate-limited per chat: 100 rapid messages = 1 push per 60s
 export const onNewMessageNotification = v1.firestore
     .document('chats/{chatId}/messages/{messageId}')
     .onCreate(async (snap, context) => {
@@ -198,7 +180,6 @@ export const onNewMessageNotification = v1.firestore
         const chatDoc = await db.collection('chats').doc(chatId).get();
         const participants: string[] = chatDoc.data()?.participants ?? [];
 
-        // Fallback for legacy "uid1_uid2" IDs
         const resolved = participants.length > 0
             ? participants
             : chatId.includes('_') ? chatId.split('_') : [];
@@ -230,13 +211,6 @@ export const onNewMessageNotification = v1.firestore
         );
     });
 
-// DROP PROMPT
-// Uses FCM topic instead of loading all users — scales to millions for free.
-//
-// To subscribe users to this topic, call this when they save their FCM token:
-//   await messaging.subscribeToTopic(token, 'drop_prompts');
-// And unsubscribe on logout:
-//   await messaging.unsubscribeFromTopic(token, 'drop_prompts');
 export const onNewDropPromptNotification = v1.firestore
     .document('dropPrompts/{promptId}')
     .onCreate(async (snap, context) => {

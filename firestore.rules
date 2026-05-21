@@ -125,7 +125,8 @@ service cloud.firestore {
     match /flashes/{flashId} {
       allow read:   if isSignedIn();
       allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
-      allow update: if isOwner(resource.data.userId);
+      allow update: if isOwner(resource.data.userId) || 
+                       (isSignedIn() && onlyKeysChanged(['viewCount', 'viewedBy']));
       allow delete: if isOwner(resource.data.userId);
     }
 
@@ -294,6 +295,7 @@ service cloud.firestore {
           onlyKeysChanged([
             'reactions',
             'deletedFor',
+            'starredBy',
             'isStarred'
           ]);
 

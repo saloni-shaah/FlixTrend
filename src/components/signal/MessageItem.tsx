@@ -6,7 +6,7 @@ import { getFirestore, doc, runTransaction } from 'firebase/firestore';
 import { app } from '@/utils/firebaseClient';
 import { AudioPlayer } from './AudioPlayer';
 import { GENZ_REACTIONS } from '@/lib/quick-drop-data';
-import { Eye, Check, Video, Mic, ImageIcon, Music2, Star } from 'lucide-react';
+import { Eye, Check, Video, Mic, ImageIcon, Music2, Star, Share } from 'lucide-react';
 import { Camera } from 'lucide-react';
 
 const db = getFirestore(app);
@@ -137,11 +137,14 @@ interface Props {
 }
 
 export const MessageItem = React.memo(({
-  msg, isUser, selectedChat, firebaseUser, isSelected, selectionMode, isStarred,
+  msg: rawMsg, isUser, selectedChat, firebaseUser, isSelected, selectionMode, isStarred,
   onLongPress, onContextMenu, onClick,
   onShowEmojiPicker, showEmojiPicker, setFullScreenImage, chatId, onReply, messages,
   readReceipts
 }: Props) => {
+
+  const isForwarded = rawMsg.type === 'forward';
+  const msg = isForwarded ? rawMsg.originalMessage : rawMsg;
 
   const lp = useLongPress(e => {
     if (selectionMode) onClick(msg.id);
@@ -329,6 +332,13 @@ export const MessageItem = React.memo(({
       <div className={cn('flex flex-col max-w-[78%] md:max-w-[65%] relative', isUser ? 'items-end' : 'items-start')}>
         {!isUser && selectedChat.isGroup && (
           <span className="text-xs font-semibold text-accent-pink px-1 mb-0.5">{displayName}</span>
+        )}
+
+        {isForwarded && (
+            <div className="flex items-center gap-1.5 text-xs text-white/70 mb-1 px-1">
+                <Share size={12} />
+                <span>Forwarded</span>
+            </div>
         )}
 
         <div className={cn('message-bubble-content relative px-3 py-2 rounded-2xl text-[15px] leading-relaxed transition-all', isUser ? 'bg-gradient-to-br from-accent-pink/80 to-purple-700/80 text-white' : 'bg-gray-700 text-white', messageFont, msg.pending && 'opacity-60')}>

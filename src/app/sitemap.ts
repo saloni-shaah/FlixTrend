@@ -21,12 +21,9 @@ async function fetchCollection(collectionName: string): Promise<SitemapEntry[]> 
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   try {
-    const [users, posts, videos, drops, songs] = await Promise.all([
+    const [users, posts] = await Promise.all([
       fetchCollection('users'),
       fetchCollection('posts'),
-      fetchCollection('videos'),
-      fetchCollection('drops'),
-      fetchCollection('songs'),
     ]);
 
     const staticPages = [
@@ -54,12 +51,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }));
 
     const createEntries = (items: SitemapEntry[], pathPrefix: string, priority: number) => {
+      const isPost = pathPrefix.includes('post');
       return items
-        .filter(item => item.username || pathPrefix.includes('post'))
+        .filter(item => isPost || item.username)
         .map(item => {
-          const url = item.username 
-            ? `${URL}${pathPrefix}${item.username.toLowerCase()}` 
-            : `${URL}${pathPrefix}${item.id}`;
+          const slug = isPost 
+            ? item.id 
+            : item.username!.toLowerCase();
+          const url = `${URL}${pathPrefix}${slug}`;
           const lastModified = item.updatedAt?.toMillis() ?? item.createdAt?.toMillis();
           return {
             url,
@@ -72,18 +71,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     
     const userEntries = createEntries(users, '/squad/', 0.8);
     const postEntries = createEntries(posts, '/post/', 0.9);
-    const videoEntries = createEntries(videos, '/flow/', 0.9);
-    const dropEntries = createEntries(drops, '/drop/', 0.85);
-    const songEntries = createEntries(songs, '/music/', 0.7);
 
     return [
       ...staticEntries,
       ...categoryEntries,
       ...userEntries,
       ...postEntries,
-      ...videoEntries,
-      ...dropEntries,
-      ...songEntries,
     ];
   } catch (error) {
     console.error("Failed to generate sitemap:", error);
