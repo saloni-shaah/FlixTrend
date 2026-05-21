@@ -171,7 +171,7 @@ service cloud.firestore {
     // ─────────────────────────────────────────────────────────────────────
 
     match /songs/{songId} {
-      allow get:    if true;
+      allow get:    if isSignedIn();
       allow list:   if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if false;

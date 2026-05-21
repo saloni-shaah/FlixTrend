@@ -5,7 +5,7 @@ import { db } from '@/utils/firebaseClient';
 import { useMusicPlayer } from '@/utils/MusicPlayerContext';
 import { Song } from '@/types/music';
 import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Repeat1, MoreHorizontal, Mic } from 'lucide-react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from 'framer-motion';
 import { LyricsDisplay } from '@/components/LyricsDisplay';
@@ -19,6 +19,7 @@ const fmt = (t: number) => {
 
 const SongPage = () => {
     const params = useParams();
+    const router = useRouter();
     const songId = params.songId as string;
     const [song, setSong] = useState<Song | null>(null);
     const [relatedSongs, setRelatedSongs] = useState<Song[]>([]);
@@ -47,6 +48,13 @@ const SongPage = () => {
         setRepeatMode,
         addToQueue,
     } = useMusicPlayer();
+
+    useEffect(() => {
+        // Sync the page with the active song in the music player
+        if (activeSong && activeSong.id && activeSong.id !== songId) {
+            router.push(`/music/${activeSong.id}`);
+        }
+    }, [activeSong, songId, router]);
 
     useEffect(() => {
         const fetchSongAndRelated = async () => {

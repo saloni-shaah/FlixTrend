@@ -1,7 +1,7 @@
-
-"use client";
+'use client';
 import React, { createContext, useContext, useState, useRef, useEffect, ReactNode, useCallback } from 'react';
 import { Song } from '@/types/music';
+import { useAppState } from '@/utils/AppStateContext';
 
 // Define the context type
 interface MusicPlayerContextType {
@@ -28,6 +28,7 @@ const MusicPlayerContext = createContext<MusicPlayerContextType | undefined>(und
 
 // Provider component
 export const MusicPlayerProvider = ({ children }: { children: ReactNode }) => {
+  const { user } = useAppState();
   const [activeSong, setActiveSong] = useState<Song | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -40,7 +41,17 @@ export const MusicPlayerProvider = ({ children }: { children: ReactNode }) => {
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // --- Player Functions (defined before effects that use them) ---
+  const incrementPlayCount = useCallback(async (songId: string) => {
+    try {
+        await fetch("/api/songs/view", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ songId, userId: user?.uid || "anon" }),
+        });
+    } catch (error) {
+        console.error("Error incrementing play count:", error);
+    }
+  }, [user]);
 
   const playSong = useCallback((song: Song, playlist: Song[] = [], index: number = -1) => {
     setActiveSong(song);
@@ -48,7 +59,8 @@ export const MusicPlayerProvider = ({ children }: { children: ReactNode }) => {
     setOriginalPlaylist(playlist);
     setCurrentPlaylist(playlist);
     setCurrentSongIndex(index);
-  }, []);
+    incrementPlayCount(song.id);
+  }, [incrementPlayCount]);
 
   const playNext = useCallback(() => {
     if (!activeSong) return;
