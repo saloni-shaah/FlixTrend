@@ -24,68 +24,70 @@ var __importStar = (this && this.__importStar) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.onUserUpdate = void 0;
-const v1 = __importStar(require("firebase-functions/v1"));
+const functions = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
-const firebase_functions_1 = require("firebase-functions");
 const followerTiers = [
-    { name: 'legend', count: 10000000 },
-    { name: 'icon', count: 1000000 },
-    { name: 'force', count: 100000 },
-    { name: 'storm', count: 10000 },
-    { name: 'hype', count: 1000 },
-    { name: 'wave', count: 100 },
-    { name: 'buzz', count: 50 },
-    { name: 'spark', count: 10 },
+    { name: "legend", count: 10000000 },
+    { name: "icon", count: 1000000 },
+    { name: "force", count: 100000 },
+    { name: "storm", count: 10000 },
+    { name: "hype", count: 1000 },
+    { name: "wave", count: 100 },
+    { name: "buzz", count: 50 },
+    { name: "spark", count: 10 },
 ];
 const likeTiers = [
-    { name: 'phenomenon', count: 1000000 },
-    { name: 'sensation', count: 100000 },
-    { name: 'viral', count: 10000 },
-    { name: 'adored', count: 1000 },
-    { name: 'liked', count: 100 },
+    { name: "phenomenon", count: 1000000 },
+    { name: "sensation", count: 100000 },
+    { name: "viral", count: 10000 },
+    { name: "adored", count: 1000 },
+    { name: "liked", count: 100 },
 ];
-exports.onUserUpdate = v1.firestore
-    .document('users/{userId}')
+exports.onUserUpdate = functions
+    .firestore
+    .document("users/{userId}")
     .onUpdate(async (change, context) => {
-    var _a, _b, _c, _d, _e;
     const before = change.before.data();
     const after = change.after.data();
-    if (!before || !after) {
-        firebase_functions_1.logger.info("User data is missing, skipping update.");
+    if (!before || !after)
+        return null;
+    if (before.Follower_Count === after.Follower_Count &&
+        before.Total_likes === after.Total_likes) {
         return null;
     }
-    const accoladesToAward = [];
-    // 1. Check Follower_Count changes
-    const beforeFollowers = (_a = before.Follower_Count) !== null && _a !== void 0 ? _a : 0;
-    const afterFollowers = (_b = after.Follower_Count) !== null && _b !== void 0 ? _b : 0;
-    if (beforeFollowers !== afterFollowers) {
-        firebase_functions_1.logger.info(`Follower count changed for ${context.params.userId}.`);
-        followerTiers
-            .filter(tier => afterFollowers >= tier.count)
-            .forEach(tier => accoladesToAward.push(tier.name));
+    const currentAccolades = Array.isArray(after.accolades)
+        ? after.accolades
+        : [];
+    const foundAccolades = [];
+    const beforeFollowers = before.Follower_Count || 0;
+    const afterFollowers = after.Follower_Count || 0;
+    if (afterFollowers > beforeFollowers) {
+        for (const tier of followerTiers) {
+            if (beforeFollowers < tier.count &&
+                afterFollowers >= tier.count &&
+                !currentAccolades.includes(tier.name)) {
+                foundAccolades.push(tier.name);
+            }
+        }
     }
-    // 2. Check Total_likes changes
-    const beforeLikes = (_c = before.Total_likes) !== null && _c !== void 0 ? _c : 0;
-    const afterLikes = (_d = after.Total_likes) !== null && _d !== void 0 ? _d : 0;
-    if (beforeLikes !== afterLikes) {
-        firebase_functions_1.logger.info(`Total likes changed for ${context.params.userId}.`);
-        likeTiers
-            .filter(tier => afterLikes >= tier.count)
-            .forEach(tier => accoladesToAward.push(tier.name));
+    const beforeLikes = before.Total_likes || 0;
+    const afterLikes = after.Total_likes || 0;
+    if (afterLikes > beforeLikes) {
+        for (const tier of likeTiers) {
+            if (beforeLikes < tier.count &&
+                afterLikes >= tier.count &&
+                !currentAccolades.includes(tier.name)) {
+                foundAccolades.push(tier.name);
+            }
+        }
     }
-    if (accoladesToAward.length === 0)
+    const newAccolades = [...new Set(foundAccolades)];
+    if (newAccolades.length === 0)
         return null;
-    // 3. KEY FIX: Only write if there are actually NEW accolades not already on the doc.
-    //    This prevents the infinite re-trigger loop from the accolades write itself.
-    const currentAccolades = (_e = after.accolades) !== null && _e !== void 0 ? _e : [];
-    const newAccolades = accoladesToAward.filter(a => !currentAccolades.includes(a));
-    if (newAccolades.length === 0) {
-        firebase_functions_1.logger.info(`No new accolades to award for ${context.params.userId}. Skipping write.`);
-        return null;
-    }
-    firebase_functions_1.logger.info(`Awarding ${newAccolades.length} new accolades to ${context.params.userId}: ${newAccolades.join(', ')}`);
-    return change.after.ref.update({
-        accolades: admin.firestore.FieldValue.arrayUnion(...newAccolades)
+    functions.logger.info(`Awarding accolades to ${context.params.userId}`, newAccolades);
+    await change.after.ref.update({
+        accolades: admin.firestore.FieldValue.arrayUnion(...newAccolades),
     });
+    return null;
 });
 //# sourceMappingURL=onUserUpdate.js.map

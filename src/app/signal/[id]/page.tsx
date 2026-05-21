@@ -1,10 +1,10 @@
 'use client';
 import React, { useEffect, useState, Suspense, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getFirestore, collection, query, onSnapshot, orderBy, doc, serverTimestamp, updateDoc, getDoc, limit, startAfter, getDocs, setDoc, arrayUnion, deleteDoc } from "firebase/firestore";
+import { getFirestore, collection, query, onSnapshot, orderBy, doc, serverTimestamp, updateDoc, getDoc, limit, startAfter, getDocs, setDoc, arrayUnion, deleteDoc, arrayRemove, runTransaction } from "firebase/firestore";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { auth, app } from "@/utils/firebaseClient";
-import { Loader, X, Trash2, Smile, CheckSquare, CornerDownRight, Star, Copy } from "lucide-react";
+import { Loader, X, Trash2, Smile, CheckSquare, CornerDownRight, Star, Copy, Share } from "lucide-react";
 import { useAppState } from "@/utils/AppStateContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -17,6 +17,7 @@ import { ChatHeader } from "@/components/signal/ChatHeader";
 import { MessageList } from "@/components/signal/MessageList";
 import { ChatInput } from "@/components/signal/ChatInput";
 import { FullScreenImageViewer } from "@/components/FullScreenImageViewer";
+import { SignalShareModal } from "@/components/signal/SignalShareModal";
 
 const db = getFirestore(app);
 const storage = getStorage(app);
@@ -46,10 +47,10 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
     const [selectionMode, setSelectionMode] = useState<boolean>(false);
     const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [showShareModal, setShowShareModal] = useState(false);
     const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
     const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
     const [longPressMenu, setLongPressMenu] = useState<{ x: number, y: number, msgId: string } | null>(null);
-    const [starredMessages, setStarredMessages] = useState<Set<string>>(new Set());
 
     const [oldestDoc, setOldestDoc] = useState<any>(null);
     const [loadingMore, setLoadingMore] = useState(false);
@@ -124,7 +125,6 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
 
     useEffect(() => {
         let chatUnsubscribe: () => void;
-        let starredUnsubscribe: () => void;
 
         const setupChat = async () => {
             if (!firebaseUser?.uid) return;
@@ -163,19 +163,11 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                 setOldestDoc(snap.docs[snap.docs.length - 1]);
                 setHasMoreToLoad(snap.docs.length === 50);
             }, (err) => console.error("Messages snapshot err:", err));
-
-            const starredQuery = query(collection(db, "users", firebaseUser.uid, "starredMessages"));
-            starredUnsubscribe = onSnapshot(starredQuery, (snap) => {
-                const newStarred = new Set<string>();
-                snap.forEach(doc => newStarred.add(doc.id));
-                setStarredMessages(newStarred);
-            });
         };
 
         setupChat();
         return () => {
             if (chatUnsubscribe) chatUnsubscribe();
-            if (starredUnsubscribe) starredUnsubscribe();
         };
     }, [chatId, firebaseUser.uid]);
 
@@ -274,6 +266,8 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                 text: text.trim() || "",
                 mediaUrl: mediaUrl || null,
                 replyTo: replyingTo ? replyingTo.id : null,
+                isStarred: false,
+                starredBy: [],
             });
             updateReadReceipt();
         } catch (e) {
@@ -393,20 +387,41 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
         setLongPressMenu(null);
     }, [messages]);
 
-    const toggleStar = async (msgId: string) => {
+    const toggleStar = useCallback(async (msgId: string) => {
         if (!firebaseUser?.uid) return;
-        const starredDocRef = doc(db, "users", firebaseUser.uid, "starredMessages", msgId);
+        const messageRef = doc(db, "chats", chatId, "messages", msgId);
+
         try {
-            if (starredMessages.has(msgId)) {
-                await deleteDoc(starredDocRef);
-            } else {
-                const message = messages.find(m => m.id === msgId);
-                if (!message) return;
-                await setDoc(starredDocRef, { ...message, starredAt: serverTimestamp() });
-            }
-        } catch (e) { console.error(e); }
+            await runTransaction(db, async (transaction) => {
+                const messageDoc = await transaction.get(messageRef);
+                if (!messageDoc.exists()) {
+                    throw new Error("Message does not exist!");
+                }
+
+                const messageData = messageDoc.data();
+                const starredBy = messageData.starredBy || [];
+                const isCurrentlyStarred = starredBy.includes(firebaseUser.uid);
+
+                let newStarredBy;
+                if (isCurrentlyStarred) {
+                    // Unstar the message
+                    newStarredBy = starredBy.filter((uid: string) => uid !== firebaseUser.uid);
+                } else {
+                    // Star the message
+                    newStarredBy = [...starredBy, firebaseUser.uid];
+                }
+                
+                // Update the message document with the new `starredBy` array and the `isStarred` boolean flag.
+                transaction.update(messageRef, {
+                    starredBy: newStarredBy,
+                    isStarred: newStarredBy.length > 0,
+                });
+            });
+        } catch (error) {
+            console.error("Error toggling star:", error);
+        }
         setLongPressMenu(null);
-    };
+    }, [chatId, firebaseUser?.uid]);
 
     const handleLongPressOrContextMenu = (event: React.MouseEvent | React.TouchEvent, msgId: string) => {
         event.preventDefault();
@@ -437,6 +452,7 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
     );
     
     const messageForMenu = longPressMenu ? messages.find(m => m.id === longPressMenu.msgId) : null;
+    const selectedMessages = messages.filter(m => selectedItems.has(m.id));
 
     return (
         <div className="flex-1 flex flex-col bg-black/40 h-full pt-4 pb-6">
@@ -451,7 +467,10 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                     >
                         <button onClick={cancelSelection} className="p-2 rounded-full hover:bg-white/10"><X size={24} /></button>
                         <motion.span layout className="font-bold text-lg text-white">{selectedItems.size} selected</motion.span>
-                        <button onClick={() => setShowDeleteConfirm(true)} className="p-2 rounded-full hover:bg-red-500/20 text-red-500"><Trash2 size={24} /></button>
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => setShowShareModal(true)} className="p-2 rounded-full hover:bg-white/10 text-white"><Share size={24} /></button>
+                            <button onClick={() => setShowDeleteConfirm(true)} className="p-2 rounded-full hover:bg-red-500/20 text-red-500"><Trash2 size={24} /></button>
+                        </div>
                     </motion.div>
                 ) : (
                     <ChatHeader selectedChat={selectedChat} />
@@ -465,7 +484,6 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                     selectedChat,
                     selectedItems,
                     selectionMode,
-                    starredMessages,
                     handleLongPress: handleLongPressOrContextMenu,
                     onContextMenu: handleLongPressOrContextMenu,
                     handleMessageClick,
@@ -495,6 +513,13 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                 }}
             />
 
+            {showShareModal && (
+                <SignalShareModal 
+                    messages={selectedMessages} 
+                    onClose={() => { setShowShareModal(false); cancelSelection(); }} 
+                />
+            )}
+
             {longPressMenu && messageForMenu && (
                 <Popover open={true} onOpenChange={() => setLongPressMenu(null)}>
                     <PopoverTrigger asChild>
@@ -511,7 +536,7 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                             {messageForMenu.text && (
                                 <button onClick={() => handleCopy(longPressMenu.msgId)} className="p-2 rounded-full hover:bg-white/10"><Copy size={18} /></button>
                             )}
-                            <button onClick={() => toggleStar(longPressMenu.msgId)} className="p-2 rounded-full hover:bg-white/10"><Star size={18} className={cn(starredMessages.has(longPressMenu.msgId) ? 'text-yellow-400 fill-yellow-400' : '')} /></button>
+                            <button onClick={() => toggleStar(longPressMenu.msgId)} className="p-2 rounded-full hover:bg-white/10"><Star size={18} className={cn(messageForMenu?.starredBy?.includes(firebaseUser.uid) ? 'text-yellow-400 fill-yellow-400' : '')} /></button>
                             <button onClick={() => startSelection(longPressMenu.msgId)} className="p-2 rounded-full hover:bg-white/10"><CheckSquare size={18} /></button>
                             <button onClick={() => { setShowEmojiPicker(longPressMenu.msgId); setLongPressMenu(null); }} className="p-2 rounded-full hover:bg-white/10"><Smile size={18} /></button>
                             <button onClick={() => handleReply(messageForMenu)} className="p-2 rounded-full hover:bg-white/10"><CornerDownRight size={18} /></button>
@@ -602,7 +627,7 @@ export default function SignalChatPage() {
                 <div className="flex h-full items-center justify-center text-accent-cyan">
                     <Loader className="animate-spin" /> Loading Chat...
                 </div>
-            }>
+            }> 
                 <ChatPageWrapper />
             </Suspense>
         </div>

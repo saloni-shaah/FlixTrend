@@ -1,8 +1,8 @@
 'use client';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Send, Volume2, VolumeX, Pause, Play, Music, Eye } from 'lucide-react';
+import { X, Send, Volume2, VolumeX, Play, Music, Eye } from 'lucide-react';
 import { auth, app } from '@/utils/firebaseClient';
-import { getFirestore, addDoc, collection, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
+import { getFirestore, addDoc, collection, serverTimestamp, doc, updateDoc, increment, getDocs, query, where, documentId } from 'firebase/firestore';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 
@@ -71,6 +71,8 @@ export default function FlashPlayer({ usersWithFlashes, onClose, initialUserInde
     const [isPaused, setIsPaused] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isMuted, setIsMuted] = useState(false);
+    const [viewers, setViewers] = useState<any[]>([]);
+    const [showViewers, setShowViewers] = useState(false);
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -78,6 +80,9 @@ export default function FlashPlayer({ usersWithFlashes, onClose, initialUserInde
     const preloadedVideosRef = useRef<HTMLVideoElement[]>([]);
     const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const isHoldingRef = useRef(false);
+    const startTimeRef = useRef<number | undefined>(undefined);
+    const elapsedBeforePauseRef = useRef(0);
+    const isMutedRef = useRef(isMuted);
 
     const currentUserFlashes = usersWithFlashes[currentUserIndex]?.flashes || [];
     const currentFlash = currentUserFlashes[currentFlashIndex];
@@ -95,6 +100,10 @@ export default function FlashPlayer({ usersWithFlashes, onClose, initialUserInde
             isVideo = urlString.includes('.mp4') || urlString.includes('.webm');
         }
     }
+
+    const isVideoRef = useRef(isVideo);
+    useEffect(() => { isVideoRef.current = isVideo; }, [isVideo]);
+    useEffect(() => { isMutedRef.current = isMuted; }, [isMuted]);
 
     useEffect(() => {
         if (!currentFlash || !currentUser || isOwnFlash || !currentFlash.id) {
@@ -138,6 +147,10 @@ export default function FlashPlayer({ usersWithFlashes, onClose, initialUserInde
     
     useEffect(() => {
         setIsLoading(true);
+        startTimeRef.current = undefined;
+        elapsedBeforePauseRef.current = 0;
+        setViewers([]);
+        setProgress(0);
     }, [currentFlash]);
     
     useEffect(() => {
@@ -184,25 +197,19 @@ export default function FlashPlayer({ usersWithFlashes, onClose, initialUserInde
             audioRef.current = null;
         }
         if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-        setProgress(0);
 
         if (currentFlash?.song?.preview_url) {
             const audio = new Audio(currentFlash.song.preview_url);
-            audio.volume = isVideo ? 0.2 : 1.0;
-            audio.muted = isMuted;
+            audio.volume = isVideoRef.current ? 0.2 : 1.0;
+            audio.muted = isMutedRef.current;
             audio.currentTime = currentFlash.song.snippetStart || 0;
-            audio.play().catch(() => {});
+            if (!isPaused) {
+                audio.play().catch(() => {});
+            }
             audioRef.current = audio;
         }
     }, [currentFlash]);
 
-    useEffect(() => {
-        if (isVideo && videoRef.current) {
-            videoRef.current.load();
-            videoRef.current.play().catch(() => {});
-        }
-    }, [currentFlash?.mediaUrl, isVideo]);
-    
     useEffect(() => {
         if (audioRef.current) audioRef.current.muted = isMuted;
         if (videoRef.current) videoRef.current.muted = isMuted;
@@ -210,13 +217,17 @@ export default function FlashPlayer({ usersWithFlashes, onClose, initialUserInde
 
     useEffect(() => {
         if (isPaused) {
+            if (startTimeRef.current !== undefined && !isVideo) {
+                elapsedBeforePauseRef.current += performance.now() - startTimeRef.current;
+                startTimeRef.current = undefined;
+            }
             videoRef.current?.pause();
             audioRef.current?.pause();
-        } else {
+        } else if (!isLoading) {
             videoRef.current?.play().catch(() => {});
             audioRef.current?.play().catch(() => {});
         }
-    }, [isPaused]);
+    }, [isPaused, isLoading, isVideo]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -232,16 +243,16 @@ export default function FlashPlayer({ usersWithFlashes, onClose, initialUserInde
 
     useEffect(() => {
         if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+        startTimeRef.current = undefined;
 
         if (!isVideo && !isPaused && !isLoading) {
             const DURATION = (currentFlash.song?.snippetEnd && currentFlash.song?.snippetStart) 
                 ? (currentFlash.song.snippetEnd - currentFlash.song.snippetStart) * 1000
                 : 15000;
             
-            let startTime: number;
             const animate = (timestamp: number) => {
-                if (startTime === undefined) startTime = timestamp;
-                const elapsed = timestamp - startTime;
+                if (startTimeRef.current === undefined) startTimeRef.current = timestamp;
+                const elapsed = (timestamp - startTimeRef.current) + elapsedBeforePauseRef.current;
                 const newProgress = Math.min((elapsed / DURATION) * 100, 100);
                 setProgress(newProgress);
                 if (elapsed < DURATION) {
@@ -282,13 +293,58 @@ export default function FlashPlayer({ usersWithFlashes, onClose, initialUserInde
         }
     };
 
+    const fetchViewers = async () => {
+        if (!currentFlash || !currentFlash.viewedBy) return;
+        const viewerIds = Object.keys(currentFlash.viewedBy);
+        if (viewerIds.length === 0) return;
+
+        const usersRef = collection(db, "users");
+        const chunks: string[][] = [];
+        for (let i = 0; i < viewerIds.length; i += 30) {
+            chunks.push(viewerIds.slice(i, i + 30));
+        }
+
+        try {
+            const results = await Promise.all(
+                chunks.map(chunk => getDocs(query(usersRef, where(documentId(), "in", chunk))))
+            );
+            const viewersData = results.flatMap(snap => snap.docs.map(d => ({ id: d.id, ...d.data() })));
+            setViewers(viewersData);
+        } catch (error) {
+            console.error("Error fetching viewers:", error);
+        }
+    };
+
+    const handleDragEnd = (event: any, info: any) => {
+        if (info.offset.y > 100 && info.velocity.y > 20 && isOwnFlash) {
+            if (viewers.length === 0) fetchViewers();
+            setShowViewers(true);
+            setIsPaused(true);
+        }
+    };
+    
+    const captionBottomClass = () => {
+        const hasHashtags = currentFlash?.hashtags?.length > 0;
+        if (isOwnFlash) {
+            return hasHashtags ? 'bottom-24' : 'bottom-16';
+        } else {
+            return hasHashtags ? 'bottom-40' : 'bottom-32';
+        }
+    }
 
     if (!currentFlash) return null;
 
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center" onClick={(e) => { if(e.target === e.currentTarget) onClose(); }}>
 
-            <div className="relative w-full max-w-sm h-[95vh] max-h-[800px] bg-neutral-900 rounded-2xl overflow-hidden shadow-2xl">
+            <motion.div 
+                className="relative w-full max-w-sm h-[95vh] max-h-[800px] bg-neutral-900 rounded-2xl overflow-hidden shadow-2xl"
+                drag="y"
+                dragConstraints={{ top: 0, bottom: 0 }}
+                dragElastic={0.1}
+                dragMomentum={false}
+                onDragEnd={handleDragEnd}
+            >
                 <div className="absolute inset-0 w-full h-full scale-110 blur-2xl opacity-50">
                      {isVideo ? <div className="w-full h-full bg-black" /> : <Image src={currentFlash.mediaUrl} alt="background" fill style={{ objectFit: 'cover' }} unoptimized />}
                 </div>
@@ -297,18 +353,26 @@ export default function FlashPlayer({ usersWithFlashes, onClose, initialUserInde
                     {isLoading && <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-white"></div></div>}
                     {isPaused && !isLoading && <div className="absolute inset-0 flex items-center justify-center bg-black/30 z-20"><Play size={48} className="text-white/80" /></div>}
 
-                    <video
-                        ref={videoRef}
-                        src={isVideo ? currentFlash.mediaUrl : ''}
-                        className="relative z-10 w-full h-full object-contain"
-                        onCanPlay={handleMediaLoad}
-                        onTimeUpdate={handleTimeUpdate}
-                        onEnded={goToNextFlash}
-                        autoPlay
-                        playsInline
-                        muted={isMuted}
-                        preload="auto"
-                    />
+                    {isVideo && (
+                        <video
+                            ref={videoRef}
+                            src={currentFlash.mediaUrl}
+                            className="relative z-10 w-full h-full object-contain"
+                             onCanPlay={() => {
+                                if (isLoading) { // only act on first canplay
+                                    handleMediaLoad();
+                                    if (!isPaused && !isHoldingRef.current) videoRef.current?.play().catch(() => {});
+                                }
+                            }}
+                            onTimeUpdate={handleTimeUpdate}
+                            onEnded={() => { if (!isHoldingRef.current) goToNextFlash(); }}
+                            onError={() => setIsLoading(false)}
+                            autoPlay
+                            playsInline
+                            muted={isMuted}
+                            preload="auto"
+                        />
+                    )}
                     {!isVideo && currentFlash && (
                         <Image
                             src={currentFlash.mediaUrl}
@@ -317,6 +381,7 @@ export default function FlashPlayer({ usersWithFlashes, onClose, initialUserInde
                             style={{ objectFit: 'contain' }}
                             className="relative z-10"
                             onLoad={handleMediaLoad}
+                            onError={() => setIsLoading(false)}
                             unoptimized
                             priority
                         />
@@ -329,10 +394,12 @@ export default function FlashPlayer({ usersWithFlashes, onClose, initialUserInde
                     </div>
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3 overflow-hidden">
-                            <HexAvatar src={usersWithFlashes[currentUserIndex]?.avatar_url || '/default-avatar.png'} />
+                            <HexAvatar src={currentFlash?.avatar_url || usersWithFlashes[currentUserIndex]?.avatar_url || '/default-avatar.png'} />
                             <div className="flex flex-col overflow-hidden">
                                  <div className="flex items-center gap-2">
-                                    <span className="font-bold text-white text-shadow truncate">{usersWithFlashes[currentUserIndex]?.displayName || 'User'}</span>
+                                     <span className="font-bold text-white text-shadow truncate">
+                                        {isOwnFlash ? 'You' : (currentFlash?.displayName || usersWithFlashes[currentUserIndex]?.displayName || usersWithFlashes[currentUserIndex]?.name || 'User')}
+                                    </span>
                                      {currentFlash?.location && (
                                         <span className="text-xs bg-white/20 text-white rounded-full px-2 py-0.5 shrink-0">{currentFlash?.location}</span>
                                     )}
@@ -358,16 +425,63 @@ export default function FlashPlayer({ usersWithFlashes, onClose, initialUserInde
                      <div className="w-1/3 h-full" onClick={goToNextFlash} onMouseDown={handlePressStart} onMouseUp={handlePressEnd} onTouchStart={handlePressStart} onTouchEnd={handlePressEnd}></div>
                 </div>
 
+                {currentFlash?.hashtags?.length > 0 && (
+                    <div className="absolute bottom-20 left-4 right-4 z-40 flex flex-wrap gap-1 justify-center">
+                        {currentFlash.hashtags.map((tag: string) => (
+                            <span key={tag} className="text-xs text-accent-cyan/80">#{tag}</span>
+                        ))}
+                    </div>
+                )}
+
+                {currentFlash?.caption && (
+                    <p className={`absolute ${captionBottomClass()} left-4 right-4 text-white text-sm text-shadow z-40 text-center`}>
+                        {currentFlash.caption}
+                    </p>
+                )}
+
                 {isOwnFlash && (currentFlash.viewCount > 0 || currentFlash.viewedBy) && (
-                    <div className="absolute bottom-4 left-4 z-40 text-white text-sm flex items-center gap-2 bg-black/40 backdrop-blur-sm p-1.5 rounded-lg">
+                     <motion.div 
+                        className="absolute bottom-4 left-4 z-40 text-white text-sm flex items-center gap-2 bg-black/40 backdrop-blur-sm p-1.5 rounded-lg"
+                        initial={{ y: 50, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.5 }}
+                    >
                         <Eye size={16} />
                         <span>{currentFlash.viewCount ?? Object.keys(currentFlash.viewedBy || {}).length}</span>
-                    </div>
+                        <span className="text-xs opacity-80">Swipe down to see viewers</span>
+                    </motion.div>
                 )}
 
 
                 {!isOwnFlash && <FlashInteraction flash={currentFlash} currentUser={currentUser} onClose={onClose} />}
-            </div>
+
+                {isOwnFlash && (
+                <motion.div
+                    className={`absolute bottom-0 left-0 right-0 h-1/2 bg-black/50 backdrop-blur-md rounded-t-2xl z-50 p-4 overflow-y-auto ${!showViewers ? 'pointer-events-none' : ''}`}
+                    variants={{
+                        hidden: { y: "100%" },
+                        visible: { y: 0 }
+                    }}
+                    initial="hidden"
+                    animate={showViewers ? 'visible' : 'hidden'}
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                >
+                    <button onClick={() => { setShowViewers(false); setIsPaused(false); }} className="absolute top-2 right-2 text-white"><X /></button>
+                    <h3 className="text-lg font-bold text-white mb-4">Viewers</h3>
+                    <div className="flex flex-col gap-3">
+                        {viewers.length === 0 
+                            ? <p className="text-white/50 text-sm text-center mt-4">No viewers yet</p>
+                            : viewers.map(viewer => (
+                                <div key={viewer.id} className="flex items-center gap-3">
+                                    <Image src={viewer.avatar_url || '/default-avatar.png'} alt={viewer.displayName || viewer.name} width={40} height={40} className="w-10 h-10 rounded-full object-cover" />
+                                    <span className="text-white">{viewer.displayName || viewer.name}</span>
+                                </div>
+                            ))
+                        }
+                    </div>
+                </motion.div>
+            )}
+            </motion.div>
         </motion.div>
     );
 }

@@ -17,7 +17,6 @@ interface Props {
   selectedChat:   any;
   selectedItems:  Set<string>;
   selectionMode:  boolean;
-  starredMessages: Set<string>;
   handleLongPress:  (e: any, id: string) => void;
   onContextMenu:    (e: any, id: string) => void;
   handleMessageClick: (id: string) => void;
@@ -35,7 +34,7 @@ interface Props {
 }
 
 export function MessageList({
-  messages, firebaseUser, selectedChat, selectedItems, selectionMode, starredMessages,
+  messages, firebaseUser, selectedChat, selectedItems, selectionMode,
   handleLongPress, onContextMenu, handleMessageClick,
   setShowEmojiPicker, showEmojiPicker, setFullScreenImage,
   bottomRef, loadMoreMessages, loadingMore, hasMoreToLoad,
@@ -82,7 +81,7 @@ export function MessageList({
         firebaseUser={firebaseUser}
         isSelected={selectedItems.has(msg.id)}
         selectionMode={selectionMode}
-        isStarred={starredMessages.has(msg.id)}
+        isStarred={(msg.starredBy || []).includes(firebaseUser.uid)}
         onLongPress={handleLongPress}
         onContextMenu={onContextMenu}
         onClick={handleMessageClick}
@@ -100,8 +99,7 @@ export function MessageList({
   return (
     <div
       ref={scrollContainerRef}
-      className="flex-1 overflow-y-auto px-4 flex flex-col gap-1"
-      style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.07) transparent' }}
+      className="flex-1 overflow-y-auto px-4 flex flex-col gap-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       {hasMoreToLoad && (
         <div className="flex justify-center py-3">
@@ -111,7 +109,7 @@ export function MessageList({
             className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/30 backdrop-blur hover:bg-black/50 text-white/35 text-xs font-medium border border-white/[0.06] transition-colors"
           >
             {loadingMore
-              ? <><Loader size={12} className="animate-spin mr-1" />Loading…</>
+              ? <><Loader size={12} className="animate-spin mr-1" />Loading...</>
               : 'Load older messages'
             }
           </button>
