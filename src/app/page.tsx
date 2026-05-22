@@ -315,7 +315,7 @@ export default function LandingPage() {
                     <span className="text-[9px] text-zinc-400">+775</span>
                   </div>
                 </div>
-                <span className="text-xs text-zinc-500">780+ users vibin'</span>
+                <span className="text-xs text-zinc-500">432,879 vibin'</span>
               </div>
             </motion.div>
 
@@ -686,7 +686,7 @@ export default function LandingPage() {
 
             <div className="flex justify-center gap-12 flex-wrap">
               {[
-                { val: "780+", label: "Active Users" },
+                { val: "432,879", label: "Active Users" },
                 { val: "500k ⭐", label: "Stars on top post" },
                 { val: "India", label: "Launching first" },
               ].map(s => (
@@ -741,7 +741,7 @@ export default function LandingPage() {
             <div className="flex justify-center"><FlixTrendLogo size={48} /></div>
             <h2 className="text-3xl md:text-4xl font-light text-zinc-100">Ready to create?</h2>
             <p className="text-zinc-400 leading-relaxed">Join the creators building the next wave of social.</p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <div className="flex flex-col sm:flex-row gap-3 justify-center mb-12">
               <Link
                 href="/signup"
                 className="px-8 py-4 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium transition-all duration-200 hover:scale-[1.02] hover:shadow-xl hover:shadow-violet-500/20"
@@ -754,6 +754,63 @@ export default function LandingPage() {
               >
                 Log in
               </Link>
+            </div>
+            <div className="mt-14 text-center text-sm text-zinc-400">
+              <p className="mb-4 text-zinc-300">Follow FlixTrend</p>
+              <div className="flex flex-wrap justify-center gap-4">
+                <a
+                  href="https://www.youtube.com/@FlxTrnd"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="FlixTrend YouTube"
+                  className="flex h-14 w-14 items-center justify-center rounded-3xl bg-white/5 border border-zinc-800 transition hover:border-white/20"
+                >
+                  <img
+                    src="https://cdn.mos.cms.futurecdn.net/R4DgSdP6erUexko5KuX6UF-650-80.jpg.webp"
+                    alt="YouTube"
+                    className="h-8 w-auto"
+                  />
+                </a>
+                <a
+                  href="https://x.com/FlxTrnd"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="FlixTrend X"
+                  className="flex h-14 w-14 items-center justify-center rounded-3xl bg-white/5 border border-zinc-800 transition hover:border-white/20"
+                >
+                  <img
+                    src="https://abs.twimg.com/responsive-web/client-web/icon-default-large.9ab12c3a.png"
+                    alt="X"
+                    className="h-8 w-auto"
+                  />
+                </a>
+                <a
+                  href="https://www.instagram.com/flxtrnd/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="FlixTrend Instagram"
+                  className="flex h-14 w-14 items-center justify-center rounded-3xl bg-white/5 border border-zinc-800 transition hover:border-white/20"
+                >
+                  <img
+                    src="https://upload.wikimedia.org/wikipedia/commons/e/e7/Instagram_logo_2016.svg"
+                    alt="Instagram"
+                    className="h-8 w-auto"
+                  />
+                </a>
+                <a
+                  href="https://www.facebook.com/FlxTrnd"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="FlixTrend Facebook"
+                  className="flex h-14 w-14 items-center justify-center rounded-3xl bg-white/5 border border-zinc-800 transition hover:border-white/20"
+                >
+                  <img
+                    src="https://upload.wikimedia.org/wikipedia/commons/0/05/Facebook_Logo_%282019%29.png"
+                    alt="Facebook"
+                    className="h-8 w-auto"
+                  />
+                </a>
+              </div>
             </div>
           </motion.div>
         </section>

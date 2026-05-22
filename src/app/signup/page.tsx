@@ -6,7 +6,7 @@ import {
   getAuth,
   createUserWithEmailAndPassword,
 } from 'firebase/auth';
-import { doc, getFirestore, writeBatch, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { doc, getFirestore, writeBatch, serverTimestamp, Timestamp, increment } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -189,6 +189,7 @@ export default function SignupPage() {
   const [usernameError, setUsernameError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showUnderage, setShowUnderage] = useState(false);
@@ -239,6 +240,7 @@ export default function SignupPage() {
 
     if (!dobComplete) { setError('Please select your date of birth.'); return; }
     if (isUnderage) { setShowUnderage(true); return; }
+    if (!acceptedTerms) { setError('You must agree to our Terms and Privacy Policy to continue.'); return; }
     if (password !== confirmPassword) { setError('Passwords do not match.'); return; }
     if (!username) { setError('Please enter a username.'); return; }
 
@@ -281,6 +283,10 @@ export default function SignupPage() {
       // /usernames/{username} — lowercase lock
       const usernameDocRef = doc(db, 'usernames', username);
       batch.set(usernameDocRef, { uid: user.uid });
+
+      // Increment total user count only after the new user document is written successfully.
+      const appStatusRef = doc(db, 'app_status', 'user_stats');
+      batch.set(appStatusRef, { totalUsers: increment(1) }, { merge: true });
 
       await batch.commit();
 
@@ -410,12 +416,25 @@ export default function SignupPage() {
                 </button>
               </div>
 
+              <label className="flex items-start gap-3 text-sm text-gray-200">
+                <input
+                  type="checkbox"
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
+                  disabled={loading}
+                  className="mt-1 h-4 w-4 rounded border-gray-400 bg-black/20 text-accent-cyan focus:ring-accent-cyan"
+                />
+                <span className="leading-relaxed">
+                  I agree to the <a href="/terms" className="text-accent-cyan hover:underline">Terms of Service</a>, <a href="/privacy" className="text-accent-cyan hover:underline">Privacy Policy</a>, and any other applicable policies.
+                </span>
+              </label>
+
               <motion.button
                 whileHover={{ scale: loading ? 1 : 1.05 }}
                 whileTap={{ scale: loading ? 1 : 0.95 }}
                 type="submit"
                 className="btn-glass mt-2 bg-accent-pink/80 disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={loading || !!isUnderage || !!usernameError}
+                disabled={loading || !acceptedTerms || !!isUnderage || !!usernameError}
               >
                 {loading ? 'Creating Account...' : 'Create Account'}
               </motion.button>
