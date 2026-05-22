@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getAuth } from 'firebase/auth';
-import { doc, getFirestore, writeBatch, increment, getDoc } from 'firebase/firestore';
+import { doc, getFirestore, writeBatch, getDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Input } from '@/components/ui/input';
@@ -95,9 +95,6 @@ export default function CompleteProfilePage() {
           location,
           gender: genderToSave,
         });
-
-        const appStatusRef = doc(db, 'app_status', 'user_stats');
-        batch.set(appStatusRef, { totalUsers: increment(1) }, { merge: true });
 
         await batch.commit();
       }

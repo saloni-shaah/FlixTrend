@@ -60,15 +60,16 @@ const pwaConfig = {
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  reactStrictMode: true,
   experimental: {
     serverActions: {
       bodySizeLimit: '50mb',
     },
   },
   allowedDevOrigins: [
-    '3000-firebase-studio-1771359278488.cluster-w5vd22whf5gmav2vgkomwtc4go.cloudworkstations.dev',
-    '6000-firebase-studio-1777484363034.cluster-ancjwrkgr5dvux4qug5rbzyc2y.cloudworkstations.dev/',
-    '9000-firebase-studio-1778923407977.cluster-mwsteha33jfdowtvzffztbjcj6.cloudworkstations.dev',
+    'http://localhost:3000',
+    'https://localhost:3000',
+    'http://127.0.0.1:3000',
   ],
   typescript: {
     ignoreBuildErrors: true,
