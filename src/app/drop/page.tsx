@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
-import { getFirestore, collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { getFirestore, collection, query, where, orderBy, limit, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { auth, app } from '@/utils/firebaseClient';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { Sparkles, Clock, CircleDollarSign } from 'lucide-react';
@@ -9,6 +9,7 @@ import { motion } from 'framer-motion';
 import { DropCard } from '@/components/drop/DropCard';
 import { DropPollCard } from '@/components/drop/DropPollCard';
 import { VibeSpaceLoader } from '@/components/VibeSpaceLoader';
+import { subscribeToPush } from '@/utils/pushNotifications';
 
 const db = getFirestore(app);
 
@@ -49,9 +50,20 @@ function DropPageContent() {
   const [poll, setPoll] = useState<any | null>(null);
   const [userHasPosted, setUserHasPosted] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [notificationStatus, setNotificationStatus] = useState<'idle' | 'pending' | 'success' | 'error'>('idle');
+  const [notificationMessage, setNotificationMessage] = useState<string>('');
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
+  const [browserPushSupported, setBrowserPushSupported] = useState(false);
   
   const [user, authLoading] = useAuthState(auth);
   const router = useRouter();
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setBrowserPushSupported('serviceWorker' in navigator && 'Notification' in window);
+      setNotificationPermission(Notification.permission);
+    }
+  }, []);
 
   useEffect(() => {
     if (authLoading) return;
@@ -118,6 +130,38 @@ function DropPageContent() {
 
   }, [user, authLoading, router]);
 
+  const handleEnableNotifications = async () => {
+    if (!user) return;
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      setNotificationStatus('error');
+      setNotificationMessage('Browser notifications are not supported.');
+      return;
+    }
+
+    setNotificationStatus('pending');
+    setNotificationMessage('Requesting permission...');
+
+    const token = await subscribeToPush(user.uid);
+    const newPermission = Notification.permission;
+    setNotificationPermission(newPermission);
+
+    if (token) {
+      setNotificationStatus('success');
+      setNotificationMessage('Notifications enabled! You will now receive drop alerts.');
+      return;
+    }
+
+    if (newPermission === 'denied') {
+      await updateDoc(doc(db, 'users', user.uid), { 'settings.pushNotifications': false }).catch(() => null);
+      setNotificationStatus('error');
+      setNotificationMessage('Notification permission was denied. Enable it in browser settings to receive alerts.');
+      return;
+    }
+
+    setNotificationStatus('error');
+    setNotificationMessage('Could not enable notifications. Please try again later.');
+  };
+
   const handleCreateDrop = () => {
     if (prompt) {
       router.push(`/drop/create?promptId=${prompt.id}`);
@@ -153,6 +197,37 @@ function DropPageContent() {
             <p className="text-gray-500 text-xl">{prompt.text}</p>
             <CountdownTimer expiryDate={prompt.expiresAt} />
         </div>
+
+        {browserPushSupported && notificationPermission !== 'granted' && (
+          <div className="mb-6 rounded-3xl border border-accent-cyan/20 bg-white/10 p-4 text-left text-sm text-white">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="font-semibold text-accent-cyan">Get instant drop alerts</p>
+                <p className="text-gray-300">
+                  {notificationPermission === 'denied'
+                    ? 'Your browser has blocked notifications. Enable them in browser settings to receive drop alerts.'
+                    : 'Enable push notifications to get notified when new drops and polls are live.'}
+                </p>
+              </div>
+              {notificationPermission === 'default' ? (
+                <button
+                  onClick={handleEnableNotifications}
+                  disabled={notificationStatus === 'pending'}
+                  className="btn-glass bg-accent-cyan text-black px-5 py-2 font-semibold rounded-full hover:bg-accent-cyan/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {notificationStatus === 'pending' ? 'Waiting…' : 'Enable Notifications'}
+                </button>
+              ) : (
+                <span className="text-yellow-300">Notifications blocked</span>
+              )}
+            </div>
+            {notificationMessage && (
+              <p className={`mt-3 text-sm ${notificationStatus === 'error' ? 'text-yellow-400' : 'text-green-300'}`}>
+                {notificationMessage}
+              </p>
+            )}
+          </div>
+        )}
 
         {userHasPosted ? (
             <>

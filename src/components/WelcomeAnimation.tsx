@@ -3,6 +3,9 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FlixTrendLogo } from "./FlixTrendLogo";
 import Image from "next/image";
+import { auth, db } from '@/utils/firebaseClient';
+import { doc, updateDoc } from 'firebase/firestore';
+import { subscribeToPush } from '@/utils/pushNotifications';
 
 // --- Keyframes and Variants ---
 const containerVariants = {
@@ -133,6 +136,54 @@ function WorldTourAnimation() {
 
 
 function FinalWelcomeAnimation() {
+  const [notificationStatus, setNotificationStatus] = useState<'idle' | 'pending' | 'success' | 'error'>('idle');
+  const [notificationMessage, setNotificationMessage] = useState<string>('');
+  const [permission, setPermission] = useState<NotificationPermission | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setPermission(Notification.permission);
+    }
+  }, []);
+
+  const handleEnableNotifications = async () => {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      setNotificationStatus('error');
+      setNotificationMessage('Browser notifications are not supported.');
+      return;
+    }
+
+    setNotificationStatus('pending');
+    setNotificationMessage('Requesting permission...');
+
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      setNotificationStatus('error');
+      setNotificationMessage('Please log in to enable notifications.');
+      return;
+    }
+
+    const token = await subscribeToPush(currentUser.uid);
+    const newPermission = Notification.permission;
+    setPermission(newPermission);
+
+    if (token) {
+      setNotificationStatus('success');
+      setNotificationMessage('Notifications enabled!');
+      return;
+    }
+
+    if (newPermission === 'denied') {
+      await updateDoc(doc(db, 'users', currentUser.uid), { 'settings.pushNotifications': false }).catch(() => null);
+      setNotificationStatus('error');
+      setNotificationMessage('Browser notification permission was denied. Please enable it in your browser settings.');
+      return;
+    }
+
+    setNotificationStatus('error');
+    setNotificationMessage('Could not enable notifications. Try again later.');
+  };
+
   return (
     <motion.div
       key="final-welcome"
@@ -160,6 +211,25 @@ function FinalWelcomeAnimation() {
       >
         Where trend finds you first.
       </motion.p>
+      {permission !== 'granted' && (
+        <motion.div
+          className="flex flex-col items-center gap-3"
+          variants={textVariants}
+        >
+          <button
+            onClick={handleEnableNotifications}
+            disabled={notificationStatus === 'pending'}
+            className="btn-glass bg-accent-cyan text-black px-6 py-3 font-semibold rounded-full hover:bg-accent-cyan/90 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {notificationStatus === 'pending' ? 'Waiting…' : 'Enable Notifications'}
+          </button>
+          {notificationMessage && (
+            <p className={`text-sm ${notificationStatus === 'error' ? 'text-yellow-400' : 'text-green-300'}`}>
+              {notificationMessage}
+            </p>
+          )}
+        </motion.div>
+      )}
     </motion.div>
   );
 }

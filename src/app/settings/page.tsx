@@ -7,6 +7,7 @@ import { signOut, sendEmailVerification } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { auth, db } from '@/utils/firebaseClient';
 import { doc, onSnapshot, updateDoc } from "firebase/firestore";
+import { subscribeToPush, unsubscribeFromPush } from '@/utils/pushNotifications';
 
 export default function SettingsPage() {
     const [profile, setProfile] = useState<any>(null);
@@ -23,7 +24,22 @@ export default function SettingsPage() {
     });
     const [isSaving, setIsSaving] = useState(false);
     const [resendStatus, setResendStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
+    const [browserPushBlocked, setBrowserPushBlocked] = useState(false);
     const router = useRouter();
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const blocked = Notification.permission === 'denied';
+        setBrowserPushBlocked(blocked);
+
+        if (blocked && settings.pushNotifications) {
+            setSettings(prev => ({ ...prev, pushNotifications: false }));
+            if (firebaseUser) {
+                const userDocRef = doc(db, 'users', firebaseUser.uid);
+                updateDoc(userDocRef, { 'settings.pushNotifications': false }).catch(() => null);
+            }
+        }
+    }, [settings.pushNotifications, firebaseUser]);
 
     useEffect(() => {
         const unsub = auth.onAuthStateChanged(user => {
@@ -64,6 +80,40 @@ export default function SettingsPage() {
                 localStorage.setItem('theme', value);
             }
             window.dispatchEvent(new Event('themeChange'));
+            return;
+        }
+
+        if (key === 'pushNotifications' && firebaseUser) {
+            setIsSaving(true);
+            const userDocRef = doc(db, "users", firebaseUser.uid);
+            let shouldWriteSetting = true;
+
+            try {
+                if (value) {
+                    const token = await subscribeToPush(firebaseUser.uid);
+                    if (!token) {
+                        shouldWriteSetting = false;
+                        await updateDoc(userDocRef, { [`settings.${key}`]: false });
+                        setSettings(prev => ({ ...prev, pushNotifications: false }));
+                    }
+                } else {
+                    await unsubscribeFromPush(firebaseUser.uid);
+                }
+
+                if (shouldWriteSetting) {
+                    await updateDoc(userDocRef, { [`settings.${key}`]: value });
+                }
+            } catch (error) {
+                console.error("Failed to update push notification setting:", error);
+                if (typeof Notification !== 'undefined' && Notification.permission === 'denied') {
+                    await updateDoc(userDocRef, { [`settings.${key}`]: false }).catch(() => null);
+                    setSettings(prev => ({ ...prev, pushNotifications: false }));
+                } else {
+                    setSettings(prev => ({ ...prev, pushNotifications: !value }));
+                }
+            } finally {
+                setIsSaving(false);
+            }
             return;
         }
 
@@ -196,6 +246,18 @@ export default function SettingsPage() {
                             </button>
                         </div>
                     )}
+                <div className="flex flex-col gap-2 py-2">
+                    <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-2"><Zap /> Push Notifications</span>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" checked={settings.pushNotifications} onChange={(e) => handleSettingChange('pushNotifications', e.target.checked)} className="sr-only peer" />
+                            <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-accent-cyan peer-checked:after:translate-x-full after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-cyan"></div>
+                        </label>
+                    </div>
+                    {browserPushBlocked && (
+                        <p className="text-sm text-yellow-400">Browser notifications are blocked. Enable them in your browser settings to receive push notifications.</p>
+                    )}
+                </div>
                 <div className="flex items-center justify-between py-2">
                     <span><MessageCircle className="inline-block mr-2"/> Who can DM you?</span>
                     <select value={settings.dmPrivacy} onChange={(e) => handleSettingChange('dmPrivacy', e.target.value)} className="input-glass text-sm">
