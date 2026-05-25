@@ -8,7 +8,7 @@ import { ProgressBar } from "@/components/video/ProgressBar";
 import {
   Play, Pause, Volume2, VolumeX, Maximize, Minimize,
   Settings, Loader2, AlertTriangle, Youtube, PictureInPicture2,
-  Subtitles, RotateCcw, RotateCw, Info,
+  Subtitles, RotateCcw, RotateCw,
 } from "lucide-react";
 import { useVideoPlayer } from "@/hooks/useVideoPlayer";
 import { useNetworkQuality } from "@/hooks/useNetworkQuality";
@@ -21,10 +21,11 @@ interface Props {
   postId: string;
   title?: string;
   captionsUrl?: string; // optional .vtt file URL
+  isPortrait?: boolean;
 }
 
 export function LongFormVideoPlayer({
-  videoUrl, videoQualities, thumbnailUrl, postId, title, captionsUrl,
+  videoUrl, videoQualities, thumbnailUrl, postId, title, captionsUrl, isPortrait = false,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -37,7 +38,6 @@ export function LongFormVideoPlayer({
   const [isTheaterMode, setIsTheaterMode] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [showShortcuts, setShowShortcuts] = useState(false);
   const [ambientMode, setAmbientMode] = useState(false);
   const [captionsEnabled, setCaptionsEnabled] = useState(false);
   const [isPiP, setIsPiP] = useState(false);
@@ -184,13 +184,31 @@ export function LongFormVideoPlayer({
   }, [videoRef]);
 
   // ── Fullscreen ────────────────────────────────────────────────────────────
-  const toggleFullScreen = useCallback(() => {
-    if (!document.fullscreenElement) containerRef.current?.requestFullscreen().catch(() => {});
-    else document.exitFullscreen();
-  }, []);
+  const lockLandscapeIfUseful = useCallback(async () => {
+    if (isPortrait) return;
+    try {
+      const orientation = screen.orientation as ScreenOrientation & { lock?: (orientation: "any" | "natural" | "landscape" | "portrait" | "portrait-primary" | "portrait-secondary" | "landscape-primary" | "landscape-secondary") => Promise<void> };
+      await orientation.lock?.("landscape");
+    } catch {}
+  }, [isPortrait]);
+
+  const toggleFullScreen = useCallback(async () => {
+    if (!document.fullscreenElement) {
+      await containerRef.current?.requestFullscreen().catch(() => {});
+      await lockLandscapeIfUseful();
+    } else {
+      document.exitFullscreen();
+    }
+  }, [lockLandscapeIfUseful]);
 
   useEffect(() => {
-    const h = () => setIsFullScreen(!!document.fullscreenElement);
+    const h = () => {
+      const fullScreen = !!document.fullscreenElement;
+      setIsFullScreen(fullScreen);
+      if (!fullScreen) {
+        try { screen.orientation.unlock?.(); } catch {}
+      }
+    };
     document.addEventListener("fullscreenchange", h);
     return () => document.removeEventListener("fullscreenchange", h);
   }, []);
@@ -260,17 +278,6 @@ export function LongFormVideoPlayer({
     return () => document.removeEventListener("mousedown", h);
   }, [showSettings]);
 
-  // ── Shortcuts outside click ────────────────────────────────────────────────
-  useEffect(() => {
-    if (!showShortcuts) return;
-    const h = (e: MouseEvent) => {
-      if (!(e.target as HTMLElement).closest(".shortcuts-panel")) setShowShortcuts(false);
-    };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, [showShortcuts]);
-
-
   // ── Seek flash indicator ──────────────────────────────────────────────────
   const flashSeek = (dir: "left" | "right") => {
     setSeekIndicator(dir);
@@ -297,6 +304,7 @@ export function LongFormVideoPlayer({
 
   const effectiveVolume = isMuted ? 0 : volume;
   const visible = showControls || !isPlaying || showSettings;
+  const mobileFrameClass = isPortrait ? "h-[72svh]" : "h-[33svh]";
 
   return (
     <TheaterModeContainer isTheaterMode={isTheaterMode}>
@@ -337,7 +345,7 @@ export function LongFormVideoPlayer({
 
         <div
           ref={containerRef}
-          className={`video-player relative w-full aspect-video bg-black overflow-hidden select-none ${!visible ? "cursor-none" : "cursor-default"}`}
+          className={`video-player relative w-full ${mobileFrameClass} md:h-auto md:aspect-video bg-black overflow-hidden select-none ${!visible ? "cursor-none" : "cursor-default"}`}
           onDoubleClick={toggleFullScreen}
           onTouchEnd={handleTouchEnd}
         >
@@ -427,34 +435,10 @@ export function LongFormVideoPlayer({
               <div className="flex items-center gap-2">
                 {/* Quality badge top-right */}
                 {availableQualities.length > 1 && (
-                  <div className="px-2 py-1 rounded-md bg-black/30 backdrop-blur-md border border-white/10 text-white/60 text-[10px] font-semibold">
+                  <div className="hidden sm:block px-2 py-1 rounded-md bg-black/30 backdrop-blur-md border border-white/10 text-white/60 text-[10px] font-semibold">
                     {activeQualityLabel.toUpperCase()}
                   </div>
                 )}
-                {/* Shortcuts button */}
-                <div className="relative shortcuts-panel">
-                <button
-                    onClick={() => setShowShortcuts(p => !p)}
-                    className={`p-1.5 rounded-full bg-black/30 backdrop-blur-md border border-white/10 text-white/80 hover:text-white transition ${showShortcuts ? "text-purple-400" : ""}`}
-                    title="Keyboard Shortcuts"
-                    >
-                    <Info size={17} />
-                </button>
-                {showShortcuts && (
-                    <div
-                      className="absolute top-10 right-0 w-56 rounded-2xl bg-black/70 backdrop-blur-2xl border border-white/10 text-white/90 text-sm p-4 flex flex-col gap-1 shadow-2xl z-30"
-                      onMouseDown={(e) => e.stopPropagation()}
-                    >
-                      <p className="text-white/40 text-[10px] uppercase tracking-widest mb-1">Shortcuts</p>
-                      {[["Space / K","Play/Pause"],["← →","Seek 5s"],["↑ ↓","Volume"],["M","Mute"],["F","Fullscreen"],["T","Theater"],["0–9","Jump to %"]].map(([k,v]) => (
-                        <div key={k} className="flex justify-between text-[11px] text-white/60">
-                          <kbd className="bg-white/10 px-1.5 rounded font-mono text-xs">{k}</kbd>
-                          <span>{v}</span>
-                        </div>
-                      ))}
-                    </div>
-                )}
-                </div>
               </div>
             </div>
 
@@ -502,7 +486,7 @@ export function LongFormVideoPlayer({
                 {/* Mini player */}
                 <button
                   onClick={() => openMiniPlayer({ postId, videoUrl, title, isFlow: false })}
-                  className="p-1.5 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition"
+                  className="hidden sm:flex p-1.5 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition"
                   title="Mini Player"
                 >
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -532,7 +516,7 @@ export function LongFormVideoPlayer({
 
                   {showSettings && (
                     <div
-                      className="absolute bottom-10 right-0 w-56 rounded-2xl bg-black/70 backdrop-blur-2xl border border-white/10 text-white/90 text-sm p-4 flex flex-col gap-4 shadow-2xl"
+                      className="fixed md:absolute inset-x-3 bottom-4 md:inset-x-auto md:bottom-10 md:right-0 w-auto md:w-56 max-h-[68svh] overflow-y-auto rounded-2xl bg-black/90 md:bg-black/70 backdrop-blur-2xl border border-white/10 text-white/90 text-sm p-4 flex flex-col gap-4 shadow-2xl z-50"
                       onMouseDown={(e) => e.stopPropagation()}
                     >
                       {/* Quality */}

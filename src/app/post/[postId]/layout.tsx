@@ -9,6 +9,28 @@ const truncate = (text: string, length: number) => {
   return text.substring(0, length) + '...';
 };
 
+const normalizeUrls = (value: unknown): string[] => {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value.filter((url): url is string => typeof url === "string" && url.length > 0);
+  }
+  return typeof value === "string" && value.length > 0 ? [value] : [];
+};
+
+const toOpenGraphImages = (urls: string[]) => {
+  return urls.map(url => ({
+    url,
+    width: 1200,
+    height: 630,
+  }));
+};
+
+const toOpenGraphVideos = (urls: string[]) => {
+  return urls.map(url => ({
+    url,
+  }));
+};
+
 export async function generateMetadata(
   { params }: { params: Promise<{ postId: string }> }
 ): Promise<Metadata> {
@@ -89,7 +111,18 @@ export async function generateMetadata(
         break;
     }
 
-    const imageUrl = post.thumbnailUrl || post.mediaUrl || author?.avatar_url || `${siteUrl}/default-avatar.png`;
+    const mediaUrls = normalizeUrls(post.mediaUrl);
+    const thumbnailUrls = normalizeUrls(post.thumbnailUrl);
+    const fallbackImageUrl = author?.avatar_url || `${siteUrl}/default-avatar.png`;
+    const imageUrls = post.type === "media"
+      ? post.isVideo
+        ? thumbnailUrls
+        : mediaUrls
+      : [];
+    const openGraphImages = toOpenGraphImages(imageUrls.length > 0 ? imageUrls : [fallbackImageUrl]);
+    const openGraphVideos = post.type === "media" && post.isVideo
+      ? toOpenGraphVideos(mediaUrls)
+      : [];
 
     return {
       metadataBase: new URL(siteUrl),
@@ -100,8 +133,15 @@ export async function generateMetadata(
         title: postTitle,
         description: postDescription,
         url: `${siteUrl}/post/${postId}`,
-        images: [{ url: imageUrl, width: 800, height: 600 }],
+        images: openGraphImages,
+        videos: openGraphVideos.length > 0 ? openGraphVideos : undefined,
         type: "article",
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: postTitle,
+        description: postDescription,
+        images: openGraphImages.map(image => image.url),
       },
       robots: { index: true, follow: true },
     };

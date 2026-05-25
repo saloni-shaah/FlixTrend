@@ -6,13 +6,17 @@ const URL = 'https://flixtrend.in';
 type SitemapEntry = {
   id: string;
   username?: string;
+  accountType?: string;
   updatedAt?: { toMillis: () => number };
   createdAt: { toMillis: () => number };
 };
 
 async function fetchCollection(collectionName: string): Promise<SitemapEntry[]> {
   const db = getFirestore();
-  const snapshot = await db.collection(collectionName).get();
+  const collectionRef = db.collection(collectionName);
+  const snapshot = collectionName === 'users'
+    ? await collectionRef.where('accountType', '==', 'creator').get()
+    : await collectionRef.get();
   if (snapshot.empty) {
     return [];
   }
@@ -50,14 +54,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     }));
 
-    const createEntries = (items: SitemapEntry[], pathPrefix: string, priority: number) => {
-      const isPost = pathPrefix.includes('post');
+    const createEntries = (
+      items: SitemapEntry[],
+      pathPrefix: string,
+      priority: number,
+      shouldInclude: (item: SitemapEntry) => boolean
+    ) => {
       return items
-        .filter(item => isPost || item.username)
+        .filter(shouldInclude)
         .map(item => {
-          const slug = isPost 
-            ? item.id 
-            : item.username!.toLowerCase();
+          const slug = pathPrefix.includes('post') ? item.id : item.username!.toLowerCase();
           const url = `${URL}${pathPrefix}${slug}`;
           const lastModified = item.updatedAt?.toMillis() ?? item.createdAt?.toMillis();
           return {
@@ -69,8 +75,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         });
     };
     
-    const userEntries = createEntries(users, '/squad/', 0.8);
-    const postEntries = createEntries(posts, '/post/', 0.9);
+    const userEntries = createEntries(
+      users,
+      '/squad/',
+      0.8,
+      item => Boolean(item.username && item.accountType === 'creator')
+    );
+    const postEntries = createEntries(
+      posts,
+      '/post/',
+      0.9,
+      () => true
+    );
 
     return [
       ...staticEntries,
