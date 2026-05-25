@@ -6,6 +6,8 @@ export type UserProfile = {
   name?: string;
   bio?: string;
   avatar_url?: string;
+  banner_url?: string;
+  accountType?: string;
   // Add other profile fields here
   [key: string]: any; // Allow other fields
 };

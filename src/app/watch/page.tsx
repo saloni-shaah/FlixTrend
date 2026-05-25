@@ -71,7 +71,7 @@ export function WatchHeader({
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 bg-background/80 backdrop-blur-md z-50 p-4 border-b border-white/5">
+    <header className="hidden md:block fixed top-0 left-0 right-0 bg-background/80 backdrop-blur-md z-50 p-4 border-b border-white/5">
       <div className="max-w-[1800px] mx-auto flex items-center justify-between gap-4">
         {/* Logo */}
         <Link 
@@ -309,6 +309,31 @@ function DescriptionBox({ post }: { post: any }) {
   );
 }
 
+function KeyboardShortcuts() {
+  const shortcuts = [
+    ["Space / K", "Play/Pause"],
+    ["J / L", "Seek 5s"],
+    ["↑ / ↓", "Volume"],
+    ["M", "Mute"],
+    ["F", "Fullscreen"],
+    ["T", "Theater"],
+  ];
+
+  return (
+    <div className="hidden lg:block mt-4 rounded-xl bg-white/5 p-4">
+      <p className="text-xs uppercase tracking-wider text-white/40 font-semibold mb-3">Keyboard shortcuts</p>
+      <div className="grid grid-cols-2 gap-2">
+        {shortcuts.map(([keyName, label]) => (
+          <div key={keyName} className="flex items-center justify-between gap-3 text-xs text-white/55">
+            <kbd className="rounded bg-white/10 px-2 py-1 font-mono text-white/70">{keyName}</kbd>
+            <span className="text-right">{label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function WatchPage() {
   const searchParams = useSearchParams();
@@ -349,7 +374,7 @@ export default function WatchPage() {
     const postRef = doc(db, "posts", videoId);
     const postUnsub = onSnapshot(postRef, async (snap) => {
       if (!snap.exists()) { setError("Video not found."); setLoading(false); return; }
-      const data = { id: snap.id, ...snap.data() };
+      const data: any = { id: snap.id, ...snap.data() };
       setPost(data);
       setLoading(false);
 
@@ -383,7 +408,7 @@ export default function WatchPage() {
       );
       setRecommended(
         recSnap.docs
-          .map((d) => ({ id: d.id, ...d.data() }))
+          .map((d) => ({ id: d.id, ...d.data() } as any))
           .filter((p) => p.id !== videoId && getVideoUrl(p.mediaUrl))
           .slice(0, 12)
       );
@@ -435,80 +460,103 @@ export default function WatchPage() {
     <div className="min-h-screen bg-background text-foreground">
       <WatchHeader currentUserProfile={currentUserProfile} />
       {/* ── Main layout ── */}
-      <div className="max-w-[1800px] mx-auto px-2 pt-4 pb-6 lg:pb-8">
-        <div className="flex flex-col lg:flex-row gap-6 watch-main">
+      <div className="max-w-[1800px] mx-auto px-0 md:px-4 pt-0 md:pt-24 pb-6 lg:pb-8">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 watch-main">
 
           {/* ── Left: player + info ── */}
           <div className="flex-1 min-w-0">
 
             {/* Player */}
-            <LongFormVideoPlayer
-              videoUrl={videoUrl}
-              videoQualities={videoQualities}
-              thumbnailUrl={thumbUrl}
-              postId={videoId!}
-              title={post.content}
-              captionsUrl={post.captionsUrl ?? undefined}
-            />
-
-            {/* Title */}
-            <h1 className="text-lg md:text-xl font-bold text-white mt-4 leading-snug">
-              {post.content || "Untitled"}
-            </h1>
-
-            {/* Actions row */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-3">
-              <AuthorRow
-                author={author}
-                post={post}
-                currentUser={currentUser}
-                isFollowing={isFollowing}
-                onFollow={handleFollow}
+            <div className="sticky top-0 z-40 md:static md:z-auto bg-black">
+              <LongFormVideoPlayer
+                videoUrl={videoUrl}
+                videoQualities={videoQualities}
+                thumbnailUrl={thumbUrl}
+                postId={videoId!}
+                title={post.content}
+                captionsUrl={post.captionsUrl ?? undefined}
+                isPortrait={Boolean(post.isPortrait)}
               />
-              <div className="flex items-center gap-2 sm:ml-auto">
-                <PostActions post={post} onCommentClick={() => setShowCommentModal(true)} />
-              </div>
             </div>
 
-            {/* Description */}
-            <DescriptionBox post={post} />
+            <div className="px-3 md:px-0">
+              {/* Title */}
+              <h1 className="text-base md:text-xl font-bold text-white mt-3 md:mt-4 leading-snug">
+                {post.content || "Untitled"}
+              </h1>
 
-            {/* Comments (inline, YouTube style) */}
-            <div className="mt-8">
-              <div className="flex items-center gap-3 mb-5">
-                <h2 className="text-base font-bold text-white">
-                  {post.commentCount || comments.length} Comments
-                </h2>
+              {/* Actions row */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 md:gap-4 mt-2 md:mt-3">
+                <AuthorRow
+                  author={author}
+                  post={post}
+                  currentUser={currentUser}
+                  isFollowing={isFollowing}
+                  onFollow={handleFollow}
+                />
+                <div className="w-full sm:w-auto overflow-x-auto">
+                  <PostActions post={post} onCommentClick={() => setShowCommentModal(true)} />
+                </div>
               </div>
 
-              <div className="flex flex-col divide-y divide-white/5">
-                {comments.slice(0, showAllComments ? comments.length : 3).map((c) => (
-                  <div key={c.id} className="py-3">
-                    <CommentComponent
-                      comment={c}
-                      postId={videoId!}
-                      currentUser={currentUser}
-                      collectionName="posts"
-                      onEdit={() => {}}
-                    />
-                  </div>
-                ))}
-              </div>
+              {/* Description */}
+              <DescriptionBox post={post} />
+              <KeyboardShortcuts />
 
-              {comments.length > 3 && (
+              {/* Comments (inline, YouTube style) */}
+              <div className="mt-6 md:mt-8">
                 <button
                   onClick={() => setShowCommentModal(true)}
-                  className="mt-4 text-sm text-accent-cyan hover:underline"
+                  className="md:hidden w-full rounded-xl bg-white/5 px-4 py-3 text-left"
                 >
-                  View all {post.commentCount || comments.length} comments
+                  <span className="text-sm font-bold text-white">
+                    {post.commentCount || comments.length} Comments
+                  </span>
+                  {comments[0] && (
+                    <span className="mt-1 block truncate text-xs text-white/50">
+                      {comments[0].content || comments[0].text || "View the conversation"}
+                    </span>
+                  )}
                 </button>
-              )}
+
+                <div className="hidden md:block">
+                  <div className="flex items-center gap-3 mb-5">
+                    <h2 className="text-base font-bold text-white">
+                      {post.commentCount || comments.length} Comments
+                    </h2>
+                  </div>
+
+                  <div className="flex flex-col divide-y divide-white/5">
+                    {comments.slice(0, showAllComments ? comments.length : 3).map((c) => (
+                      <div key={c.id} className="py-3">
+                        <CommentComponent
+                          comment={c}
+                          postId={videoId!}
+                          currentUser={currentUser}
+                          collectionName="posts"
+                          onEdit={() => {}}
+                          onReply={() => {}}
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  {comments.length > 3 && (
+                    <button
+                      onClick={() => setShowCommentModal(true)}
+                      className="mt-4 text-sm text-accent-cyan hover:underline"
+                    >
+                      View all {post.commentCount || comments.length} comments
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
           {/* ── Right: recommended ── */}
-          <aside className="watch-sidebar lg:w-[380px] xl:w-[420px] shrink-0">
-            <p className="text-sm font-semibold text-white/50 mb-3 uppercase tracking-wider">
+          <aside className="watch-sidebar px-3 md:px-0 lg:w-[380px] xl:w-[420px] shrink-0">
+            <p className="text-xs md:text-sm font-semibold text-white/50 mb-2 md:mb-3 uppercase tracking-wider">
               Up next
             </p>
             <div className="flex flex-col gap-1">

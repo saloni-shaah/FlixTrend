@@ -88,7 +88,12 @@ service cloud.firestore {
         request.auth.uid == request.resource.data.userId;
 
       allow update: if isSignedIn() && (
-        request.auth.uid == resource.data.userId
+        request.auth.uid == resource.data.userId ||
+        (onlyKeysChanged(['relayCount']) &&
+         request.resource.data.relayCount == resource.data.get('relayCount', 0) + 1 &&
+         existsAfter(/databases/$(database)/documents/posts/$(request.auth.uid + '_' + postId)) &&
+         getAfter(/databases/$(database)/documents/posts/$(request.auth.uid + '_' + postId)).data.type == 'relay' &&
+         getAfter(/databases/$(database)/documents/posts/$(request.auth.uid + '_' + postId)).data.originalPostId == postId)
       );
 
       allow delete: if isOwner(resource.data.userId);

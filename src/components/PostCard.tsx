@@ -53,6 +53,8 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
   const [viewCount, setViewCount] = useState(post.viewCount || 0);
   const [playVideo, setPlayVideo] = useState(false);
   const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
+  const [originalPost, setOriginalPost] = useState<any>(post.originalPost || null);
+  const [originalPostLoading, setOriginalPostLoading] = useState(post.type === 'relay' && !post.originalPost);
 
   const router = useRouter();
   const currentUser = auth.currentUser;
@@ -137,6 +139,43 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
     return () => unsubscribe();
   }, [post.id, collectionName]);
 
+  useEffect(() => {
+    if (post.type !== 'relay' || !post.originalPostId) {
+      setOriginalPost(null);
+      setOriginalPostLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchOriginalPost = async () => {
+      setOriginalPostLoading(true);
+      try {
+        const originalRef = fsDoc(db, 'posts', post.originalPostId);
+        const originalSnap = await getDoc(originalRef);
+
+        if (!cancelled) {
+          setOriginalPost(originalSnap.exists() ? { id: originalSnap.id, ...originalSnap.data() } : null);
+        }
+      } catch (error) {
+        console.error('Error fetching relayed post:', error);
+        if (!cancelled) {
+          setOriginalPost(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setOriginalPostLoading(false);
+        }
+      }
+    };
+
+    fetchOriginalPost();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [post.type, post.originalPostId]);
+
   const handleDelete = async () => {
     if (window.confirm("Are you sure you want to permanently delete this post and all its interactions? This cannot be undone.")) {
       try {
@@ -154,8 +193,17 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
   };
   
   const renderPostContent = (p: any) => {
-    const contentPost = p.type === 'relay' ? p.originalPost : p;
+    const isRelay = p.type === 'relay';
+    const contentPost = isRelay ? originalPost : p;
     
+    if (originalPostLoading) {
+      return (
+        <div className="text-muted-foreground p-4 border border-dashed border-gray-600 rounded-lg">
+          Loading relayed post...
+        </div>
+      );
+    }
+
     if (!contentPost) {
       return (
         <div className="text-muted-foreground p-4 border border-dashed border-gray-600 rounded-lg">
@@ -164,7 +212,13 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
       );
     }
 
-    const initials = author.displayName?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || author.username?.slice(0, 2).toUpperCase() || "U";
+    const contentAuthor = {
+      uid: contentPost.userId,
+      displayName: contentPost.displayName,
+      username: contentPost.username,
+      avatar_url: contentPost.avatar_url,
+    };
+    const initials = contentAuthor.displayName?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || contentAuthor.username?.slice(0, 2).toUpperCase() || "U";
     const mediaUrls = Array.isArray(contentPost.mediaUrl) ? contentPost.mediaUrl : (contentPost.mediaUrl ? [contentPost.mediaUrl] : []);
     const mediaContent = contentPost.type === "media" && mediaUrls.length > 0 && !isShortVibe;
     const defaultFontStyle = (contentPost.type === 'media' || contentPost.type === 'video') ? 'font-courgette' : 'font-body';
@@ -172,20 +226,20 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
     return (
         <>
             <div className="flex items-center gap-3 mb-2">
-                <a onClick={(e) => handleProfileClick(e, author.uid)} className="flex items-center gap-2 group cursor-pointer">
+                <a onClick={(e) => handleProfileClick(e, contentAuthor.uid)} className="flex items-center gap-2 group cursor-pointer">
                     <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green flex items-center justify-center font-bold text-lg overflow-hidden border-2 border-accent-green group-hover:scale-105 transition-transform">
-                        {author.avatar_url ? <img src={author.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : <span className="text-white">{initials}</span>}
+                        {contentAuthor.avatar_url ? <img src={contentAuthor.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : <span className="text-white">{initials}</span>}
                     </div>
-                    <span className="font-headline text-accent-green text-sm group-hover:underline">{author.displayName || `@${author.username || "user"}`}</span>
+                    <span className="font-headline text-accent-green text-sm group-hover:underline">{contentAuthor.displayName || `@${contentAuthor.username || "user"}`}</span>
                 </a>
                 <div className="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
                     <span>{timeAgo(contentPost.createdAt)}</span>
                     {(contentPost.isVideo || contentPost.type === 'live') && (
                         <span className="flex items-center gap-1">
-                            <Eye size={14} /> {viewCount.toLocaleString()}
+                            <Eye size={14} /> {(isRelay ? contentPost.viewCount || 0 : viewCount).toLocaleString()}
                         </span>
                     )}
-                    {currentUser?.uid === contentPost.userId && !isShortVibe && collectionName === 'posts' && (
+                    {!isRelay && currentUser?.uid === contentPost.userId && !isShortVibe && collectionName === 'posts' && (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <button className="p-1 rounded-full hover:bg-white/10"><MoreVertical size={16}/></button>
@@ -386,11 +440,19 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
             </div>
         )}
 
+      {post.type === 'relay' && post.content && (
+        <div className="whitespace-pre-line rounded-xl bg-accent-green/10 border border-accent-green/20 px-4 py-3 text-[1.05rem] font-body">
+          {post.content}
+        </div>
+      )}
+
       {showEdit && (
         <EditPostModal post={post} onClose={() => setShowEdit(false)} />
       )}
 
-      {renderPostContent(post)}
+      <div className={post.type === 'relay' ? 'rounded-2xl border border-glass-border bg-black/20 p-4' : ''}>
+        {renderPostContent(post)}
+      </div>
       <PostActions post={post} onCommentClick={() => setShowComments(true)} collectionName={collectionName} />
       
       {showComments && <CommentModal postId={post.id} postAuthorId={post.userId} onClose={() => setShowComments(false)} post={post} collectionName={collectionName} />}
