@@ -1,5 +1,7 @@
 User-agent: *
 Allow: /
+Allow: /faq
+Allow: /help
 
 # Block sensitive or useless pages
 Disallow: /api/

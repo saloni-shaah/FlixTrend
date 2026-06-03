@@ -242,3 +242,62 @@ export const onNewDropPromptNotification = v1.firestore
 
         logger.info(`Drop prompt notification sent via topic for prompt ${promptId}`);
     });
+
+export const onCallCreated = v1.firestore
+    .document('calls/{callId}')
+    .onCreate(async (snap, context) => {
+        const callData = snap.data();
+        const { callId } = context.params;
+        const { callerId, receiverId, type } = callData;
+
+        const callerSnap = await admin.firestore().collection('users').doc(callerId).get();
+        const callerName = callerSnap.data()?.name || 'Someone';
+        const isVideo = type === 'video';
+
+        const receiverDoc = await admin.firestore().collection('users').doc(receiverId).get();
+        const receiverData = receiverDoc.data();
+        if (!receiverData) {
+            logger.warn(`Receiver ${receiverId} not found for call ${callId}`);
+            return;
+        }
+
+        const fcmTokens: string[] = receiverData.fcmTokens ?? (receiverData.fcmToken ? [receiverData.fcmToken] : []);
+        if (fcmTokens.length === 0) {
+            logger.info(`No FCM tokens for receiver ${receiverId}. Call notification skipped.`);
+            return;
+        }
+
+        const message: admin.messaging.MulticastMessage = {
+            tokens: fcmTokens,
+            data: {
+                type: 'call',
+                callId,
+                callerName,
+                isVideo: String(isVideo),
+                title: isVideo ? 'Incoming Video Call' : 'Incoming Voice Call',
+                body: `${callerName} is calling you...`,
+            },
+            android: {
+                priority: 'high',
+            },
+            apns: {
+                payload: {
+                    aps: {
+                        alert: {
+                            title: isVideo ? 'Incoming Video Call' : 'Incoming Voice Call',
+                            body: `${callerName} is calling you...`,
+                        },
+                        sound: 'default',
+                        category: 'CALL_CATEGORY',
+                    },
+                },
+            },
+        };
+
+        try {
+            const response = await messaging.sendEachForMulticast(message);
+            logger.info(`Call notification sent to ${receiverId}: ${response.successCount}/${fcmTokens.length} devices`);
+        } catch (error) {
+            logger.error(`Error sending call notification to ${receiverId}:`, error);
+        }
+    });

@@ -2,11 +2,10 @@
 import 'regenerator-runtime/runtime';
 import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import dynamic from 'next/dynamic';
-import { getFirestore, collection, query, orderBy, getDoc, doc, limit, startAfter, getDocs, where, Timestamp, onSnapshot, or } from "firebase/firestore";
+import { getFirestore, collection, query, orderBy, limit, startAfter, getDocs, where, onSnapshot } from "firebase/firestore";
 import { Plus, Search, Mic, ArrowLeft, Users as UsersIcon, Brush, GraduationCap, Popcorn, Gamepad2 } from "lucide-react";
 import { auth } from "@/utils/firebaseClient";
-import { useAppState } from "@/utils/AppStateContext";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, Variants } from "framer-motion";
 import { PostCard } from "@/components/PostCard";
 import { app } from "@/utils/firebaseClient";
 import { VibeSpaceLoader } from "@/components/VibeSpaceLoader";
@@ -14,13 +13,28 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from 'next/image';
 import { WelcomeAnimation } from "@/components/WelcomeAnimation";
-import { redisClient } from '@/utils/redis';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import { FlixFlameIcon } from '@/components/icons/FlixFlameIcon';
 
 const FlashPlayer = dynamic(() => import('./FlashPlayer'), { ssr: false });
 
 const db = getFirestore(app);
+const FIRESTORE_IN_LIMIT = 30;
+
+const chunkArray = <T,>(items: T[], size: number) => {
+    const chunks: T[][] = [];
+    for (let i = 0; i < items.length; i += size) {
+        chunks.push(items.slice(i, i + size));
+    }
+    return chunks;
+};
+
+type FlashUser = {
+    id: string;
+    username?: string;
+    avatar_url?: string | null;
+    flashes: any[];
+};
 
 const categories = [
     { id: 'daily', name: 'Daily', icon: <UsersIcon />, sub: ['Vlogs', 'Moments', 'Travel', 'Self'] },
@@ -198,19 +212,74 @@ function VibeSpaceContent() {
 
     useEffect(() => {
         if (!currentUser) return;
-        const q = query(
-            collection(db, "flashes"), 
-            where("expiresAt", ">", new Date()),
-            where("createdAt", "<=", new Date()),
-            orderBy("createdAt", "desc")
-        );
-        const unsub = onSnapshot(q, (snapshot) => {
-            setFlashes(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+        let isActive = true;
+        const unsubscribes: Array<() => void> = [];
+
+        const subscribeToRelationshipFlashes = async () => {
+            const [followingSnap, followersSnap] = await Promise.all([
+                getDocs(collection(db, "users", currentUser.uid, "following")),
+                getDocs(collection(db, "users", currentUser.uid, "followers")),
+            ]);
+
+            if (!isActive) return;
+
+            const allowedUserIds = Array.from(new Set([
+                currentUser.uid,
+                ...followingSnap.docs.map(d => d.id),
+                ...followersSnap.docs.map(d => d.id),
+            ]));
+
+            if (allowedUserIds.length === 0) {
+                setFlashes([]);
+                return;
+            }
+
+            const flashesById = new Map<string, any>();
+            const now = new Date();
+
+            chunkArray(allowedUserIds, FIRESTORE_IN_LIMIT).forEach((userIdChunk) => {
+                const flashQuery = query(
+                    collection(db, "flashes"),
+                    where("userId", "in", userIdChunk),
+                    where("expiresAt", ">", now),
+                    where("publishAt", "<=", now),
+                    orderBy("publishAt", "desc")
+                );
+
+                const unsubscribe = onSnapshot(flashQuery, (snapshot) => {
+                    snapshot.docChanges().forEach((change) => {
+                        if (change.type === "removed") {
+                            flashesById.delete(change.doc.id);
+                            return;
+                        }
+
+                        flashesById.set(change.doc.id, { id: change.doc.id, ...change.doc.data() });
+                    });
+
+                    const nextFlashes = Array.from(flashesById.values()).sort((a, b) => {
+                        const aTime = a.publishAt?.toMillis?.() ?? 0;
+                        const bTime = b.publishAt?.toMillis?.() ?? 0;
+                        return bTime - aTime;
+                    });
+                    setFlashes(nextFlashes);
+                });
+
+                unsubscribes.push(unsubscribe);
+            });
+        };
+
+        subscribeToRelationshipFlashes().catch((error) => {
+            console.error("Error fetching flashes: ", error);
+            setFlashes([]);
         });
-        return () => unsub();
+
+        return () => {
+            isActive = false;
+            unsubscribes.forEach(unsubscribe => unsubscribe());
+        };
     }, [currentUser]);
   
-    const groupedFlashes = flashes.reduce((acc: any, flash) => {
+    const groupedFlashes = flashes.reduce<Record<string, FlashUser>>((acc, flash) => {
         if (!acc[flash.userId]) {
             acc[flash.userId] = {
                 id: flash.userId,
@@ -225,10 +294,10 @@ function VibeSpaceContent() {
 
     const flashUsers = Object.values(groupedFlashes);
     
-    const flashesContainerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.08 }}};
-    const flashItemVariants = { hidden: { opacity: 0, scale: 0.5 }, visible: { opacity: 1, scale: 1 }};
-    const categoryContainerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.3 }}};
-    const categoryItemVariants = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100, damping: 12 }}};
+    const flashesContainerVariants: Variants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.08 }}};
+    const flashItemVariants: Variants = { hidden: { opacity: 0, scale: 0.5 }, visible: { opacity: 1, scale: 1 }};
+    const categoryContainerVariants: Variants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.3 }}};
+    const categoryItemVariants: Variants = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100, damping: 12 }}};
 
     const handleCategoryClick = (catId: string | null) => {
         setActiveCategory(catId);
@@ -371,9 +440,9 @@ function VibeSpaceContent() {
           </motion.section>
         
         <section className="flex-1 flex flex-col items-center mt-4">
-            <h1 className="text-xl font-headline self-start bg-gradient-to-r from-accent-pink to-accent-green bg-clip-text text-transparent mb-4 text-glow" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
+            <motion.h1 className="text-xl font-headline self-start bg-gradient-to-r from-accent-pink to-accent-green bg-clip-text text-transparent mb-4 text-glow" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
                 VibeSpace
-            </h1>
+            </motion.h1>
             {loading ? (
               <VibeSpaceLoader />
             ) : (

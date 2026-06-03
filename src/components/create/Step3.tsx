@@ -124,18 +124,19 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
             const hashtags = (postData.hashtags || "").split(/[\s,]+/).map((h:string) => h.replace('#', '')).filter(Boolean);
 
             if (postData.postType === 'flash') {
-                let scheduledAt;
+                let publishAt;
                 let expiresAt;
 
                 if (isScheduling && scheduleDate) {
                     const [hours, minutes] = scheduleTime.split(':');
                     const finalDate = new Date(scheduleDate);
                     finalDate.setHours(parseInt(hours), parseInt(minutes));
-                    scheduledAt = Timestamp.fromDate(finalDate);
-                    expiresAt = new Date(finalDate.getTime() + 24 * 60 * 60 * 1000);
+                    publishAt = Timestamp.fromDate(finalDate);
+                    expiresAt = Timestamp.fromDate(new Date(finalDate.getTime() + 24 * 60 * 60 * 1000));
                 } else {
-                    scheduledAt = serverTimestamp();
-                    expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+                    const now = new Date();
+                    publishAt = Timestamp.fromDate(now);
+                    expiresAt = Timestamp.fromDate(new Date(now.getTime() + 24 * 60 * 60 * 1000));
                 }
                 
                 let finalMediaUrl: string | null = null;
@@ -159,8 +160,8 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                     caption: postData.caption || "",
                     content: postData.caption || "",
                     hashtags,
-                    createdAt: scheduledAt,
-                    publishAt: scheduledAt,
+                    createdAt: serverTimestamp(),
+                    publishAt,
                     expiresAt,
                     location: postData.location || null,
                     mediaUrl: finalMediaUrl,
