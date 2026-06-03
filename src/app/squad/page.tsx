@@ -13,6 +13,8 @@ import { CompleteProfileModal } from "@/components/squad/CompleteProfileModal";
 import { EditProfileModal } from "@/components/squad/EditProfileModal";
 import { UserPlaylists } from "@/components/squad/UserPlaylists";
 import { SquadBadges } from "@/components/squad/badges";
+import { ProfileFlowCard } from "@/components/squad/ProfileFlowCard";
+import { ScheduledDrafts } from "@/components/squad/ScheduledDrafts";
 import { CreatePostPrompt } from "@/components/CreatePostPrompt";
 import LikedPostsTab from "@/components/squad/LikedPostsTab";
 import { FollowButton } from "@/components/FollowButton";
@@ -23,6 +25,7 @@ import { NotificationFAB } from '@/components/squad/NotificationFAB';
 const db = getFirestore(app);
 const INITIAL_POSTS_PER_PAGE = 5;
 const MORE_POSTS_PER_PAGE = 4;
+const FLOW_INITIAL_POSTS_PER_PAGE = 4;
 
 const FlowIcon = ({ className }: { className?: string }) => (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
@@ -167,20 +170,21 @@ function SquadPageContent() {
     setLastVisible(null);
 
     const q = getQuery();
-    const finalQuery = query(q, limit(INITIAL_POSTS_PER_PAGE));
+    const pageSize = postTypeFilter === 'flow' ? FLOW_INITIAL_POSTS_PER_PAGE : INITIAL_POSTS_PER_PAGE;
+    const finalQuery = query(q, limit(pageSize));
 
     try {
         const documentSnapshots = await getDocs(finalQuery);
         const posts = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setUserPosts(posts);
         setLastVisible(documentSnapshots.docs[documentSnapshots.docs.length - 1]);
-        setHasMorePosts(documentSnapshots.docs.length === INITIAL_POSTS_PER_PAGE);
+        setHasMorePosts(documentSnapshots.docs.length === pageSize);
     } catch (error) {
         console.error("Error fetching initial posts: ", error);
         setHasMorePosts(false);
     }
     setPostsLoading(false);
-  }, [uid, getQuery]);
+  }, [uid, getQuery, postTypeFilter]);
 
   // Fetching logic for posts tab
   useEffect(() => {
@@ -298,11 +302,12 @@ function SquadPageContent() {
               </div>
           </motion.div>
 
-          {['home', 'posts', 'likes', 'playlists'].includes(activeTab) && firebaseUser && profile && firebaseUser.uid === profile.uid && <div className="w-full max-w-xl mt-8"><CreatePostPrompt /></div>}
+          {['home', 'posts', 'likes', 'playlists', 'drafts'].includes(activeTab) && firebaseUser && profile && firebaseUser.uid === profile.uid && <div className="w-full max-w-xl mt-8"><CreatePostPrompt /></div>}
 
           <div className="flex justify-center gap-2 md:gap-4 my-8 flex-wrap">
               <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "home" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`} onClick={() => setActiveTab("home")}><Home className="inline-block mr-2" size={16}/>Home</button>
               <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "posts" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`} onClick={() => setActiveTab("posts")}>My Posts</button>
+              <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "drafts" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`} onClick={() => setActiveTab("drafts")}>Drafts</button>
               <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "likes" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`} onClick={() => setActiveTab('likes')}>Likes</button>
               <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "playlists" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`} onClick={() => setActiveTab("playlists")}>Playlists</button>
           </div>
@@ -310,7 +315,7 @@ function SquadPageContent() {
           <div className="flex-1 flex flex-col items-center justify-center w-full min-h-[400px]">
               {activeTab === "home" && <HomeFeed user={firebaseUser} />}
               {activeTab === "posts" && (
-                <div className="w-full max-w-xl flex flex-col gap-6">
+                <div className={`w-full ${postTypeFilter === 'flow' ? 'max-w-6xl' : 'max-w-xl'} flex flex-col gap-6`}>
                     <div className="flex justify-center gap-2 p-1 rounded-full bg-secondary">
                         <button onClick={() => { setPostTypeFilter('all'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'all' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}>All</button>
                         <button onClick={() => { setPostTypeFilter('text'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'text' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}><AlignLeft size={14} className="inline" /></button>
@@ -330,12 +335,18 @@ function SquadPageContent() {
                     
                     {postsLoading ? <div className="flex justify-center mt-20"><Loader2 className="animate-spin"/></div> :
                       userPosts.length > 0 ? (
-                        userPosts.map((post, index) => {
-                          if (userPosts.length === index + 1) {
-                              return <div ref={loadMoreRef} key={post.id}><PostCard post={post} collectionName="posts"/></div>
-                          }
-                          return <PostCard key={post.id} post={post} collectionName="posts"/>
-                        }))
+                        <div className={postTypeFilter === 'flow' ? 'grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 sm:gap-4' : 'flex flex-col gap-6'}>
+                          {userPosts.map((post, index) => {
+                            const content = postTypeFilter === 'flow'
+                              ? <ProfileFlowCard post={post} userId={uid} sortBy={sortBy} />
+                              : <PostCard post={post} collectionName="posts"/>;
+                            if (userPosts.length === index + 1) {
+                                return <div ref={loadMoreRef} key={post.id}>{content}</div>
+                            }
+                            return <React.Fragment key={post.id}>{content}</React.Fragment>
+                          })}
+                        </div>
+                      )
                       : (
                         <div className="text-muted-foreground text-center mt-16 flex flex-col items-center">
                           <div className="text-4xl mb-4">📝</div>
@@ -349,6 +360,7 @@ function SquadPageContent() {
                     {!hasMorePosts && userPosts.length > 0 && <div className="text-center text-muted-foreground py-4">You've reached the end!</div>}
                 </div>
               )}
+              {activeTab === "drafts" && firebaseUser && <ScheduledDrafts userId={firebaseUser.uid} />}
               {activeTab === "likes" && firebaseUser && <LikedPostsTab userId={firebaseUser.uid} />}
               {activeTab === "playlists" && firebaseUser && <UserPlaylists userId={firebaseUser.uid} />}
           </div>

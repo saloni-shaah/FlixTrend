@@ -69,8 +69,6 @@ const nextConfig = {
   allowedDevOrigins: [
     'http://localhost:3000',
     'https://localhost:3000',
-    'http://localhost:1455/auth/callback?code=ac_dKlwBe1ZkLoe7R_vohkDmyGxuHkQuls3z-pMQHlllAY.9p6nH9SQVF0kos88Q4gm0Qq0VWMky0r9WVuLuwyNFqs&scope=openid+profile+email+offline_access+api.connectors.read+api.connectors.invoke&state=idVtw_6UNX1q1Y9LH4yiCPGvnoCoPKDl3YRanOJUsdQ',
-    'https://localhost:1455',
     'http://127.0.0.1:3000',
   ],
   typescript: {

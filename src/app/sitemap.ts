@@ -1,7 +1,12 @@
 import { MetadataRoute } from 'next';
 import { getFirestore } from '@/utils/firebaseAdmin';
+import { helpCategories } from '@/data/help';
 
 const URL = 'https://flixtrend.in';
+const lastModified = new Date();
+const daily = 'daily' as const;
+const weekly = 'weekly' as const;
+const monthly = 'monthly' as const;
 
 type SitemapEntry = {
   id: string;
@@ -31,7 +36,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ]);
 
     const staticPages = [
-      '/', '/about', '/contact', '/faq', '/privacy', '/terms', '/premium',
+      '/', '/about', '/contact', '/faq', '/help', '/privacy', '/terms', '/premium',
       '/store', '/flix', '/vibespace', '/squad/explore', '/drop'
     ];
 
@@ -42,17 +47,45 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     const staticEntries = staticPages.map(path => ({
       url: `${URL}${path}`,
-      lastModified: new Date(),
-      changeFrequency: path === '/' ? 'daily' : 'monthly',
+      lastModified,
+      changeFrequency: path === '/' ? daily : monthly,
       priority: path === '/' ? 1.0 : 0.7,
     }));
 
     const categoryEntries = categoryPages.map(path => ({
       url: `${URL}${path}`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
+      lastModified,
+      changeFrequency: weekly,
       priority: 0.8,
     }));
+
+    const helpEntries = helpCategories.flatMap(category => {
+      const categoryEntry = {
+        url: `${URL}/help/${category.slug}`,
+        lastModified,
+        changeFrequency: monthly,
+        priority: 0.7,
+        alternates: {
+          languages: {
+            en: `${URL}/help/${category.slug}`,
+          },
+        },
+      };
+
+      const articleEntries = category.articles.map(article => ({
+        url: `${URL}/help/${category.slug}/${article.slug}`,
+        lastModified,
+        changeFrequency: monthly,
+        priority: 0.6,
+        alternates: {
+          languages: {
+            en: `${URL}/help/${category.slug}/${article.slug}`,
+          },
+        },
+      }));
+
+      return [categoryEntry, ...articleEntries];
+    });
 
     const createEntries = (
       items: SitemapEntry[],
@@ -69,7 +102,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           return {
             url,
             lastModified: lastModified ? new Date(lastModified) : new Date(),
-            changeFrequency: 'weekly',
+            changeFrequency: weekly,
             priority,
           };
         });
@@ -91,6 +124,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     return [
       ...staticEntries,
       ...categoryEntries,
+      ...helpEntries,
       ...userEntries,
       ...postEntries,
     ];

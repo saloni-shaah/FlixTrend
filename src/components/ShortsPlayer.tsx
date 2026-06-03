@@ -1,5 +1,5 @@
 'use client';
-import React, { useRef, useEffect, forwardRef, useImperativeHandle } from "react";
+import React, { useRef, useEffect, forwardRef, useImperativeHandle, useState } from "react";
 import { OptimizedVideo } from "@/components/OptimizedVideo";
 import { Play, Pause, Volume2, VolumeX, Star } from "lucide-react";
 import { useAppState } from "@/utils/AppStateContext";
@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ProgressBar } from "@/components/video/ProgressBar";
 import { useVideoPlayer, setGlobalActiveVideo } from "@/hooks/useVideoPlayer";
 import { useRouter } from "next/navigation";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const db = getFirestore(app);
 
@@ -34,6 +35,7 @@ export const ShortsPlayer = forwardRef(
     const actionsRef = useRef<HTMLDivElement>(null);
     const { setIsFlowVideoPlaying } = useAppState();
     const [showStar, setShowStar] = React.useState(false);
+    const isMobile = useIsMobile();
 
     const videoUrl = Array.isArray(post.mediaUrl)
       ? post.mediaUrl.find((u: string) => /\.(mp4|webm|ogg)(\?.*)?$/i.test(u))
@@ -175,60 +177,147 @@ export const ShortsPlayer = forwardRef(
           )}
         </AnimatePresence>
 
-        <div className="absolute top-4 right-4 z-10">
-          <button
-            onClick={(e) => { e.stopPropagation(); toggleMute(); }}
-            className="bg-black/40 p-2 rounded-full text-white hover:bg-black/70 transition pointer-events-auto"
-          >
-            {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
-          </button>
-        </div>
+        {/* Fixed Top-right Mute Button (Both Desktop and Mobile) */}
+        <button
+          onClick={(e) => { e.stopPropagation(); toggleMute(); }}
+          className="absolute top-4 right-4 z-30 bg-black/40 p-2 rounded-full text-white hover:bg-black/70 transition pointer-events-auto"
+        >
+          {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+        </button>
 
-        <div className="absolute inset-x-0 bottom-0 p-4 flex flex-col justify-end bg-gradient-to-t from-black/70 via-black/20 to-transparent pointer-events-none">
-          <div className="flex items-end justify-between">
-            <div className="flex flex-col gap-2 text-white drop-shadow-lg max-w-[calc(100%-80px)]">
-              <a
-                onClick={(e) => handleProfileClick(e, post.userId)}
-                className="flex items-center gap-2 group cursor-pointer w-fit pointer-events-auto"
-              >
-                <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green flex items-center justify-center font-bold text-lg overflow-hidden border-2 border-accent-green group-hover:scale-105 transition-transform">
-                  {post.avatar_url ? (
-                    <img src={post.avatar_url} alt="avatar" className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-white">{post.displayName?.[0] || "U"}</span>
+        {/* MOBILE LAYOUT */}
+        {isMobile && (
+          <>
+            {/* Bottom overlay - Content and progress bar */}
+            <div className="absolute inset-x-0 bottom-0 pointer-events-none z-10 flex flex-col">
+              {/* Content overlaid at bottom */}
+              <div className="flex-1 flex items-end p-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none">
+                <div className="flex items-end w-full gap-2 justify-between">
+                  <div className="flex flex-col gap-2 text-white drop-shadow-lg flex-1 min-w-0 pointer-events-auto">
+                    <p
+                      onClick={onDescriptionClick}
+                      className="text-white text-xs font-body line-clamp-2 cursor-pointer break-words"
+                    >
+                      {post.content}
+                    </p>
+                    {post.song && (
+                      <div className="flex items-center gap-2 text-white/70 text-xs">
+                        <FaMusic />
+                        <span className="truncate max-w-[160px]">Original Audio</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Avatar and Actions on right side */}
+                  <div className="flex flex-col items-center gap-2 pointer-events-auto">
+                    {/* Avatar - just above the comment button */}
+                    <a
+                      onClick={(e) => handleProfileClick(e, post.userId)}
+                      className="flex items-center justify-center group cursor-pointer"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green flex items-center justify-center font-bold text-sm overflow-hidden border-2 border-accent-green group-hover:scale-105 transition-transform flex-shrink-0">
+                        {post.avatar_url ? (
+                          <img src={post.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-white">{post.displayName?.[0] || "U"}</span>
+                        )}
+                      </div>
+                    </a>
+
+                    {/* Actions/Comments */}
+                    <div ref={actionsRef} className="flex flex-col gap-1">
+                      <PostActions post={post} isShortVibe={true} onCommentClick={onCommentClick} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Progress bar at very bottom - centered, no padding */}
+              <div className="pointer-events-auto w-full bg-gradient-to-t from-black/90 to-black/60 py-2 px-0">
+                <div className="px-4">
+                  <ProgressBar
+                    progress={progress}
+                    currentTime={currentTime}
+                    duration={duration}
+                    variant="flow"
+                    onScrub={seek}
+                    onScrubStart={() => setIsSeeking(true)}
+                    onScrubEnd={() => setIsSeeking(false)}
+                  />
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* DESKTOP LAYOUT */}
+        {!isMobile && (
+          <>
+            {/* Bottom-left Panel - Avatar, Username, Description */}
+            <div className="absolute left-0 bottom-0 p-6 max-w-sm pointer-events-none z-20">
+              <div className="flex flex-col gap-4">
+                {/* User Info */}
+                <a
+                  onClick={(e) => handleProfileClick(e, post.userId)}
+                  className="flex items-center gap-3 group cursor-pointer pointer-events-auto"
+                >
+                  <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-accent-pink to-accent-green flex items-center justify-center font-bold text-lg overflow-hidden border-2 border-accent-green group-hover:scale-105 transition-transform flex-shrink-0">
+                    {post.avatar_url ? (
+                      <img src={post.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-white">{post.displayName?.[0] || "U"}</span>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-1 pointer-events-auto">
+                    <span className="font-headline text-white text-sm group-hover:underline">
+                      @{post.username || "user"}
+                    </span>
+                    <span className="text-white/70 text-xs">{post.displayName || "User"}</span>
+                  </div>
+                </a>
+
+                {/* Content/Description */}
+                <div className="flex flex-col gap-2">
+                  <p
+                    onClick={onDescriptionClick}
+                    className="text-white text-sm font-body cursor-pointer pointer-events-auto line-clamp-4 leading-relaxed drop-shadow-lg"
+                  >
+                    {post.content}
+                  </p>
+                  {post.song && (
+                    <div className="flex items-center gap-2 text-white/70 text-xs pointer-events-auto">
+                      <FaMusic />
+                      <span className="truncate">Original Audio</span>
+                    </div>
                   )}
                 </div>
-                <span className="font-headline text-white text-base group-hover:underline">
-                  @{post.username || "user"}
-                </span>
-              </a>
-              <p
-                onClick={onDescriptionClick}
-                className="text-white text-sm font-body line-clamp-3 cursor-pointer pointer-events-auto"
-              >
-                {post.content}
-              </p>
-              {post.song && (
-                <div className="flex items-center gap-2 text-white/70 text-sm">
-                  <FaMusic />
-                  <span className="truncate max-w-[160px]">Original Audio</span>
-                </div>
-              )}
+              </div>
             </div>
-            <div ref={actionsRef} className="flex flex-col gap-4 self-end pointer-events-auto">
-              <PostActions post={post} isShortVibe={true} onCommentClick={onCommentClick} />
+
+            {/* Right side - Actions only */}
+            <div className="absolute right-0 bottom-0 p-6 flex flex-col items-center gap-4 pointer-events-none z-20">
+              {/* Actions */}
+              <div ref={actionsRef} className="flex flex-col gap-4 pointer-events-auto">
+                <PostActions post={post} isShortVibe={true} onCommentClick={onCommentClick} />
+              </div>
             </div>
-          </div>
-          <ProgressBar
-            progress={progress}
-            currentTime={currentTime}
-            duration={duration}
-            variant="flow"
-            onScrub={seek}
-            onScrubStart={() => setIsSeeking(true)}
-            onScrubEnd={() => setIsSeeking(false)}
-          />
-        </div>
+
+            {/* Progress Bar at bottom - inside video space only */}
+            <div className="absolute inset-x-0 bottom-0 pointer-events-auto z-20 bg-gradient-to-t from-black/70 via-transparent to-transparent pb-1 px-0">
+              <div className="px-4">
+                <ProgressBar
+                  progress={progress}
+                  currentTime={currentTime}
+                  duration={duration}
+                  variant="flow"
+                  onScrub={seek}
+                  onScrubStart={() => setIsSeeking(true)}
+                  onScrubEnd={() => setIsSeeking(false)}
+                />
+              </div>
+            </div>
+          </>
+        )}
       </div>
     );
   }
