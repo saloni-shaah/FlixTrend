@@ -105,6 +105,19 @@ export default function FlashPlayer({ usersWithFlashes, onClose, initialUserInde
     useEffect(() => { isVideoRef.current = isVideo; }, [isVideo]);
     useEffect(() => { isMutedRef.current = isMuted; }, [isMuted]);
 
+    const stopCurrentAudio = useCallback(() => {
+        if (!audioRef.current) return;
+        audioRef.current.pause();
+        audioRef.current.removeAttribute('src');
+        audioRef.current.load();
+        audioRef.current = null;
+    }, []);
+
+    const closePlayer = useCallback(() => {
+        stopCurrentAudio();
+        onClose();
+    }, [onClose, stopCurrentAudio]);
+
     useEffect(() => {
         if (!currentFlash || !currentUser || isOwnFlash || !currentFlash.id) {
             return;
@@ -130,9 +143,9 @@ export default function FlashPlayer({ usersWithFlashes, onClose, initialUserInde
             setCurrentUserIndex(prev => prev + 1);
             setCurrentFlashIndex(0);
         } else {
-            onClose();
+            closePlayer();
         }
-    }, [currentFlashIndex, currentUserFlashes.length, currentUserIndex, usersWithFlashes.length, onClose]);
+    }, [currentFlashIndex, currentUserFlashes.length, currentUserIndex, usersWithFlashes.length, closePlayer]);
 
     const goToPrevFlash = useCallback(() => {
         if (isHoldingRef.current) return;
@@ -184,31 +197,35 @@ export default function FlashPlayer({ usersWithFlashes, onClose, initialUserInde
                 v.preload = 'auto';
                 preloadedVideosRef.current.push(v);
             } else {
-                const img = new Image();
+                const img = new window.Image();
                 img.src = flash.mediaUrl;
             }
         });
     }, [currentFlashIndex, currentUserIndex, currentUserFlashes, usersWithFlashes]);
 
     useEffect(() => {
-        if (audioRef.current) {
-            audioRef.current.pause();
-            audioRef.current.src = '';
-            audioRef.current = null;
-        }
+        stopCurrentAudio();
         if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
 
         if (currentFlash?.song?.preview_url) {
             const audio = new Audio(currentFlash.song.preview_url);
+            const snippetEnd = currentFlash.song.snippetEnd;
             audio.volume = isVideoRef.current ? 0.2 : 1.0;
             audio.muted = isMutedRef.current;
+            audio.loop = false;
             audio.currentTime = currentFlash.song.snippetStart || 0;
+            audio.addEventListener('timeupdate', () => {
+                if (snippetEnd && audio.currentTime >= snippetEnd) {
+                    audio.pause();
+                }
+            });
             if (!isPaused) {
                 audio.play().catch(() => {});
             }
             audioRef.current = audio;
         }
-    }, [currentFlash]);
+        return () => stopCurrentAudio();
+    }, [currentFlash, stopCurrentAudio]);
 
     useEffect(() => {
         if (audioRef.current) audioRef.current.muted = isMuted;
@@ -234,12 +251,12 @@ export default function FlashPlayer({ usersWithFlashes, onClose, initialUserInde
             if ((window as any).isTyping) return;
             if (e.key === 'ArrowRight') goToNextFlash();
             else if (e.key === 'ArrowLeft') goToPrevFlash();
-            else if (e.key === 'Escape') onClose();
+            else if (e.key === 'Escape') closePlayer();
             else if (e.key === ' ') { e.preventDefault(); setIsPaused(p => !p); }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [goToNextFlash, goToPrevFlash, onClose]);
+    }, [goToNextFlash, goToPrevFlash, closePlayer]);
 
     useEffect(() => {
         if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
@@ -335,7 +352,7 @@ export default function FlashPlayer({ usersWithFlashes, onClose, initialUserInde
     if (!currentFlash) return null;
 
     return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center" onClick={(e) => { if(e.target === e.currentTarget) onClose(); }}>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center" onClick={(e) => { if(e.target === e.currentTarget) closePlayer(); }}>
 
             <motion.div 
                 className="relative w-full max-w-sm h-[95vh] max-h-[800px] bg-neutral-900 rounded-2xl overflow-hidden shadow-2xl"
@@ -390,7 +407,7 @@ export default function FlashPlayer({ usersWithFlashes, onClose, initialUserInde
 
                 <div className="absolute top-0 left-0 right-0 p-3 z-40 bg-gradient-to-b from-black/50 to-transparent">
                     <div className="flex items-center gap-2 mb-3">
-                       {currentUserFlashes.map((_, index) => <ProgressBar key={index} progress={index === currentFlashIndex ? progress : (index < currentFlashIndex ? 100 : 0)} active={index === currentFlashIndex}/>)}
+                       {currentUserFlashes.map((_: any, index: number) => <ProgressBar key={index} progress={index === currentFlashIndex ? progress : (index < currentFlashIndex ? 100 : 0)} active={index === currentFlashIndex}/>)}
                     </div>
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3 overflow-hidden">
@@ -414,7 +431,7 @@ export default function FlashPlayer({ usersWithFlashes, onClose, initialUserInde
                         </div>
                          <div className="flex items-center gap-2 shrink-0">
                             <button onClick={() => setIsMuted(m => !m)} className="text-white">{isMuted ? <VolumeX /> : <Volume2 />}</button>
-                            <button onClick={onClose} className="text-white"><X /></button>
+                            <button onClick={closePlayer} className="text-white"><X /></button>
                         </div>
                     </div>
                 </div>
@@ -453,7 +470,7 @@ export default function FlashPlayer({ usersWithFlashes, onClose, initialUserInde
                 )}
 
 
-                {!isOwnFlash && <FlashInteraction flash={currentFlash} currentUser={currentUser} onClose={onClose} />}
+                {!isOwnFlash && <FlashInteraction flash={currentFlash} currentUser={currentUser} onClose={closePlayer} />}
 
                 {isOwnFlash && (
                 <motion.div

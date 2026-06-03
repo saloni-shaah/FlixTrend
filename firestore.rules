@@ -130,7 +130,7 @@ service cloud.firestore {
     match /flashes/{flashId} {
       allow read:   if isSignedIn();
       allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
-      allow update: if isOwner(resource.data.userId) || 
+      allow update: if isOwner(resource.data.userId) ||
                        (isSignedIn() && onlyKeysChanged(['viewCount', 'viewedBy']));
       allow delete: if isOwner(resource.data.userId);
     }
@@ -241,7 +241,8 @@ service cloud.firestore {
       }
 
       // ── Chat document itself (DM bootstrap) ──────────────────────────
-      allow read: if isSignedIn() && isParticipant();
+      allow get: if isSignedIn() && isParticipant();
+      allow list: if isSignedIn() && request.auth.uid in resource.data.participants;
 
       // DMs: either participant can create/merge the chat doc
       allow create: if isSignedIn() &&
@@ -262,12 +263,12 @@ service cloud.firestore {
       // DM read receipts — lastReadAt per user, replaces per-message readBy
       match /readReceipts/{uid} {
         allow read: if isSignedIn() && isParticipant();
-        
+
         allow create: if isOwner(uid) && isParticipant();
-        
-        allow update: if isOwner(uid) && isParticipant() 
+
+        allow update: if isOwner(uid) && isParticipant()
           && onlyKeysChanged(['lastReadAt']);
-          
+
         allow delete: if isOwner(uid);
       }
 
@@ -335,6 +336,30 @@ service cloud.firestore {
     match /dropPrompts/{promptId} {
       allow read:  if true;
       allow write: if isFounder();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // CALLS
+    // ─────────────────────────────────────────────────────────────────────
+
+    match /calls/{callId} {
+      function isCallParticipant() {
+        return isSignedIn() && (
+          request.auth.uid == resource.data.callerId ||
+          request.auth.uid == resource.data.receiverId ||
+          request.auth.uid == request.resource.data.callerId ||
+          request.auth.uid == request.resource.data.receiverId
+        );
+      }
+
+      allow get, list: if isCallParticipant();
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.callerId;
+      allow update: if isCallParticipant() && (
+        onlyKeysChanged(['status', 'acceptedAt', 'endedAt']) ||
+        (isOwner(resource.data.receiverId) && onlyKeysChanged(['status', 'acceptedAt'])) ||
+        (isOwner(resource.data.callerId) && onlyKeysChanged(['status', 'endedAt']))
+      );
+      allow delete: if false; // Keep call history for a while or cleanup via Function
     }
 
   }

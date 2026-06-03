@@ -72,6 +72,17 @@ export default function RootLayout({
     url: siteUrl,
     logo: `${siteUrl}/icon.svg`,
   };
+  const websiteSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'FlixTrend',
+    url: siteUrl,
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: `${siteUrl}/search?q={search_term_string}`,
+      'query-input': 'required name=search_term_string',
+    },
+  };
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -79,6 +90,10 @@ export default function RootLayout({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
         />
         <meta name="theme-color" content="#1B1B1E" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
