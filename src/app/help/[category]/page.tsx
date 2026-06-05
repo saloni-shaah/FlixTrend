@@ -95,13 +95,13 @@ export default async function HelpCategoryPage({ params }: CategoryPageProps) {
         <nav aria-label="Breadcrumb" className="text-sm text-zinc-400">
           <ol className="flex flex-wrap items-center gap-2">
             <li>
-              <Link href="/" className="hover:text-cyan-200">
+              <Link href="/" className="hover:text-violet-200">
                 Home
               </Link>
             </li>
             <li aria-hidden="true">/</li>
             <li>
-              <Link href="/help" className="hover:text-cyan-200">
+              <Link href="/help" className="hover:text-violet-200">
                 Help Center
               </Link>
             </li>
@@ -113,7 +113,7 @@ export default async function HelpCategoryPage({ params }: CategoryPageProps) {
         </nav>
 
         <header className="mt-8">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-300">Help Category</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-violet-300">Help Category</p>
           <h1 className="mt-3 text-4xl font-bold tracking-tight md:text-5xl">{category.title}</h1>
           <p className="mt-5 max-w-3xl text-lg leading-8 text-zinc-300">{category.desc}</p>
         </header>

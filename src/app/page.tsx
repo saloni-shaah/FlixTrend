@@ -24,7 +24,7 @@ const A = {
   avatarTripti:
     "https://res.cloudinary.com/drrzvi2jp/image/upload/v1778164065/hqXCxEzM3uMjafbdOhjXc6DqaP63-1765967286841-1000013245_hcrbho.jpg",
   avatarRitesh:
-    "https://res.cloudinary.com/drrzvi2jp/image/upload/v1778164101/avatar-1775215600205_vjf4rb.jpg",
+    "https://firebasestorage.googleapis.com/v0/b/flixtrend-24072025.firebasestorage.app/o/user_uploads%2FQhPlmR9GJtSaW8OtCKIXl8LO2zL2%2Favatar-1780643954828?alt=media&token=7ea5e056-2fd5-4f51-bbe1-4fdbad13e8c5",
   avatarFalak:
     "https://res.cloudinary.com/drrzvi2jp/image/upload/v1778164243/v2jGz3orUURUPbjHBYBAZxXRKKF2-1764609622563-33394_bx9tf1.jpg",
   avatarSaloni:
@@ -821,6 +821,8 @@ export default function LandingPage() {
             <p className="text-xs text-zinc-700">© {new Date().getFullYear()} FlixTrend · Built with intention.</p>
             <div className="flex gap-6 text-xs text-zinc-600">
               <Link href="/about" className="hover:text-zinc-300 transition">About</Link>
+              <Link href="/faq" className="hover:text-zinc-300 transition">FAQ</Link>
+              <Link href="/help" className="hover:text-zinc-300 transition">Help Center</Link>
               <Link href="/privacy" className="hover:text-zinc-300 transition">Privacy & Safety</Link>
               <Link href="/terms" className="hover:text-zinc-300 transition">Terms</Link>
               <Link href="/contact" className="hover:text-zinc-300 transition">Contact</Link>

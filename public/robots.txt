@@ -1,12 +1,24 @@
 User-agent: *
 Allow: /
-Allow: /faq
-Allow: /help
-
-# Block sensitive or useless pages
 Disallow: /api/
 Disallow: /admin/
 Disallow: /auth/
 Disallow: /private/
 
 Sitemap: https://flixtrend.in/sitemap.xml
+Host: https://flixtrend.in
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
