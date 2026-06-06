@@ -1,6 +1,5 @@
 "use client";
 import React from "react";
-import { motion, AnimatePresence } from "framer-motion";
 
 interface Props {
   isTheaterMode: boolean;
@@ -12,23 +11,17 @@ export function TheaterModeContainer({ isTheaterMode, children }: Props) {
     <>
       {isTheaterMode && (
         <style>{`
-          body { overflow-x: hidden; }
-          .watch-sidebar { display: none !important; }
-          .watch-main { max-width: 100% !important; padding: 0 !important; }
+          .watch-upnext { display: none !important; }
+          .watch-main { max-width: 100% !important; }
+          .watch-theater-expand { max-width: 100% !important; flex: 1 1 100% !important; }
         `}</style>
       )}
-      <motion.div
-        layout
-        transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-        className={
-          isTheaterMode
-            ? "w-screen relative left-1/2 -translate-x-1/2 bg-black"
-            : "w-full rounded-xl overflow-hidden relative bg-black"
-        }
-        style={isTheaterMode ? { maxWidth: "100vw" } : undefined}
-      >
-        {children}
-      </motion.div>
+      {/*
+        No wrapper div with overflow-hidden here — that was clipping the ambient canvas
+        and preventing true edge-to-edge on mobile. The player itself manages its own
+        overflow. We just pass children through transparently.
+      */}
+      {children}
     </>
   );
 }

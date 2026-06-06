@@ -86,6 +86,20 @@ const getAccent = (sender: string) => {
   return REPLY_ACCENTS[Math.abs(h) % REPLY_ACCENTS.length];
 };
 
+const MESSAGE_ACCENTS = [
+  { border: 'rgba(59,130,246,0.70)', bg: 'rgba(59,130,246,0.18)', name: '#93c5fd' },   // blue
+  { border: 'rgba(234,179,8,0.72)', bg: 'rgba(234,179,8,0.18)', name: '#fde68a' },     // yellow
+  { border: 'rgba(34,197,94,0.68)', bg: 'rgba(34,197,94,0.16)', name: '#86efac' },     // green
+  { border: 'rgba(168,85,247,0.68)', bg: 'rgba(168,85,247,0.16)', name: '#d8b4fe' },   // purple
+  { border: 'rgba(244,63,94,0.68)', bg: 'rgba(244,63,94,0.16)', name: '#fda4af' },     // rose
+  { border: 'rgba(14,165,233,0.68)', bg: 'rgba(14,165,233,0.16)', name: '#67e8f9' },   // sky
+];
+const getMessageAccent = (sender: string) => {
+  let h = 0;
+  for (let i = 0; i < sender.length; i++) h = (Math.imul(31, h) + sender.charCodeAt(i)) | 0;
+  return MESSAGE_ACCENTS[Math.abs(h) % MESSAGE_ACCENTS.length];
+};
+
 const scrollToAndFlash = (id: string) => {
   const el = document.getElementById(`message-${id}`);
   if (!el) return;
@@ -116,6 +130,58 @@ const getTimestamp = (ts: any): number | null => {
     return null;
 };
 
+const getReplyPreviewText = (text?: string) => {
+  if (!text) return '';
+  return text.trim();
+};
+
+const fitReplyPreviewText = (text: string, width: number, maxHeight: number, className = '') => {
+  if (!text || width <= 0 || maxHeight <= 0) return '';
+
+  if (typeof document === 'undefined') {
+    return text;
+  }
+
+  const probe = document.createElement('div');
+  probe.style.position = 'fixed';
+  probe.style.left = '-99999px';
+  probe.style.top = '0';
+  probe.style.visibility = 'hidden';
+  probe.style.pointerEvents = 'none';
+  probe.style.whiteSpace = 'normal';
+  probe.style.wordBreak = 'break-word';
+  probe.style.overflowWrap = 'anywhere';
+  probe.style.width = `${width}px`;
+  probe.style.fontSize = '12px';
+  probe.style.lineHeight = '1.25';
+  probe.style.fontWeight = '400';
+  probe.style.fontFamily = 'inherit';
+  probe.className = className;
+
+  document.body.appendChild(probe);
+
+  const words = text.trim().split(/\s+/);
+  let best = '';
+
+  for (let i = 1; i <= words.length; i++) {
+    const candidate = words.slice(0, i).join(' ');
+    probe.textContent = candidate;
+
+    if (probe.scrollHeight <= maxHeight) {
+      best = candidate;
+      continue;
+    }
+
+    break;
+  }
+
+  document.body.removeChild(probe);
+  return best || words[0] || '';
+};
+
+const MOBILE_SWIPE_THRESHOLD = 72;
+const MOBILE_SWIPE_CANCEL_Y = 28;
+
 interface Props {
   msg:            any;
   isUser:         boolean;
@@ -142,6 +208,12 @@ export const MessageItem = React.memo(({
   onShowEmojiPicker, showEmojiPicker, setFullScreenImage, chatId, onReply, messages,
   readReceipts
 }: Props) => {
+  const [swipeX, setSwipeX] = React.useState(0);
+  const replyMeasureRef = React.useRef<HTMLDivElement | null>(null);
+  const [replyPreviewText, setReplyPreviewText] = React.useState('');
+  const touchStartRef = React.useRef<{ x: number; y: number } | null>(null);
+  const swipeActiveRef = React.useRef(false);
+  const swipeXRef = React.useRef(0);
 
   const isForwarded = rawMsg.type === 'forward';
   const msg = isForwarded ? rawMsg.originalMessage : rawMsg;
@@ -150,6 +222,51 @@ export const MessageItem = React.memo(({
     if (selectionMode) onClick(msg.id);
     else onLongPress(e, msg.id);
   });
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (selectionMode) return;
+    const touch = e.touches[0];
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+    swipeActiveRef.current = false;
+    setSwipeX(0);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (selectionMode || !touchStartRef.current) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - touchStartRef.current.x;
+    const dy = touch.clientY - touchStartRef.current.y;
+    const swipeDirection = isUser ? -1 : 1;
+
+    if (Math.abs(dy) > MOBILE_SWIPE_CANCEL_Y && Math.abs(dy) > Math.abs(dx)) {
+      touchStartRef.current = null;
+      setSwipeX(0);
+      return;
+    }
+
+    if (swipeDirection * dx > 8) {
+      swipeActiveRef.current = true;
+      const nextSwipeX = Math.max(-MOBILE_SWIPE_THRESHOLD, Math.min(MOBILE_SWIPE_THRESHOLD, dx));
+      swipeXRef.current = nextSwipeX;
+      setSwipeX(nextSwipeX);
+    } else if (!swipeActiveRef.current) {
+      swipeXRef.current = 0;
+      setSwipeX(0);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (selectionMode) return;
+    if (touchStartRef.current) {
+      const swipeDirection = isUser ? -1 : 1;
+      const triggeredReply = swipeDirection * swipeXRef.current >= MOBILE_SWIPE_THRESHOLD;
+      if (triggeredReply) onReply(msg);
+    }
+    touchStartRef.current = null;
+    swipeActiveRef.current = false;
+    swipeXRef.current = 0;
+    setSwipeX(0);
+  };
 
   const repliedToMessage = msg.replyTo ? messages.find(m => m.id === msg.replyTo) : null;
 
@@ -161,6 +278,33 @@ export const MessageItem = React.memo(({
     if (selectedChat.isGroup) return selectedChat.memberInfo?.[repliedToMessage.sender]?.name || selectedChat.memberInfo?.[repliedToMessage.sender]?.username || 'Member';
     return selectedChat.name || selectedChat.username || 'User';
   }, [repliedToMessage, selectedChat, firebaseUser]);
+
+  const repliedToText = getReplyPreviewText(repliedToMessage?.text);
+
+  React.useLayoutEffect(() => {
+    if (!repliedToMessage || !repliedToText) {
+      setReplyPreviewText(repliedToText);
+      return;
+    }
+
+    const measure = () => {
+      const width = replyMeasureRef.current?.clientWidth ?? 0;
+      const maxHeight = 48;
+      setReplyPreviewText(fitReplyPreviewText(repliedToText, width, maxHeight));
+    };
+
+    measure();
+
+    const resizeObserver = typeof ResizeObserver !== 'undefined' && replyMeasureRef.current
+      ? new ResizeObserver(measure)
+      : null;
+
+    if (resizeObserver && replyMeasureRef.current) {
+      resizeObserver.observe(replyMeasureRef.current);
+    }
+
+    return () => resizeObserver?.disconnect();
+  }, [repliedToMessage, repliedToText]);
 
   const displayName = React.useMemo(() => {
     if (selectedChat.groupType === 'anonymous')   return genAnon(msg.sender, selectedChat.id);
@@ -260,7 +404,9 @@ export const MessageItem = React.memo(({
   const hasReactions = msg.reactions && Object.values(msg.reactions).some((u: any) => u?.length > 0);
   const isSystem     = msg.sender === 'system';
   const timeStr      = msg.createdAt?.toDate?.().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) ?? '';
+  const isEdited     = Boolean(msg.editedAt || msg.isEdited);
   const messageFont = isUser ? 'font-handlee' : 'font-patrick-hand';
+  const messageAccent = !isUser && selectedChat?.isGroup ? getMessageAccent(msg.sender) : null;
 
   if (isSystem) {
     return (
@@ -272,35 +418,35 @@ export const MessageItem = React.memo(({
     );
   }
 
-  const ReplyPreview = repliedToMessage ? (() => {
-    const accent = getAccent(repliedToMessage.sender);
-    const isMedia = ['image', 'gif', 'video', 'audio'].includes(repliedToMessage.type);
-    
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: -4, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.15 }}
-        onClick={e => { e.stopPropagation(); scrollToAndFlash(repliedToMessage.id); }}
-        className="cursor-pointer mb-2 rounded-xl overflow-hidden bg-white/5 border border-white/10 backdrop-blur-sm"
-        whileHover={{ scale: 1.015 }} whileTap={{ scale: 0.98 }}
-      >
-        <div className="flex items-stretch">
-          <div className="w-1 flex-shrink-0" style={{ background: accent.bar }} />
-          <div className="flex items-center gap-2 p-2 min-w-0">
-            <div className="flex-1 min-w-0">
-              <span className="text-xs font-bold block mb-0.5" style={{ color: accent.name }}>{repliedToDisplayName}</span>
-              <p className="text-xs leading-tight line-clamp-2 text-white/70 truncate">
-                {repliedToMessage.text || 
-                  (isMedia && <span className="flex items-center gap-1.5 italic"><ImageIcon size={12}/>Photo</span>)}
-              </p>
-            </div>
-            {repliedToMessage.mediaUrl && ['image', 'gif'].includes(repliedToMessage.type) && (
-              <img src={repliedToMessage.mediaUrl} alt="" className="w-9 h-9 rounded-md object-cover flex-shrink-0"/>
-            )}
+  const accent = repliedToMessage ? getAccent(repliedToMessage.sender) : null;
+  const isMedia = repliedToMessage ? ['image', 'gif', 'video', 'audio'].includes(repliedToMessage.type) : false;
+  const ReplyPreview = repliedToMessage ? (
+    <motion.div
+      initial={{ opacity: 0, y: -4, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.15 }}
+      onClick={e => { e.stopPropagation(); scrollToAndFlash(repliedToMessage.id); }}
+      className="cursor-pointer mb-2 rounded-xl overflow-hidden bg-white/5 border border-white/10 backdrop-blur-sm w-full max-w-full"
+      whileHover={{ scale: 1.015 }} whileTap={{ scale: 0.98 }}
+    >
+      <div className="flex items-stretch">
+        <div className="w-1 flex-shrink-0" style={{ background: accent?.bar }} />
+        <div className="flex items-center gap-2 p-2 min-w-0">
+          <div ref={replyMeasureRef} className="flex-1 min-w-0">
+            <span className="text-xs font-bold block mb-0.5" style={{ color: accent?.name }}>{repliedToDisplayName}</span>
+            <p
+              className="text-xs leading-tight text-white/70 whitespace-normal break-words overflow-hidden"
+              style={{ maxHeight: 48 }}
+            >
+              {replyPreviewText ||
+                (isMedia && <span className="flex items-center gap-1.5 italic"><ImageIcon size={12}/>Photo</span>)}
+            </p>
           </div>
+          {repliedToMessage.mediaUrl && ['image', 'gif'].includes(repliedToMessage.type) && (
+            <img src={repliedToMessage.mediaUrl} alt="" className="w-9 h-9 rounded-md object-cover flex-shrink-0"/>
+          )}
         </div>
-      </motion.div>
-    );
-  })() : null;
+      </div>
+    </motion.div>
+  ) : null;
 
   return (
     <motion.div
@@ -313,6 +459,9 @@ export const MessageItem = React.memo(({
       onContextMenu={e => { e.preventDefault(); onContextMenu(e as any, msg.id); }}
       onClick={() => onClick(msg.id)}
       {...lp}
+      onTouchStart={(e) => { lp.onTouchStart(e); handleTouchStart(e); }}
+      onTouchMove={(e) => { lp.onTouchMove(e); handleTouchMove(e); }}
+      onTouchEnd={(e) => { lp.onTouchEnd(e); handleTouchEnd(); }}
       className={cn(
         'flex w-full items-end gap-2 px-3 py-0.5 select-none',
         isUser ? 'justify-end' : 'justify-start',
@@ -331,7 +480,12 @@ export const MessageItem = React.memo(({
 
       <div className={cn('flex flex-col max-w-[78%] md:max-w-[65%] relative', isUser ? 'items-end' : 'items-start')}>
         {!isUser && selectedChat.isGroup && (
-          <span className="text-xs font-semibold text-accent-pink px-1 mb-0.5">{displayName}</span>
+          <span
+            className="text-xs font-semibold px-1 mb-0.5"
+            style={{ color: messageAccent?.name ?? '#f9a8d4' }}
+          >
+            {displayName}
+          </span>
         )}
 
         {isForwarded && (
@@ -341,7 +495,22 @@ export const MessageItem = React.memo(({
             </div>
         )}
 
-        <div className={cn('message-bubble-content relative px-3 py-2 rounded-2xl text-[15px] leading-relaxed transition-all', isUser ? 'bg-gradient-to-br from-accent-pink/80 to-purple-700/80 text-white' : 'bg-gray-700 text-white', messageFont, msg.pending && 'opacity-60')}>
+        <motion.div
+          className={cn(
+            'message-bubble-content relative px-3 py-2 rounded-2xl text-[15px] leading-relaxed transition-all',
+            isUser ? 'bg-gradient-to-br from-accent-pink/80 to-purple-700/80 text-white' : 'text-white',
+            messageFont,
+            msg.pending && 'opacity-60'
+          )}
+          animate={{ x: swipeX }}
+          transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+          style={{
+            touchAction: 'pan-y',
+            backgroundColor: isUser ? undefined : messageAccent?.bg ?? 'rgba(255,255,255,0.06)',
+            border: !isUser ? `1px solid ${messageAccent?.border ?? 'rgba(255,255,255,0.08)'}` : undefined,
+            boxShadow: !isUser ? `0 0 0 1px ${messageAccent?.border ?? 'rgba(255,255,255,0.08)'} inset, 0 10px 28px rgba(0,0,0,0.12)` : undefined,
+          }}
+        >
 
           {ReplyPreview}
 
@@ -361,9 +530,10 @@ export const MessageItem = React.memo(({
                 {seenStatus === 'all_seen' && <Eye size={16} className="text-blue-400" />}
               </div>
             )}
+            {isEdited && <span className="text-[10px] uppercase tracking-wide text-white/45">edited</span>}
             {msg.pending && <span className="text-xs opacity-50">⏳</span>}
           </div>
-        </div>
+        </motion.div>
 
         {hasReactions && (
           <div className={cn('flex flex-wrap gap-1 mt-1', isUser ? 'justify-end' : 'justify-start')}>

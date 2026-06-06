@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { getFirestore, collection, query, onSnapshot, doc as fsDoc, setDoc, serverTimestamp, getDoc, deleteDoc } from "firebase/firestore";
+import { getFirestore, onSnapshot, doc as fsDoc, serverTimestamp, getDoc, deleteDoc, writeBatch } from "firebase/firestore";
 import { FaMusic } from "react-icons/fa";
-import { Repeat2, MapPin, Smile, MoreVertical, Edit, Trash, Eye, Sparkles, Zap, PlayCircle, Radio } from "lucide-react";
+import { Repeat2, MapPin, Smile, MoreVertical, Edit, Trash, Eye, Sparkles, Zap, PlayCircle, Radio, Check } from "lucide-react";
 import { auth, app } from '@/utils/firebaseClient';
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { InFeedVideoPlayer } from '../components/InFeedVideoPlayer';
-import { PostActions } from './PostActions';
+import { PostActions, pollColors, normalizePollData, setCachedPollVote } from './PostActions';
 import { StreamViewer } from './StreamViewer';
 import { EditPostModal } from './squad/EditPostModal';
 import { CommentModal } from './CommentModal';
@@ -48,16 +48,24 @@ const timeAgo = (timestamp: any): string => {
 export function PostCard({ post, isShortVibe = false, collectionName = 'posts', allPosts, postIndex }: { post: any; isShortVibe?: boolean, collectionName?: string, allPosts?: any[], postIndex?: number }) {
   const [showComments, setShowComments] = React.useState(false);
   const [showEdit, setShowEdit] = React.useState(false);
-  const [pollVotes, setPollVotes] = React.useState<{ [optionIdx: number]: { count: number, voters: string[] } }>({});
-  const [userPollVote, setUserPollVote] = React.useState<number | null>(null);
+  const [optimisticUserVote, setOptimisticUserVote] = React.useState<number | null>(null);
+  const [livePostData, setLivePostData] = useState<any>(post);
   const [viewCount, setViewCount] = useState(post.viewCount || 0);
   const [playVideo, setPlayVideo] = useState(false);
   const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
   const [originalPost, setOriginalPost] = useState<any>(post.originalPost || null);
   const [originalPostLoading, setOriginalPostLoading] = useState(post.type === 'relay' && !post.originalPost);
-
-  const router = useRouter();
   const currentUser = auth.currentUser;
+  const activePost = post.type === 'relay' ? originalPost : livePostData;
+  const activePollPostId = post.type === 'relay'
+    ? (originalPost?.id || post.originalPostId || post.id)
+    : post.id;
+  const pollCollectionName = post.type === 'relay' ? 'posts' : collectionName;
+  const pollModel = useMemo(
+    () => normalizePollData(activePost, currentUser?.uid ?? null, optimisticUserVote),
+    [activePost, currentUser?.uid, optimisticUserVote]
+  );
+  const router = useRouter();
 
   const handleProfileClick = async (e: React.MouseEvent, uid: string) => {
     e.preventDefault();
@@ -95,45 +103,27 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
       avatar_url: post.avatar_url,
   }), [post.userId, post.displayName, post.username, post.avatar_url]);
 
-  const { totalVotes, maxVotes, maxVoteIndex } = useMemo(() => {
-    if (post.type !== 'poll') return { totalVotes: 0, maxVotes: 0, maxVoteIndex: -1 };
-    const voteCounts = Object.values(pollVotes).map(v => v.count);
-    const total = voteCounts.reduce((sum, count) => sum + count, 0);
-    const max = Math.max(0, ...voteCounts);
-    const maxIndex = max > 0 ? voteCounts.indexOf(max) : -1;
-    return { totalVotes: total, maxVotes: max, maxVoteIndex: maxIndex };
-  }, [pollVotes, post.type]);
-  
-  React.useEffect(() => {
-    if (!currentUser || post.type !== "poll" || !post.pollOptions) return;
-    
-    const unsubPollVotes = onSnapshot(collection(db, collectionName, post.id, "pollVotes"), (snap) => {
-      const votes: { [optionIdx: number]: { count: number, voters: string[] } } = {};
-      post.pollOptions.forEach((_:any, index:number) => {
-          votes[index] = { count: 0, voters: [] };
-      });
+  const pollOptions = pollModel.options;
+  const pollVoteCounts = useMemo(() => pollModel.options.map((option) => option.votes), [pollModel.options]);
+  const pollPercentages = pollModel.percentages;
+  const userPollVote = pollModel.userVote;
+  const totalVotes = pollModel.totalVotes;
 
-      let userVote: number | null = null;
-      snap.forEach(doc => {
-        const { optionIdx, userId } = doc.data();
-        if (votes[optionIdx] !== undefined) {
-            votes[optionIdx].count++;
-            votes[optionIdx].voters.push(userId);
-        }
-        if (userId === currentUser.uid) userVote = optionIdx;
-      });
-      setPollVotes(votes);
-      setUserPollVote(userVote);
-    });
+  useEffect(() => {
+    setOptimisticUserVote(null);
+  }, [activePollPostId, currentUser?.uid]);
 
-    return () => unsubPollVotes();
-  }, [post.id, currentUser, post.type, post.pollOptions, collectionName]);
+  useEffect(() => {
+    setLivePostData(post);
+  }, [post]);
 
   useEffect(() => {
     const postRef = fsDoc(db, collectionName, post.id);
     const unsubscribe = onSnapshot(postRef, (doc) => {
         if (doc.exists()) {
-            setViewCount(doc.data().viewCount || 0);
+            const data = { id: doc.id, ...(doc.data() as any) };
+            setLivePostData(data);
+            setViewCount(data.viewCount || 0);
         }
     });
     return () => unsubscribe();
@@ -146,34 +136,22 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
       return;
     }
 
-    let cancelled = false;
-
-    const fetchOriginalPost = async () => {
-      setOriginalPostLoading(true);
-      try {
-        const originalRef = fsDoc(db, 'posts', post.originalPostId);
-        const originalSnap = await getDoc(originalRef);
-
-        if (!cancelled) {
-          setOriginalPost(originalSnap.exists() ? { id: originalSnap.id, ...originalSnap.data() } : null);
-        }
-      } catch (error) {
-        console.error('Error fetching relayed post:', error);
-        if (!cancelled) {
-          setOriginalPost(null);
-        }
-      } finally {
-        if (!cancelled) {
-          setOriginalPostLoading(false);
-        }
+    setOriginalPostLoading(true);
+    const originalRef = fsDoc(db, 'posts', post.originalPostId);
+    const unsubscribe = onSnapshot(originalRef, (snapshot) => {
+      if (snapshot.exists()) {
+        setOriginalPost({ id: snapshot.id, ...snapshot.data() });
+      } else {
+        setOriginalPost(null);
       }
-    };
+      setOriginalPostLoading(false);
+    }, (error) => {
+      console.error('Error fetching relayed post:', error);
+      setOriginalPost(null);
+      setOriginalPostLoading(false);
+    });
 
-    fetchOriginalPost();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => unsubscribe();
   }, [post.type, post.originalPostId]);
 
   const handleDelete = async () => {
@@ -188,8 +166,61 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
   };
 
   const handlePollVote = async (optionIdx: number) => {
-    if (!currentUser || userPollVote !== null) return;
-    await setDoc(fsDoc(db, collectionName, post.id, "pollVotes", currentUser.uid), { userId: currentUser.uid, optionIdx, createdAt: serverTimestamp() });
+    if (!currentUser || userPollVote !== null || !activePollPostId || !activePost) return;
+
+    const postRef = fsDoc(db, pollCollectionName, activePollPostId);
+    const voteRef = fsDoc(db, pollCollectionName, activePollPostId, "pollVotes", currentUser.uid);
+    const optimisticPreviousVote = optimisticUserVote;
+    const optimisticPreviousPost = activePost;
+    setOptimisticUserVote(optionIdx);
+
+    try {
+      const batch = writeBatch(db);
+      let optimisticNextPost = activePost;
+
+      if (Array.isArray(activePost.options) && activePost.options.length > 0) {
+        const updatedOptions = activePost.options.map((option: any, idx: number) => (
+          idx === optionIdx
+            ? { ...option, votes: (Number(option?.votes ?? 0) || 0) + 1 }
+            : option
+        ));
+        optimisticNextPost = { ...activePost, options: updatedOptions };
+        batch.update(postRef, { options: updatedOptions });
+      } else if (Array.isArray(activePost.pollOptions)) {
+        optimisticNextPost = {
+          ...activePost,
+          pollVotes: {
+            ...(activePost.pollVotes || {}),
+            [currentUser.uid]: optionIdx,
+          },
+        };
+        batch.update(postRef, { [`pollVotes.${currentUser.uid}`]: optionIdx });
+      }
+
+      if (post.type === 'relay') {
+        setOriginalPost(optimisticNextPost);
+      } else {
+        setLivePostData(optimisticNextPost);
+      }
+
+      batch.set(voteRef, {
+        userId: currentUser.uid,
+        optionIdx,
+        createdAt: serverTimestamp(),
+      });
+
+      await batch.commit();
+      setCachedPollVote(activePollPostId, currentUser.uid, optionIdx);
+    } catch (error) {
+      console.error('Error submitting poll vote:', error);
+      setOptimisticUserVote(optimisticPreviousVote);
+      if (post.type === 'relay') {
+        setOriginalPost(optimisticPreviousPost);
+      } else {
+        setLivePostData(optimisticPreviousPost);
+      }
+      alert('Could not save your vote. Please try again.');
+    }
   };
   
   const renderPostContent = (p: any) => {
@@ -222,6 +253,10 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
     const mediaUrls = Array.isArray(contentPost.mediaUrl) ? contentPost.mediaUrl : (contentPost.mediaUrl ? [contentPost.mediaUrl] : []);
     const mediaContent = contentPost.type === "media" && mediaUrls.length > 0 && !isShortVibe;
     const defaultFontStyle = (contentPost.type === 'media' || contentPost.type === 'video') ? 'font-courgette' : 'font-body';
+    const displayText = contentPost.type === 'poll' ? '' : contentPost.content;
+    const pollQuestion = pollModel.question || 'Poll';
+    const hasVoted = userPollVote !== null;
+    const canVote = Boolean(currentUser) && !hasVoted && pollOptions.length > 0;
 
     return (
         <>
@@ -270,9 +305,9 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
                 </Link>
             )}
 
-            {contentPost.content && (
+            {displayText && (
                  <div className={`whitespace-pre-line mb-2 px-4 py-3 rounded-xl ${isShortVibe ? 'text-white text-base line-clamp-2 text-left' : 'text-[1.15rem]'} ${contentPost.fontStyle || defaultFontStyle}`} style={{ backgroundColor: contentPost.backgroundColor && !isShortVibe ? contentPost.backgroundColor : 'transparent', color: contentPost.backgroundColor && contentPost.backgroundColor !== '#ffffff' && !isShortVibe ? 'hsl(var(--foreground))' : 'inherit', textShadow: isShortVibe ? "0 1px 4px #000" : "none" }}>
-                    {contentPost.content}
+                    {displayText}
                 </div>
             )}
             
@@ -291,7 +326,7 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
                 contentPost.isVideo ? (
                     contentPost.thumbnailUrl && !playVideo ? (
                     <div className="cursor-pointer relative rounded-xl overflow-hidden group" onClick={() => setPlayVideo(true)}>
-                        <img src={contentPost.thumbnailUrl} alt={contentPost.content || 'post thumbnail'} className="w-full h-auto object-cover transition-transform group-hover:scale-105" />
+                        <img src={contentPost.thumbnailUrl} alt={displayText || 'post thumbnail'} className="w-full h-auto object-cover transition-transform group-hover:scale-105" />
                         <div className="absolute inset-0 flex items-center justify-center bg-black/40 transition-colors group-hover:bg-black/20">
                         <PlayCircle size={64} className="text-white/80 group-hover:text-white" />
                         </div>
@@ -329,58 +364,98 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
                 )
             ) : null}
 
-            {contentPost.type === "poll" && contentPost.pollOptions && (
-                <div className="flex flex-col gap-2.5 p-4">
-                    <div className="font-bold text-brand-gold mb-3 text-lg">{contentPost.question}</div>
-                    <motion.div className="flex flex-col gap-3">
-                        {contentPost.pollOptions.map((opt: any, idx: number) => {
-                            const voteData = pollVotes[idx] || { count: 0 };
-                            const percent = totalVotes > 0 ? Math.round((voteData.count / totalVotes) * 100) : 0;
-                            const hasVoted = userPollVote !== null;
-                            const isQuiz = contentPost.correctAnswerIndex !== null && contentPost.correctAnswerIndex !== undefined;
-                            
-                            const isUserChoice = userPollVote === idx;
-                            const isCorrectAnswer = isQuiz && contentPost.correctAnswerIndex === idx;
-                            const isMostVoted = !isQuiz && idx === maxVoteIndex;
+            {contentPost.type === "poll" && (
+                <div className="mt-4 rounded-2xl border border-white/10 bg-gradient-to-br from-slate-950/80 via-slate-900/70 to-slate-800/60 p-4 shadow-[0_18px_50px_rgba(0,0,0,0.25)] backdrop-blur-md">
+                    <div className="mb-4">
+                        <div className="text-[10px] uppercase tracking-[0.3em] text-accent-cyan/70">Poll</div>
+                        <div className="mt-2 text-lg font-bold text-white leading-snug">
+                            {pollQuestion}
+                        </div>
+                        <div className="mt-2 text-sm text-muted-foreground">
+                            {totalVotes.toLocaleString()} {totalVotes === 1 ? 'vote' : 'votes'}
+                        </div>
+                    </div>
 
-                            let barColor = "";
-                            if (hasVoted) {
-                                if(isQuiz) {
-                                    barColor = isCorrectAnswer ? "bg-green-500" : (isUserChoice ? "bg-red-500" : "bg-gray-600/70");
-                                } else {
-                                    barColor = isMostVoted ? "bg-purple-500" : "bg-green-500/80";
-                                }
-                            }
+                    <div className="space-y-3">
+                        {pollOptions.length > 0 ? (
+                            pollOptions.map((opt: any, idx: number) => {
+                                const count = pollVoteCounts[idx] || 0;
+                                const percent = pollPercentages[idx] || 0;
+                                const isSelected = userPollVote === idx;
+                                const isQuiz = pollModel.correctAnswerIndex !== null && pollModel.correctAnswerIndex !== undefined;
+                                const isCorrectAnswer = isQuiz && pollModel.correctAnswerIndex === idx;
+                                const color = pollColors[idx % pollColors.length];
+                                const textColor = isSelected ? 'text-white' : 'text-slate-100';
+                                const optionBorder = isSelected ? `${color}80` : 'rgba(255,255,255,0.08)';
+                                const optionBackground = isSelected ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.02)';
 
-                            return (
-                                <motion.button
-                                    key={idx}
-                                    className={`w-full p-3 rounded-xl font-bold transition-shadow relative overflow-hidden border-2`}
-                                    onClick={() => handlePollVote(idx)}
-                                    disabled={hasVoted}
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: idx * 0.1 + 0.2 }}
-                                    style={{
-                                        borderColor: hasVoted && isUserChoice ? (isQuiz ? (isCorrectAnswer ? '#22c55e' : '#ef4444') : 'transparent') : 'transparent',
-                                    }}
-                                >
-                                    {hasVoted &&
+                                return (
+                                    <motion.button
+                                        key={`${idx}-${opt.text}`}
+                                        type="button"
+                                        onClick={() => canVote && handlePollVote(idx)}
+                                        disabled={!canVote}
+                                        initial={{ opacity: 0, y: 12 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: idx * 0.06, duration: 0.35 }}
+                                        whileHover={canVote ? { y: -1, scale: 1.01 } : undefined}
+                                        className={`group relative w-full overflow-hidden rounded-2xl border p-4 text-left transition-all duration-300 ${canVote ? 'cursor-pointer' : 'cursor-default'} ${isSelected ? 'shadow-lg' : 'hover:border-white/20'}`}
+                                        style={{
+                                            borderColor: optionBorder,
+                                            backgroundColor: optionBackground,
+                                            boxShadow: isSelected ? `0 0 0 1px ${color}33, 0 18px 30px rgba(0,0,0,0.16)` : 'none',
+                                        }}
+                                    >
                                         <motion.div
-                                            className={`absolute left-0 top-0 h-full ${barColor} opacity-40`}
-                                            initial={{ width: 0 }}
-                                            animate={{ width: `${percent}%` }}
-                                            transition={{ duration: 0.8, ease: "easeInOut" }}
+                                            className="absolute inset-y-0 left-0 rounded-2xl opacity-25"
+                                            initial={false}
+                                            animate={{ width: `${percent}%`, backgroundColor: color }}
+                                            transition={{ duration: 0.7, ease: 'easeInOut' }}
                                         />
-                                    }
-                                    <div className="relative flex justify-between items-center z-10 px-2">
-                                        <span className={`transition-colors ${hasVoted && isCorrectAnswer ? 'text-green-300' : ''}`}>{opt.text}</span>
-                                        {hasVoted && <span className="text-sm text-gray-300 font-medium">{percent}% ({voteData.count})</span>}
-                                    </div>
-                                </motion.button>
-                            );
-                        })}
-                    </motion.div>
+                                        <div className="relative z-10 flex items-start gap-3">
+                                            <div
+                                                className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-colors ${
+                                                    isSelected ? 'border-transparent text-black' : 'border-white/15 text-white/50'
+                                                }`}
+                                                style={{ backgroundColor: isSelected ? color : 'rgba(255,255,255,0.03)' }}
+                                            >
+                                                {isSelected ? <Check size={14} strokeWidth={3} /> : <span className="text-[10px] font-bold">{idx + 1}</span>}
+                                            </div>
+
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <span className={`break-words text-base font-semibold leading-snug ${textColor} ${isCorrectAnswer ? 'text-green-300' : ''}`}>
+                                                        {opt.text}
+                                                    </span>
+                                                    <span className="shrink-0 text-sm font-bold text-white/80">
+                                                        {percent}%
+                                                    </span>
+                                                </div>
+
+                                                <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/5">
+                                                    <motion.div
+                                                        className="h-full rounded-full"
+                                                        initial={false}
+                                                        animate={{ width: `${percent}%`, backgroundColor: color }}
+                                                        transition={{ duration: 0.7, ease: 'easeInOut' }}
+                                                    />
+                                                </div>
+
+                                                <div className="mt-2 flex items-center justify-between text-xs text-white/55">
+                                                    <span>{count.toLocaleString()} {count === 1 ? 'vote' : 'votes'}</span>
+                                                    {isSelected && <span className="font-medium text-white/70">Your choice</span>}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </motion.button>
+                                );
+                            })
+                        ) : (
+                            <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] p-4 text-sm text-muted-foreground">
+                                This poll does not have any options to display yet.
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
             
@@ -459,6 +534,6 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
 
     </motion.div>
     <FullScreenImageViewer imageUrl={fullScreenImage} onClose={() => setFullScreenImage(null)} />
-    </>
+  </>
   );
 }

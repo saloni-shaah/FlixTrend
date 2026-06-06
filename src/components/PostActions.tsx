@@ -13,6 +13,215 @@ import { useUserLikes } from '@/context/UserLikesContext';
 
 const db = getFirestore(app);
 
+export const pollColors = [
+    "#22c55e",
+    "#8b5cf6",
+    "#3b82f6",
+    "#f59e0b",
+    "#ec4899",
+    "#ef4444",
+    "#14b8a6",
+    "#6366f1",
+    "#84cc16",
+    "#f97316",
+    "#06b6d4",
+    "#a855f7",
+];
+
+export const MAX_POLL_OPTIONS = 12;
+
+export type PollOption = {
+    text: string;
+    votes: number;
+};
+
+export type PollVoteDoc = {
+    userId?: string;
+    optionIdx?: number;
+};
+
+export type NormalizedPollData = {
+    question: string;
+    options: PollOption[];
+    totalVotes: number;
+    percentages: number[];
+    userVote: number | null;
+    isLegacy: boolean;
+    correctAnswerIndex: number | null;
+};
+
+const normalizePollOptionText = (value: any) => {
+    if (typeof value === 'string') return value;
+    return String(value?.text ?? '').trim();
+};
+
+const getPollVoteCacheKey = (userId: string) => `flixtrend.pollVotes.${userId}`;
+
+const readUserVoteCache = (userId: string) => {
+    if (typeof window === 'undefined') return {};
+
+    try {
+        const raw = window.localStorage.getItem(getPollVoteCacheKey(userId));
+        return raw ? JSON.parse(raw) : {};
+    } catch {
+        return {};
+    }
+};
+
+export const getCachedPollVote = (postId: string, userId: string | null) => {
+    if (!postId || !userId || typeof window === 'undefined') return null;
+
+    const cache = readUserVoteCache(userId);
+    const cachedVote = cache?.[postId];
+    const optionIdx = Number(cachedVote);
+    return Number.isInteger(optionIdx) ? optionIdx : null;
+};
+
+export const setCachedPollVote = (postId: string, userId: string | null, optionIdx: number) => {
+    if (!postId || !userId || typeof window === 'undefined') return;
+
+    try {
+        const cache = readUserVoteCache(userId);
+        cache[postId] = optionIdx;
+        window.localStorage.setItem(getPollVoteCacheKey(userId), JSON.stringify(cache));
+    } catch {
+        // Swallow storage failures so voting still works.
+    }
+};
+
+const getLegacyPollVoteCounts = (post: any, optionCount: number) => {
+    const counts = Array.from({ length: optionCount }, () => 0);
+    const legacyVotes = post?.pollVotes;
+
+    if (!legacyVotes || typeof legacyVotes !== 'object' || Array.isArray(legacyVotes)) {
+        return counts;
+    }
+
+    Object.values(legacyVotes).forEach((vote: any) => {
+        const optionIdx = Number(vote);
+        if (Number.isInteger(optionIdx) && optionIdx >= 0 && optionIdx < optionCount) {
+            counts[optionIdx] += 1;
+        }
+    });
+
+    return counts;
+};
+
+const getLegacyUserVote = (post: any, currentUserId: string | null) => {
+    if (!currentUserId) return null;
+    const legacyVotes = post?.pollVotes;
+
+    if (!legacyVotes || typeof legacyVotes !== 'object' || Array.isArray(legacyVotes)) {
+        return null;
+    }
+
+    const vote = legacyVotes[currentUserId];
+    const optionIdx = Number(vote);
+    return Number.isInteger(optionIdx) ? optionIdx : null;
+};
+
+export const getPollOptions = (post: any): PollOption[] => {
+    if (!post || post.type !== 'poll') return [];
+
+    if (Array.isArray(post.options) && post.options.length > 0) {
+        return post.options
+            .map((option: any, index: number) => ({
+                text: normalizePollOptionText(option) || `Option ${index + 1}`,
+                votes: Number(option?.votes ?? 0) || 0,
+            }))
+            .slice(0, MAX_POLL_OPTIONS);
+    }
+
+    if (Array.isArray(post.pollOptions) && post.pollOptions.length > 0) {
+        return post.pollOptions
+            .map((option: any, index: number) => ({
+                text: normalizePollOptionText(option) || `Option ${index + 1}`,
+                votes: Number(option?.votes ?? 0) || 0,
+            }))
+            .slice(0, MAX_POLL_OPTIONS);
+    }
+
+    return [];
+};
+
+export const getPollVoteCounts = (
+    post: any,
+    currentUserId: string | null = null,
+    userVoteOverride: number | null = null
+) => {
+    const options = getPollOptions(post);
+    if (options.length === 0) return [];
+
+    if (Array.isArray(post.options) && post.options.some((option: any) => Number(option?.votes ?? 0) > 0)) {
+        return post.options.slice(0, MAX_POLL_OPTIONS).map((option: any) => Number(option?.votes ?? 0) || 0);
+    }
+
+    const legacyCounts = getLegacyPollVoteCounts(post, options.length);
+    if (legacyCounts.some((count) => count > 0)) {
+        return legacyCounts;
+    }
+
+    return Array.from({ length: options.length }, () => 0);
+};
+
+export const getUserVote = (
+    post: any,
+    currentUserId: string | null,
+    userVoteOverride: number | null = null
+) => {
+    if (!currentUserId) return null;
+
+    if (Number.isInteger(userVoteOverride)) {
+        return userVoteOverride;
+    }
+
+    const legacyVote = getLegacyUserVote(post, currentUserId);
+    if (legacyVote !== null) {
+        return legacyVote;
+    }
+
+    return getCachedPollVote(post?.id, currentUserId);
+};
+
+export const getPollPercentages = (
+    post: any,
+    currentUserId: string | null = null,
+    userVoteOverride: number | null = null
+) => {
+    const counts = getPollVoteCounts(post, currentUserId, userVoteOverride);
+    const totalVotes = counts.reduce((sum: number, count: number) => sum + count, 0);
+
+    return counts.map((count: number) => (totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0));
+};
+
+export const getTotalVotes = (
+    post: any,
+    currentUserId: string | null = null,
+    userVoteOverride: number | null = null
+) => getPollVoteCounts(post, currentUserId, userVoteOverride).reduce((sum: number, count: number) => sum + count, 0);
+
+export const normalizePollData = (
+    post: any,
+    currentUserId: string | null = null,
+    userVoteOverride: number | null = null
+): NormalizedPollData => {
+    const options = getPollOptions(post);
+    const userVote = getUserVote(post, currentUserId, userVoteOverride);
+    const counts = getPollVoteCounts(post, currentUserId, userVoteOverride);
+    const totalVotes = getTotalVotes(post, currentUserId, userVoteOverride);
+    const percentages = counts.map((count: number) => (totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0));
+
+    return {
+        question: post?.question || post?.content || '',
+        options,
+        totalVotes,
+        percentages,
+        userVote,
+        isLegacy: Array.isArray(post?.pollOptions) || !!post?.pollVotes,
+        correctAnswerIndex: Number.isInteger(post?.correctAnswerIndex) ? post.correctAnswerIndex : null,
+    };
+};
+
 const relayFallbackLines = [
     "Lowkey needed this on the timeline.",
     "This one deserves a little extra reach.",

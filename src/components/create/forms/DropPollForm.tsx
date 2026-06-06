@@ -3,13 +3,14 @@ import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { X, Plus } from "lucide-react";
+import { MAX_POLL_OPTIONS } from '@/components/PostActions';
 
 export function DropPollForm({ onSubmit, isSubmitting }: { onSubmit: (data: any) => void; isSubmitting: boolean }) {
     const [question, setQuestion] = useState("What should be tomorrow's prompt?");
     const [options, setOptions] = useState([{ text: '' }, { text: '' }]);
 
     const addOption = () => {
-        if (options.length < 6) {
+        if (options.length < MAX_POLL_OPTIONS) {
             setOptions([...options, { text: '' }]);
         }
     };
@@ -82,7 +83,7 @@ export function DropPollForm({ onSubmit, isSubmitting }: { onSubmit: (data: any)
                 ))}
             </div>
 
-            {options.length < 6 && (
+            {options.length < MAX_POLL_OPTIONS && (
                 <Button type="button" variant="outline" onClick={addOption} className="w-full border-dashed border-gray-600 text-gray-400 hover:bg-gray-800/70 hover:text-white">
                     <Plus className="h-4 w-4 mr-2" />
                     Add Option

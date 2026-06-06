@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { getFirestore, collection, query, onSnapshot, orderBy, doc, serverTimestamp, updateDoc, getDoc, limit, startAfter, getDocs, setDoc, arrayUnion, deleteDoc, arrayRemove, runTransaction } from "firebase/firestore";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { auth, app } from "@/utils/firebaseClient";
-import { Loader, X, Trash2, Smile, CheckSquare, CornerDownRight, Star, Copy, Share } from "lucide-react";
+import { Loader, X, Trash2, Smile, CheckSquare, CornerDownRight, Star, Copy, Share, Edit3 } from "lucide-react";
 import { useAppState } from "@/utils/AppStateContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -31,6 +31,11 @@ interface ChatUser {
   status?: 'online' | 'offline';
   lastSeen?: any;
   members?: string[];
+  memberInfo?: Record<string, {
+    name?: string;
+    username?: string;
+    avatar_url?: string;
+  }>;
 }
 
 interface PendingDelete {
@@ -51,6 +56,8 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
     const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
     const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
     const [longPressMenu, setLongPressMenu] = useState<{ x: number, y: number, msgId: string } | null>(null);
+    const [editingMessage, setEditingMessage] = useState<any | null>(null);
+    const [editText, setEditText] = useState('');
 
     const [oldestDoc, setOldestDoc] = useState<any>(null);
     const [loadingMore, setLoadingMore] = useState(false);
@@ -137,7 +144,31 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
             if (chatDocSnap.exists()) {
                 const chatData = chatDocSnap.data();
                 const members = chatData.members || (isGroupChat ? [] : [chatDocSnap.id, firebaseUser.uid]);
-                setSelectedChat({ id: chatDocSnap.id, ...chatData, members, isGroup: isGroupChat });
+                let memberInfo: ChatUser["memberInfo"] | undefined;
+
+                if (isGroupChat && members.length > 0) {
+                    const memberSnaps = await Promise.all(
+                        members.map(async (memberId: string) => {
+                            const userSnap = await getDoc(doc(db, "users", memberId));
+                            return userSnap.exists()
+                                ? [memberId, userSnap.data()]
+                                : null;
+                        })
+                    );
+
+                    memberInfo = Object.fromEntries(
+                        memberSnaps.filter(Boolean).map(([memberId, data]: any) => [
+                            memberId,
+                            {
+                                name: data?.name,
+                                username: data?.username,
+                                avatar_url: data?.avatar_url,
+                            },
+                        ])
+                    );
+                }
+
+                setSelectedChat({ id: chatDocSnap.id, ...chatData, members, memberInfo, isGroup: isGroupChat });
             }
 
             const q = query(
@@ -236,12 +267,9 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
             sender: firebaseUser.uid,
             createdAt: new Date(),
             type,
-            reactions: {},
-            deletedFor: [],
             text: text.trim(),
-            mediaUrl,
+            mediaUrl: mediaUrl || null,
             pending: true,
-            replyTo: replyingTo ? replyingTo.id : null,
         };
 
         setMessages(prev => [...prev, tempMessage]);
@@ -261,13 +289,8 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                 sender: firebaseUser.uid,
                 createdAt: serverTimestamp(),
                 type,
-                reactions: {},
-                deletedFor: [],
                 text: text.trim() || "",
                 mediaUrl: mediaUrl || null,
-                replyTo: replyingTo ? replyingTo.id : null,
-                isStarred: false,
-                starredBy: [],
             });
             updateReadReceipt();
         } catch (e) {
@@ -373,6 +396,63 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
     const handleReply = (message: any) => {
         setReplyingTo(message);
         setLongPressMenu(null);
+    };
+
+    const canEditMessage = useCallback((message: any) => {
+        if (!message || message.sender !== firebaseUser?.uid || !message.text || message.pending) return false;
+        const createdAt = message.createdAt?.toDate?.() ?? message.createdAt;
+        if (!createdAt) return false;
+        const createdMs = createdAt instanceof Date ? createdAt.getTime() : new Date(createdAt).getTime();
+        if (Number.isNaN(createdMs)) return false;
+        return Date.now() - createdMs <= 3 * 60 * 1000;
+    }, [firebaseUser?.uid]);
+
+    const startEditMessage = useCallback((message: any) => {
+        if (!canEditMessage(message)) {
+            alert("You can only edit your message within 3 minutes of sending it.");
+            setLongPressMenu(null);
+            return;
+        }
+
+        setEditingMessage(message);
+        setEditText(message.text || '');
+        setLongPressMenu(null);
+    }, [canEditMessage]);
+
+    const saveEditedMessage = useCallback(async () => {
+        if (!editingMessage || !firebaseUser?.uid) return;
+        const nextText = editText.trim();
+        if (!nextText) return alert("Message cannot be empty.");
+
+        if (!canEditMessage(editingMessage)) {
+            alert("This message can no longer be edited.");
+            setEditingMessage(null);
+            setEditText('');
+            return;
+        }
+
+        try {
+            await updateDoc(doc(db, "chats", chatId, "messages", editingMessage.id), {
+                text: nextText,
+                editedAt: serverTimestamp(),
+                isEdited: true,
+            });
+            setMessages(prev => prev.map(m => (
+                m.id === editingMessage.id
+                    ? { ...m, text: nextText, editedAt: new Date(), isEdited: true }
+                    : m
+            )));
+            setEditingMessage(null);
+            setEditText('');
+        } catch (error) {
+            console.error("Error editing message:", error);
+            alert("Could not update the message. Please try again.");
+        }
+    }, [chatId, canEditMessage, editText, editingMessage, firebaseUser?.uid]);
+
+    const cancelEditMessage = () => {
+        setEditingMessage(null);
+        setEditText('');
     };
 
     const handleCopy = useCallback((msgId: string) => {
@@ -541,12 +621,39 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                             <button onClick={() => { setShowEmojiPicker(longPressMenu.msgId); setLongPressMenu(null); }} className="p-2 rounded-full hover:bg-white/10"><Smile size={18} /></button>
                             <button onClick={() => handleReply(messageForMenu)} className="p-2 rounded-full hover:bg-white/10"><CornerDownRight size={18} /></button>
                             {messageForMenu.sender === firebaseUser.uid &&
+                                canEditMessage(messageForMenu) &&
+                                <button onClick={() => startEditMessage(messageForMenu)} className="p-2 rounded-full hover:bg-white/10"><Edit3 size={18} /></button>
+                            }
+                            {messageForMenu.sender === firebaseUser.uid &&
                                 <button onClick={() => { startSelection(longPressMenu.msgId); setShowDeleteConfirm(true); }} className="p-2 rounded-full hover:bg-white/10 text-red-500"><Trash2 size={18} /></button>
                             }
                         </div>
                     </PopoverContent>
                 </Popover>
             )}
+
+            <AlertDialog open={!!editingMessage} onOpenChange={(open) => !open && cancelEditMessage()}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Edit Message</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            You can edit this message only within 3 minutes of sending it.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <textarea
+                        value={editText}
+                        onChange={(e) => setEditText(e.target.value)}
+                        className="min-h-[120px] w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-white outline-none resize-y"
+                        placeholder="Edit your message"
+                    />
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={cancelEditMessage}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={saveEditedMessage} className="bg-accent-cyan hover:bg-cyan-500 text-black">
+                            Save
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
             <AlertDialog open={showDeleteConfirm} onOpenChange={(open) => !open && setShowDeleteConfirm(false)}>
                 <AlertDialogContent>

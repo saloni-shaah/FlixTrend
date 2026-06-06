@@ -8,26 +8,24 @@ import {
 } from "firebase/firestore";
 import { app, auth } from "@/utils/firebaseClient";
 import Link from "next/link";
-import Image from "next/image";
 import { LongFormVideoPlayer } from "@/app/watch/LongFormVideoPlayer";
 import { PostActions } from "@/components/PostActions";
 import { CommentModal } from "@/components/CommentModal";
 import { CommentComponent } from "@/components/CommentModal";
 import { VideoThumbnail } from "@/components/video/VideoThumbnail";
 import {
-  UserPlus, UserCheck, ChevronDown, ChevronUp, Share2,
-  Flag, MoreHorizontal, Eye, Calendar, Clock, Search, Mic,
+  UserPlus, UserCheck, ChevronDown, ChevronUp, Search, Mic,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 
 const db = getFirestore(app);
 
-export function WatchHeader({ 
+// ─── Header ──────────────────────────────────────────────────────────────────
+export function WatchHeader({
   currentUserProfile,
-}: { 
-  currentUserProfile: any; 
+}: {
+  currentUserProfile: any;
 }) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
@@ -40,12 +38,10 @@ export function WatchHeader({
     browserSupportsSpeechRecognition,
   } = useSpeechRecognition();
 
-  // Keep input in sync while mic active
   useEffect(() => {
     if (listening && transcript) setSearchQuery(transcript);
   }, [transcript, listening]);
 
-  // Auto-search when mic stops
   useEffect(() => {
     if (!listening && transcript.trim()) {
       router.push(`/search?q=${encodeURIComponent(transcript.trim())}`);
@@ -71,35 +67,48 @@ export function WatchHeader({
   };
 
   return (
-    <header className="hidden md:block fixed top-0 left-0 right-0 bg-background/80 backdrop-blur-md z-50 p-4 border-b border-white/5">
-      <div className="max-w-[1800px] mx-auto flex items-center justify-between gap-4">
+    /*
+     * MOBILE: hidden — no header on mobile watch page (YouTube-style).
+     * DESKTOP: fixed top bar with logo + search + avatar.
+     */
+    <header className="hidden md:block fixed top-0 left-0 right-0 bg-background/90 backdrop-blur-xl z-50 border-b border-white/5 shadow-[0_1px_0_rgba(255,255,255,0.04)]">
+      <div className="max-w-[1800px] mx-auto flex items-center justify-between gap-4 px-4 py-3">
         {/* Logo */}
-        <Link 
-          href="/" 
-          className="flex items-center gap-2 text-2xl font-bold text-accent-cyan hover:text-accent-green transition-colors font-logo shrink-0"
+        <Link
+          href="/"
+          className="flex items-center gap-2 text-2xl lg:text-[1.7rem] font-bold text-accent-cyan hover:text-accent-green transition-colors font-logo shrink-0"
         >
           Vibespace
         </Link>
 
         {currentUserProfile ? (
           <>
-            {/* Search Bar */}
-            <div className="flex-1 flex justify-center px-4 max-w-2xl">
-              <form onSubmit={handleSearch} className={`w-full flex items-center bg-white/5 border rounded-full transition-all ${isSearchFocused ? 'border-accent-cyan/50 ring-2 ring-accent-cyan/20' : 'border-white/10'}`}>
+            {/* Search */}
+            <div className="flex-1 flex justify-center px-3 max-w-2xl">
+              <form
+                onSubmit={handleSearch}
+                className={`w-full flex items-center bg-white/5 border rounded-full transition-all ${
+                  isSearchFocused
+                    ? 'border-accent-cyan/50 ring-2 ring-accent-cyan/20'
+                    : 'border-white/10'
+                }`}
+              >
                 <button
                   type="button"
                   onClick={handleMicClick}
                   disabled={!browserSupportsSpeechRecognition}
-                  className={`p-2 pl-4 rounded-full shrink-0 transition-colors ${listening ? 'text-red-500 animate-pulse' : 'text-white/40 hover:text-white/80'}`}
+                  className={`p-2 pl-4 rounded-full shrink-0 transition-colors ${
+                    listening ? 'text-red-500 animate-pulse' : 'text-white/40 hover:text-white/80'
+                  }`}
                   aria-label="Voice search"
                 >
                   <Mic size={18} />
                 </button>
                 <div className="w-px h-5 bg-white/10 mx-2 shrink-0" />
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   placeholder={listening ? 'Listening...' : 'Search videos...'}
-                  className="flex-1 bg-transparent py-2 focus:outline-none transition-all min-w-0 text-sm"
+                  className="flex-1 bg-transparent py-2 focus:outline-none text-sm min-w-0"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => setIsSearchFocused(true)}
@@ -115,14 +124,14 @@ export function WatchHeader({
               </form>
             </div>
 
-            {/* User Profile */}
+            {/* Avatar */}
             <div className="shrink-0">
               <Link href="/squad">
-                <div className="w-10 h-10 rounded-full border-2 border-accent-pink overflow-hidden hover:scale-105 transition-transform">
-                  <img 
-                    src={currentUserProfile.avatar_url || 'https://via.placeholder.com/40'} 
-                    alt="Profile" 
-                    className="w-full h-full object-cover" 
+                <div className="w-11 h-11 rounded-full border-2 border-accent-pink overflow-hidden bg-black/20 shadow-lg ring-1 ring-white/10 hover:scale-105 transition-transform">
+                  <img
+                    src={currentUserProfile.avatar_url || 'https://via.placeholder.com/40'}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
                   />
                 </div>
               </Link>
@@ -142,6 +151,7 @@ export function WatchHeader({
   );
 }
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 function fmtViews(n: number) {
   if (!n) return "0";
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -171,15 +181,13 @@ function getVideoUrl(mediaUrl: any): string {
 }
 
 function getVideoQualities(mediaUrl: any): { "1080p"?: string; "720p"?: string } | undefined {
-    if (!Array.isArray(mediaUrl)) {
-        return undefined;
-    }
-    const qualities: { "1080p"?: string; "720p"?: string } = {};
-    const url1080 = mediaUrl.find(url => typeof url === 'string' && url.includes('1080'));
-    const url720 = mediaUrl.find(url => typeof url === 'string' && url.includes('720'));
-    if (url1080) qualities['1080p'] = url1080;
-    if (url720) qualities['720p'] = url720;
-    return Object.keys(qualities).length > 0 ? qualities : undefined;
+  if (!Array.isArray(mediaUrl)) return undefined;
+  const qualities: { "1080p"?: string; "720p"?: string } = {};
+  const url1080 = mediaUrl.find((url: string) => typeof url === 'string' && url.includes('1080'));
+  const url720 = mediaUrl.find((url: string) => typeof url === 'string' && url.includes('720'));
+  if (url1080) qualities['1080p'] = url1080;
+  if (url720) qualities['720p'] = url720;
+  return Object.keys(qualities).length > 0 ? qualities : undefined;
 }
 
 function getImageUrl(mediaUrl: any): string {
@@ -189,17 +197,19 @@ function getImageUrl(mediaUrl: any): string {
   return typeof u === "string" ? u : "";
 }
 
-// ─── Recommended card ────────────────────────────────────────────────────────
+// ─── Recommended card ─────────────────────────────────────────────────────────
 function RecCard({ post }: { post: any }) {
   const vid = getVideoUrl(post.mediaUrl);
   return (
     <Link
       href={`/watch?v=${post.id}`}
-      className="flex gap-3 p-2 rounded-xl hover:bg-white/5 transition-colors group"
+      className="flex gap-3 p-2 rounded-xl hover:bg-white/5 active:bg-white/8 transition-colors group"
     >
-      <div className="w-40 h-[90px] shrink-0 rounded-lg overflow-hidden bg-black relative">
+      {/* Thumbnail */}
+      <div className="w-[160px] h-[90px] shrink-0 rounded-lg overflow-hidden bg-black relative">
         <VideoThumbnail src={vid} alt={post.content || "video"} />
       </div>
+      {/* Meta */}
       <div className="flex-1 min-w-0 py-0.5">
         <p className="text-sm font-semibold text-white line-clamp-2 leading-snug group-hover:text-accent-cyan transition-colors">
           {post.content || "Untitled"}
@@ -213,51 +223,49 @@ function RecCard({ post }: { post: any }) {
   );
 }
 
-// ─── Author section ──────────────────────────────────────────────────────────
+// ─── Author row ───────────────────────────────────────────────────────────────
 function AuthorRow({
   author, post, currentUser, isFollowing, onFollow,
 }: {
   author: any; post: any; currentUser: any; isFollowing: boolean; onFollow: () => void;
 }) {
   const router = useRouter();
-
-  const goToProfile = () => {
-    if (!post.userId) return;
-    router.push(`/squad`);
-  };
-
   if (!author) return null;
+  const profileHref = author.username ? `/squad/${author.username}` : "/squad";
+
   return (
-    <div className="flex items-center gap-3 mt-3">
-      <button onClick={goToProfile} className="shrink-0">
-        <div className="w-11 h-11 rounded-full overflow-hidden bg-gradient-to-tr from-accent-pink to-accent-green">
+    <div className="flex items-center gap-3">
+      <button onClick={() => router.push(profileHref)} className="shrink-0" aria-label={`Open ${author.username || "uploader"} profile`}>
+        <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-tr from-accent-pink to-accent-green">
           {author.avatar_url ? (
             <img src={author.avatar_url} alt={author.username} className="w-full h-full object-cover" />
           ) : (
-            <span className="w-full h-full flex items-center justify-center text-white font-bold">
+            <span className="w-full h-full flex items-center justify-center text-white font-bold text-sm">
               {author.username?.[0]?.toUpperCase() || "U"}
             </span>
           )}
         </div>
       </button>
-      <div className="flex-1 min-w-0" onClick={goToProfile} role="button">
-        <p className="font-semibold text-sm text-white cursor-pointer hover:underline truncate">
+
+      <div className="flex-1 min-w-0 cursor-pointer" onClick={() => router.push(profileHref)} role="button" aria-label={`Open ${author.username || "uploader"} profile`}>
+        <p className="font-semibold text-sm text-white hover:underline truncate">
           @{author.username || "user"}
         </p>
         <p className="text-xs text-white/50">
           {fmtViews(author.Follower_Count || 0)} followers
         </p>
       </div>
+
       {currentUser && currentUser.uid !== post.userId && (
         <button
           onClick={onFollow}
-          className={`shrink-0 flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-full transition-all ${
+          className={`shrink-0 flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-full transition-all active:scale-95 ${
             isFollowing
               ? "bg-white/10 text-white hover:bg-white/15"
               : "bg-white text-black hover:bg-white/90"
           }`}
         >
-          {isFollowing ? <UserCheck size={15} /> : <UserPlus size={15} />}
+          {isFollowing ? <UserCheck size={14} /> : <UserPlus size={14} />}
           {isFollowing ? "Following" : "Follow"}
         </button>
       )}
@@ -265,34 +273,33 @@ function AuthorRow({
   );
 }
 
-// ─── Description box ─────────────────────────────────────────────────────────
+// ─── Description box ──────────────────────────────────────────────────────────
 function DescriptionBox({ post }: { post: any }) {
   const [expanded, setExpanded] = useState(false);
-
   const date = post.publishAt || post.createdAt;
   const views = post.viewCount || 0;
 
   return (
     <div
-      className="mt-4 rounded-xl bg-white/5 hover:bg-white/8 transition-colors p-4 cursor-pointer"
+      className="rounded-xl bg-white/5 active:bg-white/8 hover:bg-white/8 transition-colors p-3 cursor-pointer"
       onClick={() => setExpanded((p) => !p)}
     >
-      <div className="flex items-center gap-4 text-sm text-white/70 font-semibold mb-2">
+      <div className="flex items-center gap-3 text-sm text-white/70 font-semibold mb-1.5">
         <span>{fmtViews(views)} views</span>
         <span>{fmtDate(date)}</span>
       </div>
 
       <p
-        className={`text-sm text-white/80 whitespace-pre-line leading-relaxed transition-all ${
-          expanded ? "" : "line-clamp-3"
+        className={`text-sm text-white/80 whitespace-pre-line leading-relaxed ${
+          expanded ? "" : "line-clamp-2"
         }`}
       >
         <strong>{post.content || ""}</strong>
         {post.description ? `\n\n${post.description}` : ""}
       </p>
 
-      {post.hashtags?.length > 0 && (
-        <div className={`flex flex-wrap gap-1.5 mt-2 ${expanded ? "" : "hidden"}`}>
+      {post.hashtags?.length > 0 && expanded && (
+        <div className="flex flex-wrap gap-1.5 mt-2">
           {post.hashtags.map((t: string) => (
             <span key={t} className="text-accent-cyan text-xs hover:underline cursor-pointer">
               #{t}
@@ -301,14 +308,15 @@ function DescriptionBox({ post }: { post: any }) {
         </div>
       )}
 
-      <button className="flex items-center gap-1 text-xs text-white/50 mt-2 hover:text-white transition-colors">
-        {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-        {expanded ? "Show less" : "Show more"}
-      </button>
+      <span className="flex items-center gap-1 text-xs text-white/40 mt-1.5">
+        {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+        {expanded ? "Show less" : "more"}
+      </span>
     </div>
   );
 }
 
+// ─── Keyboard shortcuts (desktop only) ────────────────────────────────────────
 function KeyboardShortcuts() {
   const shortcuts = [
     ["Space / K", "Play/Pause"],
@@ -378,15 +386,12 @@ export default function WatchPage() {
       setPost(data);
       setLoading(false);
 
-      // Author
       if (data.userId) {
         const authorUnsub = onSnapshot(doc(db, "users", data.userId), (aSnap) => {
           if (aSnap.exists()) {
-            const aData = aSnap.data();
-            setAuthor(aData);
+            setAuthor(aSnap.data());
             if (currentUser) {
-              const followersCol = collection(db, "users", data.userId, "followers");
-              getDoc(doc(followersCol, currentUser.uid)).then((d) =>
+              getDoc(doc(db, "users", data.userId, "followers", currentUser.uid)).then((d) =>
                 setIsFollowing(d.exists())
               );
             }
@@ -395,14 +400,12 @@ export default function WatchPage() {
         unsubRefs.current.push(authorUnsub);
       }
 
-      // Comments
       const cUnsub = onSnapshot(
         query(collection(db, "posts", videoId, "comments"), orderBy("createdAt", "desc"), limit(5)),
         (s) => setComments(s.docs.map((d) => ({ id: d.id, ...d.data() })))
       );
       unsubRefs.current.push(cUnsub);
 
-      // Recommended
       const recSnap = await getDocs(
         query(collection(db, "posts"), where("isVideo", "==", true), limit(20))
       );
@@ -438,36 +441,70 @@ export default function WatchPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen bg-background">
+      <div className="flex min-h-[100svh] items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-12 w-12 border-2 border-accent-cyan border-t-transparent" />
       </div>
     );
   }
   if (error || !post) {
     return (
-      <div className="flex justify-center items-center h-screen bg-background text-white/60">
+      <div className="flex min-h-[100svh] items-center justify-center bg-background text-white/60">
         {error || "Video not found."}
       </div>
     );
   }
 
   const videoUrl = getVideoUrl(post.mediaUrl);
-  const videoQualities = post.videoQualities as { "1080p"?: string; "720p"?: string } | undefined
-    ?? getVideoQualities(post.mediaUrl);
+  const videoQualities =
+    (post.videoQualities as { "1080p"?: string; "720p"?: string } | undefined) ??
+    getVideoQualities(post.mediaUrl);
   const thumbUrl = getImageUrl(post.mediaUrl);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    /*
+     * ROOT: bg-black on mobile so any overflow from player blends seamlessly.
+     * bg-background on desktop for the sidebar area.
+     */
+    <div className="min-h-[100svh] bg-background text-foreground overflow-x-hidden">
+      {/* Desktop header only */}
       <WatchHeader currentUserProfile={currentUserProfile} />
-      {/* ── Main layout ── */}
-      <div className="max-w-[1800px] mx-auto px-0 md:px-4 pt-0 md:pt-24 pb-6 lg:pb-8">
-        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 watch-main">
 
-          {/* ── Left: player + info ── */}
-          <div className="flex-1 min-w-0">
+      {/*
+       * LAYOUT ROOT
+       * Mobile:  pt-0, no margins — player starts at the absolute top edge.
+       * Desktop: pt-[56px] clears the fixed header (56px = header py-3 + content).
+       *          Adjust this value if your header height differs.
+       *
+       * FIX: removed `pb-[env(safe-area-inset-bottom)]` from this wrapper —
+       * that safe-area padding now lives only on the inner info section so it
+       * doesn't push the player down on notched devices.
+       */}
+      <div className="w-full pt-0 md:pt-[56px]">
+        <div
+          className={[
+            "flex flex-col lg:flex-row lg:gap-6 px-0 md:px-0",
+            "watch-main",            // custom class — we override any mt/pt it adds below
+            "!mt-0 !pt-0",           // ← kill any margin/padding injected by watch-main CSS
+            "lg:max-w-[1600px] lg:mx-auto lg:px-6 xl:px-8",
+          ].join(" ")}
+        >
 
-            {/* Player */}
-            <div className="sticky top-0 z-40 md:static md:z-auto bg-black">
+          {/* ── Left column: player + info ── */}
+          <div
+            className={[
+              "flex-1 min-w-0",
+              "watch-theater-expand",  // custom class — override its spacing
+              "!mt-0 !pt-0",           // ← kill any margin/padding injected by watch-theater-expand CSS
+            ].join(" ")}
+          >
+
+            {/*
+             * PLAYER WRAPPER
+             * Mobile:  no margin, no padding, no rounding — true edge-to-edge.
+             * Desktop: slight rounding restored via md:rounded-xl.
+             * bg-black ensures letterbox bars are black.
+             */}
+            <div className="w-full px-0 bg-black md:rounded-xl md:overflow-hidden !mt-0 !pt-0">
               <LongFormVideoPlayer
                 videoUrl={videoUrl}
                 videoQualities={videoQualities}
@@ -479,14 +516,19 @@ export default function WatchPage() {
               />
             </div>
 
-            <div className="px-3 md:px-0">
+            {/*
+             * INFO SECTION
+             * Mobile: px-3 + safe-area bottom padding here (not on the outer wrapper).
+             * Desktop: no extra padding.
+             */}
+            <div className="px-3 md:px-0 pb-[env(safe-area-inset-bottom)] md:pb-0 bg-background">
               {/* Title */}
-              <h1 className="text-base md:text-xl font-bold text-white mt-3 md:mt-4 leading-snug">
+              <h1 className="text-[15px] md:text-xl font-bold text-white mt-2.5 md:mt-4 leading-snug">
                 {post.content || "Untitled"}
               </h1>
 
-              {/* Actions row */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 md:gap-4 mt-2 md:mt-3">
+              {/* Author + actions */}
+              <div className="mt-2.5 md:mt-3 flex flex-col gap-2.5 md:gap-3">
                 <AuthorRow
                   author={author}
                   post={post}
@@ -494,20 +536,25 @@ export default function WatchPage() {
                   isFollowing={isFollowing}
                   onFollow={handleFollow}
                 />
-                <div className="w-full sm:w-auto overflow-x-auto">
+                <div className="overflow-x-auto -mx-3 px-3 md:mx-0 md:px-0">
                   <PostActions post={post} onCommentClick={() => setShowCommentModal(true)} />
                 </div>
               </div>
 
               {/* Description */}
-              <DescriptionBox post={post} />
+              <div className="mt-2.5 md:mt-3">
+                <DescriptionBox post={post} />
+              </div>
+
+              {/* Keyboard shortcuts — desktop only */}
               <KeyboardShortcuts />
 
-              {/* Comments (inline, YouTube style) */}
-              <div className="mt-6 md:mt-8">
+              {/* ── Comments ── */}
+              <div className="mt-5 md:mt-8 mb-4 md:mb-0">
+                {/* Mobile: tap-to-open pill */}
                 <button
                   onClick={() => setShowCommentModal(true)}
-                  className="md:hidden w-full rounded-xl bg-white/5 px-4 py-3 text-left"
+                  className="md:hidden w-full rounded-xl bg-white/5 active:bg-white/10 px-4 py-3 text-left transition-colors"
                 >
                   <span className="text-sm font-bold text-white">
                     {post.commentCount || comments.length} Comments
@@ -519,13 +566,11 @@ export default function WatchPage() {
                   )}
                 </button>
 
+                {/* Desktop: inline list */}
                 <div className="hidden md:block">
-                  <div className="flex items-center gap-3 mb-5">
-                    <h2 className="text-base font-bold text-white">
-                      {post.commentCount || comments.length} Comments
-                    </h2>
-                  </div>
-
+                  <h2 className="text-base font-bold text-white mb-5">
+                    {post.commentCount || comments.length} Comments
+                  </h2>
                   <div className="flex flex-col divide-y divide-white/5">
                     {comments.slice(0, showAllComments ? comments.length : 3).map((c) => (
                       <div key={c.id} className="py-3">
@@ -540,7 +585,6 @@ export default function WatchPage() {
                       </div>
                     ))}
                   </div>
-
                   {comments.length > 3 && (
                     <button
                       onClick={() => setShowCommentModal(true)}
@@ -554,18 +598,20 @@ export default function WatchPage() {
             </div>
           </div>
 
-          {/* ── Right: recommended ── */}
-          <aside className="watch-sidebar px-3 md:px-0 lg:w-[380px] xl:w-[420px] shrink-0">
-            <p className="text-xs md:text-sm font-semibold text-white/50 mb-2 md:mb-3 uppercase tracking-wider">
-              Up next
-            </p>
-            <div className="flex flex-col gap-1">
-              {recommended.map((r) => (
-                <RecCard key={r.id} post={r} />
-              ))}
-              {recommended.length === 0 && (
-                <p className="text-white/30 text-sm py-8 text-center">No recommendations yet.</p>
-              )}
+          {/* ── Right column: recommendations ── */}
+          <aside className="watch-upnext w-full lg:w-[360px] xl:w-[400px] shrink-0 bg-background">
+            <div className="px-3 md:px-0 pb-6">
+              <p className="text-[11px] md:text-sm font-semibold text-white/50 mb-2 md:mb-3 uppercase tracking-wider">
+                Up next
+              </p>
+              <div className="flex flex-col gap-0.5">
+                {recommended.map((r) => (
+                  <RecCard key={r.id} post={r} />
+                ))}
+                {recommended.length === 0 && (
+                  <p className="text-white/30 text-sm py-8 text-center">No recommendations yet.</p>
+                )}
+              </div>
             </div>
           </aside>
         </div>

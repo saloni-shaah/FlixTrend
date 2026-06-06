@@ -26,7 +26,7 @@ const POST_ATTRS = [
   'objectID', 'content', 'caption', 'username', 'displayName', 'avatar_url',
   'mediaUrl', 'thumbnailUrl', 'hashtags', 'viewCount', 'likesCount', 'isVideo',
   'type', 'createdAt', 'userId', 'fontStyle', 'backgroundColor',
-  'pollOptions', 'question', 'correctAnswerIndex', 'song', 'mood',
+  'pollOptions', 'options', 'pollVotes', 'question', 'correctAnswerIndex', 'song', 'mood',
 ];
 
 const USER_ATTRS = ['objectID', 'name', 'username', 'bio', 'avatar_url', 'isPremium', 'Follower_Count'];

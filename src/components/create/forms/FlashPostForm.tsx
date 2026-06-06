@@ -1,10 +1,9 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
-import { X, UploadCloud, Music as MusicIcon, MapPin, Camera, Image as ImageIcon, Locate, Loader, Calendar as CalendarIcon, Zap, Search, Play, Pause } from 'lucide-react';
+import { X, UploadCloud, Music as MusicIcon, MapPin, Camera, Image as ImageIcon, Locate, Loader, Calendar as CalendarIcon, Search, Play, Pause } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getFirestore, collection, onSnapshot, query, orderBy, getDoc, doc } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
-import { auth, app } from '@/utils/firebaseClient';
+import { app } from '@/utils/firebaseClient';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
@@ -12,7 +11,6 @@ import imageCompression from 'browser-image-compression';
 import { isAbusive } from '@/utils/moderation';
 
 const db = getFirestore(app);
-const storage = getStorage(app);
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 const MAX_VIDEO_DURATION = 180; // 3 minutes
@@ -29,10 +27,6 @@ export function FlashPostForm({ data, onDataChange, onError }: { data: any, onDa
     const [appSongs, setAppSongs] = useState<any[]>([]);
     const [songSearchTerm, setSongSearchTerm] = useState('');
     const [hasFetchedSongs, setHasFetchedSongs] = useState(false);
-    
-    const [showCamera, setShowCamera] = useState(false);
-    const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
-    const [cameraError, setCameraError] = useState<string | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const [uploadError, setUploadError] = useState('');
     const [isFetchingLocation, setIsFetchingLocation] = useState(false);
@@ -43,45 +37,33 @@ export function FlashPostForm({ data, onDataChange, onError }: { data: any, onDa
     const [isSnippetPlaying, setIsSnippetPlaying] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const videoRef = useRef<HTMLVideoElement>(null);
-    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const cameraInputRef = useRef<HTMLInputElement>(null);
     const snippetAudioRef = useRef<HTMLAudioElement>(null);
 
     useEffect(() => {
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            navigator.mediaDevices.enumerateDevices()
-                .then(devices => {
-                    if (devices.some(device => device.kind === 'videoinput')) {
-                        setIsCameraSupported(true);
-                    }
-                });
-        }
-    }, []);
+        let cancelled = false;
 
-    useEffect(() => {
-        if (showCamera) startCamera();
-        else stopCamera();
-    }, [showCamera]);
-
-    const startCamera = async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-            setCameraStream(stream);
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
+        const checkCameraSupport = async () => {
+            if (!navigator.mediaDevices?.getUserMedia) {
+                if (!cancelled) setIsCameraSupported(false);
+                return;
             }
-        } catch (err) {
-            console.error("Camera error:", err);
-            setCameraError("Camera access denied. Please enable it in your browser settings.");
-        }
-    };
-    
-    const stopCamera = () => {
-        if (cameraStream) {
-            cameraStream.getTracks().forEach(track => track.stop());
-            setCameraStream(null);
-        }
-    };
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                stream.getTracks().forEach(track => track.stop());
+                if (!cancelled) setIsCameraSupported(true);
+            } catch {
+                if (!cancelled) setIsCameraSupported(false);
+            }
+        };
+
+        checkCameraSupport();
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     useEffect(() => {
         if (data.songId && !data.song) {
@@ -193,23 +175,7 @@ export function FlashPostForm({ data, onDataChange, onError }: { data: any, onDa
     };
     
     const handleCapture = () => {
-        if (videoRef.current && canvasRef.current) {
-            const video = videoRef.current;
-            const canvas = canvasRef.current;
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const context = canvas.getContext('2d');
-            if (context) {
-                context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
-                canvas.toBlob((blob) => {
-                    if (blob) {
-                        const capturedFile = new File([blob], `camera-capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
-                        handleFileChange(capturedFile);
-                    }
-                }, 'image/jpeg');
-            }
-        }
-        setShowCamera(false);
+        cameraInputRef.current?.click();
     };
 
     const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -327,27 +293,6 @@ export function FlashPostForm({ data, onDataChange, onError }: { data: any, onDa
         ? appSongs.filter(s => s.title?.toLowerCase().includes(songSearchTerm.toLowerCase()) || s.artist?.toLowerCase().includes(songSearchTerm.toLowerCase())).slice(0, 10)
         : appSongs.slice(0, 10);
 
-    if (showCamera) {
-        return (
-            <div className="flex flex-col items-center gap-4">
-                <div className="w-full aspect-video bg-black rounded-lg overflow-hidden relative">
-                    {cameraStream ? (
-                        <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-                    ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-400">
-                            {cameraError ? cameraError : "Starting camera..."}
-                        </div>
-                    )}
-                </div>
-                <button type="button" className="btn-glass bg-accent-pink text-white w-20 h-20 rounded-full flex items-center justify-center" onClick={handleCapture} disabled={!cameraStream}>
-                    <Zap size={32} />
-                </button>
-                <button type="button" className="text-sm text-gray-400" onClick={() => setShowCamera(false) }>Back to upload</button>
-                <canvas ref={canvasRef} className="hidden"></canvas>
-            </div>
-        )
-    }
-
     return (
         <div className="flex flex-col gap-4">
             <textarea name="caption" className="input-glass w-full rounded-2xl" placeholder="Add a caption..." value={data.caption || ''} onChange={handleTextChange} />
@@ -360,10 +305,18 @@ export function FlashPostForm({ data, onDataChange, onError }: { data: any, onDa
                         <UploadCloud className="text-gray-500" size={40}/>
                         <p className="text-gray-400">Drag & drop media here</p>
                         <p className="text-gray-500 text-xs">or</p>
-                        <div className="grid grid-cols-2 gap-2 w-full max-w-sm">
-                            <button type="button" className="btn-glass flex items-center justify-center gap-2" onClick={() => fileInputRef.current?.click()}><ImageIcon /> Gallery</button>
+                        <div className={`grid gap-2 w-full max-w-sm ${isCameraSupported ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                            <button
+                                type="button"
+                                className={`btn-glass flex items-center justify-center gap-2 ${!isCameraSupported ? 'w-full' : ''}`}
+                                onClick={() => fileInputRef.current?.click()}
+                            >
+                                <ImageIcon /> Gallery
+                            </button>
                             {isCameraSupported && (
-                                <button type="button" className="btn-glass flex items-center justify-center gap-2" onClick={() => setShowCamera(true)}><Camera /> Camera</button>
+                                <button type="button" className="btn-glass flex items-center justify-center gap-2" onClick={handleCapture}>
+                                    <Camera /> Camera
+                                </button>
                             )}
                         </div>
                         <p className="text-xs text-gray-500 mt-2">Max 50MB & 3 minutes</p>
@@ -381,6 +334,14 @@ export function FlashPostForm({ data, onDataChange, onError }: { data: any, onDa
                     </div>
                 )}
                 <input type="file" ref={fileInputRef} onChange={handleFileInputChange} className="hidden" accept="image/*,video/*" />
+                <input
+                    type="file"
+                    ref={cameraInputRef}
+                    onChange={handleFileInputChange}
+                    className="hidden"
+                    accept="image/*"
+                    capture="environment"
+                />
                 {uploadError && <p className="text-red-400 text-xs mt-2">{uploadError}</p>}
             </div>
             

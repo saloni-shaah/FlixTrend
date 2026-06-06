@@ -28,6 +28,7 @@ export const InFeedVideoPlayer = forwardRef<InFeedVideoPlayerHandle, InFeedVideo
         const router = useRouter();
         const [showLikeAnimation, setShowLikeAnimation] = useState(false);
         const videoUrl = mediaUrls.find((u) => /\.(mp4|webm|ogg)(\?.*)?$/i.test(u));
+        const captionsUrl = post?.subtitleUrl || post?.captionsUrl || null;
 
         const { likedPosts: currentYearLikes, loading: likesLoading } = useUserLikes();
         const [isLiked, setIsLiked] = useState(false);
@@ -132,7 +133,11 @@ export const InFeedVideoPlayer = forwardRef<InFeedVideoPlayerHandle, InFeedVideo
                     loop
                     {...videoEvents}
                     controlsList="nodownload"
-                />
+                >
+                    {captionsUrl && (
+                        <track kind="subtitles" src={captionsUrl} label="Subtitles" srcLang="en" />
+                    )}
+                </OptimizedVideo>
 
                 <AnimatePresence>
                     {showLikeAnimation && (

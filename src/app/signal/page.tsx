@@ -346,8 +346,12 @@ function ClientOnlySignalPage({ firebaseUser, userProfile }: { firebaseUser: any
   const handleQuickDrop = async (item: string) => {
     if (!quickDropChat) return;
     await addDoc(collection(db, 'chats', getChatId(quickDropChat), 'messages'), {
-      sender: firebaseUser.uid, createdAt: serverTimestamp(),
-      type: 'text', readBy: [firebaseUser.uid], reactions: {}, deletedFor: [], text: item,
+      sender: firebaseUser.uid,
+      createdAt: serverTimestamp(),
+      type: 'text',
+      text: item,
+      mediaUrl: null,
+      clientId: crypto.randomUUID(),
     });
     setQuickDropChat(null);
   };

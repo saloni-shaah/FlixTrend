@@ -72,6 +72,7 @@ export function GuestPostCard({ post }: { post: any }) {
     const contentPost = p.type === 'relay' ? p.originalPost : p;
     const initials = contentPost.displayName?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || contentPost.username?.slice(0, 2).toUpperCase() || "U";
     const defaultFontStyle = (contentPost.type === 'media' || contentPost.type === 'video') ? 'font-courgette' : 'font-body';
+    const displayText = contentPost.content;
     
     return (
         <>
@@ -88,9 +89,9 @@ export function GuestPostCard({ post }: { post: any }) {
                 </div>
             </div>
 
-            {contentPost.content && (
+            {displayText && (
                 <div className={`whitespace-pre-line mb-2 px-4 py-3 rounded-xl text-[1.15rem] ${defaultFontStyle}`} style={{ backgroundColor: contentPost.backgroundColor ? contentPost.backgroundColor : 'transparent', color: contentPost.backgroundColor && contentPost.backgroundColor !== '#ffffff' ? 'hsl(var(--foreground))' : 'inherit' }}>
-                    {contentPost.content}
+                    {displayText}
                 </div>
             )}
 

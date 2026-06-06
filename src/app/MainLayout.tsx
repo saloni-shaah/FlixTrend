@@ -1,4 +1,3 @@
-
 'use client';
 
 import { usePathname } from 'next/navigation';
@@ -16,15 +15,15 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     '/settings/notifications',
     '/settings/privacy',
     '/settings/security',
-    '/create'
+    '/create',
+    '/watch',   // ← video watch page: no top/bottom nav padding (YouTube-style)
   ];
 
   const hideNav = noNavRoutes.some(route => pathname.startsWith(route));
 
   return (
     <MusicPlayerProvider>
-      {/* Nav components would be here if they existed */}
-      <main className={`transition-all duration-300 ease-in-out ${hideNav ? 'pt-0' : 'pt-16'} pb-16 md:pb-0`}>
+      <main className={`transition-all duration-300 ease-in-out ${hideNav ? 'pt-0 pb-0' : 'pt-16 pb-16'} md:pb-0`}>
         {children}
       </main>
       <GlobalMusicPlayer />

@@ -1,12 +1,11 @@
 import { MetadataRoute } from 'next';
 import { getFirestore } from '@/utils/firebaseAdmin';
 import { helpCategories } from '@/data/help';
-import { siteUrl } from '@/lib/seoUrls';
+import { getStaticSeoPaths, siteUrl } from '@/lib/seoUrls';
 
 const daily = 'daily' as const;
 const weekly = 'weekly' as const;
 const monthly = 'monthly' as const;
-const staticLastModified = new Date('2026-01-01T00:00:00.000Z');
 
 type SitemapEntry = {
   id: string;
@@ -35,66 +34,31 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       fetchCollection('posts'),
     ]);
 
-    const staticPages = [
-      '/', '/about', '/contact', '/help', '/faq', '/privacy', '/terms',
-      '/premium', '/store', '/flix', '/vibespace', '/squad/explore', '/drop'
-    ];
-
-    const staticEntries = staticPages.map(path => ({
+    const staticEntries = getStaticSeoPaths().map((path) => ({
       url: `${siteUrl}${path}`,
-      lastModified: staticLastModified,
+      lastModified: new Date(),
       changeFrequency: path === '/' ? daily : monthly,
       priority: path === '/' ? 1.0 : 0.7,
     }));
 
-    const helpEntries = helpCategories.flatMap(category => {
+    const helpEntries = helpCategories.flatMap((category) => {
+      const categoryUrl = `${siteUrl}/help/${category.slug}`;
       const categoryEntry = {
-        url: `${siteUrl}/help/${category.slug}`,
-        lastModified: staticLastModified,
+        url: categoryUrl,
+        lastModified: new Date(),
         changeFrequency: monthly,
         priority: 0.7,
-        alternates: {
-          languages: {
-            en: `${siteUrl}/help/${category.slug}`,
-          },
-        },
       };
 
-      const articleEntries = category.articles.map(article => ({
+      const articleEntries = category.articles.map((article) => ({
         url: `${siteUrl}/help/${category.slug}/${article.slug}`,
-        lastModified: staticLastModified,
+        lastModified: new Date(),
         changeFrequency: monthly,
         priority: 0.6,
-        alternates: {
-          languages: {
-            en: `${siteUrl}/help/${category.slug}/${article.slug}`,
-          },
-        },
       }));
 
       return [categoryEntry, ...articleEntries];
     });
-
-    const faqAndSupportEntries = [
-      {
-        url: `${siteUrl}/faq`,
-        lastModified: staticLastModified,
-        changeFrequency: monthly,
-        priority: 0.8,
-      },
-      {
-        url: `${siteUrl}/help`,
-        lastModified: staticLastModified,
-        changeFrequency: monthly,
-        priority: 0.8,
-      },
-      {
-        url: `${siteUrl}/about`,
-        lastModified: staticLastModified,
-        changeFrequency: monthly,
-        priority: 0.8,
-      },
-    ];
 
     const createEntries = (
       items: SitemapEntry[],
@@ -130,13 +94,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       () => true
     );
 
-    return [
+    const allEntries = [
       ...staticEntries,
-      ...faqAndSupportEntries,
       ...helpEntries,
       ...userEntries,
       ...postEntries,
     ];
+
+    const seen = new Set<string>();
+    return allEntries.filter((entry) => {
+      if (seen.has(entry.url)) {
+        return false;
+      }
+      seen.add(entry.url);
+      return true;
+    });
   } catch (error) {
     console.error("Failed to generate sitemap:", error);
     return [];

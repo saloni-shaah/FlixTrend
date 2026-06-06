@@ -11,7 +11,7 @@ function getCloudinaryId(url: string): string | null {
   return match ? match[2] : null;
 }
 
-export const OptimizedVideo = React.forwardRef<HTMLVideoElement, { src: string; thumbnailUrl?: string; className?: string; preload?: "auto" | "metadata" | "none"; loop?: boolean; muted?: boolean; [key: string]: any; }>(({ src, thumbnailUrl, className, preload, loop, muted, ...props }, ref) => {
+export const OptimizedVideo = React.forwardRef<HTMLVideoElement, { src: string; thumbnailUrl?: string; className?: string; preload?: "auto" | "metadata" | "none"; loop?: boolean; muted?: boolean; children?: React.ReactNode; [key: string]: any; }>(({ src, thumbnailUrl, className, preload, loop, muted, children, ...props }, ref) => {
     if (!src) {
         return null; 
     }
@@ -27,7 +27,7 @@ export const OptimizedVideo = React.forwardRef<HTMLVideoElement, { src: string; 
         preload: preload || "metadata",
         loop: loop,
         muted: muted,
-        style: { userSelect: 'none' },
+        style: { userSelect: 'none' as const },
         onContextMenu: handleContextMenu, // Prevent right-click
         controlsList: "nodownload", // Prevent download button
         ...props,
@@ -40,7 +40,7 @@ export const OptimizedVideo = React.forwardRef<HTMLVideoElement, { src: string; 
         const transformedVideoUrl = `${CLOUDINARY_BASE_URL}/video/upload/f_auto,q_auto,w_800,c_limit/${publicId}`;
         return (
             <div className="relative w-full h-full" onContextMenu={handleContextMenu}>
-                <video {...videoProps} src={transformedVideoUrl} />
+                <video {...videoProps} src={transformedVideoUrl}>{children}</video>
                 <div className="absolute inset-0"></div>
             </div>
         );
@@ -48,7 +48,7 @@ export const OptimizedVideo = React.forwardRef<HTMLVideoElement, { src: string; 
 
     return (
         <div className="relative w-full h-full" onContextMenu={handleContextMenu}>
-            <video {...videoProps} src={src} />
+            <video {...videoProps} src={src}>{children}</video>
             <div className="absolute inset-0"></div>
         </div>
     );

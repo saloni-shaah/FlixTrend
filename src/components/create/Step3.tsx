@@ -13,6 +13,7 @@ import { isAbusive } from '@/utils/moderation';
 
 const db = getFirestore(app);
 const storage = getStorage(app);
+const MAX_MEDIA_IMAGES = 65;
 
 const creatorCategoryMap: Record<string, string> = {
     'vlogs': 'daily', 'moments': 'daily', 'travel': 'daily', 'self': 'daily',
@@ -50,7 +51,15 @@ function PostPreview({ postData }: { postData: any }) {
                      <>
                         <p className="font-bold text-white pb-2">{postData.content || postData.caption}</p>
                         <div className="mt-2 aspect-video w-full rounded-md overflow-hidden bg-black flex items-center justify-center">
-                            <img src={thumbnailUrl || mediaUrl[0]} alt="preview" className="w-full h-full object-cover" />
+                            {Array.isArray(mediaUrl) && mediaUrl.length > 1 && !postData.isVideo ? (
+                                <div className="grid w-full h-full grid-cols-2 gap-1">
+                                    {mediaUrl.slice(0, 4).map((url: string, idx: number) => (
+                                        <img key={url + idx} src={url} alt={`preview ${idx + 1}`} className="w-full h-full object-cover" />
+                                    ))}
+                                </div>
+                            ) : (
+                                <img src={thumbnailUrl || mediaUrl[0]} alt="preview" className="w-full h-full object-cover" />
+                            )}
                         </div>
                         {postData.description && <p className="text-sm text-gray-300 mt-2">{postData.description}</p>}
                     </>
@@ -105,6 +114,12 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
              setError("Your post contains inappropriate language and cannot be posted.");
              setIsPublishing(false);
              return;
+        }
+
+        if (postData.postType === 'media' && !(postData.content || '').trim()) {
+            setError("Content is required for media posts.");
+            setIsPublishing(false);
+            return;
         }
 
         if (isScheduling && !scheduleDate) {
@@ -178,8 +193,9 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
 
             // --- Existing logic for all other post types (media, text, poll, live) ---
             let finalThumbnailUrl: string | null = null;
-            let finalMediaUrl: string | null = null;
+            let finalMediaUrl: string | string[] | null = null;
             let finalRawMediaUrl: string | null = null;
+            let finalSubtitleUrl: string | null = null;
             let storagePath: string | null = null;
 
             if (postData.thumbnailFile) {
@@ -188,17 +204,26 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
             }
 
             if (postData.files && postData.files.length > 0) {
-                const file = postData.files[0];
-                const mediaPath = `posts/${user.uid}/${Date.now()}_${file.name}`;
-                storagePath = mediaPath;
-                
-                const uploadedUrl = await uploadFile(file, mediaPath);
-                
                 if (postData.isVideo) {
+                    const file = postData.files[0];
+                    const mediaPath = `posts/${user.uid}/${Date.now()}_${file.name}`;
+                    storagePath = mediaPath;
+                    const uploadedUrl = await uploadFile(file, mediaPath);
                     finalMediaUrl = uploadedUrl;
                     finalRawMediaUrl = uploadedUrl;
+                    if (postData.subtitleFile) {
+                        const subtitlePath = `posts/${user.uid}/subtitles/${Date.now()}_${postData.subtitleFile.name}`;
+                        finalSubtitleUrl = await uploadFile(postData.subtitleFile, subtitlePath);
+                    }
                 } else {
-                    finalMediaUrl = uploadedUrl;
+                    if (postData.files.length > MAX_MEDIA_IMAGES) {
+                        throw new Error(`Media posts can include up to ${MAX_MEDIA_IMAGES} images.`);
+                    }
+                    const uploads = await Promise.all(postData.files.map((file: File, index: number) => {
+                        const mediaPath = `posts/${user.uid}/${Date.now()}_${index}_${file.name}`;
+                        return uploadFile(file, mediaPath);
+                    }));
+                    finalMediaUrl = uploads;
                 }
             }
             
@@ -240,6 +265,7 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                     isPortrait: postData.isPortrait || false,
                     processingComplete: !postData.isVideo,
                     videoQualities: {},
+                    subtitleUrl: finalSubtitleUrl,
                 }),
                 ...(postData.postType === 'poll' && { 
                     question: postData.question,
@@ -353,7 +379,11 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                 <button 
                     className={`btn-accent ${postData.postType === 'live' ? 'bg-red-600 hover:bg-red-700' : ''}`}
                     onClick={handleSubmit}
-                    disabled={isPublishing || (postData.postType === 'live' && (!postData.content || !postData.thumbnailFile))}
+                    disabled={
+                        isPublishing ||
+                        (postData.postType === 'live' && (!postData.content || !postData.thumbnailFile)) ||
+                        (postData.postType === 'media' && !(postData.content || '').trim())
+                    }
                 >
                     {getButtonText()} {postData.postType === 'live' ? <Radio /> :<CheckCircle />}
                 </button>

@@ -8,7 +8,11 @@ service firebase.storage {
     }
 
     function isImage() {
-      return request.resource.contentType.matches('image/.*');
+        return request.resource.contentType.matches('image/.*');
+    }
+
+    function isSubtitle() {
+      return request.resource.contentType.matches('text/vtt');
     }
 
     function maxSize(mb) {
@@ -41,6 +45,15 @@ service firebase.storage {
       allow write: if isSignedIn() &&
         request.auth.uid == userId &&
         maxSize(250);
+    }
+
+    // ── Post subtitles ────────────────────────────────────────────────────
+    match /posts/{userId}/subtitles/{fileName} {
+      allow read: if true;
+      allow write: if isSignedIn() &&
+        request.auth.uid == userId &&
+        isSubtitle() &&
+        maxSize(4);
     }
 
     // ── Thumbnails ────────────────────────────────────────────────────────

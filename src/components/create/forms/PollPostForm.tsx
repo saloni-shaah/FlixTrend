@@ -3,9 +3,18 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, CheckCircle } from 'lucide-react';
 import { isAbusive } from '@/utils/moderation';
+import { MAX_POLL_OPTIONS } from '@/components/PostActions';
 
 export function PollPostForm({ data, onDataChange, onError }: { data: any, onDataChange: (data: any) => void, onError: (error: string | null) => void }) {
-    const [options, setOptions] = useState<any[]>(data.options || [{ text: '' }, { text: '' }]);
+    const [options, setOptions] = useState<any[]>(
+        data.options?.length
+            ? data.options
+            : Array.isArray(data.pollOptions)
+                ? data.pollOptions.map((option: any) => ({
+                    text: typeof option === 'string' ? option : option?.text || '',
+                }))
+                : [{ text: '' }, { text: '' }]
+    );
     const [correctAnswerIndex, setCorrectAnswerIndex] = useState<number | null>(data.correctAnswerIndex ?? null);
 
     const checkForAbuse = (checkData: {
@@ -53,7 +62,7 @@ export function PollPostForm({ data, onDataChange, onError }: { data: any, onDat
     };
 
     const addOption = () => {
-        if (options.length < 6) {
+        if (options.length < MAX_POLL_OPTIONS) {
             setOptions([...options, { text: '' }]);
         }
     };
@@ -89,7 +98,7 @@ export function PollPostForm({ data, onDataChange, onError }: { data: any, onDat
             />
             
             <div className="space-y-3">
-                <p className="text-sm text-gray-400">Provide 2-6 options. You can optionally select one correct answer for a quiz.</p>
+                <p className="text-sm text-gray-400">Provide 2-12 options. You can optionally select one correct answer for a quiz.</p>
                 {options.map((option, index) => (
                     <div key={index} className="flex items-center gap-2">
                          <button 
@@ -115,7 +124,7 @@ export function PollPostForm({ data, onDataChange, onError }: { data: any, onDat
                 ))}
             </div>
             
-            {options.length < 6 && (
+            {options.length < MAX_POLL_OPTIONS && (
                 <button type="button" onClick={addOption} className="btn-glass text-sm self-start flex items-center gap-2">
                     <Plus size={16} /> Add Option
                 </button>

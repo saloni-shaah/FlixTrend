@@ -1,14 +1,15 @@
 'use client';
 import React, { useRef, useEffect, useCallback, useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
 import { OptimizedVideo } from "@/components/OptimizedVideo";
 import { Watermark } from "@/components/video/Watermark";
 import { TheaterModeContainer } from "@/components/video/TheaterModeContainer";
 import { ProgressBar } from "@/components/video/ProgressBar";
+import { WatchSettingsPanel } from "@/app/watch/WatchSettingsPanel";
+import { useToast } from "@/hooks/use-toast";
 import {
   Play, Pause, Volume2, VolumeX, Maximize, Minimize,
   Settings, Loader2, AlertTriangle, Youtube, PictureInPicture2,
-  Subtitles, RotateCcw, RotateCw,
+  RotateCcw, RotateCw,
 } from "lucide-react";
 import { useVideoPlayer } from "@/hooks/useVideoPlayer";
 import { useNetworkQuality } from "@/hooks/useNetworkQuality";
@@ -20,7 +21,7 @@ interface Props {
   thumbnailUrl?: string;
   postId: string;
   title?: string;
-  captionsUrl?: string; // optional .vtt file URL
+  captionsUrl?: string;
   isPortrait?: boolean;
 }
 
@@ -33,6 +34,25 @@ export function LongFormVideoPlayer({
   const ambientFrameRef = useRef<number>(0);
   const controlsTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastTapRef = useRef<{ time: number; x: number }>({ time: 0, x: 0 });
+  const gestureRef = useRef<{
+    active: boolean;
+    mode: "seek" | "volume" | "brightness" | null;
+    startX: number;
+    startY: number;
+    startTime: number;
+    startVolume: number;
+    startBrightness: number;
+    startPosition: number;
+  }>({
+    active: false,
+    mode: null,
+    startX: 0,
+    startY: 0,
+    startTime: 0,
+    startVolume: 0,
+    startBrightness: 0,
+    startPosition: 0,
+  });
 
   const [showControls, setShowControls] = useState(true);
   const [isTheaterMode, setIsTheaterMode] = useState(false);
@@ -42,8 +62,17 @@ export function LongFormVideoPlayer({
   const [captionsEnabled, setCaptionsEnabled] = useState(false);
   const [isPiP, setIsPiP] = useState(false);
   const [seekIndicator, setSeekIndicator] = useState<"left" | "right" | null>(null);
+  const [gestureOverlay, setGestureOverlay] = useState<null | {
+    type: "seek" | "volume" | "brightness";
+    label: string;
+    value: string;
+  }>(null);
   const [selectedQuality, setSelectedQuality] = useState<string>("auto");
   const [isLooping, setIsLooping] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isLandscape, setIsLandscape] = useState(false);
+  const [playerHeight, setPlayerHeight] = useState(0);
+  const [brightnessLevel, setBrightnessLevel] = useState(0.88);
 
   const {
     videoRef, isPlaying, isMuted, volume, progress, currentTime, duration,
@@ -52,19 +81,9 @@ export function LongFormVideoPlayer({
     setPlaybackRate, videoEvents,
   } = useVideoPlayer({ postId, variant: "watch", title, videoUrl, thumbnailUrl });
 
-  const router = useRouter();
   const { open: openMiniPlayer } = useMiniPlayer();
   const autoQuality = useNetworkQuality();
-
-  // ── Persist volume ────────────────────────────────────────────────────────
-  useEffect(() => {
-    const saved = localStorage.getItem("ft-volume");
-    if (saved !== null) setVolume(parseFloat(saved));
-  }, []); // eslint-disable-line
-
-  useEffect(() => {
-    localStorage.setItem("ft-volume", String(volume));
-  }, [volume]);
+  const { toast } = useToast();
 
   // ── Quality ───────────────────────────────────────────────────────────────
   const availableQualities = useMemo(() => {
@@ -76,7 +95,9 @@ export function LongFormVideoPlayer({
 
   const autoQualitySrc = useMemo(() => {
     if (!videoQualities || Object.keys(videoQualities).length === 0) return videoUrl;
-    const sortedAvailable = Object.keys(videoQualities).sort((a, b) => parseInt(b.replace('p', '')) - parseInt(a.replace('p', '')));
+    const sortedAvailable = Object.keys(videoQualities).sort(
+      (a, b) => parseInt(b.replace('p', '')) - parseInt(a.replace('p', ''))
+    );
     const idealQualityNum = parseInt(autoQuality.replace('p', ''));
     for (const q of sortedAvailable) {
       const qNum = parseInt(q.replace('p', ''));
@@ -98,6 +119,47 @@ export function LongFormVideoPlayer({
     return match ? match[0] : autoQuality;
   }, [selectedQuality, autoQualitySrc, videoQualities, autoQuality]);
 
+  // ── Viewport detection ────────────────────────────────────────────────────
+  useEffect(() => {
+    const updateViewport = () => {
+      setIsMobile(window.innerWidth < 768);
+      setIsLandscape(window.innerWidth > window.innerHeight);
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (rect) setPlayerHeight(rect.height);
+    };
+    updateViewport();
+    window.addEventListener("resize", updateViewport);
+    window.addEventListener("orientationchange", updateViewport);
+    const ro =
+      typeof ResizeObserver !== "undefined" && containerRef.current
+        ? new ResizeObserver(updateViewport)
+        : null;
+    if (ro && containerRef.current) ro.observe(containerRef.current);
+    return () => {
+      window.removeEventListener("resize", updateViewport);
+      window.removeEventListener("orientationchange", updateViewport);
+      ro?.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.volume = volume;
+  }, [videoRef, volume]);
+
+  // Ambient canvas resize
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = wrapperRef.current?.getBoundingClientRect() || containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    canvas.width = Math.round(rect.width * dpr);
+    canvas.height = Math.round(rect.height * dpr);
+  }, [ambientMode, playerHeight]);
+
+  // Quality switch: preserve playback position
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -114,12 +176,12 @@ export function LongFormVideoPlayer({
     video.load();
   }, [activeSrc, videoRef]);
 
-  // ── Loop ──────────────────────────────────────────────────────────────────
+  // Loop
   useEffect(() => {
     if (videoRef.current) videoRef.current.loop = isLooping;
   }, [isLooping, videoRef]);
 
-  // ── Captions ──────────────────────────────────────────────────────────────
+  // Captions
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !captionsUrl) return;
@@ -140,7 +202,7 @@ export function LongFormVideoPlayer({
     });
   }, [captionsEnabled, videoRef]);
 
-  // ── Ambient mode ──────────────────────────────────────────────────────────
+  // Ambient mode
   useEffect(() => {
     const canvas = canvasRef.current;
     const video = videoRef.current;
@@ -151,24 +213,26 @@ export function LongFormVideoPlayer({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     const draw = () => {
-      if (!video.paused && !video.ended) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      }
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.filter = "blur(24px) saturate(1.65) brightness(0.85)";
+      if (!video.paused && !video.ended) ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       ambientFrameRef.current = requestAnimationFrame(draw);
     };
     ambientFrameRef.current = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(ambientFrameRef.current);
   }, [ambientMode, videoRef]);
 
-  // ── Picture-in-Picture ────────────────────────────────────────────────────
+  // Picture-in-Picture
   const togglePiP = useCallback(async () => {
     const video = videoRef.current;
     if (!video) return;
+    const wasInPiP = !!document.pictureInPictureElement;
     try {
-      if (document.pictureInPictureElement) await document.exitPictureInPicture();
+      if (wasInPiP) await document.exitPictureInPicture();
       else await video.requestPictureInPicture();
+      toast({ title: wasInPiP ? "Picture-in-Picture off" : "Picture-in-Picture on" });
     } catch {}
-  }, [videoRef]);
+  }, [toast, videoRef]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -183,11 +247,45 @@ export function LongFormVideoPlayer({
     };
   }, [videoRef]);
 
-  // ── Fullscreen ────────────────────────────────────────────────────────────
+  const handleToggleCaptions = useCallback((value: boolean) => {
+    setCaptionsEnabled(value);
+    toast({ title: value ? "Captions enabled" : "Captions disabled" });
+  }, [toast]);
+
+  const handleToggleAmbient = useCallback((value: boolean) => {
+    setAmbientMode(value);
+    toast({ title: value ? "Ambient mode on" : "Ambient mode off" });
+  }, [toast]);
+
+  const handleToggleLoop = useCallback((value: boolean) => {
+    setIsLooping(value);
+    toast({ title: value ? "Loop enabled" : "Loop disabled" });
+  }, [toast]);
+
+  const handleQualityChange = useCallback((quality: string) => {
+    setSelectedQuality(quality);
+    toast({
+      title: "Quality updated",
+      description: quality === "auto"
+        ? `Auto · ${activeQualityLabel}`
+        : `Switched to ${quality}`,
+    });
+  }, [activeQualityLabel, toast]);
+
+  const handlePlaybackRateChange = useCallback((rate: number) => {
+    setPlaybackRate(rate);
+    toast({ title: rate === 1 ? "Normal speed" : `${rate}× speed` });
+  }, [setPlaybackRate, toast]);
+
+  const handleBrightnessChange = useCallback((value: number) => {
+    setBrightnessLevel(value);
+  }, []);
+
+  // Fullscreen
   const lockLandscapeIfUseful = useCallback(async () => {
     if (isPortrait) return;
     try {
-      const orientation = screen.orientation as ScreenOrientation & { lock?: (orientation: "any" | "natural" | "landscape" | "portrait" | "portrait-primary" | "portrait-secondary" | "landscape-primary" | "landscape-secondary") => Promise<void> };
+      const orientation = screen.orientation as any;
       await orientation.lock?.("landscape");
     } catch {}
   }, [isPortrait]);
@@ -201,34 +299,36 @@ export function LongFormVideoPlayer({
     }
   }, [lockLandscapeIfUseful]);
 
+  const handleFullscreen = useCallback(async () => {
+    setShowSettings(false);
+    const wasFullscreen = !!document.fullscreenElement;
+    await toggleFullScreen();
+    toast({ title: wasFullscreen ? "Fullscreen off" : "Fullscreen on" });
+  }, [toast, toggleFullScreen]);
+
   useEffect(() => {
     const h = () => {
       const fullScreen = !!document.fullscreenElement;
       setIsFullScreen(fullScreen);
-      if (!fullScreen) {
-        try { screen.orientation.unlock?.(); } catch {}
-      }
+      if (!fullScreen) { try { (screen.orientation as any).unlock?.(); } catch {} }
     };
     document.addEventListener("fullscreenchange", h);
     return () => document.removeEventListener("fullscreenchange", h);
   }, []);
 
-  // ── Controls auto-hide ────────────────────────────────────────────────────
+  // Controls auto-hide
   const resetControlsTimer = useCallback(() => {
     setShowControls(true);
     if (controlsTimerRef.current) clearTimeout(controlsTimerRef.current);
     if (videoRef.current && !videoRef.current.paused) {
-      controlsTimerRef.current = setTimeout(() => setShowControls(false), 2500);
+      controlsTimerRef.current = setTimeout(() => setShowControls(false), isMobile ? 2000 : 2500);
     }
-  }, [videoRef]);
+  }, [isMobile, videoRef]);
 
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const hide = () => {
-      if (controlsTimerRef.current) clearTimeout(controlsTimerRef.current);
-      setShowControls(false);
-    };
+    const hide = () => { if (controlsTimerRef.current) clearTimeout(controlsTimerRef.current); setShowControls(false); };
     el.addEventListener("mousemove", resetControlsTimer);
     el.addEventListener("mouseleave", hide);
     return () => {
@@ -238,7 +338,7 @@ export function LongFormVideoPlayer({
     };
   }, [resetControlsTimer]);
 
-  // ── Keyboard ──────────────────────────────────────────────────────────────
+  // Keyboard
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement)?.tagName;
@@ -268,28 +368,105 @@ export function LongFormVideoPlayer({
     return () => window.removeEventListener("keydown", onKey);
   }, [togglePlay, toggleMute, seekSeconds, toggleFullScreen, duration, videoRef, volume, setVolume, captionsUrl]);
 
-  // ── Settings outside click ────────────────────────────────────────────────
   useEffect(() => {
-    if (!showSettings) return;
-    const h = (e: MouseEvent) => {
-      if (!(e.target as HTMLElement).closest(".settings-panel")) setShowSettings(false);
+    if (!showSettings || isMobile) return;
+    const onDown = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement).closest("[data-watch-settings]")) setShowSettings(false);
     };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, [showSettings]);
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [showSettings, isMobile]);
 
-  // ── Seek flash indicator ──────────────────────────────────────────────────
+  const clamp = useCallback((value: number, min: number, max: number) => Math.max(min, Math.min(max, value)), []);
+
   const flashSeek = (dir: "left" | "right") => {
     setSeekIndicator(dir);
     setTimeout(() => setSeekIndicator(null), 700);
   };
 
-  // ── Touch: double-tap seek, single tap show controls ─────────────────────
+  const setGestureState = useCallback((type: "seek" | "volume" | "brightness", label: string, value: string) => {
+    setGestureOverlay({ type, label, value });
+  }, []);
+
+  const clearGestureState = useCallback(() => {
+    setGestureOverlay(null);
+    setIsSeeking(false);
+  }, [setIsSeeking]);
+
+  // Touch gestures
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (showSettings) return;
+    const touch = e.touches[0];
+    resetControlsTimer();
+    gestureRef.current = {
+      active: true,
+      mode: null,
+      startX: touch.clientX,
+      startY: touch.clientY,
+      startTime: Date.now(),
+      startVolume: volume,
+      startBrightness: brightnessLevel,
+      startPosition: videoRef.current?.currentTime ?? 0,
+    };
+  }, [brightnessLevel, resetControlsTimer, showSettings, videoRef, volume]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    const gesture = gestureRef.current;
+    if (!gesture.active || showSettings) return;
+    const touch = e.touches[0];
+    const rect = containerRef.current?.getBoundingClientRect();
+    const video = videoRef.current;
+    if (!rect || !video) return;
+
+    const dx = touch.clientX - gesture.startX;
+    const dy = touch.clientY - gesture.startY;
+    const absX = Math.abs(dx);
+    const absY = Math.abs(dy);
+
+    if (!gesture.mode && (absX > 8 || absY > 8)) {
+      gesture.mode = absX >= absY ? "seek" : (gesture.startX > rect.width * 0.58 ? "volume" : "brightness");
+      if (gesture.mode === "seek") setIsSeeking(true);
+      e.preventDefault();
+    }
+
+    if (!gesture.mode) return;
+    resetControlsTimer();
+
+    if (gesture.mode === "seek") {
+      const targetTime = clamp(gesture.startPosition + dx * 0.18, 0, duration || video.duration || 0);
+      video.currentTime = targetTime;
+      const seconds = Math.round(Math.abs(targetTime - gesture.startPosition));
+      setGestureState("seek", dx < 0 ? "Rewind" : "Forward", `${seconds || 0}s`);
+      if (dx < 0) flashSeek("left"); else flashSeek("right");
+      e.preventDefault();
+    } else if (gesture.mode === "volume") {
+      const next = clamp(gesture.startVolume - dy / 280, 0, 1);
+      setVolume(next);
+      setGestureState("volume", "Volume", `${Math.round(next * 100)}%`);
+      e.preventDefault();
+    } else if (gesture.mode === "brightness") {
+      const next = clamp(gesture.startBrightness - dy / 320, 0.65, 1);
+      setBrightnessLevel(next);
+      setGestureState("brightness", "Brightness", `${Math.round(next * 100)}%`);
+      e.preventDefault();
+    }
+  }, [brightnessLevel, clamp, duration, setGestureState, setIsSeeking, setVolume, showSettings, videoRef]);
+
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    const gesture = gestureRef.current;
     const touch = e.changedTouches[0];
     const now = Date.now();
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
+
+    if (gesture.active && gesture.mode) {
+      clearGestureState();
+      gesture.active = false;
+      gesture.mode = null;
+      resetControlsTimer();
+      return;
+    }
+
     const elapsed = now - lastTapRef.current.time;
     if (elapsed < 300) {
       const x = touch.clientX - rect.left;
@@ -300,54 +477,67 @@ export function LongFormVideoPlayer({
       resetControlsTimer();
     }
     lastTapRef.current = { time: now, x: touch.clientX };
-  }, [seekSeconds, togglePlay, resetControlsTimer]);
+    gesture.active = false;
+    gesture.mode = null;
+  }, [clearGestureState, resetControlsTimer, seekSeconds, togglePlay]);
 
   const effectiveVolume = isMuted ? 0 : volume;
   const visible = showControls || !isPlaying || showSettings;
-  const mobileFrameClass = isPortrait ? "h-[72svh]" : "h-[33svh]";
+  const canUsePiP = typeof document !== "undefined" && "pictureInPictureEnabled" in document;
+
+  /*
+   * PLAYER ASPECT RATIO
+   * ─────────────────────────────────────────────────────────────────────────
+   * Always aspect-video (16:9) for the container — same as YouTube.
+   * Portrait videos render with `object-contain` (set on the <video> element)
+   * which letterboxes them inside the 16:9 black container.
+   *
+   * WHY: using aspect-[9/16] made the container NARROW (246px on a 400px
+   * screen), exposing the purple page background on the sides. YouTube never
+   * does this — it always uses a full-width 16:9 container.
+   *
+   * Fullscreen is the only exception: use the full viewport height.
+   */
+  const playerAspectClass = isFullScreen ? "h-[100svh]" : "aspect-video";
+
+  const settingsTopOffset = isMobile ? playerHeight : 0;
 
   return (
     <TheaterModeContainer isTheaterMode={isTheaterMode}>
-      <style jsx global>{`
-        .video-player input[type="range"]::-webkit-slider-thumb {
-          -webkit-appearance: none;
-          width: 13px; height: 13px;
-          border-radius: 50%;
-          background: #a855f7;
-          cursor: pointer;
-          box-shadow: 0 0 6px rgba(168,85,247,0.6);
-        }
-        .video-player input[type="range"]::-moz-range-thumb {
-          width: 13px; height: 13px;
-          border-radius: 50%;
-          background: #a855f7;
-          border: none;
-          cursor: pointer;
-        }
-        .seek-flash { animation: seekFlash 0.6s ease-out forwards; }
-        @keyframes seekFlash {
-          0%   { opacity: 1; transform: scale(1); }
-          60%  { opacity: 0.8; transform: scale(1.15); }
-          100% { opacity: 0; transform: scale(0.9); }
-        }
-      `}</style>
-
-      {/* Ambient canvas sits OUTSIDE overflow-hidden so glow bleeds out */}
-      <div ref={wrapperRef} className="relative">
+      {/*
+       * WRAPPER
+       * mt-0 / pt-0 override any margin/padding that TheaterModeContainer or
+       * the watch-theater-expand CSS class may inject above the player.
+       */}
+      <div ref={wrapperRef} className="relative w-full overflow-visible mt-0 pt-0">
         {ambientMode && (
           <canvas
             ref={canvasRef}
-            width={160} height={90}
+            width={480} height={270}
             className="absolute -inset-6 w-[calc(100%+3rem)] h-[calc(100%+3rem)] -z-10 opacity-70 pointer-events-none"
-            style={{ filter: "blur(36px)", transform: "scale(1.05)" }}
+            style={{ filter: "blur(42px) saturate(1.6) brightness(0.92)", transform: "scale(1.04)" }}
           />
         )}
 
         <div
           ref={containerRef}
-          className={`video-player relative w-full ${mobileFrameClass} md:h-auto md:aspect-video bg-black overflow-hidden select-none ${!visible ? "cursor-none" : "cursor-default"}`}
-          onDoubleClick={toggleFullScreen}
+          className={[
+            "video-player relative w-full bg-black select-none",
+            "transition-[height] duration-300 ease-out",
+            "overflow-hidden",
+            playerAspectClass,
+            !visible ? "cursor-none" : "cursor-default",
+          ].join(" ")}
+          onDoubleClick={!isMobile ? toggleFullScreen : undefined}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
+          onTouchCancel={() => {
+            gestureRef.current.active = false;
+            gestureRef.current.mode = null;
+            clearGestureState();
+          }}
+          style={{ touchAction: "none" }}
         >
           {/* Loading */}
           {(isLoading || isSeeking) && !error && (
@@ -371,13 +561,33 @@ export function LongFormVideoPlayer({
             ref={videoRef}
             src={activeSrc}
             poster={thumbnailUrl}
-            className="w-full h-full object-contain"
-            playsInline preload="metadata" controlsList="nodownload"
+            className="w-full h-full object-contain bg-black"
+            playsInline
+            preload="metadata"
+            controlsList="nodownload"
             {...videoEvents}
           />
           <Watermark isAnimated={isPlaying} />
 
-          {/* Seek flash indicators */}
+          {/* Brightness overlay */}
+          {brightnessLevel < 1 && (
+            <div
+              className="absolute inset-0 z-[9] pointer-events-none bg-black"
+              style={{ opacity: Math.min(0.45, (1 - brightnessLevel) * 1.15) }}
+            />
+          )}
+
+          {/* Gesture overlay */}
+          {gestureOverlay && (
+            <div className="absolute inset-0 z-30 pointer-events-none flex items-center justify-center">
+              <div className="rounded-3xl border border-white/10 bg-black/60 px-4 py-3 text-center backdrop-blur-xl shadow-2xl">
+                <p className="text-[10px] uppercase tracking-[0.22em] text-white/45">{gestureOverlay.label}</p>
+                <p className="mt-1 text-lg font-semibold text-white">{gestureOverlay.value}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Seek flash */}
           {seekIndicator === "left" && (
             <div className="seek-flash absolute left-8 top-1/2 -translate-y-1/2 z-30 flex flex-col items-center gap-1 pointer-events-none">
               <div className="flex gap-0.5">
@@ -395,27 +605,31 @@ export function LongFormVideoPlayer({
             </div>
           )}
 
-          {/* Click-to-play overlay (desktop only — touch handled by onTouchEnd) */}
+          {/* Click-to-play (desktop) */}
           <div className="absolute inset-0 z-10 hidden md:block" onClick={togglePlay} />
 
           {/* ── Controls overlay ── */}
           <div
-            className={`absolute inset-0 z-20 flex flex-col justify-between pointer-events-none transition-opacity duration-300 ${visible ? "opacity-100" : "opacity-0"}`}
+            className={`absolute inset-0 z-20 flex flex-col justify-between pointer-events-none transition-[opacity] duration-300 ${
+              visible ? "opacity-100" : "opacity-0"
+            }`}
           >
-            {/* Top-left: Play + Volume */}
-            <div className="p-2 md:p-3 flex items-start justify-between pointer-events-auto">
+            {/* Top row: play + volume + quality badge */}
+            <div className="px-2 pt-1 md:px-3 md:pt-3 flex items-start justify-between pointer-events-auto">
               <div
-                className="flex items-center gap-1.5 md:gap-2 px-2.5 py-1.5 rounded-full bg-black/30 backdrop-blur-md border border-white/10"
+                className="flex items-center gap-1.5 md:gap-2 px-2.5 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/10"
                 onMouseDown={(e) => e.stopPropagation()}
               >
-                <button onClick={togglePlay} className="text-white/80 hover:text-white transition">
+                {/* Play/pause */}
+                <button onClick={togglePlay} className="text-white/90 hover:text-white transition active:scale-90">
                   {isPlaying
                     ? <Pause size={18} className="md:w-5 md:h-5" fill="currentColor" />
                     : <Play  size={18} className="md:w-5 md:h-5" fill="currentColor" />}
                 </button>
 
+                {/* Volume */}
                 <div className="flex items-center gap-1.5 group/vol">
-                  <button onClick={toggleMute} className="text-white/80 hover:text-white transition">
+                  <button onClick={toggleMute} className="text-white/80 hover:text-white transition active:scale-90">
                     {effectiveVolume === 0
                       ? <VolumeX size={16} className="md:w-[18px] md:h-[18px]" />
                       : <Volume2 size={16} className="md:w-[18px] md:h-[18px]" />}
@@ -424,31 +638,31 @@ export function LongFormVideoPlayer({
                     type="range" min="0" max="1" step="0.05"
                     value={effectiveVolume}
                     onChange={(e) => setVolume(parseFloat(e.target.value))}
-                    className="w-0 group-hover/vol:w-16 md:group-hover/vol:w-20 h-1 transition-all duration-300 appearance-none rounded-full"
+                    className="hidden md:block w-0 group-hover/vol:w-20 h-1 transition-all duration-300 appearance-none rounded-full"
                     style={{
                       background: `linear-gradient(to right, rgba(255,255,255,0.85) ${effectiveVolume*100}%, rgba(255,255,255,0.15) ${effectiveVolume*100}%)`
                     }}
                   />
                 </div>
               </div>
-              
-              <div className="flex items-center gap-2">
-                {/* Quality badge top-right */}
-                {availableQualities.length > 1 && (
-                  <div className="hidden sm:block px-2 py-1 rounded-md bg-black/30 backdrop-blur-md border border-white/10 text-white/60 text-[10px] font-semibold">
-                    {activeQualityLabel.toUpperCase()}
-                  </div>
-                )}
-              </div>
+
+              {/* Quality badge */}
+              {availableQualities.length > 1 && (
+                <div className="hidden sm:flex px-2 py-1 rounded-md bg-black/40 backdrop-blur-md border border-white/10 text-white/60 text-[10px] font-semibold items-center gap-1">
+                  {activeQualityLabel.toUpperCase()}
+                  {selectedQuality === "auto" && (
+                    <span className="text-[8px] text-accent-cyan/70 uppercase">auto</span>
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* Bottom */}
+            {/* Bottom: progress + controls */}
             <div
-              className="bg-gradient-to-t from-black/75 via-black/30 to-transparent pt-8 md:pt-12 pointer-events-auto"
+              className="bg-gradient-to-t from-black/80 via-black/30 to-transparent pt-4 md:pt-10 pointer-events-auto"
               onMouseDown={(e) => e.stopPropagation()}
             >
-              {/* Progress */}
-              <div className="px-3 md:px-4 mb-1.5 md:mb-2">
+              <div className="px-0 md:px-3 mb-1 md:mb-2">
                 <ProgressBar
                   progress={progress}
                   buffered={buffered}
@@ -461,147 +675,145 @@ export function LongFormVideoPlayer({
                 />
               </div>
 
-              {/* Bottom row */}
-              <div className="flex items-center justify-end px-3 md:px-4 pb-2 md:pb-3 gap-2 md:gap-3 text-white/80">
-                {/* Theater */}
+              <div className="flex items-center justify-end px-2 md:px-3 pb-[calc(0.5rem+env(safe-area-inset-bottom))] md:pb-3 gap-2 md:gap-3 text-white/85">
+                {/* Theater (desktop) */}
                 <button
                   onClick={() => setIsTheaterMode(p => !p)}
-                  className={`hidden md:flex p-1.5 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition ${isTheaterMode ? "text-purple-400" : ""}`}
+                  className={`hidden md:flex p-2 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition ${isTheaterMode ? "text-purple-400" : ""}`}
                   title="Theater mode (T)"
                 >
                   <Youtube size={17} />
                 </button>
 
-                {/* PiP */}
-                {"pictureInPictureEnabled" in document && (
+                {/* PiP (desktop) */}
+                {canUsePiP && (
                   <button
                     onClick={togglePiP}
-                    className={`hidden md:flex p-1.5 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition ${isPiP ? "text-purple-400" : ""}`}
+                    className={`hidden md:flex p-2 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition ${isPiP ? "text-purple-400" : ""}`}
                     title="Picture in picture"
                   >
                     <PictureInPicture2 size={17} />
                   </button>
                 )}
 
-                {/* Mini player */}
+                {/* Mini player (mobile) */}
                 <button
                   onClick={() => openMiniPlayer({ postId, videoUrl, title, isFlow: false })}
-                  className="hidden sm:flex p-1.5 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition"
+                  className="flex md:hidden p-2 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition active:scale-90"
                   title="Mini Player"
                 >
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="2" y="3" width="20" height="14" rx="2"/>
-                    <rect x="12" y="10" width="9" height="6" rx="1" fill="currentColor" stroke="none" opacity="0.5"/>
-                  </svg>
+                  <MiniPlayerIcon />
+                </button>
+
+                {/* Mini player (desktop) */}
+                <button
+                  onClick={() => openMiniPlayer({ postId, videoUrl, title, isFlow: false })}
+                  className="hidden md:flex p-2 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition"
+                  title="Mini Player"
+                >
+                  <MiniPlayerIcon />
                 </button>
 
                 {/* Fullscreen */}
                 <button
                   onClick={toggleFullScreen}
-                  className="p-1.5 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition"
+                  className="p-2 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition active:scale-90"
                   title="Fullscreen (F)"
                 >
-                  {isFullScreen ? <Minimize size={17} /> : <Maximize size={17} />}
+                  {isFullScreen ? <Minimize size={18} /> : <Maximize size={18} />}
                 </button>
 
                 {/* Settings */}
-                <div className="relative settings-panel">
-                  <button
-                    onClick={() => setShowSettings(p => !p)}
-                    className={`p-1.5 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition ${showSettings ? "text-purple-400 rotate-45" : "text-white/80"} duration-300`}
-                    onMouseDown={(e) => e.stopPropagation()}
-                  >
-                    <Settings size={17} />
-                  </button>
-
-                  {showSettings && (
-                    <div
-                      className="fixed md:absolute inset-x-3 bottom-4 md:inset-x-auto md:bottom-10 md:right-0 w-auto md:w-56 max-h-[68svh] overflow-y-auto rounded-2xl bg-black/90 md:bg-black/70 backdrop-blur-2xl border border-white/10 text-white/90 text-sm p-4 flex flex-col gap-4 shadow-2xl z-50"
-                      onMouseDown={(e) => e.stopPropagation()}
-                    >
-                      {/* Quality */}
-                      {availableQualities.length > 1 && (
-                        <div>
-                          <p className="text-white/40 text-[10px] uppercase tracking-widest mb-2">Quality</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {availableQualities.map((q) => (
-                              <button
-                                key={q}
-                                onClick={() => setSelectedQuality(q)}
-                                className={`px-2.5 py-1 rounded-full text-xs transition ${selectedQuality === q ? "bg-purple-500/80 text-white" : "bg-white/10 hover:bg-white/20"}`}
-                              >
-                                {q === "auto" ? `Auto · ${activeQualityLabel}` : q}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Speed */}
-                      <div>
-                        <p className="text-white/40 text-[10px] uppercase tracking-widest mb-2">Speed</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {[0.5, 0.75, 1, 1.25, 1.5, 2].map((r) => (
-                            <button
-                              key={r}
-                              onClick={() => setPlaybackRate(r)}
-                              className={`px-2.5 py-1 rounded-full text-xs transition ${playbackRate === r ? "bg-purple-500/80 text-white" : "bg-white/10 hover:bg-white/20"}`}
-                            >
-                              {r === 1 ? "Normal" : `${r}×`}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Toggles */}
-                      <div className="flex flex-col gap-2.5 border-t border-white/10 pt-3">
-                        {/* Loop */}
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs">Loop</span>
-                          <button
-                            onClick={() => setIsLooping(p => !p)}
-                            className={`w-9 h-5 rounded-full transition-colors relative ${isLooping ? "bg-purple-500" : "bg-white/20"}`}
-                          >
-                            <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${isLooping ? "left-4" : "left-0.5"}`} />
-                          </button>
-                        </div>
-
-                        {/* Ambient */}
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs">Ambient Mode</span>
-                          <button
-                            onClick={() => setAmbientMode(p => !p)}
-                            className={`w-9 h-5 rounded-full transition-colors relative ${ambientMode ? "bg-purple-500" : "bg-white/20"}`}
-                          >
-                            <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${ambientMode ? "left-4" : "left-0.5"}`} />
-                          </button>
-                        </div>
-
-                        {/* Captions — only show if a .vtt was passed */}
-                        {captionsUrl && (
-                          <div className="flex items-center justify-between">
-                            <span className="flex items-center gap-1.5 text-xs">
-                              <Subtitles size={13} />
-                              Captions
-                              <kbd className="text-[9px] bg-white/10 px-1 rounded">C</kbd>
-                            </span>
-                            <button
-                              onClick={() => setCaptionsEnabled(p => !p)}
-                              className={`w-9 h-5 rounded-full transition-colors relative ${captionsEnabled ? "bg-purple-500" : "bg-white/20"}`}
-                            >
-                              <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${captionsEnabled ? "left-4" : "left-0.5"}`} />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <button
+                  onClick={() => setShowSettings((p) => !p)}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
+                  onTouchEnd={(e) => e.stopPropagation()}
+                  data-watch-settings
+                  className={`p-2 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition active:scale-90 ${
+                    showSettings ? "text-purple-400 rotate-45" : "text-white/85"
+                  } duration-300`}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  title="Settings"
+                >
+                  <Settings size={17} />
+                </button>
               </div>
+            </div>
+
+            {/* Settings panel */}
+            <div className="pointer-events-none absolute inset-0 z-[60]">
+              <WatchSettingsPanel
+                open={showSettings}
+                isMobile={isMobile}
+                topOffset={settingsTopOffset}
+                onClose={() => setShowSettings(false)}
+                availableQualities={availableQualities}
+                selectedQuality={selectedQuality}
+                activeQualityLabel={activeQualityLabel}
+                onQualityChange={handleQualityChange}
+                playbackRate={playbackRate}
+                onPlaybackRateChange={handlePlaybackRateChange}
+                isLooping={isLooping}
+                onLoopChange={handleToggleLoop}
+                ambientMode={ambientMode}
+                onAmbientChange={handleToggleAmbient}
+                captionsUrl={captionsUrl}
+                captionsEnabled={captionsEnabled}
+                onCaptionsChange={handleToggleCaptions}
+                onMiniPlayer={() => {
+                  setShowSettings(false);
+                  openMiniPlayer({ postId, videoUrl, title, isFlow: false });
+                }}
+                onFullscreen={handleFullscreen}
+                isFullScreen={isFullScreen}
+                onPiP={canUsePiP ? () => { setShowSettings(false); void togglePiP(); } : undefined}
+                isPiP={isPiP}
+                brightnessLevel={brightnessLevel}
+                onBrightnessChange={handleBrightnessChange}
+                networkQuality={autoQuality}
+              />
             </div>
           </div>
         </div>
       </div>
+
+      <style jsx global>{`
+        .video-player input[type="range"]::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          width: 13px;
+          height: 13px;
+          border-radius: 50%;
+          background: #a855f7;
+          cursor: pointer;
+          box-shadow: 0 0 6px rgba(168, 85, 247, 0.6);
+        }
+        .video-player input[type="range"]::-moz-range-thumb {
+          width: 13px;
+          height: 13px;
+          border-radius: 50%;
+          background: #a855f7;
+          border: none;
+          cursor: pointer;
+        }
+        .seek-flash {
+          animation: seekFlash 0.6s ease-out forwards;
+        }
+        @keyframes seekFlash {
+          0%   { opacity: 1; transform: translateY(-50%) scale(1); }
+          60%  { opacity: 0.8; transform: translateY(-50%) scale(1.15); }
+          100% { opacity: 0; transform: translateY(-50%) scale(0.9); }
+        }
+      `}</style>
     </TheaterModeContainer>
+  );
+}
+
+function MiniPlayerIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="3" width="20" height="14" rx="2"/>
+      <rect x="12" y="10" width="9" height="6" rx="1" fill="currentColor" stroke="none" opacity="0.5"/>
+    </svg>
   );
 }

@@ -9,6 +9,11 @@ import { IGif } from '@giphy/js-types';
 import imageCompression from 'browser-image-compression';
 import { cn } from '@/lib/utils';
 
+const getReplyPreviewText = (text?: string) => {
+  if (!text) return '';
+  return text.trim().split(/\s+/).slice(0, 3).join(' ');
+};
+
 interface ChatInputProps {
   chatId:        string;
   draft:         string;
@@ -174,7 +179,7 @@ export function ChatInput({
                             Replying
                         </p>
                         <p className="text-white/60 line-clamp-1 whitespace-pre-wrap">
-                            {replyingTo.text || (replyingTo.type || 'message')}
+                            {getReplyPreviewText(replyingTo.text) || (replyingTo.type || 'message')}
                         </p>
                     </div>
                 </div>
