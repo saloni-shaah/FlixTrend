@@ -7,10 +7,12 @@ import {
   Maximize2,
   Minimize2,
   PictureInPicture2,
+  SlidersHorizontal,
   Subtitles,
   X,
   Wifi,
 } from "lucide-react";
+import type { StableVolumeStrength } from "@/lib/audio/stableVolume";
 
 interface WatchSettingsPanelProps {
   open: boolean;
@@ -37,6 +39,11 @@ interface WatchSettingsPanelProps {
   isPiP?: boolean;
   brightnessLevel?: number;
   onBrightnessChange?: (value: number) => void;
+  stableVolumeEnabled: boolean;
+  onStableVolumeChange: (value: boolean) => void;
+  stableVolumeStrength: StableVolumeStrength;
+  onStableVolumeStrengthChange: (value: StableVolumeStrength) => void;
+  onResetStableVolume?: () => void;
   /** The currently detected network quality, e.g. "1080p", "720p", "480p" */
   networkQuality?: string;
 }
@@ -66,6 +73,11 @@ export function WatchSettingsPanel({
   isPiP,
   brightnessLevel,
   onBrightnessChange,
+  stableVolumeEnabled,
+  onStableVolumeChange,
+  stableVolumeStrength,
+  onStableVolumeStrengthChange,
+  onResetStableVolume,
   networkQuality,
 }: WatchSettingsPanelProps) {
   const showCaptions = !!captionsUrl;
@@ -275,6 +287,13 @@ export function WatchSettingsPanel({
               <div className="space-y-1 border-t border-white/10 pt-4">
                 <ToggleRow label="Loop" value={isLooping} onChange={onLoopChange} helper="Repeat this video." />
                 <ToggleRow label="Ambient" value={ambientMode} onChange={onAmbientChange} helper="Background glow from the current frame." />
+                <ToggleRow
+                  label="Stable Volume"
+                  value={stableVolumeEnabled}
+                  onChange={onStableVolumeChange}
+                  helper="Balances quiet and loud parts automatically."
+                  icon={<SlidersHorizontal size={13} />}
+                />
                 {showCaptions && (
                   <ToggleRow
                     label="Captions"
@@ -299,6 +318,51 @@ export function WatchSettingsPanel({
                     onChange={(e) => onBrightnessChange(parseFloat(e.target.value))}
                     className="w-full accent-cyan-400"
                   />
+                </div>
+              )}
+
+              {stableVolumeEnabled && (
+                <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-white/85">Strength</p>
+                      <p className="mt-0.5 text-[11px] leading-snug text-white/40">
+                        Low keeps the original feel, High smooths more aggressively.
+                      </p>
+                    </div>
+                    {onResetStableVolume && (
+                      <button
+                        type="button"
+                        onClick={onResetStableVolume}
+                        className="shrink-0 rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-semibold text-white/75 hover:bg-white/15 transition"
+                      >
+                        Reset
+                      </button>
+                    )}
+                  </div>
+                  <div className="mt-3 grid grid-cols-3 gap-2">
+                    {(["low", "medium", "high"] as StableVolumeStrength[]).map((option) => (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => onStableVolumeStrengthChange(option)}
+                        className={[
+                          "rounded-2xl px-3 py-2 text-xs font-semibold capitalize transition active:scale-95",
+                          stableVolumeStrength === option
+                            ? "bg-gradient-to-r from-fuchsia-500 to-cyan-400 text-black"
+                            : "bg-white/10 text-white/75 hover:bg-white/15",
+                        ].join(" ")}
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-3 rounded-xl bg-black/20 p-3">
+                    <p className="text-[10px] uppercase tracking-[0.22em] text-white/35">Preview</p>
+                    <p className="mt-1 text-[11px] leading-relaxed text-white/55">
+                      Quiet dialogue gets lifted a bit while sudden peaks are gently compressed so playback feels steadier.
+                    </p>
+                  </div>
                 </div>
               )}
 

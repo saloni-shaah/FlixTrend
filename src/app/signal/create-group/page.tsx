@@ -21,7 +21,7 @@ const storage = getStorage(app);
 
 // DiceBear fallback — generates a unique avatar SVG from the group name
 const dicebearUrl = (seed: string) =>
-  `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(seed)}&backgroundColor=0a0b14&radius=50`;
+  `https://api.dicebear.com/8.x/bottts-neutral/svg?seed=${encodeURIComponent(seed)}&backgroundColor=0a0b14&radius=50`;
 
 export default function CreateGroupPage() {
   const [user, authLoading] = useAuthState(auth);
@@ -118,9 +118,9 @@ export default function CreateGroupPage() {
         const fileRef = storageRef(storage, `group_avatars/${tempId}/${avatarFile.name}`);
         await uploadBytes(fileRef, avatarFile);
         avatar_url = await getDownloadURL(fileRef);
+      } else {
+        avatar_url = dicebearUrl(groupName.trim());
       }
-      // If no avatar, use DiceBear — stored as null, rendered client-side
-      // (saves storage writes; DiceBear is free & deterministic from groupId)
 
       const groupRef = await addDoc(collection(db, 'groups'), {
         name:        groupName.trim(),
@@ -130,11 +130,11 @@ export default function CreateGroupPage() {
         createdBy:   user.uid,
         createdAt:   serverTimestamp(),
         isGroup:     true,
-        avatar_url,          // null → DiceBear rendered from groupId
+        avatar_url,
+        avatarSeed:  groupName.trim().toLowerCase(),
+        groupType:   'community',
+        accountType: 'community',
       });
-
-      // Update storage path to use real group ID
-      // (optional: re-upload with correct groupId path — skipped for MVP)
 
       router.push(`/signal/${groupRef.id}`);
     } catch (e) {

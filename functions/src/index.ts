@@ -10,6 +10,8 @@ initializeApp();
 const db = admin.firestore();
 const storage = getStorage();
 
+const ASIA_SOUTH1 = v1.region('asia-south1');
+
 function parseStoragePath(url: string): string | null {
     try {
         const decoded = decodeURIComponent(url);
@@ -38,7 +40,7 @@ async function deleteSubcollection(collectionRef: admin.firestore.CollectionRefe
 // COMMENTS
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const onCommentCreate = v1.firestore
+export const onCommentCreate = ASIA_SOUTH1.firestore
     .document('posts/{postId}/comments/{commentId}')
     .onCreate(async (snap, context) => {
         const { postId } = context.params;
@@ -56,7 +58,7 @@ export const onCommentCreate = v1.firestore
 // FOLLOWERS
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const onFollow = v1.firestore
+export const onFollow = ASIA_SOUTH1.firestore
     .document('users/{userId}/followers/{followerId}')
     .onCreate(async (snap, context) => {
         const { userId, followerId } = context.params;
@@ -68,7 +70,7 @@ export const onFollow = v1.firestore
         }
     });
 
-export const onUnfollow = v1.firestore
+export const onUnfollow = ASIA_SOUTH1.firestore
     .document('users/{userId}/followers/{followerId}')
     .onDelete(async (snap, context) => {
         const { userId, followerId } = context.params;
@@ -94,7 +96,7 @@ export const onUnfollow = v1.firestore
 // LIKES
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const incrementLikes = v1.firestore
+export const incrementLikes = ASIA_SOUTH1.firestore
     .document('posts/{postId}/likes/{userId}')
     .onCreate(async (snap, context) => {
         const { postId, userId } = context.params;
@@ -125,7 +127,7 @@ export const incrementLikes = v1.firestore
         }
     });
 
-export const decrementLikes = v1.firestore
+export const decrementLikes = ASIA_SOUTH1.firestore
     .document('posts/{postId}/likes/{userId}')
     .onDelete(async (snap, context) => {
         const { postId, userId } = context.params;
@@ -163,7 +165,7 @@ export const decrementLikes = v1.firestore
 // POSTS
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const onPostCreate = v1.firestore
+export const onPostCreate = ASIA_SOUTH1.firestore
     .document('posts/{postId}')
     .onCreate(async (snap, context) => {
         const post = snap.data();
@@ -187,7 +189,7 @@ export const onPostCreate = v1.firestore
         }
     });
 
-export const onPostDelete = v1.firestore
+export const onPostDelete = ASIA_SOUTH1.firestore
     .document('posts/{postId}')
     .onDelete(async (snap, context) => {
         const { postId } = context.params;
@@ -234,7 +236,7 @@ export const onPostDelete = v1.firestore
 // CHAT
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const onChatDelete = v1.firestore
+export const onChatDelete = ASIA_SOUTH1.firestore
     .document('users/{userId}/deletedChats/{chatId}')
     .onCreate(async (snap, context) => {
         const { chatId } = context.params;
@@ -255,7 +257,7 @@ export const onChatDelete = v1.firestore
 // AUTH CLEANUP
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const onUserDelete = v1.auth.user().onDelete(async (user) => {
+export const onUserDelete = ASIA_SOUTH1.auth.user().onDelete(async (user) => {
     const uid = user.uid;
     logger.info(`User ${uid} deleted. Starting full cleanup.`);
     const userRef = db.collection('users').doc(uid);
@@ -471,12 +473,6 @@ export const deleteUserAccount = onCall(async (request) => {
         throw new HttpsError('internal', 'Failed to delete account. Please try again later.');
     }
 });
-
-// ─────────────────────────────────────────────────────────────────────────────
-// DELETE MESSAGE
-// "delete for me"      → client-side updateDoc (no function call)
-// "delete for everyone"→ this function; verifies sender === uid then hard-deletes
-// ─────────────────────────────────────────────────────────────────────────────
 
 export const deleteMessage = onCall(async (request) => {
     const uid = request.auth?.uid;

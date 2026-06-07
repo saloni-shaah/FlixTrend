@@ -16,12 +16,7 @@ export function TheaterModeContainer({ isTheaterMode, children }: Props) {
           .watch-theater-expand { max-width: 100% !important; flex: 1 1 100% !important; }
         `}</style>
       )}
-      {/*
-        No wrapper div with overflow-hidden here — that was clipping the ambient canvas
-        and preventing true edge-to-edge on mobile. The player itself manages its own
-        overflow. We just pass children through transparently.
-      */}
-      {children}
+      <div className="w-full bg-black">{children}</div>
     </>
   );
 }

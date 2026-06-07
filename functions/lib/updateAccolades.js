@@ -28,69 +28,98 @@ const v1 = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
 const firebase_functions_1 = require("firebase-functions");
 const db = admin.firestore();
-const leaderboardAccolades = [
-    'top_1_follower', 'top_2_follower', 'top_3_follower',
-    'top_4_follower', 'top_5_follower'
+const followerTiers = [
+    { name: "legend", count: 10000000 },
+    { name: "icon", count: 1000000 },
+    { name: "force", count: 100000 },
+    { name: "storm", count: 10000 },
+    { name: "hype", count: 1000 },
+    { name: "wave", count: 100 },
+    { name: "buzz", count: 50 },
+    { name: "spark", count: 10 },
 ];
+const likeTiers = [
+    { name: "phenomenon", count: 1000000 },
+    { name: "sensation", count: 100000 },
+    { name: "viral", count: 10000 },
+    { name: "adored", count: 1000 },
+    { name: "liked", count: 100 },
+];
+const leaderboardAccolades = [
+    "top_1_follower",
+    "top_2_follower",
+    "top_3_follower",
+    "top_4_follower",
+    "top_5_follower",
+];
+function getThresholdAccolades(userData) {
+    var _a, _b;
+    const followerCount = Number((_a = userData.Follower_Count) !== null && _a !== void 0 ? _a : 0);
+    const totalLikes = Number((_b = userData.Total_likes) !== null && _b !== void 0 ? _b : 0);
+    return [
+        ...followerTiers.filter(tier => followerCount >= tier.count).map(tier => tier.name),
+        ...likeTiers.filter(tier => totalLikes >= tier.count).map(tier => tier.name),
+    ];
+}
 exports.updateAccolades = v1.pubsub
-    .schedule('36 23 * * *')
-    .timeZone('Asia/Kolkata')
+    .schedule("36 23 * * *")
+    .timeZone("Asia/Kolkata")
     .onRun(async () => {
-    var _a, _b, _c, _d;
-    firebase_functions_1.logger.info('Starting daily leaderboard update.');
+    firebase_functions_1.logger.info("Starting scheduled accolade reconciliation.");
     try {
-        const batch = db.batch();
-        const leaderboardRef = db.collection('system').doc('leaderboard');
-        // 1. Fetch previous top 5 and new top 5 in parallel
-        const [leaderboardDoc, newTopUsersSnap] = await Promise.all([
-            leaderboardRef.get(),
-            db.collection('users').orderBy('Follower_Count', 'desc').limit(5).get()
+        const [topUsersSnap, usersSnap] = await Promise.all([
+            db.collection("users").orderBy("Follower_Count", "desc").limit(5).get(),
+            db.collection("users").get(),
         ]);
-        const oldTopUserIds = leaderboardDoc.exists
-            ? (_b = (_a = leaderboardDoc.data()) === null || _a === void 0 ? void 0 : _a.ids) !== null && _b !== void 0 ? _b : []
-            : [];
-        const newTopUserIds = newTopUsersSnap.docs.map(doc => doc.id);
-        // 2. Demote users who fell out of top 5
-        const usersToDemote = oldTopUserIds.filter(id => !newTopUserIds.includes(id));
-        for (const userId of usersToDemote) {
-            firebase_functions_1.logger.info(`Demoting ${userId} — no longer in top 5.`);
-            batch.update(db.collection('users').doc(userId), {
-                accolades: admin.firestore.FieldValue.arrayRemove(...leaderboardAccolades)
-            });
-        }
-        // 3. Assign correct badge to new top 5, skip if already correct (saves writes)
-        for (let i = 0; i < newTopUsersSnap.docs.length; i++) {
-            const userDoc = newTopUsersSnap.docs[i];
-            const userId = userDoc.id;
-            const newBadge = leaderboardAccolades[i];
-            const currentAccolades = (_d = (_c = userDoc.data()) === null || _c === void 0 ? void 0 : _c.accolades) !== null && _d !== void 0 ? _d : [];
-            const alreadyHasCorrectBadge = currentAccolades.includes(newBadge);
-            const hasStaleLeaderboardBadge = leaderboardAccolades
-                .filter(a => a !== newBadge)
-                .some(a => currentAccolades.includes(a));
-            if (alreadyHasCorrectBadge && !hasStaleLeaderboardBadge) {
-                firebase_functions_1.logger.info(`User ${userId} already has correct badge ${newBadge}. Skipping.`);
-                continue;
+        const leaderboardMap = new Map();
+        topUsersSnap.docs.forEach((doc, index) => {
+            leaderboardMap.set(doc.id, leaderboardAccolades[index]);
+        });
+        const batchSize = 450;
+        let batch = db.batch();
+        let writes = 0;
+        let updatedUsers = 0;
+        const flushBatch = async () => {
+            if (writes === 0)
+                return;
+            await batch.commit();
+            batch = db.batch();
+            writes = 0;
+        };
+        for (const userDoc of usersSnap.docs) {
+            const userData = userDoc.data();
+            const currentAccolades = Array.isArray(userData.accolades) ? userData.accolades : [];
+            const thresholdAccolades = getThresholdAccolades(userData);
+            const nonLeaderboardAccolades = currentAccolades.filter(badge => !leaderboardAccolades.includes(badge));
+            const desiredAccolades = new Set([
+                ...nonLeaderboardAccolades,
+                ...thresholdAccolades,
+            ]);
+            const leaderboardBadge = leaderboardMap.get(userDoc.id);
+            if (leaderboardBadge) {
+                desiredAccolades.add(leaderboardBadge);
             }
-            firebase_functions_1.logger.info(`Assigning ${newBadge} to ${userId}.`);
-            const userRef = db.collection('users').doc(userId);
-            // Remove any stale leaderboard badge and add the correct one in one atomic batch
-            const staleOnes = leaderboardAccolades.filter(a => a !== newBadge);
-            batch.update(userRef, {
-                accolades: admin.firestore.FieldValue.arrayRemove(...staleOnes)
+            const nextAccolades = [...desiredAccolades].sort();
+            const currentSorted = [...currentAccolades].sort();
+            const needsUpdate = nextAccolades.length !== currentSorted.length
+                || nextAccolades.some((badge, index) => badge !== currentSorted[index]);
+            if (!needsUpdate)
+                continue;
+            batch.update(userDoc.ref, {
+                accolades: nextAccolades,
             });
-            batch.update(userRef, {
-                accolades: admin.firestore.FieldValue.arrayUnion(newBadge)
-            });
+            writes += 1;
+            updatedUsers += 1;
+            if (writes >= batchSize) {
+                await flushBatch();
+            }
         }
-        // 4. Persist new top 5 list
-        batch.set(leaderboardRef, { ids: newTopUserIds });
-        await batch.commit();
-        firebase_functions_1.logger.info('Daily leaderboard update complete.');
+        await flushBatch();
+        firebase_functions_1.logger.info(`Scheduled accolade reconciliation complete. Updated ${updatedUsers} users.`);
         return null;
     }
     catch (error) {
-        firebase_functions_1.logger.error('Error in leaderboard update:', error);
+        firebase_functions_1.logger.error("Error in scheduled accolade reconciliation:", error);
         return null;
     }
 });

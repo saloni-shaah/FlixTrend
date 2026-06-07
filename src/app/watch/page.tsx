@@ -482,10 +482,10 @@ export default function WatchPage() {
       <div className="w-full pt-0 md:pt-[56px]">
         <div
           className={[
-            "flex flex-col lg:flex-row lg:gap-6 px-0 md:px-0",
+            "flex flex-col lg:flex-row gap-0 lg:gap-6 w-full",
             "watch-main",            // custom class — we override any mt/pt it adds below
             "!mt-0 !pt-0",           // ← kill any margin/padding injected by watch-main CSS
-            "lg:max-w-[1600px] lg:mx-auto lg:px-6 xl:px-8",
+            "px-3 sm:px-4 lg:px-6 xl:px-8",
           ].join(" ")}
         >
 

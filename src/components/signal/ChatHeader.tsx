@@ -18,7 +18,15 @@ const fmtLastSeen = (ts: any) => {
   return ts.toDate().toLocaleDateString();
 };
 
-export function ChatHeader({ selectedChat }: { selectedChat: any }) {
+export function ChatHeader({
+  selectedChat,
+  onOpenDetails,
+  onBack,
+}: {
+  selectedChat: any;
+  onOpenDetails?: () => void;
+  onBack?: () => void;
+}) {
   const router = useRouter();
   const [imgUrl,       setImgUrl]       = useState<string | null>(null);
   const [showAppPrompt, setShowAppPrompt] = useState(false);
@@ -36,11 +44,21 @@ export function ChatHeader({ selectedChat }: { selectedChat: any }) {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-10 flex items-center gap-3 px-4 h-16 bg-black/40 backdrop-blur-2xl border-b borfer-white/[0.06]">
+      <header
+        className={`fixed top-0 left-0 right-0 z-10 flex items-center gap-3 px-4 h-16 bg-black/40 backdrop-blur-2xl border-b borfer-white/[0.06] ${onOpenDetails ? 'cursor-pointer' : ''}`}
+        onClick={() => {
+          onOpenDetails?.();
+        }}
+      >
 
         {/* Back */}
         <button
-          onClick={() => router.push('/signal')}
+          onClick={(e) => {
+            e.stopPropagation();
+            onBack?.();
+            router.push('/signal');
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
           className="p-2 rounded-full hover:bg-white/[0.08] transition-colors flex-shrink-0"
         >
           <ArrowLeft size={20} />
@@ -48,7 +66,10 @@ export function ChatHeader({ selectedChat }: { selectedChat: any }) {
 
         {/* Avatar */}
         <div
-          onClick={() => selectedChat.avatar_url && setImgUrl(selectedChat.avatar_url)}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (selectedChat.avatar_url) setImgUrl(selectedChat.avatar_url);
+          }}
           className={`relative w-10 h-10 rounded-full overflow-hidden flex-shrink-0 bg-gradient-to-tr from-accent-pink to-accent-cyan flex items-center justify-center font-bold text-white ${selectedChat.avatar_url ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}`}
         >
           {selectedChat.avatar_url
@@ -86,13 +107,15 @@ export function ChatHeader({ selectedChat }: { selectedChat: any }) {
         {!selectedChat.isGroup && (
           <div className="flex items-center gap-1">
             <button
-              onClick={() => setShowAppPrompt(true)}
+              onClick={(e) => { e.stopPropagation(); setShowAppPrompt(true); }}
+              onPointerDown={(e) => e.stopPropagation()}
               className="p-2 rounded-full hover:bg-white/[0.08] transition-colors text-gray-500"
             >
               <Phone size={18} />
             </button>
             <button
-              onClick={() => setShowAppPrompt(true)}
+              onClick={(e) => { e.stopPropagation(); setShowAppPrompt(true); }}
+              onPointerDown={(e) => e.stopPropagation()}
               className="p-2 rounded-full hover:bg-white/[0.08] transition-colors text-gray-500"
             >
               <Video size={18} />

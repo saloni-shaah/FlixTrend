@@ -1,7 +1,7 @@
 'use client';
 import React, { useEffect, useState, Suspense, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getFirestore, collection, query, onSnapshot, orderBy, doc, serverTimestamp, updateDoc, getDoc, limit, startAfter, getDocs, setDoc, arrayUnion, deleteDoc, arrayRemove, runTransaction } from "firebase/firestore";
+import { getFirestore, collection, query, onSnapshot, orderBy, doc, serverTimestamp, updateDoc, getDoc, limit, startAfter, getDocs, setDoc, arrayUnion, deleteDoc, arrayRemove, runTransaction, where } from "firebase/firestore";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { auth, app } from "@/utils/firebaseClient";
 import { Loader, X, Trash2, Smile, CheckSquare, CornerDownRight, Star, Copy, Share, Edit3 } from "lucide-react";
@@ -18,6 +18,7 @@ import { MessageList } from "@/components/signal/MessageList";
 import { ChatInput } from "@/components/signal/ChatInput";
 import { FullScreenImageViewer } from "@/components/FullScreenImageViewer";
 import { SignalShareModal } from "@/components/signal/SignalShareModal";
+import UserDetails from "@/components/signal/Userdetails";
 
 const db = getFirestore(app);
 const storage = getStorage(app);
@@ -28,9 +29,17 @@ interface ChatUser {
   username?: string;
   avatar_url?: string;
   isGroup?: boolean;
+  isPremium?: boolean;
+  isFounder?: boolean;
+  premiumUntil?: any;
   status?: 'online' | 'offline';
   lastSeen?: any;
   members?: string[];
+  admins?: string[];
+  description?: string;
+  avatarSeed?: string;
+  groupType?: string;
+  accountType?: string;
   memberInfo?: Record<string, {
     name?: string;
     username?: string;
@@ -44,6 +53,7 @@ interface PendingDelete {
 }
 
 function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string }) {
+    const router = useRouter();
     const { drafts, setDraft } = useAppState();
     const [selectedChat, setSelectedChat] = useState<ChatUser | null>(null);
     const [messages, setMessages] = useState<any[]>([]);
@@ -55,6 +65,8 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
     const [showShareModal, setShowShareModal] = useState(false);
     const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
     const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
+    const [showUserDetails, setShowUserDetails] = useState(false);
+    const [addableUsers, setAddableUsers] = useState<any[]>([]);
     const [longPressMenu, setLongPressMenu] = useState<{ x: number, y: number, msgId: string } | null>(null);
     const [editingMessage, setEditingMessage] = useState<any | null>(null);
     const [editText, setEditText] = useState('');
@@ -76,7 +88,29 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
 
     useEffect(() => {
         hasScrolledInitially.current = false;
+        setShowUserDetails(false);
     }, [chatId]);
+
+    useEffect(() => {
+        if (!firebaseUser?.uid) return;
+        let cancelled = false;
+        (async () => {
+            const [followingSnap, followersSnap] = await Promise.all([
+                getDocs(collection(db, 'users', firebaseUser.uid, 'following')),
+                getDocs(collection(db, 'users', firebaseUser.uid, 'followers')),
+            ]);
+            const allIds = Array.from(new Set([
+                ...followingSnap.docs.map(d => d.id),
+                ...followersSnap.docs.map(d => d.id),
+            ]));
+            const profiles = (await Promise.all(allIds.map(async uid => {
+                const snap = await getDoc(doc(db, 'users', uid));
+                return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+            }))).filter(Boolean);
+            if (!cancelled) setAddableUsers(profiles as any[]);
+        })().catch(console.error);
+        return () => { cancelled = true; };
+    }, [firebaseUser?.uid]);
 
     const updateReadReceipt = useCallback(() => {
         if (!firebaseUser?.uid || !chatId) return;
@@ -86,6 +120,72 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
             { merge: true }
         ).catch(console.error);
     }, [chatId, firebaseUser?.uid]);
+
+    const refreshSelectedChatMemberInfo = useCallback(async (chatSnapshot?: ChatUser | null) => {
+        const targetChat = chatSnapshot || selectedChat;
+        if (!targetChat?.isGroup || !targetChat.id) return targetChat;
+        const memberIds = targetChat.members || [];
+        const memberSnaps = await Promise.all(
+            memberIds.map(async (memberId) => {
+                const userSnap = await getDoc(doc(db, "users", memberId));
+                return userSnap.exists() ? [memberId, userSnap.data()] : null;
+            })
+        );
+        const memberInfo = Object.fromEntries(
+            memberSnaps.filter(Boolean).map(([memberId, data]: any) => [
+                memberId,
+                {
+                    name: data?.name,
+                    username: data?.username,
+                    avatar_url: data?.avatar_url,
+                },
+            ])
+        );
+        return { ...targetChat, memberInfo };
+    }, [selectedChat]);
+
+    const handleAddMember = useCallback((memberId: string) => {
+        (async () => {
+            if (!firebaseUser?.uid || !selectedChat?.id || !selectedChat.isGroup) return;
+            if (!selectedChat.admins?.includes(firebaseUser.uid)) return;
+            if (!memberId || selectedChat.members?.includes(memberId)) return;
+            await updateDoc(doc(db, "groups", selectedChat.id), {
+                members: arrayUnion(memberId),
+            });
+            const updated = await getDoc(doc(db, "groups", selectedChat.id));
+            if (updated.exists()) {
+                const nextChat = { id: updated.id, ...updated.data(), isGroup: true } as ChatUser;
+                setSelectedChat(await refreshSelectedChatMemberInfo(nextChat));
+            }
+        })().catch((error) => {
+            console.error("Failed to add member:", error);
+            alert("Could not add that member.");
+        });
+    }, [firebaseUser?.uid, refreshSelectedChatMemberInfo, selectedChat]);
+
+    const handleRemoveMember = useCallback(async (memberId: string) => {
+        if (!firebaseUser?.uid || !selectedChat?.id || !selectedChat.isGroup) return;
+        if (!selectedChat.admins?.includes(firebaseUser.uid)) return;
+        if (memberId === firebaseUser.uid) return;
+        await updateDoc(doc(db, "groups", selectedChat.id), {
+            members: arrayRemove(memberId),
+        });
+        const updated = await getDoc(doc(db, "groups", selectedChat.id));
+        if (updated.exists()) {
+            const nextChat = { id: updated.id, ...updated.data(), isGroup: true } as ChatUser;
+            setSelectedChat(await refreshSelectedChatMemberInfo(nextChat));
+        }
+    }, [firebaseUser?.uid, refreshSelectedChatMemberInfo, selectedChat]);
+
+    const handleDeleteGroup = useCallback(async () => {
+        if (!firebaseUser?.uid || !selectedChat?.id || !selectedChat.isGroup) return;
+        if (!selectedChat.admins?.includes(firebaseUser.uid)) return;
+        const ok = window.confirm("Delete this group? This cannot be undone.");
+        if (!ok) return;
+        await deleteDoc(doc(db, "groups", selectedChat.id));
+        setShowUserDetails(false);
+        router.push('/signal');
+    }, [firebaseUser?.uid, router, selectedChat]);
 
     useEffect(() => {
         if (!messages.length || !bottomRef.current) return;
@@ -533,6 +633,33 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
     
     const messageForMenu = longPressMenu ? messages.find(m => m.id === longPressMenu.msgId) : null;
     const selectedMessages = messages.filter(m => selectedItems.has(m.id));
+    const userDetailsUser = selectedChat && !selectedChat.isGroup ? {
+        id: selectedChat.id,
+        name: selectedChat.name || selectedChat.username || 'User',
+        username: selectedChat.username || selectedChat.id,
+        avatar_url: selectedChat.avatar_url || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiMxMTEyMjIiLz48Y2lyY2xlIGN4PSIxMDAiIGN5PSI4NiIgcj0iNDAiIGZpbGw9IiMzMzQ1NTUiLz48cGF0aCBkPSJNMzYgMTg0YzE0LTM0IDQxLTU0IDY0LTU0czUwIDIwIDY0IDU0IiBmaWxsPSIjMzM0NTU1Ii8+PC9zdmc+',
+        isPremium: !!selectedChat.isPremium,
+        isFounder: !!selectedChat.isFounder,
+        premiumUntil: selectedChat.premiumUntil,
+        Follower_Count: Number((selectedChat as any).Follower_Count ?? 0),
+        Following_Count: Number((selectedChat as any).Following_Count ?? 0),
+        postCount: Number((selectedChat as any).Posts_Count ?? (selectedChat as any).postCount ?? 0),
+        totalLikes: Number((selectedChat as any).Total_likes ?? (selectedChat as any).totalLikes ?? 0),
+    } : selectedChat?.isGroup ? {
+        id: selectedChat.id,
+        name: selectedChat.name || 'Community',
+        username: selectedChat.name || selectedChat.id,
+        avatar_url: selectedChat.avatar_url || '',
+        bio: selectedChat.description || '',
+        location: undefined,
+        dob: undefined,
+        isPremium: false,
+        isFounder: false,
+        Follower_Count: selectedChat.members?.length ?? 0,
+        Following_Count: selectedChat.admins?.length ?? 0,
+        postCount: 0,
+        totalLikes: 0,
+    } : null;
 
     return (
         <div className="flex-1 flex flex-col bg-black/40 h-full pt-4 pb-6">
@@ -553,8 +680,12 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                         </div>
                     </motion.div>
                 ) : (
-                    <ChatHeader selectedChat={selectedChat} />
-                )}
+                <ChatHeader
+                    selectedChat={selectedChat}
+                    onOpenDetails={() => setShowUserDetails(true)}
+                    onBack={() => setShowUserDetails(false)}
+                />
+            )}
             </AnimatePresence>
 
             <MessageList
@@ -597,6 +728,29 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                 <SignalShareModal 
                     messages={selectedMessages} 
                     onClose={() => { setShowShareModal(false); cancelSelection(); }} 
+                />
+            )}
+
+            {userDetailsUser && (
+                <UserDetails
+                    user={userDetailsUser as any}
+                    chat={selectedChat?.isGroup ? selectedChat : null}
+                    isOpen={showUserDetails}
+                    onClose={() => setShowUserDetails(false)}
+                    currentUserId={firebaseUser?.uid}
+                    onViewProfile={() => {
+                        setShowUserDetails(false);
+                        if (selectedChat?.isGroup) {
+                            router.push(`/signal/${selectedChat.id}`);
+                        } else if (selectedChat?.username) {
+                            router.push(`/squad/${selectedChat.username}`);
+                        }
+                    }}
+                    onImageClick={(url: string) => setFullScreenImage(url)}
+                    onAddMember={handleAddMember}
+                    onRemoveMember={handleRemoveMember}
+                    onDeleteGroup={handleDeleteGroup}
+                    addableUsers={addableUsers}
                 />
             )}
 

@@ -11,6 +11,10 @@ const db = getFirestore(app);
 interface NotificationData {
     type: string;
     targetId: string;
+    targetUsername?: string;
+    link?: string;
+    replyToId?: string;
+    messageId?: string;
 }
 
 interface Notification {
@@ -20,23 +24,31 @@ interface Notification {
   createdAt: any;
   isRead: boolean;
   data: NotificationData;
+  link?: string;
+  actions?: {
+    open?: string;
+    read?: boolean;
+    reply?: boolean;
+    markAsRead?: boolean;
+  };
 }
 
 const getNotificationInfo = (notif: Notification) => {
     const { data } = notif;
+    const link = notif.link || data.link || '';
     switch (data.type) {
         case 'profile':
-            return { icon: UserPlus, link: `/squad/${data.targetId}` };
+            return { icon: UserPlus, link: link || `/squad/${data.targetUsername || data.targetId}` };
         case 'message':
-            return { icon: MessageSquare, link: `/signal/${data.targetId}` };
+            return { icon: MessageSquare, link: link || `/signal/${data.targetId}` };
         case 'drop':
-            return { icon: Award, link: `/drop/prompt/${data.targetId}` };
+            return { icon: Award, link: link || `/drop/prompt/${data.targetId}` };
         case 'comment':
-            return { icon: MessageCircle, link: `/post/${data.targetId}` };
+            return { icon: MessageCircle, link: link || `/post/${data.targetId}` };
         case 'accolade':
             return { icon: Star, link: '' };
         default:
-            return { icon: Bell, link: '' };
+            return { icon: Bell, link };
     }
 };
 
@@ -70,6 +82,43 @@ const NotificationItem = ({ notif, userId, closeModal }: { notif: Notification; 
                 <div>
                     <p className="font-bold text-white">{notif.title}</p>
                     <p className="text-sm text-gray-300">{notif.body}</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                        {link && (
+                            <button
+                                type="button"
+                                onClick={handleItemClick}
+                                className="text-xs px-2 py-1 rounded-full bg-white/10 hover:bg-white/20 text-white"
+                            >
+                                Open
+                            </button>
+                        )}
+                        {notif.actions?.reply && (
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (link) router.push(link);
+                                    closeModal();
+                                }}
+                                className="text-xs px-2 py-1 rounded-full bg-accent-cyan/20 hover:bg-accent-cyan/30 text-white"
+                            >
+                                Reply
+                            </button>
+                        )}
+                        {!notif.isRead && (
+                            <button
+                                type="button"
+                                onClick={async (e) => {
+                                    e.stopPropagation();
+                                    const notifRef = doc(db, 'users', userId, 'notifications', notif.id);
+                                    await updateDoc(notifRef, { isRead: true });
+                                }}
+                                className="text-xs px-2 py-1 rounded-full bg-white/10 hover:bg-white/20 text-white"
+                            >
+                                Mark as read
+                            </button>
+                        )}
+                    </div>
                     <p className="text-xs text-muted-foreground mt-1">
                         {notif.createdAt?.seconds ? new Date(notif.createdAt.seconds * 1000).toLocaleString() : 'Just now'}
                     </p>

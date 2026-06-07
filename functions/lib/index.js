@@ -37,6 +37,7 @@ const storage_1 = require("firebase-admin/storage");
 (0, app_1.initializeApp)();
 const db = admin.firestore();
 const storage = (0, storage_1.getStorage)();
+const ASIA_SOUTH1 = v1.region('asia-south1');
 function parseStoragePath(url) {
     try {
         const decoded = decodeURIComponent(url);
@@ -65,7 +66,7 @@ async function deleteSubcollection(collectionRef) {
 // ─────────────────────────────────────────────────────────────────────────────
 // COMMENTS
 // ─────────────────────────────────────────────────────────────────────────────
-exports.onCommentCreate = v1.firestore
+exports.onCommentCreate = ASIA_SOUTH1.firestore
     .document('posts/{postId}/comments/{commentId}')
     .onCreate(async (snap, context) => {
     const { postId } = context.params;
@@ -82,7 +83,7 @@ exports.onCommentCreate = v1.firestore
 // ─────────────────────────────────────────────────────────────────────────────
 // FOLLOWERS
 // ─────────────────────────────────────────────────────────────────────────────
-exports.onFollow = v1.firestore
+exports.onFollow = ASIA_SOUTH1.firestore
     .document('users/{userId}/followers/{followerId}')
     .onCreate(async (snap, context) => {
     const { userId, followerId } = context.params;
@@ -94,7 +95,7 @@ exports.onFollow = v1.firestore
         firebase_functions_1.logger.error(`Error updating follow counts:`, error);
     }
 });
-exports.onUnfollow = v1.firestore
+exports.onUnfollow = ASIA_SOUTH1.firestore
     .document('users/{userId}/followers/{followerId}')
     .onDelete(async (snap, context) => {
     var _a, _b, _c, _d;
@@ -120,7 +121,7 @@ exports.onUnfollow = v1.firestore
 // ─────────────────────────────────────────────────────────────────────────────
 // LIKES
 // ─────────────────────────────────────────────────────────────────────────────
-exports.incrementLikes = v1.firestore
+exports.incrementLikes = ASIA_SOUTH1.firestore
     .document('posts/{postId}/likes/{userId}')
     .onCreate(async (snap, context) => {
     var _a;
@@ -149,7 +150,7 @@ exports.incrementLikes = v1.firestore
         firebase_functions_1.logger.error(`Error processing like for post ${postId}:`, error);
     }
 });
-exports.decrementLikes = v1.firestore
+exports.decrementLikes = ASIA_SOUTH1.firestore
     .document('posts/{postId}/likes/{userId}')
     .onDelete(async (snap, context) => {
     var _a, _b, _c;
@@ -185,7 +186,7 @@ exports.decrementLikes = v1.firestore
 // ─────────────────────────────────────────────────────────────────────────────
 // POSTS
 // ─────────────────────────────────────────────────────────────────────────────
-exports.onPostCreate = v1.firestore
+exports.onPostCreate = ASIA_SOUTH1.firestore
     .document('posts/{postId}')
     .onCreate(async (snap, context) => {
     var _a, _b;
@@ -210,7 +211,7 @@ exports.onPostCreate = v1.firestore
         firebase_functions_1.logger.error(`Error in onPostCreate for user ${userId}:`, error);
     }
 });
-exports.onPostDelete = v1.firestore
+exports.onPostDelete = ASIA_SOUTH1.firestore
     .document('posts/{postId}')
     .onDelete(async (snap, context) => {
     var _a, _b;
@@ -257,7 +258,7 @@ exports.onPostDelete = v1.firestore
 // ─────────────────────────────────────────────────────────────────────────────
 // CHAT
 // ─────────────────────────────────────────────────────────────────────────────
-exports.onChatDelete = v1.firestore
+exports.onChatDelete = ASIA_SOUTH1.firestore
     .document('users/{userId}/deletedChats/{chatId}')
     .onCreate(async (snap, context) => {
     var _a, _b;
@@ -274,7 +275,7 @@ exports.onChatDelete = v1.firestore
 // ─────────────────────────────────────────────────────────────────────────────
 // AUTH CLEANUP
 // ─────────────────────────────────────────────────────────────────────────────
-exports.onUserDelete = v1.auth.user().onDelete(async (user) => {
+exports.onUserDelete = ASIA_SOUTH1.auth.user().onDelete(async (user) => {
     const uid = user.uid;
     firebase_functions_1.logger.info(`User ${uid} deleted. Starting full cleanup.`);
     const userRef = db.collection('users').doc(uid);
@@ -481,11 +482,6 @@ exports.deleteUserAccount = (0, https_1.onCall)(async (request) => {
         throw new https_1.HttpsError('internal', 'Failed to delete account. Please try again later.');
     }
 });
-// ─────────────────────────────────────────────────────────────────────────────
-// DELETE MESSAGE
-// "delete for me"      → client-side updateDoc (no function call)
-// "delete for everyone"→ this function; verifies sender === uid then hard-deletes
-// ─────────────────────────────────────────────────────────────────────────────
 exports.deleteMessage = (0, https_1.onCall)(async (request) => {
     var _a, _b;
     const uid = (_a = request.auth) === null || _a === void 0 ? void 0 : _a.uid;
@@ -582,4 +578,5 @@ __exportStar(require("./updateAccolades"), exports);
 __exportStar(require("./onUserUpdate"), exports);
 __exportStar(require("./reconcileViews"), exports);
 __exportStar(require("./disappearingMessages"), exports);
+__exportStar(require("./SignalCalling"), exports);
 //# sourceMappingURL=index.js.map

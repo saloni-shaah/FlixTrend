@@ -6,10 +6,12 @@ import * as v1 from "firebase-functions/v1";
 const db = admin.firestore();
 const messaging = admin.messaging();
 
+const ASIA_SOUTH1 = v1.region('asia-south1');
+
 interface NotificationData {
     type: string;
     targetId: string;
-    [key: string]: string;
+    [key: string]: string | boolean | null | undefined;
 }
 
 interface NotificationSettings {
@@ -36,14 +38,45 @@ async function isPushRateLimited(userId: string, key: string): Promise<boolean> 
         .doc(key);
     const snap = await ref.get();
 
-    if (snap.exists && snap.data()!.lastSent.toMillis() > now - RATE_LIMIT_SECONDS * 1000) {
-        rateLimitCache.set(cacheKey, now);
-        return true;
+    if (snap.exists) {
+        const lastSent = snap.data()!.lastSent?.toMillis?.() ?? 0;
+        if (lastSent > now - RATE_LIMIT_SECONDS * 1000) {
+            rateLimitCache.set(cacheKey, now);
+            return true;
+        }
+
+        await ref.delete().catch(() => undefined);
     }
 
     rateLimitCache.set(cacheKey, now);
-    await ref.set({ lastSent: admin.firestore.Timestamp.now() });
+    await ref.set({
+        lastSent: admin.firestore.Timestamp.now(),
+        expiresAt: admin.firestore.Timestamp.fromMillis(now + RATE_LIMIT_SECONDS * 1000),
+    }, { merge: true });
     return false;
+}
+
+function buildNotificationDeepLink(type: string, data: NotificationData) {
+    if (data.link) return data.link;
+
+    if (type === 'message' && data.targetId) {
+        return `/signal/${data.targetId}`;
+    }
+
+    if (type === 'profile') {
+        const username = data.targetUsername || data.username || data.targetId;
+        return username ? `/squad/${username}` : '/squad';
+    }
+
+    if (type === 'drop' && data.targetId) {
+        return `/drop/${data.targetId}`;
+    }
+
+    if (type === 'comment' && data.targetId) {
+        return `/post/${data.targetId}`;
+    }
+
+    return data.targetId ? `/${data.targetId}` : '/';
 }
 
 export async function sendNotification(
@@ -64,6 +97,7 @@ export async function sendNotification(
             return;
         }
 
+        const isOnline = String(userData.status ?? '').toLowerCase() === 'online';
         const settings: NotificationSettings = userData.notificationSettings ?? {};
         const typeMap: Record<string, keyof NotificationSettings> = {
             message: 'messages',
@@ -83,15 +117,28 @@ export async function sendNotification(
         const expiresAt = Timestamp.fromMillis(Date.now() + 30 * 24 * 60 * 60 * 1000);
         const notifCollection = db.collection('users').doc(userId).collection('notifications');
         const notifRef = options.dedupId ? notifCollection.doc(options.dedupId) : notifCollection.doc();
+        const deepLink = buildNotificationDeepLink(data.type, data);
 
         await notifRef.set({
             title,
             body,
             data,
+            link: deepLink,
+            actions: {
+                open: deepLink,
+                read: true,
+                reply: data.type === 'message',
+                markAsRead: true,
+            },
             isRead: false,
             createdAt: FieldValue.serverTimestamp(),
             expiresAt,
         }, { merge: true });
+
+        if (isOnline) {
+            logger.info(`User ${userId} is online; saved notification only.`);
+            return;
+        }
 
         const fcmTokens: string[] = userData.fcmTokens ?? (userData.fcmToken ? [userData.fcmToken] : []);
         if (fcmTokens.length === 0) {
@@ -151,7 +198,7 @@ export async function sendNotification(
     }
 }
 
-export const onNewFollowerNotification = v1.firestore
+export const onNewFollowerNotification = ASIA_SOUTH1.firestore
     .document('users/{userId}/followers/{followerId}')
     .onCreate(async (snap, context) => {
         const { userId, followerId } = context.params;
@@ -162,7 +209,12 @@ export const onNewFollowerNotification = v1.firestore
             userId,
             'New Follower!',
             `${followerName} is now following your squad.`,
-            { type: 'profile', targetId: followerId },
+            {
+                type: 'profile',
+                targetId: followerId,
+                targetUsername: followerSnap.data()?.username || followerSnap.data()?.name || followerId,
+                link: followerSnap.data()?.username ? `/squad/${followerSnap.data()!.username}` : `/squad/${followerId}`,
+            },
             {
                 dedupId: `follow_${followerId}`,
                 rateLimitKey: `follow_${followerId}`,
@@ -170,7 +222,7 @@ export const onNewFollowerNotification = v1.firestore
         );
     });
 
-export const onNewMessageNotification = v1.firestore
+export const onNewMessageNotification = ASIA_SOUTH1.firestore
     .document('chats/{chatId}/messages/{messageId}')
     .onCreate(async (snap, context) => {
         const message = snap.data();
@@ -201,7 +253,13 @@ export const onNewMessageNotification = v1.firestore
                     recipientId,
                     senderName,
                     body,
-                    { type: 'message', targetId: chatId },
+                    {
+                        type: 'message',
+                        targetId: chatId,
+                        replyToId: messageId,
+                        messageId,
+                        link: `/signal/${chatId}`,
+                    },
                     {
                         dedupId: `message_${messageId}`,
                         rateLimitKey: `chat_${chatId}`,
@@ -211,7 +269,7 @@ export const onNewMessageNotification = v1.firestore
         );
     });
 
-export const onNewDropPromptNotification = v1.firestore
+export const onNewDropPromptNotification = ASIA_SOUTH1.firestore
     .document('dropPrompts/{promptId}')
     .onCreate(async (snap, context) => {
         const prompt = snap.data();
@@ -243,7 +301,7 @@ export const onNewDropPromptNotification = v1.firestore
         logger.info(`Drop prompt notification sent via topic for prompt ${promptId}`);
     });
 
-export const onCallCreated = v1.firestore
+export const onCallCreated = ASIA_SOUTH1.firestore
     .document('calls/{callId}')
     .onCreate(async (snap, context) => {
         const callData = snap.data();

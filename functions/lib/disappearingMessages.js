@@ -26,92 +26,127 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.cleanupDisappearingMessages = void 0;
 const v1 = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
+const firestore_1 = require("firebase-admin/firestore");
 const firebase_functions_1 = require("firebase-functions");
 const db = admin.firestore();
-// These should match the values offered in the client-side settings
 const VALID_DURATIONS = [1, 7, 21, 30, 90];
 const DEFAULT_DURATION_DAYS = 90;
-/**
- * Fetches a user's preferred message duration from their settings.
- * @param {string} uid The user's ID.
- * @returns {Promise<number>} The duration in days.
- */
 async function getUserDuration(uid) {
     var _a;
     try {
         const userDoc = await db.collection('users').doc(uid).get();
-        if (!userDoc.exists) {
+        if (!userDoc.exists)
             return DEFAULT_DURATION_DAYS;
-        }
         const settings = (_a = userDoc.data()) === null || _a === void 0 ? void 0 : _a.settings;
-        const duration = settings === null || settings === void 0 ? void 0 : settings.disappearingMessages;
-        // Ensure the value from the database is a valid, recognized duration
+        const duration = Number(settings === null || settings === void 0 ? void 0 : settings.disappearingMessages);
         return VALID_DURATIONS.includes(duration) ? duration : DEFAULT_DURATION_DAYS;
     }
     catch (error) {
         firebase_functions_1.logger.error(`Error fetching user settings for ${uid}:`, error);
-        // Fail safely by returning the longest duration
         return DEFAULT_DURATION_DAYS;
     }
 }
-exports.cleanupDisappearingMessages = v1.pubsub
-    .schedule('0 3 * * *') // Runs daily at 3:00 AM
-    .timeZone('Asia/Kolkata') // Set to your target timezone
+async function deleteOldMessages(chatRef, cutoffTimestamp) {
+    const oldMessagesQuery = chatRef
+        .collection('messages')
+        .where('createdAt', '<', cutoffTimestamp)
+        .orderBy('createdAt');
+    let deletedCount = 0;
+    let lastDoc = null;
+    while (true) {
+        let query = oldMessagesQuery.limit(500);
+        if (lastDoc)
+            query = query.startAfter(lastDoc);
+        const snap = await query.get();
+        if (snap.empty)
+            break;
+        const nextCursor = snap.docs[snap.docs.length - 1];
+        const batch = db.batch();
+        let ops = 0;
+        snap.forEach(msgDoc => {
+            if (msgDoc.data().isStarred !== true) {
+                batch.delete(msgDoc.ref);
+                ops++;
+                deletedCount++;
+            }
+        });
+        if (ops > 0) {
+            await batch.commit();
+            firebase_functions_1.logger.info(`Chat ${chatRef.id} | batch committed: ${ops} deletions`);
+        }
+        lastDoc = nextCursor;
+        if (snap.size < 500)
+            break;
+    }
+    return deletedCount;
+}
+exports.cleanupDisappearingMessages = v1
+    .runWith({ timeoutSeconds: 540, memory: '512MB' })
+    .pubsub.schedule('50 18 * * *')
+    .timeZone('Asia/Kolkata')
     .onRun(async () => {
-    var _a;
+    var _a, _b, _c, _d;
     firebase_functions_1.logger.info('Starting scheduled cleanup of disappearing messages.');
-    const chatsSnap = await db.collection('chats').get();
-    if (chatsSnap.empty) {
-        firebase_functions_1.logger.info('No chats found to process.');
-        return null;
+    const durationCache = new Map();
+    async function getCachedDuration(uid) {
+        if (durationCache.has(uid))
+            return durationCache.get(uid);
+        const d = await getUserDuration(uid);
+        durationCache.set(uid, d);
+        return d;
     }
     let totalDeletedCount = 0;
-    // Process each chat individually
-    for (const chatDoc of chatsSnap.docs) {
+    // ── DM chats ──────────────────────────────────────────────────────
+    const allChatsSnap = await db.collection('chats').get();
+    const dmDocs = allChatsSnap.docs.filter(doc => !doc.data().isGroup);
+    firebase_functions_1.logger.info(`DM chats found: ${dmDocs.length}`);
+    for (const chatDoc of dmDocs) {
         try {
-            const chatData = chatDoc.data();
-            const participants = (_a = chatData === null || chatData === void 0 ? void 0 : chatData.participants) !== null && _a !== void 0 ? _a : [];
-            if (participants.length === 0) {
-                continue; // Skip chats with no participants
+            const participants = (_b = (_a = chatDoc.data()) === null || _a === void 0 ? void 0 : _a.participants) !== null && _b !== void 0 ? _b : [];
+            if (!participants.length) {
+                firebase_functions_1.logger.warn(`DM ${chatDoc.id} | no participants, skipping.`);
+                continue;
             }
-            // Fetch all participant settings concurrently to find the most aggressive (shortest) duration
-            const durations = await Promise.all(participants.map(uid => getUserDuration(uid)));
+            const durations = await Promise.all(participants.map(getCachedDuration));
             const shortestDurationDays = Math.min(...durations);
-            // Calculate the deletion cutoff timestamp
-            const cutoffMs = Date.now() - shortestDurationDays * 24 * 60 * 60 * 1000;
-            const cutoffTimestamp = admin.firestore.Timestamp.fromMillis(cutoffMs);
-            const messagesRef = chatDoc.ref.collection('messages');
-            // Query for messages older than the cutoff that are not starred
-            const oldMessagesQuery = messagesRef
-                .where('createdAt', '<', cutoffTimestamp)
-                .where('isStarred', '==', false); // Efficiently exclude starred messages
-            // Use pagination to delete in batches, avoiding memory issues
-            let deletedInChat = 0;
-            while (true) {
-                const snap = await oldMessagesQuery.limit(500).get();
-                if (snap.empty) {
-                    break; // No more messages to delete
-                }
-                const batch = db.batch();
-                snap.forEach(msgDoc => {
-                    batch.delete(msgDoc.ref);
-                    deletedInChat++;
-                });
-                await batch.commit();
-                if (snap.size < 500) {
-                    break; // Last batch
-                }
-            }
-            if (deletedInChat > 0) {
-                firebase_functions_1.logger.info(`Chat ${chatDoc.id}: Applied ${shortestDurationDays}-day rule. Deleted ${deletedInChat} messages.`);
-                totalDeletedCount += deletedInChat;
+            const cutoffTimestamp = firestore_1.Timestamp.fromMillis(Date.now() - shortestDurationDays * 86400000);
+            firebase_functions_1.logger.info(`DM ${chatDoc.id} | shortest: ${shortestDurationDays}d | cutoff: ${cutoffTimestamp.toDate().toISOString()}`);
+            const deleted = await deleteOldMessages(chatDoc.ref, cutoffTimestamp);
+            if (deleted > 0) {
+                firebase_functions_1.logger.info(`DM ${chatDoc.id} | total deleted: ${deleted}`);
+                totalDeletedCount += deleted;
             }
         }
         catch (error) {
-            firebase_functions_1.logger.error(`Failed to process chat ${chatDoc.id}:`, error);
+            firebase_functions_1.logger.error(`Failed to process DM ${chatDoc.id}:`, error);
         }
     }
-    firebase_functions_1.logger.info(`Cleanup complete. Deleted a total of ${totalDeletedCount} messages across all chats.`);
+    // ── Group chats ───────────────────────────────────────────────────
+    const groupsSnap = await db.collection('groups').get();
+    firebase_functions_1.logger.info(`Group chats found: ${groupsSnap.size}`);
+    for (const groupDoc of groupsSnap.docs) {
+        try {
+            const members = (_d = (_c = groupDoc.data()) === null || _c === void 0 ? void 0 : _c.members) !== null && _d !== void 0 ? _d : [];
+            if (!members.length) {
+                firebase_functions_1.logger.warn(`Group ${groupDoc.id} | no members, skipping.`);
+                continue;
+            }
+            const durations = await Promise.all(members.map(getCachedDuration));
+            const shortestDurationDays = Math.min(...durations);
+            const cutoffTimestamp = firestore_1.Timestamp.fromMillis(Date.now() - shortestDurationDays * 86400000);
+            firebase_functions_1.logger.info(`Group ${groupDoc.id} | members: ${members.length} | shortest: ${shortestDurationDays}d | cutoff: ${cutoffTimestamp.toDate().toISOString()}`);
+            const chatRef = db.collection('chats').doc(groupDoc.id);
+            const deleted = await deleteOldMessages(chatRef, cutoffTimestamp);
+            if (deleted > 0) {
+                firebase_functions_1.logger.info(`Group ${groupDoc.id} | total deleted: ${deleted}`);
+                totalDeletedCount += deleted;
+            }
+        }
+        catch (error) {
+            firebase_functions_1.logger.error(`Failed to process group ${groupDoc.id}:`, error);
+        }
+    }
+    firebase_functions_1.logger.info(`Cleanup complete. Total deleted across all chats: ${totalDeletedCount}`);
     return null;
 });
 //# sourceMappingURL=disappearingMessages.js.map

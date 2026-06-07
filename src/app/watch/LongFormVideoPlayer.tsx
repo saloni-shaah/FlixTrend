@@ -14,6 +14,8 @@ import {
 import { useVideoPlayer } from "@/hooks/useVideoPlayer";
 import { useNetworkQuality } from "@/hooks/useNetworkQuality";
 import { useMiniPlayer } from "@/app/vibespace/miniplayer";
+import { useStableVolume } from "@/hooks/useStableVolume";
+import type { StableVolumeStrength } from "@/lib/audio/stableVolume";
 
 interface Props {
   videoUrl: string;
@@ -73,6 +75,8 @@ export function LongFormVideoPlayer({
   const [isLandscape, setIsLandscape] = useState(false);
   const [playerHeight, setPlayerHeight] = useState(0);
   const [brightnessLevel, setBrightnessLevel] = useState(0.88);
+  const [stableVolumeEnabled, setStableVolumeEnabled] = useState(false);
+  const [stableVolumeStrength, setStableVolumeStrength] = useState<StableVolumeStrength>("medium");
 
   const {
     videoRef, isPlaying, isMuted, volume, progress, currentTime, duration,
@@ -84,6 +88,15 @@ export function LongFormVideoPlayer({
   const { open: openMiniPlayer } = useMiniPlayer();
   const autoQuality = useNetworkQuality();
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setStableVolumeEnabled(localStorage.getItem("fx_stable_volume_enabled") === "true");
+    const strength = localStorage.getItem("fx_stable_volume_strength");
+    if (strength === "low" || strength === "medium" || strength === "high") {
+      setStableVolumeStrength(strength);
+    }
+  }, []);
 
   // ── Quality ───────────────────────────────────────────────────────────────
   const availableQualities = useMemo(() => {
@@ -147,6 +160,13 @@ export function LongFormVideoPlayer({
     if (!video) return;
     video.volume = volume;
   }, [videoRef, volume]);
+
+  useStableVolume({
+    mediaElementRef: videoRef,
+    enabled: stableVolumeEnabled,
+    strength: stableVolumeStrength,
+    baseVolume: volume,
+  });
 
   // Ambient canvas resize
   useEffect(() => {
@@ -280,6 +300,26 @@ export function LongFormVideoPlayer({
   const handleBrightnessChange = useCallback((value: number) => {
     setBrightnessLevel(value);
   }, []);
+
+  const handleStableVolumeChange = useCallback((value: boolean) => {
+    setStableVolumeEnabled(value);
+    localStorage.setItem("fx_stable_volume_enabled", String(value));
+    toast({ title: value ? "Stable Volume on" : "Stable Volume off" });
+  }, [toast]);
+
+  const handleStableVolumeStrengthChange = useCallback((value: StableVolumeStrength) => {
+    setStableVolumeStrength(value);
+    localStorage.setItem("fx_stable_volume_strength", value);
+    toast({ title: "Stable Volume strength updated", description: value[0].toUpperCase() + value.slice(1) });
+  }, [toast]);
+
+  const handleResetStableVolume = useCallback(() => {
+    setStableVolumeEnabled(false);
+    setStableVolumeStrength("medium");
+    localStorage.setItem("fx_stable_volume_enabled", "false");
+    localStorage.setItem("fx_stable_volume_strength", "medium");
+    toast({ title: "Stable Volume reset" });
+  }, [toast]);
 
   // Fullscreen
   const lockLandscapeIfUseful = useCallback(async () => {
@@ -771,6 +811,11 @@ export function LongFormVideoPlayer({
                 isPiP={isPiP}
                 brightnessLevel={brightnessLevel}
                 onBrightnessChange={handleBrightnessChange}
+                stableVolumeEnabled={stableVolumeEnabled}
+                onStableVolumeChange={handleStableVolumeChange}
+                stableVolumeStrength={stableVolumeStrength}
+                onStableVolumeStrengthChange={handleStableVolumeStrengthChange}
+                onResetStableVolume={handleResetStableVolume}
                 networkQuality={autoQuality}
               />
             </div>
