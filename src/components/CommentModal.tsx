@@ -530,8 +530,8 @@ export function CommentModal({
                 <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-8 gap-3">
                     <MessageCircle size={48} className="opacity-25" />
                     <div className="text-center">
-                        <h3 className="font-bold text-lg">No comments yet</h3>
-                        <p className="text-sm">Be the first one to share your thoughts!</p>
+                        <h3 className="font-bold text-lg">empty rn — be the one they quote 🔥</h3>
+                        <p className="text-sm">say something unhinged and make the whole squad lose it 💀🫵</p>
                     </div>
                 </div>
             ) : (
@@ -607,7 +607,7 @@ export function CommentModal({
                                 ref={textareaRef}
                                 value={newComment}
                                 onChange={(e) => { setNewComment(e.target.value); if (modErr) setModErr(''); }}
-                                placeholder="Vibe check ✨ Be kind & respectful 🙏"
+                                placeholder="say it with love ✨🫶"
                                 className="bg-transparent border-border rounded-xl w-full resize-none text-base py-2 pl-4 pr-28"
                                 rows={1}
                                 maxLength={COMMENT_MAX_LENGTH}

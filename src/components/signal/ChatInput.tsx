@@ -270,7 +270,7 @@ export function ChatInput({
               value={draft}
               onChange={handleChange}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
-              placeholder="Message…"
+              placeholder="send something iconic rn 🔥"
               rows={1}
               disabled={isProcessing}
               className="w-full bg-white/[0.07] border border-white/[0.07] rounded-2xl px-4 py-2.5 text-white text-[14px] placeholder-gray-600 focus:outline-none focus:border-accent-cyan/30 resize-none max-h-32 transition-all"

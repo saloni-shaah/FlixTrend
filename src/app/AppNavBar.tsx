@@ -110,7 +110,7 @@ export default function AppNavBar() {
     <>
       {isOffline && (
         <div className="fixed bottom-0 left-0 w-full z-50 bg-yellow-500/90 backdrop-blur-md text-black font-bold p-2 text-center text-sm">
-            No signal rn 📵 some stuff might be glitchy 😵‍💫 check your net 🌐 and try again 🔄
+            no signal rn 📵 everything is cooked 😵‍💫 check your net 🌐 and try again 🔄
         </div>
       )}
       <nav 

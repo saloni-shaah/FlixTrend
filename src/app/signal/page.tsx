@@ -156,7 +156,7 @@ const ChatItem = React.memo(({ chat, selectionMode, isSelected, isStarred, onCli
             <p className={cn('text-[13px] truncate flex-1', chat.unreadCount > 0 ? 'text-white/65 font-medium' : 'text-gray-600')}>
               {draft
                 ? <span className="text-yellow-400 font-medium">Draft: {draft}</span>
-                : preview || <span className="italic opacity-40">Say hi 👋</span>
+                : preview || <span className="italic opacity-40">make their day 🌟</span>
               }
             </p>
             {chat.unreadCount > 0 && <span className="w-2 h-2 rounded-full bg-accent-cyan flex-shrink-0 shadow-[0_0_6px_rgba(0,229,255,0.8)]" />}

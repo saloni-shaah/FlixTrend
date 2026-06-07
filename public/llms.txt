@@ -1,18 +1,165 @@
-FlixTrend
+# FlixTrend
 
-Official website:
-https://flixtrend.in
+> FlixTrend is India's clean, Gen-Z social platform for creators and communities — built for real connection without the toxicity. Drop Flashes, build your squad, vibe in Signal chats, and grow your audience on the internet's cleanest corner.
 
-Help Center:
-https://flixtrend.in/help
+Official website: https://flixtrend.in
+Sitemap: https://flixtrend.in/sitemap.xml
+Robots: https://flixtrend.in/robots.txt
 
-FAQ:
-https://flixtrend.in/faq
+---
 
-Privacy:
-https://flixtrend.in/privacy
+## What is FlixTrend?
 
-Terms:
-https://flixtrend.in/terms
+FlixTrend is a social media platform targeting Gen-Z users, primarily in India. It emphasizes positive, non-toxic content, creator monetization, and community building. Users can post short-form content (Flashes), join communities (Squads), chat in real-time (Signal), discover trending content (Vibes), watch live streams (Flow), listen to music, and access exclusive creator drops.
 
-FlixTrend is a social platform for creators and communities.
+---
+
+## Core Features
+
+- **Flashes** — short-form video and photo posts (like Stories/Reels)
+- **Vibes / Vibespace** — personalized trending content discovery feed
+- **Signal** — real-time 1:1 and group messaging (DMs + group chats)
+- **Squads** — creator communities and fan groups with public profiles
+- **Drops** — exclusive time-limited content releases from creators
+- **Flow** — live video streaming for creators and broadcasters
+- **Flix** — long-form or curated video content feed
+- **Watch** — video watching experience
+- **Music** — music content with individual song pages
+- **Studio** — creator dashboard for managing content and analytics
+- **Store** — in-app store for digital goods or creator products
+- **Premium** — paid subscription tier for exclusive features
+- **Broadcast** — live room broadcasting (separate from Flow)
+- **Embed** — embeddable post player for external sites
+
+---
+
+## Brand Values
+
+- Non-toxic, positive social environment
+- Creator-first monetization and growth tools
+- Privacy-respecting and secure by design
+- Built for Indian Gen-Z culture and global audiences
+- Clean, safe content moderation with opt-out flagging system
+
+---
+
+## Public Pages
+
+### Core
+- Homepage: https://flixtrend.in
+- About: https://flixtrend.in/about
+- Contact: https://flixtrend.in/contact
+- Search: https://flixtrend.in/search
+- Guest mode: https://flixtrend.in/guest
+
+### Legal & Policy
+- Privacy Policy: https://flixtrend.in/privacy
+- Terms of Service: https://flixtrend.in/terms
+- Singer / Artist Terms: https://flixtrend.in/terms/singer
+- FAQ: https://flixtrend.in/faq
+
+### Help Center
+- Help Home: https://flixtrend.in/help
+- Help Category: https://flixtrend.in/help/{category}
+- Help Article: https://flixtrend.in/help/{category}/{slug}
+
+### Auth & Onboarding
+- Login: https://flixtrend.in/login
+- Sign Up: https://flixtrend.in/signup
+- Account Type selection: https://flixtrend.in/signup/account-type
+- Phone Verification: https://flixtrend.in/signup/phone-verification
+- Complete Profile: https://flixtrend.in/signup/complete-profile
+- Avatar & Banner setup: https://flixtrend.in/signup/avatar-banner
+- Singer onboarding: https://flixtrend.in/signup/singer
+
+### Content & Discovery
+- Vibespace (discovery feed): https://flixtrend.in/vibespace
+- Flix (video feed): https://flixtrend.in/flix
+- Watch: https://flixtrend.in/watch
+- Search: https://flixtrend.in/search
+- Individual post: https://flixtrend.in/post/{postId}
+- Embeddable post player: https://flixtrend.in/embed/{postId}
+
+### Flow — Live Streaming
+- Flow home: https://flixtrend.in/flow
+- Live stream room: https://flixtrend.in/flow/{videoId}
+- Live room (broadcast): https://flixtrend.in/live/{roomName}
+- Broadcast room: https://flixtrend.in/broadcast/{roomName}
+
+### Music
+- Music home: https://flixtrend.in/music
+- Individual song: https://flixtrend.in/music/{songId}
+
+### Squads — Creator Communities
+- Squad explore: https://flixtrend.in/squad/explore
+- Squad home: https://flixtrend.in/squad
+- Creator profile: https://flixtrend.in/squad/{username}
+
+### Signal — Messaging
+- Signal inbox: https://flixtrend.in/signal
+- Individual chat: https://flixtrend.in/signal/{id}
+- Create group chat: https://flixtrend.in/signal/create-group
+
+### Drops
+- Drops feed: https://flixtrend.in/drop
+- Create a drop: https://flixtrend.in/drop/create
+
+### Creator Tools
+- Create post: https://flixtrend.in/create
+- Studio (creator dashboard): https://flixtrend.in/studio
+- Store: https://flixtrend.in/store
+- Premium: https://flixtrend.in/premium
+
+### Settings
+- Settings home: https://flixtrend.in/settings
+- Additional settings: https://flixtrend.in/settings/additional
+- Archived chats: https://flixtrend.in/settings/archived-chats
+
+---
+
+## Dynamic URL Patterns
+
+| Pattern | Description |
+|---|---|
+| `/squad/{username}` | Public creator profile page |
+| `/post/{postId}` | Individual post/flash page |
+| `/embed/{postId}` | Embeddable post player (for external use) |
+| `/flow/{videoId}` | Live or recorded stream page |
+| `/live/{roomName}` | Live room viewer |
+| `/broadcast/{roomName}` | Broadcaster room |
+| `/music/{songId}` | Individual song/track page |
+| `/signal/{id}` | Individual Signal chat thread |
+| `/help/{category}` | Help center category |
+| `/help/{category}/{slug}` | Individual help article |
+
+---
+
+## User Types
+
+- **Creators** — verified content creators with public profiles at `/squad/{username}`, access to Studio, Drops, Flow, and monetization
+- **Singers / Artists** — special creator subtype with dedicated onboarding (`/signup/singer`) and terms (`/terms/singer`)
+- **General Users** — follow creators, engage with content, use Signal, access Vibespace
+- **Guest** — limited browsing without an account via `/guest`
+- **Admin** — internal platform moderation at `/admin` (not public)
+
+---
+
+## Technical Notes for AI Crawlers
+
+- Built with Next.js (App Router) and Firebase/Firestore
+- Sitemap auto-generated with 24h revalidation (`revalidate = 86400`) — do not cache indefinitely
+- Posts use opt-out moderation: content is public unless `isDeleted`, `isBanned`, or `isDraft === true`
+- Posts without a `visibility` field are treated as public (Firestore opt-out pattern)
+- Creators are identified by `accountType === 'creator'` in Firestore
+- Age-aware sitemap priorities: posts < 30 days → 0.9, < 1 year → 0.7, older → 0.4
+- Creator activity priority: active within 6 months → 0.8, inactive → 0.5
+- Static priority: homepage → 1.0, /about /faq /help /contact → 0.9
+- Paginated sitemap index planned when approaching ~45k URLs (Next.js `generateSitemaps()`)
+- All squad usernames are `encodeURIComponent`'d and lowercased in sitemap
+
+---
+
+## Social & Contact
+
+- Twitter/X: @FlxTrnd
+- Contact page: https://flixtrend.in/contact
