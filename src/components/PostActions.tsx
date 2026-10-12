@@ -409,7 +409,7 @@ export function PostActions({ post, onCommentClick, isShortVibe = false, collect
         return (
             <>
                 <div className='flex flex-col items-center gap-5'>
-                    <button className={cn('flex flex-col items-center gap-1.5 font-bold text-white transition-all', 'hover:text-brand-gold')} onClick={handleCommentButtonClick}>
+                    <button aria-label="Open comments" className={cn('flex min-h-11 min-w-11 flex-col items-center justify-center gap-1.5 font-bold text-white transition-all', 'hover:text-brand-gold')} onClick={handleCommentButtonClick}>
                         <MessageCircle size={iconSize} />
                         <span className="text-sm font-semibold">{post.commentCount || 0}</span>
                     </button>
@@ -444,7 +444,7 @@ export function PostActions({ post, onCommentClick, isShortVibe = false, collect
         <>
             <div className="flex items-center justify-between mt-2 pt-2 border-t border-glass-border">
                 <div className="flex items-center justify-start gap-6">
-                    <button className={cn('flex items-center gap-1.5 font-bold transition-all text-lg', textClass, 'hover:text-brand-gold')} onClick={handleCommentButtonClick}>
+                    <button aria-label="Open comments" className={cn('flex min-h-11 min-w-11 items-center justify-center gap-1.5 font-bold transition-all text-lg', textClass, 'hover:text-brand-gold')} onClick={handleCommentButtonClick}>
                         <MessageCircle size={iconSize} />
                         <span>{post.commentCount || 0}</span>
                     </button>

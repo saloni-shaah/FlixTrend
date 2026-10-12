@@ -26,7 +26,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateComment = exports.deleteComment = exports.updatePost = exports.deleteMessage = exports.deleteUserAccount = exports.checkEmail = exports.checkPhone = exports.checkUsername = exports.cleanupStaleDocuments = exports.cleanupOldDrops = exports.selectNextPrompt = exports.cleanupExpiredFlashes = exports.onUserDelete = exports.onChatDelete = exports.onPostDelete = exports.onPostCreate = exports.decrementLikes = exports.incrementLikes = exports.onUnfollow = exports.onFollow = exports.onCommentCreate = void 0;
+exports.updateComment = exports.deleteComment = exports.updatePost = exports.deleteMessage = exports.deleteUserAccount = exports.checkEmail = exports.checkPhone = exports.checkUsername = exports.cleanupStaleDocuments = exports.cleanupOldDrops = exports.selectNextPrompt = exports.cleanupExpiredFlashes = exports.onUserDelete = exports.onChatDelete = exports.onPostDelete = exports.onPostCreate = exports.decrementLikes = exports.incrementLikes = exports.onUnfollow = exports.onFollow = exports.onDropCommentCreate = exports.onCommentCreate = void 0;
 const app_1 = require("firebase-admin/app");
 const firestore_1 = require("firebase-admin/firestore");
 const admin = __importStar(require("firebase-admin"));
@@ -66,6 +66,14 @@ async function deleteSubcollection(collectionRef) {
 // ─────────────────────────────────────────────────────────────────────────────
 // COMMENTS
 // ─────────────────────────────────────────────────────────────────────────────
+function getCommentParentCollection(value) {
+    if (value === undefined)
+        return "posts";
+    if (value !== "posts" && value !== "drops") {
+        throw new https_1.HttpsError("invalid-argument", "Invalid comment collection.");
+    }
+    return value;
+}
 exports.onCommentCreate = ASIA_SOUTH1.firestore
     .document('posts/{postId}/comments/{commentId}')
     .onCreate(async (snap, context) => {
@@ -78,6 +86,20 @@ exports.onCommentCreate = ASIA_SOUTH1.firestore
     }
     catch (error) {
         firebase_functions_1.logger.error(`Error updating post ${postId} on new comment:`, error);
+    }
+});
+exports.onDropCommentCreate = ASIA_SOUTH1.firestore
+    .document('drops/{dropId}/comments/{commentId}')
+    .onCreate(async (snap, context) => {
+    const { dropId } = context.params;
+    try {
+        await db.collection('drops').doc(dropId).update({
+            commentCount: firestore_1.FieldValue.increment(1),
+            updatedAt: firestore_1.FieldValue.serverTimestamp(),
+        });
+    }
+    catch (error) {
+        firebase_functions_1.logger.error(`Error updating drop ${dropId} on new comment:`, error);
     }
 });
 // ─────────────────────────────────────────────────────────────────────────────
@@ -524,25 +546,35 @@ exports.updatePost = (0, https_1.onCall)(async (request) => {
     return { success: true };
 });
 exports.deleteComment = (0, https_1.onCall)(async (request) => {
-    var _a, _b, _c;
+    var _a;
     const uid = (_a = request.auth) === null || _a === void 0 ? void 0 : _a.uid;
-    const { postId, commentId } = request.data;
     if (!uid)
         throw new https_1.HttpsError('unauthenticated', 'You must be logged in to delete a comment.');
-    const postRef = db.collection('posts').doc(postId);
-    const commentRef = postRef.collection('comments').doc(commentId);
-    const commentDoc = await commentRef.get();
-    if (!commentDoc.exists)
-        throw new https_1.HttpsError('not-found', 'Comment not found.');
-    if (commentDoc.data().userId !== uid) {
-        throw new https_1.HttpsError('permission-denied', 'You do not have permission to delete this comment.');
+    const { postId, commentId } = request.data;
+    const parentCollection = getCommentParentCollection(request.data.collectionName);
+    if (typeof postId !== 'string' || !postId || typeof commentId !== 'string' || !commentId) {
+        throw new https_1.HttpsError('invalid-argument', 'A post and comment ID are required.');
     }
-    await commentRef.delete();
-    const postDoc = await postRef.get();
-    const current = (_c = (_b = postDoc.data()) === null || _b === void 0 ? void 0 : _b.commentCount) !== null && _c !== void 0 ? _c : 0;
-    await postRef.update({
-        commentCount: Math.max(0, current - 1),
-        updatedAt: firestore_1.FieldValue.serverTimestamp(),
+    const parentRef = db.collection(parentCollection).doc(postId);
+    const commentRef = parentRef.collection('comments').doc(commentId);
+    await db.runTransaction(async (transaction) => {
+        var _a, _b, _c;
+        const [commentDoc, parentDoc] = await Promise.all([
+            transaction.get(commentRef),
+            transaction.get(parentRef),
+        ]);
+        if (!commentDoc.exists)
+            throw new https_1.HttpsError('not-found', 'Comment not found.');
+        if (((_a = commentDoc.data()) === null || _a === void 0 ? void 0 : _a.userId) !== uid) {
+            throw new https_1.HttpsError('permission-denied', 'You do not have permission to delete this comment.');
+        }
+        transaction.delete(commentRef);
+        if (parentDoc.exists) {
+            transaction.update(parentRef, {
+                commentCount: Math.max(0, ((_c = (_b = parentDoc.data()) === null || _b === void 0 ? void 0 : _b.commentCount) !== null && _c !== void 0 ? _c : 0) - 1),
+                updatedAt: firestore_1.FieldValue.serverTimestamp(),
+            });
+        }
     });
     return { success: true, message: 'Comment deleted successfully.' };
 });
@@ -555,7 +587,11 @@ exports.updateComment = (0, https_1.onCall)(async (request) => {
     if (!newText || typeof newText !== 'string' || newText.trim().length === 0) {
         throw new https_1.HttpsError('invalid-argument', 'Comment text cannot be empty.');
     }
-    const postRef = db.collection('posts').doc(postId);
+    const parentCollection = getCommentParentCollection(request.data.collectionName);
+    if (typeof postId !== 'string' || !postId || typeof commentId !== 'string' || !commentId) {
+        throw new https_1.HttpsError('invalid-argument', 'A post and comment ID are required.');
+    }
+    const postRef = db.collection(parentCollection).doc(postId);
     const commentRef = postRef.collection('comments').doc(commentId);
     const commentDoc = await commentRef.get();
     if (!commentDoc.exists)
@@ -564,7 +600,7 @@ exports.updateComment = (0, https_1.onCall)(async (request) => {
         throw new https_1.HttpsError('permission-denied', 'You do not have permission to edit this comment.');
     }
     const batch = db.batch();
-    batch.update(commentRef, { text: newText.trim() });
+    batch.update(commentRef, { text: newText.trim(), editedAt: firestore_1.FieldValue.serverTimestamp() });
     batch.update(postRef, { updatedAt: firestore_1.FieldValue.serverTimestamp() });
     await batch.commit();
     return { success: true, message: 'Comment updated.' };

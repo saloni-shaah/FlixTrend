@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc } from "firebase/firestore";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { auth, app } from '@/utils/firebaseClient';
@@ -21,7 +22,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
     AlertDialog,
-    AlertDialogAction,
     AlertDialogCancel,
     AlertDialogContent,
     AlertDialogDescription,
@@ -46,6 +46,7 @@ interface Comment {
     userId: string;
     text: string;
     createdAt: any;
+    editedAt?: any;
     likes?: string[];
     type?: 'text' | 'gif';
     parentId?: string | null;
@@ -105,8 +106,12 @@ const EditCommentDialog = ({ comment, postId, collectionName, onOpenChange, onFi
         if (text.length > COMMENT_MAX_LENGTH) { setErr(`Max ${COMMENT_MAX_LENGTH} characters.`); return; }
         if (isAbusive(text)) { setErr('Contains abusive language.'); return; }
         setSaving(true); setErr('');
-        try { await updateFn({ postId, commentId: comment.id, newText: text.trim() }); onFinish(); }
-        catch { alert('Failed to save. Try again.'); }
+        try {
+            await updateFn({ postId, commentId: comment.id, newText: text.trim(), collectionName });
+            onFinish();
+        } catch {
+            setErr('Failed to save your comment. Please try again.');
+        }
         finally { setSaving(false); }
     };
 
@@ -121,8 +126,10 @@ const EditCommentDialog = ({ comment, postId, collectionName, onOpenChange, onFi
                 <p className="text-xs text-muted-foreground -mt-2 mb-1">{text.length} / {COMMENT_MAX_LENGTH}</p>
                 {err && <p className="text-red-500 text-sm">{err}</p>}
                 <AlertDialogFooter>
-                    <AlertDialogCancel onClick={onFinish}>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</AlertDialogAction>
+                    <AlertDialogCancel onClick={onFinish} disabled={saving}>Cancel</AlertDialogCancel>
+                    <Button type="button" onClick={save} disabled={saving}>
+                        {saving ? 'Saving…' : 'Save'}
+                    </Button>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
@@ -175,7 +182,7 @@ export const CommentComponent = ({
 
     const handleDelete = async () => {
         if (!window.confirm('Delete this comment?')) return;
-        try { await deleteFn({ postId, commentId: comment.id }); }
+        try { await deleteFn({ postId, commentId: comment.id, collectionName }); }
         catch { alert('Failed to delete comment.'); }
     };
 
@@ -279,7 +286,12 @@ export const CommentComponent = ({
                         {showMenu && (
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 -mt-0.5 text-muted-foreground">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        aria-label="Comment options"
+                                        className="h-11 w-11 opacity-100 transition-opacity flex-shrink-0 -mt-0.5 text-muted-foreground"
+                                    >
                                         <MoreVertical size={14} />
                                     </Button>
                                 </DropdownMenuTrigger>
@@ -306,6 +318,7 @@ export const CommentComponent = ({
                     {/* Actions row */}
                     <div className="flex items-center gap-4 text-muted-foreground text-xs mt-1.5">
                         <span>{formatTimestamp(comment.createdAt)}</span>
+                        {comment.editedAt && <span>edited</span>}
                         <button
                             className={cn('flex items-center gap-1 font-semibold transition-colors', liked ? 'text-accent-pink' : 'hover:text-white')}
                             onClick={handleLike}
@@ -421,6 +434,7 @@ export function CommentModal({
     const [showGiphy, setShowGiphy] = useState(false);
     const { currentUserProfile } = useAppState();
     const currentUser = auth.currentUser;
+    const canManagePost = isPostOwner ?? currentUser?.uid === postAuthorId;
     const listRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -432,6 +446,42 @@ export function CommentModal({
         const unsub = onSnapshot(q, (s) => setComments(s.docs.map((d) => ({ id: d.id, ...d.data() } as Comment))), console.error);
         return () => unsub();
     }, [postId, collectionName, open]);
+
+    useEffect(() => {
+        if (!open || !isOverlay) return;
+
+        const scrollY = window.scrollY;
+        const bodyStyle = document.body.style;
+        const htmlStyle = document.documentElement.style;
+        const previousBodyStyles = {
+            position: bodyStyle.position,
+            top: bodyStyle.top,
+            left: bodyStyle.left,
+            right: bodyStyle.right,
+            width: bodyStyle.width,
+            overflow: bodyStyle.overflow,
+        };
+        const previousHtmlOverflow = htmlStyle.overflow;
+
+        bodyStyle.position = 'fixed';
+        bodyStyle.top = `-${scrollY}px`;
+        bodyStyle.left = '0';
+        bodyStyle.right = '0';
+        bodyStyle.width = '100%';
+        bodyStyle.overflow = 'hidden';
+        htmlStyle.overflow = 'hidden';
+
+        return () => {
+            bodyStyle.position = previousBodyStyles.position;
+            bodyStyle.top = previousBodyStyles.top;
+            bodyStyle.left = previousBodyStyles.left;
+            bodyStyle.right = previousBodyStyles.right;
+            bodyStyle.width = previousBodyStyles.width;
+            bodyStyle.overflow = previousBodyStyles.overflow;
+            htmlStyle.overflow = previousHtmlOverflow;
+            window.scrollTo(0, scrollY);
+        };
+    }, [open, isOverlay]);
 
     const handleReply = (c: Comment, username?: string) => {
         setReplyingTo(c);
@@ -504,15 +554,15 @@ export function CommentModal({
         comment: c, postId, currentUser, collectionName,
         onEdit: setEditingComment, onReply: handleReply,
         onTimestampClick: handleTimestampClick,
-        isPostOwner, onPin: handlePin, postAuthorUsername,
+        isPostOwner: canManagePost, onPin: handlePin, postAuthorUsername,
     });
 
     const content = (
-        <div className="h-full w-full bg-background flex flex-col glass-card">
+        <div className="h-full min-h-0 w-full bg-background flex flex-col glass-card">
 
             {/* Header */}
             <div className="p-4 border-b border-glass-border flex items-center justify-between shrink-0">
-                <h2 className="text-xl font-bold">
+                <h2 id="comments-title" className="text-xl font-bold">
                     Comments{' '}
                     {(post.commentCount || comments.length) > 0 && (
                         <span className="text-muted-foreground font-normal text-base">
@@ -537,7 +587,7 @@ export function CommentModal({
             ) : (
                 <div
                     ref={listRef}
-                    className="flex-1 overflow-y-auto p-4 space-y-6"
+                    className="min-h-0 flex-1 overscroll-contain overflow-y-auto p-4 space-y-6"
                     style={{
                         /* Thin, subtle scrollbar matching the glass theme */
                         scrollbarWidth: 'thin',
@@ -602,20 +652,20 @@ export function CommentModal({
                             alt="Your avatar"
                             className="w-9 h-9 rounded-full object-cover mt-1"
                         />
-                        <div className="flex-1 relative">
+                        <div className="flex-1 min-w-0 relative">
                             <Textarea
                                 ref={textareaRef}
                                 value={newComment}
                                 onChange={(e) => { setNewComment(e.target.value); if (modErr) setModErr(''); }}
                                 placeholder="say it with love ✨🫶"
-                                className="bg-transparent border-border rounded-xl w-full resize-none text-base py-2 pl-4 pr-28"
+                                className="bg-transparent border-border rounded-xl w-full resize-none text-base py-2 pl-4 pr-4 sm:pr-28"
                                 rows={1}
                                 maxLength={COMMENT_MAX_LENGTH}
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(e as any); }
                                 }}
                             />
-                            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center">
+                            <div className="mt-2 flex items-center justify-end gap-1 sm:absolute sm:right-2 sm:top-1/2 sm:mt-0 sm:-translate-y-1/2">
                                 {videoCurrentTime !== undefined && (
                                     <Button type="button" size="icon" onClick={addTimestamp} className="w-9 h-9 rounded-full bg-transparent hover:bg-white/10" title="Insert timestamp">
                                         <Clock size={20} />
@@ -667,22 +717,30 @@ export function CommentModal({
     );
 
     if (isOverlay) {
-        return (
+        if (typeof document === 'undefined') return null;
+        return createPortal(
             <>
                 <motion.div
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                     className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
                     onClick={onClose}
                 />
-                <motion.div
-                    initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
-                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                    className="fixed top-12 right-0 bottom-0 w-full max-w-lg z-50 sm:top-0 rounded-t-xl sm:rounded-none"
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    {content}
-                </motion.div>
-            </>
+                <div className="fixed inset-0 z-50 flex items-end justify-center px-2 pb-4 pointer-events-none sm:items-center sm:p-6">
+                    <motion.div
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="comments-title"
+                        initial={{ opacity: 0, y: 32 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 32 }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                        className="pointer-events-auto h-[84dvh] max-h-[760px] w-full max-w-lg overscroll-contain overflow-hidden rounded-3xl border border-glass-border bg-background shadow-2xl sm:h-[min(80dvh,760px)]"
+                    >
+                        {content}
+                    </motion.div>
+                </div>
+            </>,
+            document.body
         );
     }
 

@@ -40,6 +40,14 @@ async function deleteSubcollection(collectionRef: admin.firestore.CollectionRefe
 // COMMENTS
 // ─────────────────────────────────────────────────────────────────────────────
 
+function getCommentParentCollection(value: unknown): "posts" | "drops" {
+    if (value === undefined) return "posts";
+    if (value !== "posts" && value !== "drops") {
+        throw new HttpsError("invalid-argument", "Invalid comment collection.");
+    }
+    return value;
+}
+
 export const onCommentCreate = ASIA_SOUTH1.firestore
     .document('posts/{postId}/comments/{commentId}')
     .onCreate(async (snap, context) => {
@@ -51,6 +59,20 @@ export const onCommentCreate = ASIA_SOUTH1.firestore
             });
         } catch (error) {
             logger.error(`Error updating post ${postId} on new comment:`, error);
+        }
+    });
+
+export const onDropCommentCreate = ASIA_SOUTH1.firestore
+    .document('drops/{dropId}/comments/{commentId}')
+    .onCreate(async (snap, context) => {
+        const { dropId } = context.params;
+        try {
+            await db.collection('drops').doc(dropId).update({
+                commentCount: FieldValue.increment(1),
+                updatedAt: FieldValue.serverTimestamp(),
+            });
+        } catch (error) {
+            logger.error(`Error updating drop ${dropId} on new comment:`, error);
         }
     });
 
@@ -516,21 +538,30 @@ export const updatePost = onCall(async (request) => {
 
 export const deleteComment = onCall(async (request) => {
     const uid = request.auth?.uid;
-    const { postId, commentId } = request.data;
     if (!uid) throw new HttpsError('unauthenticated', 'You must be logged in to delete a comment.');
-    const postRef = db.collection('posts').doc(postId);
-    const commentRef = postRef.collection('comments').doc(commentId);
-    const commentDoc = await commentRef.get();
-    if (!commentDoc.exists) throw new HttpsError('not-found', 'Comment not found.');
-    if (commentDoc.data()!.userId !== uid) {
-        throw new HttpsError('permission-denied', 'You do not have permission to delete this comment.');
+    const { postId, commentId } = request.data;
+    const parentCollection = getCommentParentCollection(request.data.collectionName);
+    if (typeof postId !== 'string' || !postId || typeof commentId !== 'string' || !commentId) {
+        throw new HttpsError('invalid-argument', 'A post and comment ID are required.');
     }
-    await commentRef.delete();
-    const postDoc = await postRef.get();
-    const current = postDoc.data()?.commentCount ?? 0;
-    await postRef.update({
-        commentCount: Math.max(0, current - 1),
-        updatedAt: FieldValue.serverTimestamp(),
+    const parentRef = db.collection(parentCollection).doc(postId);
+    const commentRef = parentRef.collection('comments').doc(commentId);
+    await db.runTransaction(async (transaction) => {
+        const [commentDoc, parentDoc] = await Promise.all([
+            transaction.get(commentRef),
+            transaction.get(parentRef),
+        ]);
+        if (!commentDoc.exists) throw new HttpsError('not-found', 'Comment not found.');
+        if (commentDoc.data()?.userId !== uid) {
+            throw new HttpsError('permission-denied', 'You do not have permission to delete this comment.');
+        }
+        transaction.delete(commentRef);
+        if (parentDoc.exists) {
+            transaction.update(parentRef, {
+                commentCount: Math.max(0, (parentDoc.data()?.commentCount ?? 0) - 1),
+                updatedAt: FieldValue.serverTimestamp(),
+            });
+        }
     });
     return { success: true, message: 'Comment deleted successfully.' };
 });
@@ -542,7 +573,11 @@ export const updateComment = onCall(async (request) => {
     if (!newText || typeof newText !== 'string' || newText.trim().length === 0) {
         throw new HttpsError('invalid-argument', 'Comment text cannot be empty.');
     }
-    const postRef = db.collection('posts').doc(postId);
+    const parentCollection = getCommentParentCollection(request.data.collectionName);
+    if (typeof postId !== 'string' || !postId || typeof commentId !== 'string' || !commentId) {
+        throw new HttpsError('invalid-argument', 'A post and comment ID are required.');
+    }
+    const postRef = db.collection(parentCollection).doc(postId);
     const commentRef = postRef.collection('comments').doc(commentId);
     const commentDoc = await commentRef.get();
     if (!commentDoc.exists) throw new HttpsError('not-found', 'Comment not found.');
@@ -550,7 +585,7 @@ export const updateComment = onCall(async (request) => {
         throw new HttpsError('permission-denied', 'You do not have permission to edit this comment.');
     }
     const batch = db.batch();
-    batch.update(commentRef, { text: newText.trim() });
+    batch.update(commentRef, { text: newText.trim(), editedAt: FieldValue.serverTimestamp() });
     batch.update(postRef, { updatedAt: FieldValue.serverTimestamp() });
     await batch.commit();
     return { success: true, message: 'Comment updated.' };

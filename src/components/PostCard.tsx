@@ -306,7 +306,7 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
             )}
 
             {displayText && (
-                 <div className={`whitespace-pre-line mb-2 px-4 py-3 rounded-xl ${isShortVibe ? 'text-white text-base line-clamp-2 text-left' : 'text-[1.15rem]'} ${contentPost.fontStyle || defaultFontStyle}`} style={{ backgroundColor: contentPost.backgroundColor && !isShortVibe ? contentPost.backgroundColor : 'transparent', color: contentPost.backgroundColor && contentPost.backgroundColor !== '#ffffff' && !isShortVibe ? 'hsl(var(--foreground))' : 'inherit', textShadow: isShortVibe ? "0 1px 4px #000" : "none" }}>
+                 <div className={`whitespace-pre-line break-words mb-2 px-4 py-3 rounded-xl ${isShortVibe ? 'text-white text-base text-left' : 'text-[1.15rem]'} ${contentPost.fontStyle || defaultFontStyle}`} style={{ backgroundColor: contentPost.backgroundColor && !isShortVibe ? contentPost.backgroundColor : 'transparent', color: contentPost.backgroundColor && contentPost.backgroundColor !== '#ffffff' && !isShortVibe ? 'hsl(var(--foreground))' : 'inherit', textShadow: isShortVibe ? "0 1px 4px #000" : "none" }}>
                     {displayText}
                 </div>
             )}
@@ -485,7 +485,7 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
                     </div>
                     <span className="font-headline text-white text-base group-hover:underline">{author.displayName || `@${author.username || "user"}`}</span>
                 </a>
-                <p className={`text-white text-sm line-clamp-3 ${post.fontStyle || 'font-body'}`}>{post.content || post.question}</p>
+                <p className={`text-white text-sm line-clamp-5 break-words whitespace-pre-line ${post.fontStyle || 'font-body'}`}>{post.content || post.question}</p>
                  {post.song && (
                     <div className="flex items-center gap-2 text-white text-sm">
                         <FaMusic /> <span>{post.song.name} - {post.song.artists.join(", ")}</span>
