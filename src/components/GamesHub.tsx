@@ -1,6 +1,6 @@
 
 "use client";
-import React, { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Gamepad2 } from 'lucide-react';
 import { TicTacToe } from './games/TicTacToe';
@@ -9,8 +9,15 @@ import { Game2048 } from './games/2048';
 import { Match3 } from './games/Match3';
 import { BrickBreaker } from './games/BrickBreaker';
 import { CricketChallenge } from './games/CricketChallenge';
+import { Chess } from './games/Chess';
 
 const games = [
+    {
+        id: 'chess',
+        name: "Chess",
+        description: "A classic two-player chess match on one device. Play offline with legal moves, check, and checkmate.",
+        component: Chess
+    },
     {
         id: 'tic-tac-toe',
         name: "Tic-Tac-Toe",
@@ -50,17 +57,21 @@ const games = [
 ];
 
 export function GamesHub() {
-    const [activeGame, setActiveGame] = useState<any>(null);
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const category = searchParams.get('category') || '';
+    const gameSlug = category.startsWith('games/') ? category.slice('games/'.length) : '';
+    const activeGame = games.find(game => game.id === gameSlug);
 
-    const handleSelectGame = (game: any) => {
-        setActiveGame(game);
-    }
+    const handleSelectGame = (game: typeof games[number]) => {
+        router.push(`/flix?category=games/${game.id}`, { scroll: false });
+    };
 
     if (activeGame) {
         const GameComponent = activeGame.component;
         return (
              <div className="w-full flex flex-col items-center">
-                <button onClick={() => setActiveGame(null)} className="btn-glass self-start mb-4 flex items-center gap-2">
+                <button onClick={() => router.push('/flix?category=games', { scroll: false })} className="btn-glass self-start mb-4 flex items-center gap-2">
                     <ArrowLeft size={16}/> Back to Games
                 </button>
                 <GameComponent />
@@ -87,9 +98,10 @@ export function GamesHub() {
                      <h3 className="text-xl font-bold text-accent-cyan mb-4">FlixTrend Classics</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {games.map(game => (
-                            <motion.div
+                            <motion.button
+                                type="button"
                                 key={game.id}
-                                className="glass-card p-6 flex flex-col gap-3 hover:border-accent-cyan transition-colors duration-300 cursor-pointer"
+                                className="glass-card p-6 flex flex-col gap-3 text-left hover:border-accent-cyan transition-colors duration-300"
                                 whileHover={{ y: -5 }}
                                 onClick={() => handleSelectGame(game)}
                             >
@@ -97,7 +109,7 @@ export function GamesHub() {
                                 <h4 className="font-bold text-lg text-accent-cyan">{game.name}</h4>
                                 <p className="text-sm text-gray-400 flex-1">{game.description}</p>
                                 <div className="text-right text-xs font-bold text-accent-pink">Play Now &rarr;</div>
-                            </motion.div>
+                            </motion.button>
                         ))}
                     </div>
                 </motion.section>

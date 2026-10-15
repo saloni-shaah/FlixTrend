@@ -21,7 +21,8 @@ const TABS = [
 function FlixPageContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const activeTab = searchParams.get('category') || 'trends';
+    const category = searchParams.get('category') || 'trends';
+    const activeTab = category.startsWith('games/') ? 'games' : category;
 
     const handleTabClick = (tabId: string) => {
         // Update the URL query parameter without a full page reload
