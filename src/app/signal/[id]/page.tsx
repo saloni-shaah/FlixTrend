@@ -361,6 +361,13 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
         if ((!text.trim() && !mediaUrl) || !selectedChat) return;
 
         const clientId = uuid();
+        const replyWords = (replyingTo?.text || "").trim().split(/\s+/).filter(Boolean);
+        const replyPreview = replyingTo?.id ? {
+            sender: replyingTo.sender,
+            text: replyWords.length > 3 ? `${replyWords.slice(0, 3).join(" ")}…` : replyWords.join(" "),
+            type: replyingTo.type || "text",
+            mediaUrl: replyingTo.mediaUrl || null,
+        } : null;
         const tempMessage = {
             id: `temp-${clientId}`,
             clientId,
@@ -369,6 +376,10 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
             type,
             text: text.trim(),
             mediaUrl: mediaUrl || null,
+            ...(replyPreview ? {
+                replyTo: replyingTo.id,
+                replyPreview,
+            } : {}),
             pending: true,
         };
 
@@ -391,6 +402,10 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                 type,
                 text: text.trim() || "",
                 mediaUrl: mediaUrl || null,
+                ...(replyPreview ? {
+                    replyTo: replyingTo.id,
+                    replyPreview,
+                } : {}),
             });
             updateReadReceipt();
         } catch (e) {

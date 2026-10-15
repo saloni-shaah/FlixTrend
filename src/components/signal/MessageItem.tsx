@@ -132,51 +132,8 @@ const getTimestamp = (ts: any): number | null => {
 
 const getReplyPreviewText = (text?: string) => {
   if (!text) return '';
-  return text.trim();
-};
-
-const fitReplyPreviewText = (text: string, width: number, maxHeight: number, className = '') => {
-  if (!text || width <= 0 || maxHeight <= 0) return '';
-
-  if (typeof document === 'undefined') {
-    return text;
-  }
-
-  const probe = document.createElement('div');
-  probe.style.position = 'fixed';
-  probe.style.left = '-99999px';
-  probe.style.top = '0';
-  probe.style.visibility = 'hidden';
-  probe.style.pointerEvents = 'none';
-  probe.style.whiteSpace = 'normal';
-  probe.style.wordBreak = 'break-word';
-  probe.style.overflowWrap = 'anywhere';
-  probe.style.width = `${width}px`;
-  probe.style.fontSize = '12px';
-  probe.style.lineHeight = '1.25';
-  probe.style.fontWeight = '400';
-  probe.style.fontFamily = 'inherit';
-  probe.className = className;
-
-  document.body.appendChild(probe);
-
   const words = text.trim().split(/\s+/);
-  let best = '';
-
-  for (let i = 1; i <= words.length; i++) {
-    const candidate = words.slice(0, i).join(' ');
-    probe.textContent = candidate;
-
-    if (probe.scrollHeight <= maxHeight) {
-      best = candidate;
-      continue;
-    }
-
-    break;
-  }
-
-  document.body.removeChild(probe);
-  return best || words[0] || '';
+  return words.length > 3 ? `${words.slice(0, 3).join(' ')}…` : words.join(' ');
 };
 
 const MOBILE_SWIPE_THRESHOLD = 72;
@@ -209,8 +166,6 @@ export const MessageItem = React.memo(({
   readReceipts
 }: Props) => {
   const [swipeX, setSwipeX] = React.useState(0);
-  const replyMeasureRef = React.useRef<HTMLDivElement | null>(null);
-  const [replyPreviewText, setReplyPreviewText] = React.useState('');
   const touchStartRef = React.useRef<{ x: number; y: number } | null>(null);
   const swipeActiveRef = React.useRef(false);
   const swipeXRef = React.useRef(0);
@@ -269,42 +224,24 @@ export const MessageItem = React.memo(({
   };
 
   const repliedToMessage = msg.replyTo ? messages.find(m => m.id === msg.replyTo) : null;
+  const replyTarget = repliedToMessage ?? (msg.replyTo ? {
+    id: msg.replyTo,
+    sender: msg.replyPreview?.sender,
+    type: msg.replyPreview?.type || 'text',
+    text: msg.replyPreview?.text || (['image', 'gif', 'video', 'audio'].includes(msg.replyPreview?.type) ? '' : 'Original message unavailable'),
+    mediaUrl: msg.replyPreview?.mediaUrl,
+  } : null);
 
   const repliedToDisplayName = React.useMemo(() => {
-    if (!repliedToMessage) return '';
-    if (repliedToMessage.sender === firebaseUser?.uid) return 'You';
-    if (selectedChat.groupType === 'anonymous')    return genAnon(repliedToMessage.sender, selectedChat.id);
-    if (selectedChat.groupType === 'pseudonymous') return selectedChat.pseudonyms?.[repliedToMessage.sender] || 'Anon';
-    if (selectedChat.isGroup) return selectedChat.memberInfo?.[repliedToMessage.sender]?.name || selectedChat.memberInfo?.[repliedToMessage.sender]?.username || 'Member';
+    if (!replyTarget?.sender) return 'Original message';
+    if (replyTarget.sender === firebaseUser?.uid) return 'You';
+    if (selectedChat.groupType === 'anonymous')    return genAnon(replyTarget.sender, selectedChat.id);
+    if (selectedChat.groupType === 'pseudonymous') return selectedChat.pseudonyms?.[replyTarget.sender] || 'Anon';
+    if (selectedChat.isGroup) return selectedChat.memberInfo?.[replyTarget.sender]?.name || selectedChat.memberInfo?.[replyTarget.sender]?.username || 'Member';
     return selectedChat.name || selectedChat.username || 'User';
-  }, [repliedToMessage, selectedChat, firebaseUser]);
+  }, [replyTarget, selectedChat, firebaseUser]);
 
-  const repliedToText = getReplyPreviewText(repliedToMessage?.text);
-
-  React.useLayoutEffect(() => {
-    if (!repliedToMessage || !repliedToText) {
-      setReplyPreviewText(repliedToText);
-      return;
-    }
-
-    const measure = () => {
-      const width = replyMeasureRef.current?.clientWidth ?? 0;
-      const maxHeight = 48;
-      setReplyPreviewText(fitReplyPreviewText(repliedToText, width, maxHeight));
-    };
-
-    measure();
-
-    const resizeObserver = typeof ResizeObserver !== 'undefined' && replyMeasureRef.current
-      ? new ResizeObserver(measure)
-      : null;
-
-    if (resizeObserver && replyMeasureRef.current) {
-      resizeObserver.observe(replyMeasureRef.current);
-    }
-
-    return () => resizeObserver?.disconnect();
-  }, [repliedToMessage, repliedToText]);
+  const repliedToText = getReplyPreviewText(replyTarget?.text);
 
   const displayName = React.useMemo(() => {
     if (selectedChat.groupType === 'anonymous')   return genAnon(msg.sender, selectedChat.id);
@@ -418,30 +355,30 @@ export const MessageItem = React.memo(({
     );
   }
 
-  const accent = repliedToMessage ? getAccent(repliedToMessage.sender) : null;
-  const isMedia = repliedToMessage ? ['image', 'gif', 'video', 'audio'].includes(repliedToMessage.type) : false;
-  const ReplyPreview = repliedToMessage ? (
+  const accent = replyTarget?.sender ? getAccent(replyTarget.sender) : null;
+  const isMedia = replyTarget ? ['image', 'gif', 'video', 'audio'].includes(replyTarget.type) : false;
+  const ReplyPreview = replyTarget ? (
     <motion.div
       initial={{ opacity: 0, y: -4, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.15 }}
-      onClick={e => { e.stopPropagation(); scrollToAndFlash(repliedToMessage.id); }}
-      className="cursor-pointer mb-2 rounded-xl overflow-hidden bg-white/5 border border-white/10 backdrop-blur-sm w-full max-w-full"
-      whileHover={{ scale: 1.015 }} whileTap={{ scale: 0.98 }}
+      onClick={e => { e.stopPropagation(); if (repliedToMessage) scrollToAndFlash(repliedToMessage.id); }}
+      className={cn('mb-2 rounded-xl overflow-hidden bg-white/5 border border-white/10 backdrop-blur-sm w-full min-w-0 max-w-full', repliedToMessage && 'cursor-pointer')}
+      whileHover={repliedToMessage ? { scale: 1.015 } : undefined}
+      whileTap={repliedToMessage ? { scale: 0.98 } : undefined}
     >
       <div className="flex items-stretch">
         <div className="w-1 flex-shrink-0" style={{ background: accent?.bar }} />
-        <div className="flex items-center gap-2 p-2 min-w-0">
-          <div ref={replyMeasureRef} className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 p-2 min-w-0 w-full">
+          <div className="flex-1 min-w-0">
             <span className="text-xs font-bold block mb-0.5" style={{ color: accent?.name }}>{repliedToDisplayName}</span>
             <p
-              className="text-xs leading-tight text-white/70 whitespace-normal break-words overflow-hidden"
-              style={{ maxHeight: 48 }}
+              className="text-xs leading-tight text-white/70 line-clamp-2 break-words"
             >
-              {replyPreviewText ||
+              {repliedToText ||
                 (isMedia && <span className="flex items-center gap-1.5 italic"><ImageIcon size={12}/>Photo</span>)}
             </p>
           </div>
-          {repliedToMessage.mediaUrl && ['image', 'gif'].includes(repliedToMessage.type) && (
-            <img src={repliedToMessage.mediaUrl} alt="" className="w-9 h-9 rounded-md object-cover flex-shrink-0"/>
+          {replyTarget.mediaUrl && ['image', 'gif'].includes(replyTarget.type) && (
+            <img src={replyTarget.mediaUrl} alt="" className="w-9 h-9 rounded-md object-cover flex-shrink-0"/>
           )}
         </div>
       </div>
@@ -499,6 +436,9 @@ export const MessageItem = React.memo(({
           className={cn(
             'message-bubble-content relative px-3 py-2 rounded-2xl text-[15px] leading-relaxed transition-all',
             isUser ? 'bg-gradient-to-br from-accent-pink/80 to-purple-700/80 text-white' : 'text-white',
+            'signal-message-bubble',
+            isUser ? 'signal-message-bubble--outgoing' : 'signal-message-bubble--incoming',
+            messageAccent && 'signal-message-bubble--accented',
             messageFont,
             msg.pending && 'opacity-60'
           )}
