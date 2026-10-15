@@ -10,6 +10,8 @@ import { Match3 } from './games/Match3';
 import { BrickBreaker } from './games/BrickBreaker';
 import { CricketChallenge } from './games/CricketChallenge';
 import { Chess } from './games/Chess';
+import { SnakesAndLadders } from './games/SnakesAndLadders';
+import { Ludo } from './games/Ludo';
 
 const games = [
     {
@@ -17,6 +19,18 @@ const games = [
         name: "Chess",
         description: "A classic two-player chess match on one device. Play offline with legal moves, check, and checkmate.",
         component: Chess
+    },
+    {
+        id: 'snakes-and-ladders',
+        name: "Snakes & Ladders",
+        description: "Roll the dice, climb ladders, dodge snakes, and race a friend to 100. Offline for two players.",
+        component: SnakesAndLadders
+    },
+    {
+        id: 'ludo',
+        name: "Ludo",
+        description: "A pass-and-play Ludo race for 2–4 players. Roll, capture tokens, and get all four home.",
+        component: Ludo
     },
     {
         id: 'tic-tac-toe',
