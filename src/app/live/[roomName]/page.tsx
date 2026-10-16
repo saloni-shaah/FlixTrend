@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react';
 import { getFirestore, collection, query, where, getDocs, doc, onSnapshot } from 'firebase/firestore';
 import { app, auth } from '@/utils/firebaseClient';
+import { livekitStreamUrl } from '@/utils/livekit';
 import { usePathname, useRouter } from 'next/navigation';
 import { LiveKitRoom, VideoConference } from '@livekit/components-react';
 import '@livekit/components-styles';
@@ -136,7 +137,7 @@ export default function LiveStreamPage() {
     <div className="w-full h-screen bg-black">
       <LiveKitRoom
         token={token}
-        serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_WS_URL!}
+        serverUrl={livekitStreamUrl}
         data-lk-theme="default"
         style={{ height: '100%' }}
         onDisconnected={() => router.push('/vibespace')}

@@ -2,6 +2,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { auth } from '@/utils/firebaseClient';
+import { livekitStreamUrl } from '@/utils/livekit';
 import { LiveKitRoom, ParticipantTile } from '@livekit/components-react';
 import '@livekit/components-styles';
 
@@ -66,7 +67,7 @@ export function LiveStreamViewer({ roomName, streamerName }: { roomName: string,
 
   return (
     <LiveKitRoom
-      serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_WS_URL}
+      serverUrl={livekitStreamUrl}
       token={token}
       connect={true}
       style={{ height: '100%' }}

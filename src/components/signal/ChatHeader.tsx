@@ -22,16 +22,32 @@ export function ChatHeader({
   selectedChat,
   onOpenDetails,
   onBack,
+  onStartCall,
 }: {
   selectedChat: any;
   onOpenDetails?: () => void;
   onBack?: () => void;
+  onStartCall?: (isVideo: boolean) => Promise<void>;
 }) {
   const router = useRouter();
   const [imgUrl,       setImgUrl]       = useState<string | null>(null);
-  const [showAppPrompt, setShowAppPrompt] = useState(false);
+  const [callError, setCallError] = useState<string | null>(null);
+  const [isStartingCall, setIsStartingCall] = useState(false);
 
   const initial = (selectedChat?.name?.[0] || selectedChat?.username?.[0] || '?').toUpperCase();
+
+  const startCall = async (isVideo: boolean) => {
+    if (!onStartCall) return;
+    setIsStartingCall(true);
+    try {
+      await onStartCall(isVideo);
+    } catch (error) {
+      console.error('Unable to start call:', error);
+      setCallError(error instanceof Error ? error.message : 'Unable to start the call. Please try again.');
+    } finally {
+      setIsStartingCall(false);
+    }
+  };
 
   if (!selectedChat) {
     return (
@@ -107,16 +123,20 @@ export function ChatHeader({
         {!selectedChat.isGroup && (
           <div className="flex items-center gap-1">
             <button
-              onClick={(e) => { e.stopPropagation(); setShowAppPrompt(true); }}
+              onClick={(e) => { e.stopPropagation(); void startCall(false); }}
               onPointerDown={(e) => e.stopPropagation()}
-              className="p-2 rounded-full hover:bg-white/[0.08] transition-colors text-gray-500"
+              disabled={isStartingCall}
+              aria-label="Start voice call"
+              className="p-2 rounded-full hover:bg-white/[0.08] transition-colors text-gray-300 disabled:opacity-50"
             >
               <Phone size={18} />
             </button>
             <button
-              onClick={(e) => { e.stopPropagation(); setShowAppPrompt(true); }}
+              onClick={(e) => { e.stopPropagation(); void startCall(true); }}
               onPointerDown={(e) => e.stopPropagation()}
-              className="p-2 rounded-full hover:bg-white/[0.08] transition-colors text-gray-500"
+              disabled={isStartingCall}
+              aria-label="Start video call"
+              className="p-2 rounded-full hover:bg-white/[0.08] transition-colors text-gray-300 disabled:opacity-50"
             >
               <Video size={18} />
             </button>
@@ -126,17 +146,17 @@ export function ChatHeader({
 
       <FullScreenImageViewer imageUrl={imgUrl} onClose={() => setImgUrl(null)} />
 
-      <AlertDialog open={showAppPrompt} onOpenChange={setShowAppPrompt}>
+      <AlertDialog open={!!callError} onOpenChange={(open) => !open && setCallError(null)}>
         <AlertDialogContent className="bg-black/80 backdrop-blur-2xl border-white/10">
           <AlertDialogHeader>
-            <AlertDialogTitle>Calling is smoother on the app 🚀</AlertDialogTitle>
+            <AlertDialogTitle>Could not start call</AlertDialogTitle>
             <AlertDialogDescription className="text-gray-400">
-              Download the FlixTrend app for the best call quality and real-time sync.
+              {callError}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="bg-white/5 border-white/10">Not Now</AlertDialogCancel>
-            <AlertDialogAction onClick={() => setShowAppPrompt(false)}>Got it</AlertDialogAction>
+            <AlertDialogCancel className="bg-white/5 border-white/10">Close</AlertDialogCancel>
+            <AlertDialogAction onClick={() => setCallError(null)}>Got it</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

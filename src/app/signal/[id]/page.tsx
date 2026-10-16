@@ -54,7 +54,7 @@ interface PendingDelete {
 
 function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string }) {
     const router = useRouter();
-    const { drafts, setDraft } = useAppState();
+    const { drafts, setDraft, startCall } = useAppState();
     const [selectedChat, setSelectedChat] = useState<ChatUser | null>(null);
     const [messages, setMessages] = useState<any[]>([]);
     const [replyingTo, setReplyingTo] = useState<any | null>(null);
@@ -699,6 +699,12 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                     selectedChat={selectedChat}
                     onOpenDetails={() => setShowUserDetails(true)}
                     onBack={() => setShowUserDetails(false)}
+                    onStartCall={(isVideo) => startCall({
+                        uid: selectedChat.id,
+                        name: selectedChat.name,
+                        username: selectedChat.username,
+                        avatar_url: selectedChat.avatar_url,
+                    }, isVideo)}
                 />
             )}
             </AnimatePresence>

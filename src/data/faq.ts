@@ -92,7 +92,7 @@ export const faqCategories: FaqCategory[] = [
       { q: "How do I mute a conversation?", a: "you can mute a conversation by just setting the notification off for that specific chat or by archiving a chat." },
       { q: "How do I delete a conversation?", a: "delething a coversation is simple go to signal click on three dot click on the chat you want to delete and delete it well the better aproach is it archive a chat and cause you can get it back via the settings." },
       { q: "How do I report a message?", a: "reporting a message is easy as well select a chat and click the verify the identity button flixtrend will verify the chat starting with the lastest 5 response of both person by default we may try getting more messages for checking and if we find the person an abuse we may deactivate it and even delete it." },
-      { q: "Can I call someone on FlixTrend?", a: "yes we do have video calls and voice calls support on the android and ios app for flixtrend where you can call your mutuals whom you follow and who follows you back." },
+      { q: "Can I call someone on FlixTrend?", a: "Yes. FlixTrend supports one-to-one voice and video calls between the web and mobile apps. Start a call from a direct Signal chat and allow microphone or camera access when your browser or device asks." },
       { q: "How do I control who can contact me?", a: "you cna control it via making your account private by this only your mutuals can evetually contact and message you." },
     ],
   },

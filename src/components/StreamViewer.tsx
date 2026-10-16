@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Room } from 'livekit-client';
 import { auth } from '@/utils/firebaseClient';
+import { livekitStreamUrl } from '@/utils/livekit';
 import { Volume2, VolumeX, Users } from 'lucide-react';
 
 export function StreamViewer({ streamPost }: { streamPost: any }) {
@@ -67,7 +68,7 @@ export function StreamViewer({ streamPost }: { streamPost: any }) {
 
       const connectToRoom = async () => {
         try {
-          await newRoom.connect(process.env.NEXT_PUBLIC_LIVEKIT_WS_URL!, token);
+          await newRoom.connect(livekitStreamUrl, token);
           setParticipantCount(newRoom.numParticipants + 1);
         } catch (err) {
           console.error("Failed to connect as viewer", err);

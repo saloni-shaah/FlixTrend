@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation'; // Import useParams
 import { auth } from '@/utils/firebaseClient';
+import { livekitStreamUrl } from '@/utils/livekit';
 import { getFirestore, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
 import { LiveKitRoom, VideoConference } from '@livekit/components-react';
 import '@livekit/components-styles';
@@ -88,7 +89,7 @@ export default function BroadcastPage() { // Remove params from props
             video={true}
             audio={true}
             token={token}
-            serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_WS_URL!}
+            serverUrl={livekitStreamUrl}
             data-lk-theme="default"
             style={{ height: '100%' }}
             onDisconnected={handleDisconnect}
