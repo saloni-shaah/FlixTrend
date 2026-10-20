@@ -22,13 +22,14 @@ const toDateTimeLocalValue = (date: Date) => {
 
 type ScheduledItem = {
   id: string;
-  collectionName: "posts" | "flashes";
+  collectionName: "posts" | "flashes" | "drafts";
   title: string;
   mediaUrl?: string | null;
   type?: string;
   isVideo?: boolean;
   publishAt?: any;
   status?: string;
+  storageMode?: "local" | "firestore";
 };
 
 export function ScheduledDrafts({ userId }: { userId: string }) {
@@ -51,7 +52,7 @@ export function ScheduledDrafts({ userId }: { userId: string }) {
         ]);
 
         const now = Date.now();
-        const nextItems: ScheduledItem[] = [
+        const firestoreItems: ScheduledItem[] = [
           ...postsSnap.docs.map(d => ({ id: d.id, collectionName: "posts" as const, ...d.data() })),
           ...flashesSnap.docs.map(d => ({ id: d.id, collectionName: "flashes" as const, ...d.data() })),
         ]
@@ -68,8 +69,36 @@ export function ScheduledDrafts({ userId }: { userId: string }) {
             isVideo: item.isVideo,
             publishAt: item.publishAt,
             status: item.status,
+            storageMode: "firestore" as const,
           }))
           .sort((a, b) => (toDate(a.publishAt)?.getTime() ?? 0) - (toDate(b.publishAt)?.getTime() ?? 0));
+
+        let localDrafts: ScheduledItem[] = [];
+        if (typeof window !== "undefined") {
+          try {
+            const rawLocalDrafts = window.localStorage.getItem("flixtrend:drafts");
+            if (rawLocalDrafts) {
+              const parsed = JSON.parse(rawLocalDrafts) as any[];
+              localDrafts = parsed
+                .filter((draft) => draft.userId === userId)
+                .map((draft) => ({
+                  id: draft.id,
+                  collectionName: "drafts",
+                  title: draft.title || draft.draftTitle || draft.content || "Untitled studio draft",
+                  mediaUrl: Array.isArray(draft.mediaUrl) ? draft.mediaUrl[0] : draft.mediaUrl || draft.thumbnailUrl || null,
+                  type: draft.type || "draft",
+                  isVideo: Boolean(draft.isVideo),
+                  publishAt: draft.updatedAt || draft.createdAt,
+                  status: draft.status || "draft",
+                  storageMode: "local" as const,
+                }));
+            }
+          } catch (localErr) {
+            console.error("Error loading local drafts:", localErr);
+          }
+        }
+
+        const nextItems = [...localDrafts, ...firestoreItems].sort((a, b) => (toDate(a.publishAt)?.getTime() ?? 0) - (toDate(b.publishAt)?.getTime() ?? 0));
 
         const nextDates = nextItems.reduce<Record<string, string>>((acc, item) => {
           const publishDate = toDate(item.publishAt);
@@ -158,24 +187,35 @@ export function ScheduledDrafts({ userId }: { userId: string }) {
                 <span>{item.status === "draft" ? "Draft" : "Scheduled"}</span>
               </div>
               <h3 className="font-bold text-sm line-clamp-2">{item.title}</h3>
-              {publishDate && <p className="text-xs text-muted-foreground mt-1">Publishes {publishDate.toLocaleString()}</p>}
-              <div className="mt-3 flex flex-col sm:flex-row gap-2">
-                <input
-                  type="datetime-local"
-                  min={toDateTimeLocalValue(new Date(Date.now() + 60 * 1000))}
-                  value={draftDates[key] || ""}
-                  onChange={(e) => setDraftDates(prev => ({ ...prev, [key]: e.target.value }))}
-                  className="input-glass text-sm flex-1"
-                />
-                <button
-                  onClick={() => handleSave(item)}
-                  disabled={savingId === key}
-                  className="btn-glass flex items-center justify-center gap-2 text-sm"
-                >
-                  {savingId === key ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
-                  Save
-                </button>
-              </div>
+              {publishDate && <p className="text-xs text-muted-foreground mt-1">{item.storageMode === "local" ? `Saved locally ${publishDate.toLocaleString()}` : `Publishes ${publishDate.toLocaleString()}`}</p>}
+              {item.storageMode === "local" ? (
+                <div className="mt-3 flex flex-wrap items-center gap-3">
+                  <Link href={`/create?type=draft&draftId=${encodeURIComponent(item.id)}`} className="btn-glass text-sm">
+                    Resume editing
+                  </Link>
+                  <span className="text-xs text-muted-foreground">
+                    Local project settings are saved; source files must be selected again.
+                  </span>
+                </div>
+              ) : (
+                <div className="mt-3 flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="datetime-local"
+                    min={toDateTimeLocalValue(new Date(Date.now() + 60 * 1000))}
+                    value={draftDates[key] || ""}
+                    onChange={(e) => setDraftDates(prev => ({ ...prev, [key]: e.target.value }))}
+                    className="input-glass text-sm flex-1"
+                  />
+                  <button
+                    onClick={() => handleSave(item)}
+                    disabled={savingId === key}
+                    className="btn-glass flex items-center justify-center gap-2 text-sm"
+                  >
+                    {savingId === key ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+                    Save
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         );

@@ -7,7 +7,7 @@ import { Shield, ShieldAlert, ArrowLeft, ArrowRight } from 'lucide-react';
 import { isAbusive } from '@/utils/moderation';
 
 export default function Step2({ onBack, onNext, postData }: { onBack: () => void; onNext: () => void; postData: any }) {
-    const { content, description, hashtags, question, options } = postData;
+    const { content, description, hashtags, question, options, overlayText, draftTitle } = postData;
 
     // Use the imported function
     const contentIsAbusive = isAbusive(content);
@@ -15,8 +15,10 @@ export default function Step2({ onBack, onNext, postData }: { onBack: () => void
     const hashtagsAreAbusive = isAbusive(hashtags);
     const questionIsAbusive = isAbusive(question);
     const optionsAreAbusive = options?.some((opt: any) => isAbusive(opt.text));
+    const overlayTextIsAbusive = isAbusive(overlayText);
+    const draftTitleIsAbusive = isAbusive(draftTitle);
 
-    const isClean = !contentIsAbusive && !descriptionIsAbusive && !hashtagsAreAbusive && !questionIsAbusive && !optionsAreAbusive;
+    const isClean = !contentIsAbusive && !descriptionIsAbusive && !hashtagsAreAbusive && !questionIsAbusive && !optionsAreAbusive && !overlayTextIsAbusive && !draftTitleIsAbusive;
 
     const getFieldFeedback = (isAbusive: boolean, fieldName: string) => {
         if (!isAbusive) {
@@ -37,6 +39,8 @@ export default function Step2({ onBack, onNext, postData }: { onBack: () => void
                     {hashtags && <div>{getFieldFeedback(hashtagsAreAbusive, "Hashtags")}</div>}
                     {question && <div>{getFieldFeedback(questionIsAbusive, "Poll Question")}</div>}
                     {options && <div>{getFieldFeedback(optionsAreAbusive, "Poll Options")}</div>}
+                    {draftTitle && <div>{getFieldFeedback(draftTitleIsAbusive, "Draft Title")}</div>}
+                    {overlayText && <div>{getFieldFeedback(overlayTextIsAbusive, "Media Overlay")}</div>}
                 </div>
 
                 {!isClean && (

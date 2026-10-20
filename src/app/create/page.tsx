@@ -3,7 +3,7 @@
 import React, { useState, Suspense, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlignLeft, Image as ImageIcon, BarChart3, Zap, Radio } from 'lucide-react';
+import { AlignLeft, Image as ImageIcon, BarChart3, Zap, Radio, FilePenLine } from 'lucide-react';
 import Step1 from '@/components/create/Step1';
 import Step2 from '@/components/create/Step2';
 import Step3 from '@/components/create/Step3';
@@ -14,14 +14,16 @@ const POST_TYPES = [
   { id: 'poll', label: 'Poll', icon: BarChart3 },
   { id: 'flash', label: 'Flash', icon: Zap },
   { id: 'live', label: 'Live', icon: Radio },
+  { id: 'draft', label: 'Draft Studio', icon: FilePenLine },
 ];
 
 function CreatePostPageContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
 
-    const initialType = searchParams.get('type') as 'text' | 'media' | 'poll' | 'flash' | 'live' || undefined;
+    const initialType = searchParams.get('type') as 'text' | 'media' | 'poll' | 'flash' | 'live' | 'draft' || undefined;
     const initialImageUrl = searchParams.get('imageUrl');
+    const draftId = searchParams.get('draftId');
 
     const [postData, setPostData] = useState<any>({
         postType: initialType,
@@ -31,7 +33,7 @@ function CreatePostPageContent() {
     });
 
     const [step, setStep] = useState(1);
-    const [postType, setPostType] = useState<'text' | 'media' | 'poll' | 'flash' | 'live' | undefined>(initialType);
+    const [postType, setPostType] = useState<'text' | 'media' | 'poll' | 'flash' | 'live' | 'draft' | undefined>(initialType);
     const [typeSelected, setTypeSelected] = useState(!!initialType);
 
     useEffect(() => {
@@ -40,20 +42,47 @@ function CreatePostPageContent() {
         }
     }, [initialType, typeSelected]);
 
+    useEffect(() => {
+        if (!draftId) return;
+        try {
+            const savedDrafts = JSON.parse(window.localStorage.getItem('flixtrend:drafts') || '[]');
+            if (!Array.isArray(savedDrafts)) throw new Error('Saved drafts data is not valid.');
+            const savedDraft = savedDrafts.find((draft: any) => draft.id === draftId);
+            if (!savedDraft) throw new Error('The selected local draft could not be found.');
+
+            setPostData((current: any) => ({
+                ...current,
+                ...savedDraft,
+                postType: 'draft',
+                draftId: savedDraft.id,
+                draftTitle: savedDraft.title || '',
+                draftClips: [],
+                backgroundAudio: null,
+                backgroundAudioName: savedDraft.musicName || '',
+                editedFile: null,
+                editedThumbnailFile: null,
+                editedIsVideo: false,
+                editedDuration: null,
+            }));
+        } catch (error) {
+            console.error('Could not reopen local draft:', error);
+        }
+    }, [draftId]);
+
     const handleNext = (data: any = {}) => {
-        setPostData(prev => ({ ...prev, ...data }));
-        setStep(s => s + 1);
+        setPostData((prev: any) => ({ ...prev, ...data }));
+        setStep((s: number) => s + 1);
     };
 
     const handleBack = () => {
-        setStep(s => s - 1);
+        setStep((s: number) => s - 1);
     };
 
     const handleDataChange = (newData: any) => {
-        setPostData(prev => ({...prev, ...newData}));
+        setPostData((prev: any) => ({...prev, ...newData}));
     }
 
-    const handleTypeChange = (type: 'text' | 'media' | 'poll' | 'flash' | 'live') => {
+    const handleTypeChange = (type: 'text' | 'media' | 'poll' | 'flash' | 'live' | 'draft') => {
         setPostType(type);
         setPostData({ postType: type, songId: searchParams.get('songId'), mediaUrl: [], mediaFiles: [] }); // Reset data
         setStep(1);

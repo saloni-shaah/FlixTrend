@@ -30,8 +30,18 @@ const uploadFile = async (file: File, path: string) => {
 };
 
 function PostPreview({ postData }: { postData: any }) {
+    const [editedPreviewUrl, setEditedPreviewUrl] = useState<string | null>(null);
+    useEffect(() => {
+        if (typeof File === 'undefined' || !(postData?.editedFile instanceof File)) {
+            setEditedPreviewUrl(null);
+            return;
+        }
+        const url = URL.createObjectURL(postData.editedFile);
+        setEditedPreviewUrl(url);
+        return () => URL.revokeObjectURL(url);
+    }, [postData?.editedFile]);
+
     if (!postData) return null;
-    
     const { postType, content, mediaUrl, thumbnailUrl, fontStyle, backgroundColor } = postData;
 
     return (
@@ -44,6 +54,26 @@ function PostPreview({ postData }: { postData: any }) {
                         style={{ backgroundColor: backgroundColor || 'transparent', backgroundImage: postData.backgroundImage ? `url(${postData.backgroundImage})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center' }}
                     >
                         <p className="text-lg">{content}</p>
+                    </div>
+                )}
+
+                {postType === 'draft' && (
+                    <div className="space-y-3">
+                        <div className="rounded-lg border border-accent-cyan/40 bg-accent-cyan/10 p-3">
+                            <p className="text-xs uppercase tracking-[0.2em] text-accent-cyan">Draft Studio</p>
+                            <h5 className="mt-2 text-lg font-bold text-white">{postData.draftTitle || 'Untitled draft'}</h5>
+                        </div>
+                        {editedPreviewUrl && (
+                            <div className="overflow-hidden rounded-lg bg-black">
+                                {postData.editedIsVideo
+                                    ? <video src={editedPreviewUrl} controls className="max-h-96 w-full" />
+                                    : <img src={editedPreviewUrl} alt="Edited draft preview" className="max-h-96 w-full object-contain" />}
+                            </div>
+                        )}
+                        <p className="text-xs text-accent-cyan">
+                            {postData.editedFile ? `Rendered locally: ${postData.editedFile.name}` : `${postData.draftClips?.length || 0} source items selected. Render an edit to publish it.`}
+                        </p>
+                        {postData.content && <p className="text-sm text-gray-300">{postData.content}</p>}
                     </div>
                 )}
                 
@@ -104,19 +134,72 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
         setIsScheduling(!!postData.scheduleDate);
     }, [postData.scheduleDate]);
 
-    const handleSubmit = async () => {
+    const handleSubmit = async (action: 'saveDraft' | 'publish' = 'publish') => {
         setIsPublishing(true);
         setError(null);
         const user = auth.currentUser;
         if (!user) { alert("You must be logged in to post."); setIsPublishing(false); return; }
         
-        if (isAbusive(postData.content) || isAbusive(postData.hashtags) || isAbusive(postData.caption) || isAbusive(postData.description) || isAbusive(postData.question)){
+        if (isAbusive(postData.content) || isAbusive(postData.hashtags) || isAbusive(postData.caption) || isAbusive(postData.description) || isAbusive(postData.question) || isAbusive(postData.overlayText) || isAbusive(postData.draftTitle)){
              setError("Your post contains inappropriate language and cannot be posted.");
              setIsPublishing(false);
              return;
         }
 
-        if (postData.postType === 'media' && !(postData.content || '').trim()) {
+        if (postData.postType === 'draft' && action === 'saveDraft') {
+            try {
+                const draftData = {
+                    id: postData.draftId || `draft-${Date.now()}`,
+                    title: postData.draftTitle || 'Untitled draft',
+                    postType: 'draft',
+                    content: postData.content || '',
+                    mediaItems: (postData.draftClips || []).map((clip: any) => ({
+                        name: clip.file?.name || 'Local media',
+                        start: clip.start,
+                        end: clip.end,
+                    })),
+                    musicName: postData.backgroundAudioName || '',
+                    aspectRatio: postData.aspectRatio || 'original',
+                    videoEffect: postData.videoEffect || 'None',
+                    overlayText: postData.overlayText || '',
+                    sticker: postData.sticker || '',
+                    textEffect: postData.textEffect || 'Glow',
+                    textPosition: postData.textPosition || 'bottom',
+                    muteOriginalAudio: Boolean(postData.muteOriginalAudio),
+                    musicVolume: postData.musicVolume ?? 0.7,
+                    createdAt: postData.createdAt || new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    userId: user.uid,
+                    status: 'draft',
+                    storageMode: 'local',
+                };
+
+                const draftKey = 'flixtrend:drafts';
+                const rawDrafts = typeof window !== 'undefined' ? window.localStorage.getItem(draftKey) : '[]';
+                const parsedDrafts = rawDrafts ? JSON.parse(rawDrafts) : [];
+                if (!Array.isArray(parsedDrafts)) throw new Error('Saved drafts data is not valid.');
+                const existingDrafts = parsedDrafts;
+                const nextDrafts = [draftData, ...existingDrafts.filter((draft: any) => draft.id !== draftData.id)].slice(0, 40);
+                if (typeof window !== 'undefined') {
+                    window.localStorage.setItem(draftKey, JSON.stringify(nextDrafts));
+                }
+                router.push('/squad?tab=drafts');
+                return;
+            } catch (error: any) {
+                console.error('Could not save local draft:', error);
+                setError('We could not save the draft locally. Please try again.');
+                setIsPublishing(false);
+                return;
+            }
+        }
+
+        if (postData.postType === 'draft' && !postData.editedFile) {
+            setError("Render your edit before publishing. You can save the project as a draft for now.");
+            setIsPublishing(false);
+            return;
+        }
+
+        if ((postData.postType === 'media' || postData.postType === 'draft') && !(postData.content || postData.draftTitle || '').trim()) {
             setError("Content is required for media posts.");
             setIsPublishing(false);
             return;
@@ -137,6 +220,45 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
             const creatorType = userData.creatorType || '';
             const mainCategory = creatorCategoryMap[creatorType] || null;
             const hashtags = (postData.hashtags || "").split(/[\s,]+/).map((h:string) => h.replace('#', '')).filter(Boolean);
+
+            if (postData.postType === 'draft' && postData.editedFile) {
+                let finalThumbnailUrl: string | null = null;
+                if (postData.editedThumbnailFile) {
+                    finalThumbnailUrl = await uploadFile(postData.editedThumbnailFile, `thumbnails/${user.uid}/edited_${Date.now()}.jpg`);
+                }
+                const mediaPath = `posts/${user.uid}/${Date.now()}_${postData.editedFile.name}`;
+                const uploadedUrl = await uploadFile(postData.editedFile, mediaPath);
+                const createdAt = serverTimestamp();
+                await addDoc(collection(db, 'posts'), {
+                    userId: user.uid,
+                    displayName: userData.name || user.displayName,
+                    username: userData.username,
+                    avatar_url: userData.avatar_url || null,
+                    type: 'media',
+                    content: postData.content || postData.draftTitle || '',
+                    hashtags,
+                    createdAt,
+                    publishAt: createdAt,
+                    location: postData.location || null,
+                    viewCount: 0,
+                    creatorType,
+                    category: mainCategory,
+                    mediaUrl: postData.editedIsVideo ? uploadedUrl : [uploadedUrl],
+                    rawMediaUrl: postData.editedIsVideo ? uploadedUrl : null,
+                    thumbnailUrl: finalThumbnailUrl,
+                    storagePath: postData.editedIsVideo ? mediaPath : null,
+                    description: postData.description || '',
+                    isFlow: Boolean(postData.editedIsVideo && postData.aspectRatio === 'portrait' && postData.editedDuration <= 240),
+                    isVideo: Boolean(postData.editedIsVideo),
+                    videoDuration: postData.editedDuration || null,
+                    isPortrait: Boolean(postData.editedIsVideo && postData.aspectRatio === 'portrait'),
+                    processingComplete: !postData.editedIsVideo,
+                    videoQualities: {},
+                    subtitleUrl: null,
+                });
+                router.push('/vibespace');
+                return;
+            }
 
             if (postData.postType === 'flash') {
                 let publishAt;
@@ -299,6 +421,7 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
     const getButtonText = () => {
         if (isPublishing) return 'Publishing...';
         if (postData.postType === 'live') return 'Go Live';
+        if (postData.postType === 'draft') return postData.editedFile ? 'Publish Edited Post' : 'Render an edit first';
         if (isScheduling && scheduleDate) {
             if(postData.postType === 'flash') return 'Schedule Flash';
             return 'Schedule Post';
@@ -313,7 +436,11 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                 
                 <PostPreview postData={postData} />
 
-                <p className="text-gray-400 mb-6 text-sm">You're ready to publish now or schedule your post for later.</p>
+                <p className="text-gray-400 mb-6 text-sm">
+                    {postData.postType === 'draft'
+                        ? 'Save your editing plan locally, or publish the rendered media.'
+                        : "You're ready to publish now or schedule your post for later."}
+                </p>
                  
                 {error && (
                     <motion.div 
@@ -350,10 +477,8 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                                     </PopoverTrigger>
                                     <PopoverContent className="w-auto p-0 glass-card">
                                     <Calendar
-                                        mode="single"
                                         selected={scheduleDate}
                                         onSelect={setScheduleDate}
-                                        initialFocus
                                         disabled={(date) => date < new Date(new Date().setDate(new Date().getDate() - 1))}
                                     />
                                     </PopoverContent>
@@ -376,17 +501,25 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                 <button className="btn-glass flex items-center gap-2" onClick={onBack} disabled={isPublishing}>
                     <ArrowLeft /> Back
                 </button>
-                <button 
-                    className={`btn-accent ${postData.postType === 'live' ? 'bg-red-600 hover:bg-red-700' : ''}`}
-                    onClick={handleSubmit}
-                    disabled={
-                        isPublishing ||
-                        (postData.postType === 'live' && (!postData.content || !postData.thumbnailFile)) ||
-                        (postData.postType === 'media' && !(postData.content || '').trim())
-                    }
-                >
-                    {getButtonText()} {postData.postType === 'live' ? <Radio /> :<CheckCircle />}
-                </button>
+                <div className="flex flex-wrap justify-end gap-2">
+                    {postData.postType === 'draft' && (
+                        <button className="btn-glass" onClick={() => void handleSubmit('saveDraft')} disabled={isPublishing}>
+                            Save Draft
+                        </button>
+                    )}
+                    <button
+                        className={`btn-accent ${postData.postType === 'live' ? 'bg-red-600 hover:bg-red-700' : ''}`}
+                        onClick={() => void handleSubmit('publish')}
+                        disabled={
+                            isPublishing ||
+                            (postData.postType === 'draft' && !postData.editedFile) ||
+                            (postData.postType === 'live' && (!postData.content || !postData.thumbnailFile)) ||
+                            (postData.postType === 'media' && !(postData.content || '').trim())
+                        }
+                    >
+                        {getButtonText()} {postData.postType === 'live' ? <Radio /> :<CheckCircle />}
+                    </button>
+                </div>
             </div>
         </motion.div>
     );

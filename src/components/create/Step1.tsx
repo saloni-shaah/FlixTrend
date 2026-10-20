@@ -1,6 +1,6 @@
 
 "use client";
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import { TextPostForm } from './forms/TextPostForm';
@@ -8,13 +8,19 @@ import { MediaPostForm } from './forms/MediaPostForm';
 import { PollPostForm } from './forms/PollPostForm';
 import { LivePostForm } from './forms/LivePostForm';
 import { FlashPostForm } from './forms/FlashPostForm';
+import { DraftStudioForm } from './forms/DraftStudioForm';
 
-export default function Step1({ onNext, postType, postData }: { onNext: (data: any) => void; postType: string; postData: any }) {
+export default function Step1({ onNext, onDataChange, postType, postData }: { onNext: (data: any) => void; onDataChange: (data: any) => void; postType: string; postData: any }) {
     const [formData, setFormData] = useState(postData);
     const [moderationError, setModerationError] = useState<string | null>(null);
 
+    useEffect(() => {
+        setFormData(postData);
+    }, [postData]);
+
     const handleDataChange = (data: any) => {
         setFormData((prev: any) => ({...prev, ...data}));
+        onDataChange(data);
     };
 
     const handleModerationError = (error: string | null) => {
@@ -33,6 +39,8 @@ export default function Step1({ onNext, postType, postData }: { onNext: (data: a
                 return <PollPostForm data={formData} onDataChange={handleDataChange} onError={handleModerationError} />;
             case 'live':
                 return <LivePostForm data={formData} onDataChange={handleDataChange} onError={handleModerationError} />;
+            case 'draft':
+                return <DraftStudioForm data={formData} onDataChange={handleDataChange} onError={handleModerationError} />;
             default:
                 return <p>Select a post type</p>;
         }

@@ -50,7 +50,7 @@ export const faqCategories: FaqCategory[] = [
       { q: "Can I edit a post after publishing it?", a: "editing a post is very easy for notmal stuffs like caption and description just click the three dot and for updating other things like thubmnail and sub title you can do that with studio." },
       { q: "How do I delete a post?", a: "deleting a post is very easy you can delete a post by clcikng upon the three dot and then delete the post and for a scheduled post you can delete it in the squad in the draft section." },
       { q: "Why did my upload fail?", a: "uploading a post or comment may fail due to network issue or some voilation like using wrong words that may be not safe for childerns or that abuses a person or commmunity." },
-      { q: "Can I save a post as a draft?", a: "yes you can schedule a post and save it as a draft in flixtrend it is currently avaiable for flash only but we will rolling out for all types of posts soon" },
+      { q: "Can I save a post as a draft?", a: "Yes. Open Draft Studio from the create-post screen to edit photos and videos in your browser, then save the project locally or publish the rendered result. Draft settings stay on the device where you saved them; source media files must be selected again when resuming a project." },
       { q: "How do hashtags or tags work on FlixTrend?", a: "" },
     ],
   },
