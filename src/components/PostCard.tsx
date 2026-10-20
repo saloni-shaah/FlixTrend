@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { getFirestore, onSnapshot, doc as fsDoc, serverTimestamp, getDoc, deleteDoc, writeBatch } from "firebase/firestore";
 import { FaMusic } from "react-icons/fa";
 import { Repeat2, MapPin, Smile, MoreVertical, Edit, Trash, Eye, Sparkles, Zap, PlayCircle, Radio, Check } from "lucide-react";
@@ -598,6 +598,9 @@ function VibeSpaceImageGallery({
   onSelectImage: (index: number) => void;
 }) {
   const [expandedCaptions, setExpandedCaptions] = useState<Set<number>>(() => new Set());
+  const [visibleImageCount, setVisibleImageCount] = useState(5);
+  const galleryScrollRef = useRef<HTMLDivElement>(null);
+  const nearEndRef = useRef(false);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -611,6 +614,18 @@ function VibeSpaceImageGallery({
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [onClose]);
+
+  const handleGalleryScroll = () => {
+    const container = galleryScrollRef.current;
+    if (!container) return;
+    const nearEnd = container.scrollTop + container.clientHeight >= container.scrollHeight - 80;
+    if (nearEnd && !nearEndRef.current) {
+      nearEndRef.current = true;
+      setVisibleImageCount(count => Math.min(count + 3, imageUrls.length));
+    } else if (!nearEnd) {
+      nearEndRef.current = false;
+    }
+  };
 
   return (
     <div
@@ -635,9 +650,13 @@ function VibeSpaceImageGallery({
             Close
           </button>
         </header>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-5 sm:px-6">
+        <div
+          ref={galleryScrollRef}
+          onScroll={handleGalleryScroll}
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-5 sm:px-6"
+        >
           <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-6">
-            {imageUrls.map((url, index) => (
+            {imageUrls.slice(0, visibleImageCount).map((url, index) => (
               <figure key={`${url}-${index}`} className="w-full overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
                 <button
                   type="button"
@@ -680,6 +699,11 @@ function VibeSpaceImageGallery({
                 </figcaption>
               </figure>
             ))}
+            {visibleImageCount < imageUrls.length && (
+              <p className="py-2 text-center text-xs text-white/50" aria-live="polite">
+                Scroll for {imageUrls.length - visibleImageCount} more photos
+              </p>
+            )}
           </div>
         </div>
       </div>

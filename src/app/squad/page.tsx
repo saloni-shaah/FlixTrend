@@ -339,7 +339,7 @@ function SquadPageContent() {
                           {userPosts.map((post, index) => {
                             const content = postTypeFilter === 'flow'
                               ? <ProfileFlowCard post={post} userId={uid} sortBy={sortBy} />
-                              : <PostCard post={post} collectionName="posts"/>;
+                              : <PostCard post={post} collectionName="posts" compactMedia />;
                             if (userPosts.length === index + 1) {
                                 return <div ref={loadMoreRef} key={post.id}>{content}</div>
                             }
@@ -502,7 +502,7 @@ const HomeFeed = ({ user }: { user: any }) => {
     const hasContent = posts.length > 0 || creators.length > 0;
 
     return (
-        <div className="w-full max-w-xl flex flex-col gap-6">
+        <div className="w-full max-w-3xl flex flex-col gap-6">
             {!hasContent && !loading ? (
                  <div className="text-center text-muted-foreground mt-20 p-8 bg-secondary rounded-2xl">
                     <UsersIcon size={48} className="mx-auto mb-4 text-accent-cyan"/>
@@ -511,19 +511,19 @@ const HomeFeed = ({ user }: { user: any }) => {
                  </div>
             ) : (
                 <>
-                    {posts1.map(post => <PostCard key={post.id} post={post} collectionName="posts" />)}
+                    {posts1.map(post => <PostCard key={post.id} post={post} collectionName="posts" compactMedia />)}
                     <CreatorSuggestions creators={creators1} title="Suggested Creators" currentUser={user} />
                     
-                    {posts2.map(post => <PostCard key={post.id} post={post} collectionName="posts" />)}
+                    {posts2.map(post => <PostCard key={post.id} post={post} collectionName="posts" compactMedia />)}
                     <CreatorSuggestions creators={creators2} title="More Creators" currentUser={user} />
 
-                    {posts3.map(post => <PostCard key={post.id} post={post} collectionName="posts" />)}
+                    {posts3.map(post => <PostCard key={post.id} post={post} collectionName="posts" compactMedia />)}
                     <CreatorSuggestions creators={creators3} title="Keep Exploring" currentUser={user} />
 
-                    {posts4.map(post => <PostCard key={post.id} post={post} collectionName="posts" />)}
+                    {posts4.map(post => <PostCard key={post.id} post={post} collectionName="posts" compactMedia />)}
                     <CreatorSuggestions creators={creators4} title="Discover More" currentUser={user} />
 
-                    {posts5.map(post => <PostCard key={post.id} post={post} collectionName="posts" />)}
+                    {posts5.map(post => <PostCard key={post.id} post={post} collectionName="posts" compactMedia />)}
                     <CreatorSuggestions creators={creators5} title="Top Picks for You" currentUser={user} />
 
                     <div className="text-center mt-8">

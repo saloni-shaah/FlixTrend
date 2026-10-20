@@ -35,33 +35,24 @@ const FlowIcon = ({ className }: { className?: string }) => (
 const POSTS_PER_PAGE = 10;
 const FLOW_POSTS_PER_PAGE = 8;
 
-export default function UserProfileClient({ initialProfile, initialPosts, hasMore }) {
+export default function UserProfileClient({ initialProfile, initialPosts, hasMore, username }: { initialProfile: any; initialPosts: any[]; hasMore: boolean; username?: string }) {
   const [profile, setProfile] = useState(initialProfile);
-  const [uid, setUid] = useState(initialProfile.uid);
-  const [firebaseUser, setFirebaseUser] = useState(null);
+  const [uid, setUid] = useState<string | null>(initialProfile?.uid ?? null);
+  const [firebaseUser, setFirebaseUser] = useState<any>(null);
   const [userPosts, setUserPosts] = useState(initialPosts);
   const [activeTab, setActiveTab] = useState("posts");
   const [postTypeFilter, setPostTypeFilter] = useState('all');
   const [sortBy, setSortBy] = useState('latest');
-  const [showFollowList, setShowFollowList] = useState(null);
+  const [showFollowList, setShowFollowList] = useState<null | 'followers' | 'following' | 'friends'>(null);
   const [fullScreenImage, setFullScreenImage] = useState(null);
 
-  const [lastVisible, setLastVisible] = useState(null);
+  const [lastVisible, setLastVisible] = useState<any>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMorePosts, setHasMorePosts] = useState(hasMore);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(!initialProfile);
+  const [profileError, setProfileError] = useState<string | null>(null);
 
-  const observer = useRef();
-  const loadMoreRef = useCallback(node => {
-    if (loadingMore) return;
-    if (observer.current) observer.current.disconnect();
-    observer.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && hasMorePosts) {
-        fetchMorePosts();
-      }
-    });
-    if (node) observer.current.observe(node);
-  }, [loadingMore, hasMorePosts]);
+  const observer = useRef<IntersectionObserver | null>(null);
 
   useEffect(() => {
     const unsub = auth.onAuthStateChanged((user) => {
@@ -69,6 +60,41 @@ export default function UserProfileClient({ initialProfile, initialPosts, hasMor
     });
     return () => unsub();
   }, []);
+
+  useEffect(() => {
+    if (initialProfile || !username) return;
+    let cancelled = false;
+    const loadProfile = async () => {
+      setLoading(true);
+      setProfileError(null);
+      try {
+        const profileQuery = query(
+          collection(db, 'users'),
+          where('username', '==', username.toLowerCase()),
+          limit(1)
+        );
+        const snapshot = await getDocs(profileQuery);
+        if (cancelled) return;
+        if (snapshot.empty) {
+          setProfileError('This user profile could not be found.');
+          return;
+        }
+        const profileDoc = snapshot.docs[0];
+        const nextProfile = { uid: profileDoc.id, ...profileDoc.data() };
+        setProfile(nextProfile);
+        setUid(profileDoc.id);
+      } catch (error) {
+        console.error('Error loading profile from client Firestore:', error);
+        if (!cancelled) {
+          setProfileError('Could not load this profile. Please refresh and try again.');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    loadProfile();
+    return () => { cancelled = true; };
+  }, [initialProfile, username]);
 
   useEffect(() => {
     if (!uid) return;
@@ -83,12 +109,7 @@ export default function UserProfileClient({ initialProfile, initialPosts, hasMor
     return () => unsub();
 }, [uid]);
 
-  useEffect(() => {
-    if (!uid) return;
-    fetchInitialPosts();
-  }, [uid, postTypeFilter, sortBy]);
-
-  const getQuery = () => {
+  const getQuery = useCallback(() => {
     if (!uid) return null;
     let q = query(collection(db, "posts"), where("userId", "==", uid));
 
@@ -105,16 +126,16 @@ export default function UserProfileClient({ initialProfile, initialPosts, hasMor
     }
 
     let orderByField = 'createdAt';
-    let orderByDirection = sortBy === 'oldest' ? 'asc' : 'desc';
+    let orderByDirection: OrderByDirection = sortBy === 'oldest' ? 'asc' : 'desc';
     if (sortBy === 'popular') {
         orderByField = 'likesCount';
     }
 
     q = query(q, orderBy(orderByField, orderByDirection));
     return q;
-  }
+  }, [uid, postTypeFilter, sortBy]);
 
-  const fetchInitialPosts = async () => {
+  const fetchInitialPosts = useCallback(async () => {
     const q = getQuery();
     if (!q) return;
 
@@ -132,11 +153,11 @@ export default function UserProfileClient({ initialProfile, initialPosts, hasMor
         console.error("Error fetching initial posts: ", error);
     }
     setLoading(false);
-  }
+  }, [getQuery, postTypeFilter]);
 
-  const fetchMorePosts = async () => {
+  const fetchMorePosts = useCallback(async () => {
     const q = getQuery();
-    if (!q || !lastVisible) return;
+    if (!q || !lastVisible || loading || loadingMore || !hasMorePosts) return;
 
     setLoadingMore(true);
     const pageSize = postTypeFilter === 'flow' ? FLOW_POSTS_PER_PAGE : POSTS_PER_PAGE;
@@ -146,20 +167,43 @@ export default function UserProfileClient({ initialProfile, initialPosts, hasMor
         const documentSnapshots = await getDocs(finalQuery);
         const newPosts = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setUserPosts(prevPosts => [...prevPosts, ...newPosts]);
-        setLastVisible(documentSnapshots.docs[documentSnapshots.docs.length - 1]);
+        if (documentSnapshots.docs.length > 0) {
+          setLastVisible(documentSnapshots.docs[documentSnapshots.docs.length - 1]);
+        }
         setHasMorePosts(documentSnapshots.docs.length === pageSize);
     } catch (error) {
         console.error("Error fetching more posts: ", error);
+        setHasMorePosts(false);
+    } finally {
+        setLoadingMore(false);
     }
+  }, [getQuery, lastVisible, loading, loadingMore, hasMorePosts, postTypeFilter]);
 
-    setLoadingMore(false);
-  }
+  const loadMoreRef = useCallback((node: HTMLDivElement | null) => {
+    observer.current?.disconnect();
+    if (!node) return;
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0]?.isIntersecting) fetchMorePosts();
+    }, { rootMargin: '300px' });
+    observer.current.observe(node);
+  }, [fetchMorePosts]);
+
+  useEffect(() => () => observer.current?.disconnect(), []);
+
+  useEffect(() => {
+    if (!uid) return;
+    fetchInitialPosts();
+  }, [uid, fetchInitialPosts]);
 
   if (!profile) {
-    return <div className="flex flex-col min-h-screen items-center justify-center text-red-400">User not found.</div>;
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 text-center text-red-400">
+        {loading ? <div className="animate-pulse text-accent-cyan">Loading profile...</div> : profileError || 'User not found.'}
+      </div>
+    );
   }
 
-  const initials = profile.name?.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase() || profile.username?.slice(0, 2).toUpperCase() || "U";
+  const initials = profile.name?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || profile.username?.slice(0, 2).toUpperCase() || "U";
   
   let premiumUntilTimestamp = null;
   if (profile.premiumUntil) {
@@ -281,7 +325,7 @@ export default function UserProfileClient({ initialProfile, initialPosts, hasMor
       </div>
       <div className="flex-1 flex flex-col items-center justify-center w-full">
         {activeTab === "posts" && (
-          <div className={`w-full ${postTypeFilter === 'flow' ? 'max-w-6xl' : 'max-w-xl'} flex flex-col gap-6`}>
+          <div className={`w-full ${postTypeFilter === 'flow' ? 'max-w-6xl' : 'max-w-3xl'} flex flex-col gap-6`}>
              <div className="flex justify-center gap-2 p-1 rounded-full bg-secondary">
                 <button onClick={() => { setPostTypeFilter('all'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'all' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}>All</button>
                 <button onClick={() => { setPostTypeFilter('text'); setSortBy('latest'); }} className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${postTypeFilter === 'text' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}><AlignLeft size={14} className="inline" /></button>
@@ -308,8 +352,8 @@ export default function UserProfileClient({ initialProfile, initialPosts, hasMor
               <div className={postTypeFilter === 'flow' ? 'grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 sm:gap-4' : 'flex flex-col gap-6'}>
                 {userPosts.map((post, index) => {
                   const content = postTypeFilter === 'flow'
-                    ? <ProfileFlowCard post={post} userId={uid} sortBy={sortBy} />
-                    : <PostCard post={post} collectionName="posts"/>;
+                    ? <ProfileFlowCard post={post} userId={uid ?? profile.uid} sortBy={sortBy} />
+                    : <PostCard post={post} collectionName="posts" compactMedia />;
                   if (userPosts.length === index + 1) {
                       return <div ref={loadMoreRef} key={post.id}>{content}</div>
                   }

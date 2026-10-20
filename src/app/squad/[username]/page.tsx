@@ -43,6 +43,13 @@ export async function generateMetadata(
 
   const username = rawUsername.toLowerCase();
 
+  if (!process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+    return {
+      title: "Creator Profile | FlixTrend",
+      robots: { index: false, follow: false },
+    };
+  }
+
   try {
     const profile = await getUserByUsername(username);
 
@@ -123,6 +130,17 @@ export default async function UserProfilePage({ params }: { params: Promise<{ us
 
   if (!username) {
     notFound();
+  }
+
+  if (!process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+    return (
+      <UserProfileClient
+        initialProfile={null}
+        initialPosts={[]}
+        hasMore={false}
+        username={username}
+      />
+    );
   }
 
   const profile = await getUserByUsername(username);
