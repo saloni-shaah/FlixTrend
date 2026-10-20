@@ -65,6 +65,7 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
     const [showShareModal, setShowShareModal] = useState(false);
     const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
     const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
+    const [fullScreenImageGallery, setFullScreenImageGallery] = useState<{ urls: string[]; captions: string[]; index: number } | null>(null);
     const [showUserDetails, setShowUserDetails] = useState(false);
     const [addableUsers, setAddableUsers] = useState<any[]>([]);
     const [longPressMenu, setLongPressMenu] = useState<{ x: number, y: number, msgId: string } | null>(null);
@@ -356,7 +357,7 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
         }
     };
 
-    const handleSendMessage = async (text: string, mediaUrl: string | null = null, type: 'text' | 'image' | 'audio' | 'gif' | 'video' = 'text') => {
+    const handleSendMessage = async (text: string, mediaUrl: string | null = null, type: 'text' | 'image' | 'audio' | 'gif' | 'video' = 'text', mediaGroupId?: string) => {
         if (!firebaseUser?.uid) return;
         if ((!text.trim() && !mediaUrl) || !selectedChat) return;
 
@@ -376,6 +377,7 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
             type,
             text: text.trim(),
             mediaUrl: mediaUrl || null,
+            ...(mediaGroupId ? { mediaGroupId } : {}),
             ...(replyPreview ? {
                 replyTo: replyingTo.id,
                 replyPreview,
@@ -402,6 +404,7 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                 type,
                 text: text.trim() || "",
                 mediaUrl: mediaUrl || null,
+                ...(mediaGroupId ? { mediaGroupId } : {}),
                 ...(replyPreview ? {
                     replyTo: replyingTo.id,
                     replyPreview,
@@ -418,7 +421,7 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
     const handleInputSend = (content: string, type: 'text' | 'gif' = 'text') =>
         handleSendMessage(type === 'gif' ? '' : content, type === 'gif' ? content : null, type);
 
-    const handleSendFile = async (file: File, type: 'image' | 'audio' | 'video') => {
+    const handleSendFile = async (file: File, type: 'image' | 'audio' | 'video', mediaGroupId?: string) => {
         if (!firebaseUser?.uid) return;
         const sizeLimit = type === 'audio' ? 10 * 1024 * 1024 : 25 * 1024 * 1024;
         if (file.size > sizeLimit) return alert(`File size cannot exceed ${sizeLimit / 1024 / 1024}MB.`);
@@ -427,7 +430,7 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
             const fileRef = ref(storage, `${path}/${uuid()}`);
             await uploadBytes(fileRef, file);
             const downloadURL = await getDownloadURL(fileRef);
-            await handleSendMessage("", downloadURL, type);
+            await handleSendMessage("", downloadURL, type, mediaGroupId);
         } catch (error) {
             console.error("Upload failed:", error);
             alert("Upload failed. Please try again.");
@@ -721,7 +724,14 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                     handleMessageClick,
                     setShowEmojiPicker,
                     showEmojiPicker,
-                    setFullScreenImage,
+                    setFullScreenImage: (url: string, urls?: string[], index = 0, captions?: string[]) => {
+                        setFullScreenImage(url);
+                        setFullScreenImageGallery({
+                            urls: urls?.length ? urls : [url],
+                            captions: captions?.length ? captions : [''],
+                            index,
+                        });
+                    },
                     bottomRef,
                     loadMoreMessages,
                     loadingMore,
@@ -869,7 +879,17 @@ function ChatPage({ firebaseUser, chatId }: { firebaseUser: any, chatId: string 
                 )}
             </AnimatePresence>
 
-            <FullScreenImageViewer imageUrl={fullScreenImage} onClose={() => setFullScreenImage(null)} />
+            <FullScreenImageViewer
+                imageUrl={fullScreenImage}
+                onClose={() => {
+                    setFullScreenImage(null);
+                    setFullScreenImageGallery(null);
+                }}
+                imageUrls={fullScreenImageGallery?.urls}
+                captions={fullScreenImageGallery?.captions}
+                initialIndex={fullScreenImageGallery?.index ?? 0}
+                caption={fullScreenImageGallery?.captions[fullScreenImageGallery.index]}
+            />
         </div>
     );
 }

@@ -11,12 +11,12 @@ import { Camera } from 'lucide-react';
 
 const db = getFirestore(app);
 
-const LinkifiedText = React.memo(({ text }: { text: string }) => {
+const LinkifiedText = React.memo(({ text, clamp = false }: { text: string; clamp?: boolean }) => {
     if (!text) return null;
 
     const combinedRegex = /(\b(?:https?:\/\/|www\.)[^\s<>"{}|\\^`[\]]+)|(\b(?:\+\d{1,3}\s*)?(?:\(\d{3}\)|\d{3})[\s.-]?\d{3}[\s.-]?\d{4}\b)/gi;
 
-    const parts: (string | JSX.Element)[] = [];
+    const parts: React.ReactNode[] = [];
     let lastIndex = 0;
     let match;
 
@@ -50,7 +50,7 @@ const LinkifiedText = React.memo(({ text }: { text: string }) => {
         parts.push(text.substring(lastIndex));
     }
 
-    return <p className="break-words whitespace-pre-wrap">{parts.map((part, i) => <React.Fragment key={i}>{part}</React.Fragment>)}</p>;
+    return <div className={cn('break-words whitespace-pre-wrap', clamp && 'line-clamp-2')}>{parts.map((part, i) => <React.Fragment key={i}>{part}</React.Fragment>)}</div>;
 });
 LinkifiedText.displayName = 'LinkifiedText';
 
@@ -152,7 +152,7 @@ interface Props {
   onClick:        (id: string) => void;
   onShowEmojiPicker: (id: string | null) => void;
   showEmojiPicker:   string | null;
-  setFullScreenImage: (url: string) => void;
+  setFullScreenImage: (url: string, imageUrls?: string[], initialIndex?: number, captions?: string[]) => void;
   chatId: string;
   onReply: (message: any) => void;
   messages: any[];
@@ -166,6 +166,7 @@ export const MessageItem = React.memo(({
   readReceipts
 }: Props) => {
   const [swipeX, setSwipeX] = React.useState(0);
+  const [captionExpanded, setCaptionExpanded] = React.useState(false);
   const touchStartRef = React.useRef<{ x: number; y: number } | null>(null);
   const swipeActiveRef = React.useRef(false);
   const swipeXRef = React.useRef(0);
@@ -454,11 +455,48 @@ export const MessageItem = React.memo(({
 
           {ReplyPreview}
 
-          {(msg.type === 'image' || msg.type === 'gif') && <motion.img src={msg.mediaUrl} alt="" className="rounded-lg max-w-full h-auto cursor-pointer mb-1 block" style={{ maxHeight: 300 }} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} whileHover={{ scale: 1.02 }} onClick={e => { e.stopPropagation(); setFullScreenImage(msg.mediaUrl); }}/>}
+          {(msg.type === 'image' || msg.type === 'gif') && <motion.img src={msg.mediaUrl} alt="" className="mb-1 block h-auto max-w-full cursor-pointer rounded-lg object-contain md:max-w-[min(36rem,65vw)]" style={{ maxHeight: 'min(62dvh, 30rem)' }} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} whileHover={{ scale: 1.02 }} onClick={e => {
+            e.stopPropagation();
+            const group = msg.mediaGroupId
+              ? messages.filter(item => item.type === 'image' && item.mediaGroupId === msg.mediaGroupId && item.sender === msg.sender && !(item.deletedFor ?? []).includes(firebaseUser.uid))
+              : [];
+            const imageUrls = group.length > 1 ? group.map(item => item.mediaUrl) : undefined;
+            const captions = group.length > 1 ? group.map(item => item.text || '') : undefined;
+            const initialIndex = group.length > 1 ? group.findIndex(item => item.id === msg.id) : 0;
+            setFullScreenImage(msg.mediaUrl, imageUrls ?? [msg.mediaUrl], initialIndex, captions ?? [msg.text || '']);
+          }}/>}
           {msg.type === 'video' && <video src={msg.mediaUrl} controls className="rounded-lg max-w-full h-auto mb-1 block" style={{ maxHeight: 300 }} onClick={e => e.stopPropagation()}/>}
           {msg.type === 'audio' && <div className="mb-1" onClick={e => e.stopPropagation()}><AudioPlayer src={msg.mediaUrl} isUser={isUser} /></div>}
 
-          {msg.text && <LinkifiedText text={msg.text} />}
+          {msg.text && (
+            (msg.type === 'image' || msg.type === 'gif') ? (
+              <div
+                tabIndex={0}
+                className="block max-w-full text-left text-sm leading-relaxed"
+                role="group"
+                onClick={e => {
+                  e.stopPropagation();
+                  setCaptionExpanded(expanded => !expanded);
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setCaptionExpanded(expanded => !expanded);
+                  }
+                }}
+                aria-expanded={captionExpanded}
+                aria-label={captionExpanded ? 'Collapse photo caption' : 'Expand photo caption'}
+              >
+                <LinkifiedText text={msg.text} clamp={!captionExpanded} />
+                {(msg.text.length > 100 || msg.text.includes('\n')) && (
+                  <span className="mt-1 block text-xs font-semibold text-white/60">
+                    {captionExpanded ? 'Show less' : 'Show more'}
+                  </span>
+                )}
+              </div>
+            ) : <LinkifiedText text={msg.text} />
+          )}
 
           <div className={cn('flex items-center gap-1.5 mt-1', isUser ? 'justify-end' : 'justify-start')}>
             {isStarred && <Star size={12} className="text-yellow-400"/>}

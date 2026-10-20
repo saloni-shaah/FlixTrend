@@ -22,12 +22,12 @@ interface Props {
   handleMessageClick: (id: string) => void;
   setShowEmojiPicker: (id: string | null) => void;
   showEmojiPicker:    string | null;
-  setFullScreenImage: (url: string | null) => void;
-  bottomRef:      React.RefObject<HTMLDivElement>;
+  setFullScreenImage: (url: string, imageUrls?: string[], initialIndex?: number, captions?: string[]) => void;
+  bottomRef:      React.RefObject<HTMLDivElement | null>;
   loadMoreMessages: () => void;
   loadingMore:    boolean;
   hasMoreToLoad:  boolean;
-  scrollContainerRef: React.RefObject<HTMLDivElement>;
+  scrollContainerRef: React.RefObject<HTMLDivElement | null>;
   chatId: string;
   onReply: (message: any) => void;
   readReceipts: Record<string, Date>;
@@ -47,7 +47,31 @@ export function MessageList({
   const nodes: React.ReactNode[] = [];
   let lastDate: string | null = null;
 
-  visible.forEach((msg, i) => {
+  const renderMessage = (msg: any, index: number) => (
+    <MessageItem
+      key={msg.id ?? `tmp-${index}`}
+      msg={msg}
+      isUser={msg.sender === firebaseUser.uid}
+      selectedChat={selectedChat}
+      firebaseUser={firebaseUser}
+      isSelected={selectedItems.has(msg.id)}
+      selectionMode={selectionMode}
+      isStarred={(msg.starredBy || []).includes(firebaseUser.uid)}
+      onLongPress={handleLongPress}
+      onContextMenu={onContextMenu}
+      onClick={handleMessageClick}
+      onShowEmojiPicker={setShowEmojiPicker}
+      showEmojiPicker={showEmojiPicker}
+      setFullScreenImage={setFullScreenImage}
+      chatId={chatId}
+      onReply={onReply}
+      messages={messages}
+      readReceipts={readReceipts}
+    />
+  );
+
+  for (let i = 0; i < visible.length; i++) {
+    const msg = visible[i];
     const msgDate = msg.createdAt?.toDate?.() ?? (msg.pending ? msg.createdAt : null);
     if (msgDate) {
       const ds = msgDate.toDateString();
@@ -69,32 +93,35 @@ export function MessageList({
           <span className="text-gray-600 text-xs italic">Message deleted</span>
         </div>
       );
-      return;
+      continue;
     }
 
-    nodes.push(
-      <MessageItem
-        key={msg.id ?? `tmp-${i}`}
-        msg={msg}
-        isUser={msg.sender === firebaseUser.uid}
-        selectedChat={selectedChat}
-        firebaseUser={firebaseUser}
-        isSelected={selectedItems.has(msg.id)}
-        selectionMode={selectionMode}
-        isStarred={(msg.starredBy || []).includes(firebaseUser.uid)}
-        onLongPress={handleLongPress}
-        onContextMenu={onContextMenu}
-        onClick={handleMessageClick}
-        onShowEmojiPicker={setShowEmojiPicker}
-        showEmojiPicker={showEmojiPicker}
-        setFullScreenImage={setFullScreenImage}
-        chatId={chatId}
-        onReply={onReply}
-        messages={messages}
-        readReceipts={readReceipts}
-      />
-    );
-  });
+    if (msg.type === 'image' && msg.mediaGroupId) {
+      const group = [msg];
+      while (
+        i + 1 < visible.length &&
+        visible[i + 1].type === 'image' &&
+        visible[i + 1].mediaGroupId === msg.mediaGroupId &&
+        visible[i + 1].sender === msg.sender
+      ) {
+        i++;
+        group.push(visible[i]);
+      }
+      if (group.length > 1) {
+        nodes.push(
+          <div
+            key={`media-group-${msg.mediaGroupId}`}
+            className="my-1 max-h-[72dvh] w-full overflow-y-auto overscroll-contain rounded-2xl border border-white/10 bg-black/20 py-1 [scrollbar-width:thin] md:max-w-3xl md:self-center"
+            aria-label={`Photo gallery with ${group.length} images`}
+          >
+            {group.map((item, groupIndex) => renderMessage(item, i - group.length + 1 + groupIndex))}
+          </div>
+        );
+        continue;
+      }
+    }
+    nodes.push(renderMessage(msg, i));
+  }
 
   return (
     <div

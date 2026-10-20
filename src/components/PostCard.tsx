@@ -45,7 +45,7 @@ const timeAgo = (timestamp: any): string => {
     return date.toLocaleDateString('en-US', options);
 };
 
-export function PostCard({ post, isShortVibe = false, collectionName = 'posts', allPosts, postIndex }: { post: any; isShortVibe?: boolean, collectionName?: string, allPosts?: any[], postIndex?: number }) {
+export function PostCard({ post, isShortVibe = false, collectionName = 'posts', allPosts, postIndex, compactMedia = false }: { post: any; isShortVibe?: boolean, collectionName?: string, allPosts?: any[], postIndex?: number, compactMedia?: boolean }) {
   const [showComments, setShowComments] = React.useState(false);
   const [showEdit, setShowEdit] = React.useState(false);
   const [optimisticUserVote, setOptimisticUserVote] = React.useState<number | null>(null);
@@ -53,6 +53,8 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
   const [viewCount, setViewCount] = useState(post.viewCount || 0);
   const [playVideo, setPlayVideo] = useState(false);
   const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
+  const [fullScreenImageIndex, setFullScreenImageIndex] = useState(0);
+  const [showImageGallery, setShowImageGallery] = useState(false);
   const [originalPost, setOriginalPost] = useState<any>(post.originalPost || null);
   const [originalPostLoading, setOriginalPostLoading] = useState(post.type === 'relay' && !post.originalPost);
   const currentUser = auth.currentUser;
@@ -353,14 +355,41 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
                         )
                     )
                 ) : (
-                    <div className={`mt-2 rounded-xl overflow-hidden w-full h-auto grid ${mediaUrls.length > 1 ? 'grid-cols-2' : 'grid-cols-1'} gap-1`}>
-                        {mediaUrls.map((url: string, index: number) => (
-                        <div key={index} className="group relative w-full h-full aspect-square overflow-hidden rounded-lg cursor-pointer" onClick={() => setFullScreenImage(url)}>
-                            <img src={url} alt={`post image ${index + 1}`} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
-                             <div className="absolute inset-0" onContextMenu={(e) => e.preventDefault()}></div>
+                    compactMedia ? (
+                        <div className={`mt-2 grid gap-1 overflow-hidden rounded-xl ${mediaUrls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'} ${mediaUrls.length === 1 ? 'aspect-[4/3]' : mediaUrls.length === 2 ? '' : 'aspect-square'}`}>
+                            {mediaUrls.slice(0, 4).map((url: string, index: number) => (
+                                <div
+                                    key={index}
+                                    className={`group relative min-h-0 overflow-hidden rounded-lg cursor-pointer ${mediaUrls.length === 1 ? '' : mediaUrls.length === 3 && index === 0 ? 'row-span-2' : ''} ${mediaUrls.length === 2 ? 'aspect-square' : ''}`}
+                                    onClick={() => {
+                                      if (mediaUrls.length > 4 && index === 3) {
+                                        setShowImageGallery(true);
+                                      } else {
+                                        setFullScreenImageIndex(index);
+                                        setFullScreenImage(url);
+                                      }
+                                    }}
+                                    onContextMenu={(e) => e.preventDefault()}
+                                >
+                                    <img src={url} alt={`post image ${index + 1}`} className="absolute inset-0 h-full w-full object-cover transition-transform group-hover:scale-105" />
+                                    {mediaUrls.length > 4 && index === 3 && (
+                                        <div className="absolute inset-0 flex items-center justify-center bg-black/55 text-2xl font-bold text-white">
+                                            +{mediaUrls.length - 4}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
                         </div>
-                        ))}
-                    </div>
+                    ) : (
+                        <div className={`mt-2 rounded-xl overflow-hidden w-full h-auto grid ${mediaUrls.length > 1 ? 'grid-cols-2' : 'grid-cols-1'} gap-1`}>
+                            {mediaUrls.map((url: string, index: number) => (
+                            <div key={index} className="group relative w-full h-full aspect-square overflow-hidden rounded-lg cursor-pointer" onClick={() => setFullScreenImage(url)}>
+                                <img src={url} alt={`post image ${index + 1}`} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                                 <div className="absolute inset-0" onContextMenu={(e) => e.preventDefault()}></div>
+                            </div>
+                            ))}
+                        </div>
+                    )
                 )
             ) : null}
 
@@ -533,7 +562,127 @@ export function PostCard({ post, isShortVibe = false, collectionName = 'posts', 
       {showComments && <CommentModal postId={post.id} postAuthorId={post.userId} onClose={() => setShowComments(false)} post={post} collectionName={collectionName} />}
 
     </motion.div>
-    <FullScreenImageViewer imageUrl={fullScreenImage} onClose={() => setFullScreenImage(null)} />
+    {showImageGallery && compactMedia && (
+      <VibeSpaceImageGallery
+        imageUrls={Array.isArray(activePost?.mediaUrl) ? activePost.mediaUrl : []}
+        caption={activePost?.content}
+        onClose={() => setShowImageGallery(false)}
+        onSelectImage={(index) => {
+          const imageUrls = Array.isArray(activePost?.mediaUrl) ? activePost.mediaUrl : [];
+          setShowImageGallery(false);
+          setFullScreenImageIndex(index);
+          setFullScreenImage(imageUrls[index] ?? null);
+        }}
+      />
+    )}
+    <FullScreenImageViewer
+      imageUrl={fullScreenImage}
+      onClose={() => setFullScreenImage(null)}
+      caption={activePost?.content}
+      imageUrls={compactMedia && fullScreenImage ? (Array.isArray(activePost?.mediaUrl) ? activePost.mediaUrl : [fullScreenImage]) : undefined}
+      initialIndex={compactMedia ? fullScreenImageIndex : 0}
+    />
   </>
+  );
+}
+
+function VibeSpaceImageGallery({
+  imageUrls,
+  caption,
+  onClose,
+  onSelectImage,
+}: {
+  imageUrls: string[];
+  caption?: string;
+  onClose: () => void;
+  onSelectImage: (index: number) => void;
+}) {
+  const [expandedCaptions, setExpandedCaptions] = useState<Set<number>>(() => new Set());
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[10000] bg-black/90 text-white backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Post gallery with ${imageUrls.length} images`}
+      onClick={onClose}
+    >
+      <div className="mx-auto flex h-dvh max-w-6xl flex-col" onClick={(event) => event.stopPropagation()}>
+        <header className="sticky top-0 z-10 flex shrink-0 items-center justify-between border-b border-white/10 bg-black/80 px-4 py-3 backdrop-blur-md">
+          <div>
+            <h2 className="font-semibold">Photos</h2>
+            <p className="text-xs text-white/60">{imageUrls.length} images · Scroll to explore</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full bg-white/10 px-4 py-2 text-sm hover:bg-white/20"
+            aria-label="Close gallery"
+          >
+            Close
+          </button>
+        </header>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-5 sm:px-6">
+          <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-6">
+            {imageUrls.map((url, index) => (
+              <figure key={`${url}-${index}`} className="w-full overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
+                <button
+                  type="button"
+                  className="block w-full cursor-zoom-in"
+                  onClick={() => onSelectImage(index)}
+                  aria-label={`Open image ${index + 1} of ${imageUrls.length}`}
+                >
+                  <img
+                    src={url}
+                    alt={`Post image ${index + 1}`}
+                    className="mx-auto max-h-[78dvh] w-full object-contain"
+                    loading={index < 2 ? 'eager' : 'lazy'}
+                  />
+                </button>
+                <figcaption className="flex items-start justify-between gap-4 px-4 py-3 text-sm text-white/75">
+                  {caption ? (
+                    <button
+                      type="button"
+                      className="min-w-0 flex-1 text-left"
+                      onClick={() => setExpandedCaptions(current => {
+                        const next = new Set(current);
+                        if (next.has(index)) next.delete(index);
+                        else next.add(index);
+                        return next;
+                      })}
+                      aria-expanded={expandedCaptions.has(index)}
+                      aria-label={expandedCaptions.has(index) ? 'Collapse caption' : 'Expand caption'}
+                    >
+                      <span className={expandedCaptions.has(index) ? 'whitespace-pre-line break-words' : 'line-clamp-2 whitespace-pre-line break-words'}>
+                        {caption}
+                      </span>
+                      {(caption.length > 100 || caption.includes('\n')) && (
+                        <span className="mt-1 block text-xs font-semibold text-white/60">
+                          {expandedCaptions.has(index) ? 'Show less' : 'Show more'}
+                        </span>
+                      )}
+                    </button>
+                  ) : <span className="flex-1" />}
+                  <span className="shrink-0 text-xs text-white/45">{index + 1} / {imageUrls.length}</span>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -19,7 +19,7 @@ interface ChatInputProps {
   draft:         string;
   setDraft:      (t: string) => void;
   onSendMessage: (text: string, type?: 'text' | 'gif') => void;
-  onSendFile:    (file: File, type: 'image' | 'audio' | 'video') => Promise<void> | void;
+  onSendFile:    (file: File, type: 'image' | 'audio' | 'video', mediaGroupId?: string) => Promise<void> | void;
   replyingTo?:   any;
   cancelReply?:  () => void;
 }
@@ -140,29 +140,47 @@ export function ChatInput({
 
   // ── File upload ──────────────────────────────────────────────────────────
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
     setUploadError(null);
-    if (file.size > 25 * 1024 * 1024) { setUploadError('File too large (max 25 MB).'); return; }
-
-    let toSend = file;
-    const type: 'image' | 'video' = file.type.startsWith('image/') ? 'image' : 'video';
-
-    if (file.type.startsWith('image/')) {
-      setIsProcessing(true);
-      try {
-        toSend = await imageCompression(file, { maxSizeMB: 0.4, maxWidthOrHeight: 1280, useWebWorker: true });
-      } catch {
-        setUploadError('Could not compress image.');
-        setIsProcessing(false);
-        return;
-      } finally { setIsProcessing(false); }
+    const isImageBatch = files.every(file => file.type.startsWith('image/'));
+    if (files.length > 1 && !isImageBatch) {
+      setUploadError('Select images only to send a photo gallery. Send videos one at a time.');
+      e.target.value = '';
+      return;
+    }
+    if (files.length > 10) {
+      setUploadError('You can send up to 10 images at a time.');
+      e.target.value = '';
+      return;
+    }
+    if (files.some(file => file.size > 25 * 1024 * 1024)) {
+      setUploadError('Each file must be 25 MB or smaller.');
+      e.target.value = '';
+      return;
     }
 
     setIsProcessing(true);
-    try { await onSendFile(toSend, type); }
-    catch { setUploadError('Upload failed. Please try again.'); }
-    finally { setIsProcessing(false); if (e.target) e.target.value = ''; }
+    const mediaGroupId = isImageBatch && files.length > 1 ? crypto.randomUUID() : undefined;
+    try {
+      for (const file of files) {
+        let toSend = file;
+        const type: 'image' | 'video' = file.type.startsWith('image/') ? 'image' : 'video';
+        if (type === 'image') {
+          try {
+            toSend = await imageCompression(file, { maxSizeMB: 0.4, maxWidthOrHeight: 1280, useWebWorker: true });
+          } catch {
+            throw new Error(`Could not compress ${file.name}.`);
+          }
+        }
+        await onSendFile(toSend, type, mediaGroupId);
+      }
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : 'Upload failed. Please try again.');
+    } finally {
+      setIsProcessing(false);
+      e.target.value = '';
+    }
   };
 
   const fmtTime  = (s: number) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
@@ -229,6 +247,7 @@ export function ChatInput({
               type="button"
               onClick={() => { setUploadError(null); fileRef.current?.click(); }}
               disabled={isProcessing}
+              title="Attach files; select multiple photos to send a gallery"
               className="p-2 text-gray-300 hover:text-white transition-colors disabled:opacity-40"
             >
               {isProcessing ? <Loader size={20} className="animate-spin" /> : <Paperclip size={20} />}
@@ -283,6 +302,7 @@ export function ChatInput({
           type="file"
           className="hidden"
           accept="image/*,video/*"
+          multiple
           onChange={handleFile}
         />
 

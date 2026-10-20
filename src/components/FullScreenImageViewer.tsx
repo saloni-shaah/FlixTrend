@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence, useMotionValue, PanInfo } from 'framer-motion';
-import { X, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -27,13 +27,17 @@ interface Props {
   imageUrl: string | null;
   onClose: () => void;
   alt?: string;
+  caption?: string;
+  imageUrls?: string[];
+  captions?: string[];
+  initialIndex?: number;
 }
 
 type Status = 'loading' | 'loaded' | 'error';
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const S: { [key: string]: React.CSSProperties | ((active: boolean) => React.CSSProperties) } = {
+const S = {
   backdrop: {
     position: 'fixed' as const,
     inset: 0,
@@ -55,11 +59,12 @@ const S: { [key: string]: React.CSSProperties | ((active: boolean) => React.CSSP
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
+    touchAction: 'none' as const,
   },
   img: {
     display: 'block',
-    maxWidth: '100vw',
-    maxHeight: '100dvh',
+    maxWidth: 'calc(100vw - 24px)',
+    maxHeight: 'calc(100dvh - 120px)',
     width: 'auto',
     height: 'auto',
     objectFit: 'contain' as const,
@@ -69,8 +74,8 @@ const S: { [key: string]: React.CSSProperties | ((active: boolean) => React.CSSP
   },
   controls: {
     position: 'absolute' as const,
-    top: 16,
-    right: 16,
+    top: 'max(12px, env(safe-area-inset-top))',
+    right: 'max(12px, env(safe-area-inset-right))',
     display: 'flex',
     alignItems: 'center',
     gap: 8,
@@ -94,9 +99,8 @@ const S: { [key: string]: React.CSSProperties | ((active: boolean) => React.CSSP
   }),
   meta: {
     position: 'absolute' as const,
-    bottom: 16,
-    left: '50%',
-    transform: 'translateX(-50%)',
+    top: 'max(60px, calc(env(safe-area-inset-top) + 48px))',
+    left: 'max(12px, env(safe-area-inset-left))',
     pointerEvents: 'none' as const,
     color: 'rgba(255,255,255,0.28)',
     fontSize: 11,
@@ -109,7 +113,7 @@ const S: { [key: string]: React.CSSProperties | ((active: boolean) => React.CSSP
   },
   hint: {
     position: 'absolute' as const,
-    bottom: 44,
+    bottom: 76,
     left: 0,
     right: 0,
     textAlign: 'center' as const,
@@ -126,6 +130,20 @@ const S: { [key: string]: React.CSSProperties | ((active: boolean) => React.CSSP
     justifyContent: 'center',
     pointerEvents: 'none' as const,
   },
+  caption: {
+    position: 'absolute' as const,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 10,
+    padding: '36px 20px max(20px, env(safe-area-inset-bottom))',
+    boxSizing: 'border-box' as const,
+    maxHeight: '45dvh',
+    overflowY: 'auto' as const,
+    color: '#fff',
+    background: 'linear-gradient(transparent, rgba(0,0,0,0.82) 30%)',
+    pointerEvents: 'auto' as const,
+  },
 };
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -134,9 +152,15 @@ export const FullScreenImageViewer: React.FC<Props> = ({
   imageUrl,
   onClose,
   alt = 'Full screen view',
+  caption = '',
+  imageUrls,
+  captions,
+  initialIndex = 0,
 }) => {
   const [status, setStatus] = useState<Status>('loading');
   const [zoomPct, setZoomPct] = useState(100);
+  const [captionExpanded, setCaptionExpanded] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
 
   const naturalSize = useRef({ w: 0, h: 0 });
   const renderedSize = useRef({ w: 0, h: 0 });
@@ -152,31 +176,57 @@ export const FullScreenImageViewer: React.FC<Props> = ({
   const lastTapTime = useRef(0);
   const lastTapPos = useRef({ x: 0, y: 0 });
   const pinchRef = useRef<{ dist: number; zoom: number; mx: number; my: number } | null>(null);
+  const swipeStart = useRef<{ x: number; y: number } | null>(null);
+  const gallery = useMemo(
+    () => imageUrls?.length ? imageUrls : imageUrl ? [imageUrl] : [],
+    [imageUrls, imageUrl]
+  );
+  const currentImageUrl = gallery[currentIndex] ?? imageUrl;
+  const currentCaption = captions?.[currentIndex] ?? caption;
 
-  // ── Reset on new image ──────────────────────────────────────────────────────
-  useEffect(() => {
+  const showImage = useCallback((index: number) => {
+    if (index < 0 || index >= gallery.length || index === currentIndex) return;
+    setCurrentIndex(index);
     scale.set(1);
     x.set(0);
     y.set(0);
     setZoomPct(100);
-    setStatus(imageUrl ? 'loading' : 'error');
+    setCaptionExpanded(false);
+    setStatus('loading');
     naturalSize.current = { w: 0, h: 0 };
-    if (imageUrl) {
+  }, [currentIndex, gallery.length, scale, x, y]);
+
+  const showPrevious = useCallback(() => showImage(currentIndex - 1), [currentIndex, showImage]);
+  const showNext = useCallback(() => showImage(currentIndex + 1), [currentIndex, showImage]);
+
+  // ── Reset on new image ──────────────────────────────────────────────────────
+  useEffect(() => {
+    const firstIndex = clamp(initialIndex, 0, Math.max(gallery.length - 1, 0));
+    setCurrentIndex(firstIndex);
+    scale.set(1);
+    x.set(0);
+    y.set(0);
+    setZoomPct(100);
+    setCaptionExpanded(false);
+    const firstImageUrl = gallery[firstIndex] ?? imageUrl;
+    setStatus(firstImageUrl ? 'loading' : 'error');
+    naturalSize.current = { w: 0, h: 0 };
+    if (firstImageUrl) {
       const img = new Image();
-      img.src = imageUrl; // Preload image
+      img.src = firstImageUrl;
     }
-  }, [imageUrl, scale, x, y]);
+  }, [imageUrl, initialIndex, gallery, scale, x, y]);
 
   // ── Lock body scroll ────────────────────────────────────────────────────────
   useEffect(() => {
-    if (imageUrl) {
+    if (currentImageUrl) {
       const prevOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
       return () => {
         document.body.style.overflow = prevOverflow;
       };
     }
-  }, [imageUrl]);
+  }, [currentImageUrl]);
 
   // ── Measure sizes ───────────────────────────────────────────────────────────
   const measureSizes = useCallback(() => {
@@ -236,13 +286,15 @@ export const FullScreenImageViewer: React.FC<Props> = ({
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') { onClose(); return; }
+      if (e.key === 'ArrowLeft') showPrevious();
+      if (e.key === 'ArrowRight') showNext();
       if (e.key === '+' || e.key === '=') applyZoom(scale.get() * ZOOM_STEP);
       if (e.key === '-') applyZoom(scale.get() / ZOOM_STEP);
       if (e.key === '0') applyZoom(1);
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [onClose, applyZoom, scale]);
+  }, [onClose, applyZoom, scale, showPrevious, showNext]);
 
   // ── Scroll wheel zoom toward cursor ─────────────────────────────────────────
   const handleWheel = useCallback((e: React.WheelEvent) => {
@@ -260,9 +312,12 @@ export const FullScreenImageViewer: React.FC<Props> = ({
     else applyZoom(DBL_TAP_ZOOM, e.clientX, e.clientY);
   }, [applyZoom, scale, measureSizes]);
 
+  const isZoomed = zoomPct > 100;
+
   // ── Touch ─────────────────────────────────────────────────────────────────────
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     if (e.touches.length === 2) {
+      swipeStart.current = null;
       measureSizes();
       const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
       const my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
@@ -272,6 +327,7 @@ export const FullScreenImageViewer: React.FC<Props> = ({
     if (e.touches.length === 1) {
       const now = Date.now();
       const t = e.touches[0];
+      swipeStart.current = { x: t.clientX, y: t.clientY };
       if (
         now - lastTapTime.current < DBL_TAP_MS &&
         Math.abs(t.clientX - lastTapPos.current.x) < DBL_TAP_PX &&
@@ -297,6 +353,17 @@ export const FullScreenImageViewer: React.FC<Props> = ({
   }, [applyZoom]);
 
   const handleTouchEnd = useCallback(() => { pinchRef.current = null; }, []);
+  const handleSwipeEnd = useCallback((e: React.TouchEvent) => {
+    const start = swipeStart.current;
+    const end = e.changedTouches[0];
+    swipeStart.current = null;
+    if (!start || !end || isZoomed) return;
+    const deltaX = end.clientX - start.x;
+    const deltaY = end.clientY - start.y;
+    if (Math.abs(deltaX) < 60 || Math.abs(deltaX) < Math.abs(deltaY) * 1.2) return;
+    if (deltaX < 0) showNext();
+    else showPrevious();
+  }, [isZoomed, showNext, showPrevious]);
 
   // ── Swipe down to close ───────────────────────────────────────────────────────
   const handleDragEnd = useCallback((_: unknown, info: PanInfo) => {
@@ -312,11 +379,9 @@ export const FullScreenImageViewer: React.FC<Props> = ({
     return { left: -maxX, right: maxX, top: -maxY, bottom: maxY };
   }, [getConstraints, scale]);
   
-  const isZoomed = zoomPct > 100;
-
   return (
     <AnimatePresence>
-      {imageUrl && (
+      {currentImageUrl && (
         <motion.div
           key="backdrop"
           initial={{ opacity: 0 }}
@@ -326,7 +391,7 @@ export const FullScreenImageViewer: React.FC<Props> = ({
           onClick={() => { if (!isDragging.current) onClose(); }}
           onContextMenu={(e) => e.preventDefault()}
           onWheel={handleWheel}
-          style={{ ...S.backdrop, touchAction: isZoomed ? 'none' : 'pan-y' }}
+          style={{ ...S.backdrop, touchAction: 'pan-y' }}
         >
           {status === 'loading' && (
             <div style={S.loaderWrap}><Spinner /></div>
@@ -343,6 +408,8 @@ export const FullScreenImageViewer: React.FC<Props> = ({
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
+            onTouchCancel={handleTouchEnd}
+            onTouchEndCapture={handleSwipeEnd}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.93 }}
@@ -374,7 +441,7 @@ export const FullScreenImageViewer: React.FC<Props> = ({
             >
               <img
                 ref={imgRef}
-                src={imageUrl}
+                src={currentImageUrl}
                 alt={alt}
                 style={S.img}
                 draggable={false}
@@ -387,6 +454,26 @@ export const FullScreenImageViewer: React.FC<Props> = ({
                 onError={() => setStatus('error')}
               />
             </motion.div>
+            {gallery.length > 1 && (
+              <>
+                <div
+                  className="absolute top-4 left-4 z-10 rounded-full bg-black/55 px-3 py-1.5 text-sm text-white/90"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {currentIndex + 1} / {gallery.length}
+                </div>
+                <div className="absolute left-3 top-1/2 z-10 hidden -translate-y-1/2 md:block" onClick={(e) => e.stopPropagation()}>
+                  <ControlBtn onClick={showPrevious} title="Previous image (←)" disabled={currentIndex === 0}>
+                    <ChevronLeft size={22} />
+                  </ControlBtn>
+                </div>
+                <div className="absolute right-3 top-1/2 z-10 hidden -translate-y-1/2 md:block" onClick={(e) => e.stopPropagation()}>
+                  <ControlBtn onClick={showNext} title="Next image (→)" disabled={currentIndex === gallery.length - 1}>
+                    <ChevronRight size={22} />
+                  </ControlBtn>
+                </div>
+              </>
+            )}
           </div>
           <motion.div
             initial={{ opacity: 0, y: -8 }}
@@ -416,10 +503,35 @@ export const FullScreenImageViewer: React.FC<Props> = ({
               {naturalSize.current.w} × {naturalSize.current.h}
             </div>
           )}
-          {!isZoomed && status === 'loaded' && (
+          {!currentCaption && !isZoomed && status === 'loaded' && (
             <p style={S.hint} className="md:hidden">
               Double-tap to zoom · Swipe down to close
             </p>
+          )}
+          {currentCaption && (
+            <div
+              style={S.caption}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ maxWidth: 720, margin: '0 auto' }}>
+                <button
+                  type="button"
+                  onClick={() => setCaptionExpanded((expanded) => !expanded)}
+                  className="block w-full text-left"
+                  aria-expanded={captionExpanded}
+                  aria-label={captionExpanded ? 'Collapse image caption' : 'Expand image caption'}
+                >
+                  <span className={captionExpanded ? 'whitespace-pre-line break-words text-sm sm:text-base' : 'line-clamp-2 whitespace-pre-line break-words text-sm sm:text-base'}>
+                    {currentCaption}
+                  </span>
+                  {(currentCaption.length > 100 || currentCaption.includes('\n')) && (
+                    <span className="mt-1 block text-sm font-semibold text-white/80">
+                      {captionExpanded ? 'See less' : 'See more'}
+                    </span>
+                  )}
+                </button>
+              </div>
+            </div>
           )}
         </motion.div>
       )}

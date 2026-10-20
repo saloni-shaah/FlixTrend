@@ -448,7 +448,7 @@ function VibeSpaceContent() {
             ) : (
               <div className="w-full max-w-xl flex flex-col gap-4">
                 {posts.length > 0 ? posts.map((post, index) => (
-                    <PostCard key={post.id} post={post} allPosts={posts} postIndex={index} />
+                    <PostCard key={post.id} post={post} allPosts={posts} postIndex={index} compactMedia />
                 )) : (
                     <div className="text-center text-gray-400 p-8 glass-card">No posts found in this category yet.</div>
                 )}
