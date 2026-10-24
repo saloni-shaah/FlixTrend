@@ -307,7 +307,7 @@ function SquadPageContent() {
           <div className="flex justify-center gap-2 md:gap-4 my-8 flex-wrap">
               <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "home" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`} onClick={() => setActiveTab("home")}><Home className="inline-block mr-2" size={16}/>Home</button>
               <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "posts" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`} onClick={() => setActiveTab("posts")}>My Posts</button>
-              <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "drafts" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`} onClick={() => setActiveTab("drafts")}>Drafts</button>
+              <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "drafts" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`} onClick={() => setActiveTab("drafts")}>Drafts &amp; Scheduled</button>
               <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "likes" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`} onClick={() => setActiveTab('likes')}>Likes</button>
               <button className={`px-4 py-2 rounded-full font-bold transition-colors ${activeTab === "playlists" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`} onClick={() => setActiveTab("playlists")}>Playlists</button>
           </div>

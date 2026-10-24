@@ -47,6 +47,15 @@ service firebase.storage {
         maxSize(250);
     }
 
+    // ── Private draft media ──────────────────────────────────────────────
+    match /drafts/{userId}/{allPaths=**} {
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      allow create, update: if isSignedIn() &&
+        request.auth.uid == userId &&
+        maxSize(250);
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
     // ── Post subtitles ────────────────────────────────────────────────────
     match /posts/{userId}/subtitles/{fileName} {
       allow read: if true;

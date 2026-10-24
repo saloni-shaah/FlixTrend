@@ -3,10 +3,12 @@
 import React, { useState, Suspense, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlignLeft, Image as ImageIcon, BarChart3, Zap, Radio, FilePenLine } from 'lucide-react';
+import { AlignLeft, Image as ImageIcon, BarChart3, Zap, Radio, FilePenLine, Loader2 } from 'lucide-react';
 import Step1 from '@/components/create/Step1';
 import Step2 from '@/components/create/Step2';
 import Step3 from '@/components/create/Step3';
+import { auth } from '@/utils/firebaseClient';
+import { loadPostDraft } from '@/lib/postDrafts';
 
 const POST_TYPES = [
   { id: 'text', label: 'Text Post', icon: AlignLeft },
@@ -35,6 +37,8 @@ function CreatePostPageContent() {
     const [step, setStep] = useState(1);
     const [postType, setPostType] = useState<'text' | 'media' | 'poll' | 'flash' | 'live' | 'draft' | undefined>(initialType);
     const [typeSelected, setTypeSelected] = useState(!!initialType);
+    const [isLoadingDraft, setIsLoadingDraft] = useState(Boolean(draftId));
+    const [draftLoadError, setDraftLoadError] = useState<string | null>(null);
 
     useEffect(() => {
         if (initialType && !typeSelected) {
@@ -44,29 +48,61 @@ function CreatePostPageContent() {
 
     useEffect(() => {
         if (!draftId) return;
-        try {
-            const savedDrafts = JSON.parse(window.localStorage.getItem('flixtrend:drafts') || '[]');
-            if (!Array.isArray(savedDrafts)) throw new Error('Saved drafts data is not valid.');
-            const savedDraft = savedDrafts.find((draft: any) => draft.id === draftId);
-            if (!savedDraft) throw new Error('The selected local draft could not be found.');
+        let cancelled = false;
+        const unsubscribe = auth.onAuthStateChanged((user) => {
+            if (!user) {
+                setDraftLoadError('Sign in to open this saved draft.');
+                setIsLoadingDraft(false);
+                return;
+            }
 
-            setPostData((current: any) => ({
-                ...current,
-                ...savedDraft,
-                postType: 'draft',
-                draftId: savedDraft.id,
-                draftTitle: savedDraft.title || '',
-                draftClips: [],
-                backgroundAudio: null,
-                backgroundAudioName: savedDraft.musicName || '',
-                editedFile: null,
-                editedThumbnailFile: null,
-                editedIsVideo: false,
-                editedDuration: null,
-            }));
-        } catch (error) {
-            console.error('Could not reopen local draft:', error);
-        }
+            void loadPostDraft(user.uid, draftId).then(({ data }) => {
+                if (cancelled) return;
+                setPostData((current: any) => ({ ...current, ...data }));
+                setPostType(data.postType);
+                setTypeSelected(true);
+            }).catch((error) => {
+                if (cancelled) return;
+
+                try {
+                    const savedDrafts = JSON.parse(window.localStorage.getItem('flixtrend:drafts') || '[]');
+                    const savedDraft = Array.isArray(savedDrafts)
+                        ? savedDrafts.find((draft: any) => draft.id === draftId)
+                        : null;
+                    if (savedDraft && initialType === 'draft') {
+                        setPostData((current: any) => ({
+                            ...current,
+                            ...savedDraft,
+                            postType: 'draft',
+                            draftId: savedDraft.id,
+                            draftTitle: savedDraft.title || '',
+                            draftClips: [],
+                            backgroundAudio: null,
+                            backgroundAudioName: savedDraft.musicName || '',
+                            editedFile: null,
+                            editedThumbnailFile: null,
+                            editedIsVideo: false,
+                            editedDuration: null,
+                        }));
+                        setPostType('draft');
+                        setTypeSelected(true);
+                        return;
+                    }
+                } catch (localError) {
+                    console.error('Could not read a legacy local draft:', localError);
+                }
+
+                console.error('Could not reopen cloud draft:', error);
+                setDraftLoadError(error instanceof Error ? error.message : 'Could not open this draft.');
+            }).finally(() => {
+                if (!cancelled) setIsLoadingDraft(false);
+            });
+        });
+
+        return () => {
+            cancelled = true;
+            unsubscribe();
+        };
     }, [draftId]);
 
     const handleNext = (data: any = {}) => {
@@ -105,6 +141,9 @@ function CreatePostPageContent() {
     return (
         <div className="w-full max-w-4xl mx-auto flex flex-col items-center p-4 min-h-screen">
             <h1 className="text-3xl font-headline font-bold text-accent-cyan mb-8">Create Your Vibe</h1>
+
+            {isLoadingDraft && <Loader2 className="animate-spin text-accent-cyan" aria-label="Loading draft" />}
+            {draftLoadError && <p role="alert" className="mb-6 rounded-lg border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-300">{draftLoadError}</p>}
 
             {!typeSelected && (
                  <motion.div

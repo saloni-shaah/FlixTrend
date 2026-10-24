@@ -45,11 +45,15 @@ service cloud.firestore {
 
       // General subcollections
       match /{subcollection}/{docId} {
-        allow read: if isSignedIn();
+        allow read: if isSignedIn() && (subcollection != 'drafts' || isOwner(userId));
         allow write: if isOwner(userId) ||
           (subcollection == 'followers' &&
            docId == request.auth.uid &&
            (request.method == 'create' || request.method == 'delete'));
+      }
+
+      match /drafts/{draftId} {
+        allow read, write: if isOwner(userId);
       }
 
       // Playlists: private to owner only

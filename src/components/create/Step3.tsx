@@ -10,6 +10,7 @@ import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'fire
 import { auth, app } from '@/utils/firebaseClient';
 import { useRouter } from 'next/navigation';
 import { isAbusive } from '@/utils/moderation';
+import { deletePostDraft, savePostDraft } from '@/lib/postDrafts';
 
 const db = getFirestore(app);
 const storage = getStorage(app);
@@ -43,6 +44,7 @@ function PostPreview({ postData }: { postData: any }) {
 
     if (!postData) return null;
     const { postType, content, mediaUrl, thumbnailUrl, fontStyle, backgroundColor } = postData;
+    const firstMediaUrl = Array.isArray(mediaUrl) ? mediaUrl[0] : mediaUrl;
 
     return (
         <div className="mb-6">
@@ -77,7 +79,7 @@ function PostPreview({ postData }: { postData: any }) {
                     </div>
                 )}
                 
-                {(postType === 'media' || postType === 'flash') && (thumbnailUrl || mediaUrl?.[0]) && (
+                {(postType === 'media' || postType === 'flash') && (thumbnailUrl || firstMediaUrl) && (
                      <>
                         <p className="font-bold text-white pb-2">{postData.content || postData.caption}</p>
                         <div className="mt-2 aspect-video w-full rounded-md overflow-hidden bg-black flex items-center justify-center">
@@ -87,8 +89,10 @@ function PostPreview({ postData }: { postData: any }) {
                                         <img key={url + idx} src={url} alt={`preview ${idx + 1}`} className="w-full h-full object-cover" />
                                     ))}
                                 </div>
+                            ) : postData.isVideo && !thumbnailUrl ? (
+                                <video src={firstMediaUrl} controls className="w-full h-full object-contain" />
                             ) : (
-                                <img src={thumbnailUrl || mediaUrl[0]} alt="preview" className="w-full h-full object-cover" />
+                                <img src={thumbnailUrl || firstMediaUrl} alt="preview" className="w-full h-full object-cover" />
                             )}
                         </div>
                         {postData.description && <p className="text-sm text-gray-300 mt-2">{postData.description}</p>}
@@ -124,17 +128,40 @@ function PostPreview({ postData }: { postData: any }) {
 export default function Step3({ onBack, postData }: { onBack: () => void; postData: any }) {
     const [isScheduling, setIsScheduling] = useState(!!postData.scheduleDate);
     const [scheduleDate, setScheduleDate] = useState<Date | undefined>(postData.scheduleDate);
-    const [scheduleTime, setScheduleTime] = useState('12:00');
+    const [scheduleTime, setScheduleTime] = useState(() => {
+        const date = postData.scheduleDate ? new Date(postData.scheduleDate) : null;
+        return date && !Number.isNaN(date.getTime())
+            ? `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+            : '12:00';
+    });
     const [isPublishing, setIsPublishing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const router = useRouter();
+
+    const cleanupSavedDraft = async (userId: string) => {
+        if (!postData.draftId) return;
+        try {
+            const failures = await deletePostDraft(userId, postData.draftId);
+            if (failures.length) {
+                console.error('Published post, but some saved draft media could not be removed:', failures);
+            }
+        } catch (cleanupError) {
+            console.error('Published post, but its saved draft could not be removed:', cleanupError);
+        }
+    };
     
     useEffect(() => {
         setScheduleDate(postData.scheduleDate);
         setIsScheduling(!!postData.scheduleDate);
+        if (postData.scheduleDate) {
+            const date = new Date(postData.scheduleDate);
+            if (!Number.isNaN(date.getTime())) {
+                setScheduleTime(`${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`);
+            }
+        }
     }, [postData.scheduleDate]);
 
-    const handleSubmit = async (action: 'saveDraft' | 'publish' = 'publish') => {
+    const handleSubmit = async (action: 'saveDraft' | 'schedule' | 'publish' = 'publish') => {
         setIsPublishing(true);
         setError(null);
         const user = auth.currentUser;
@@ -146,57 +173,50 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
              return;
         }
 
-        if (postData.postType === 'draft' && action === 'saveDraft') {
+        if (action === 'saveDraft' || action === 'schedule') {
             try {
-                const draftData = {
-                    id: postData.draftId || `draft-${Date.now()}`,
-                    title: postData.draftTitle || 'Untitled draft',
-                    postType: 'draft',
-                    content: postData.content || '',
-                    mediaItems: (postData.draftClips || []).map((clip: any) => ({
-                        name: clip.file?.name || 'Local media',
-                        start: clip.start,
-                        end: clip.end,
-                    })),
-                    musicName: postData.backgroundAudioName || '',
-                    aspectRatio: postData.aspectRatio || 'original',
-                    videoEffect: postData.videoEffect || 'None',
-                    overlayText: postData.overlayText || '',
-                    sticker: postData.sticker || '',
-                    textEffect: postData.textEffect || 'Glow',
-                    textPosition: postData.textPosition || 'bottom',
-                    muteOriginalAudio: Boolean(postData.muteOriginalAudio),
-                    musicVolume: postData.musicVolume ?? 0.7,
-                    createdAt: postData.createdAt || new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                    userId: user.uid,
-                    status: 'draft',
-                    storageMode: 'local',
-                };
+                if (action === 'schedule' && postData.postType === 'live') {
+                    throw new Error('Live streams cannot be scheduled.');
+                }
 
-                const draftKey = 'flixtrend:drafts';
-                const rawDrafts = typeof window !== 'undefined' ? window.localStorage.getItem(draftKey) : '[]';
-                const parsedDrafts = rawDrafts ? JSON.parse(rawDrafts) : [];
-                if (!Array.isArray(parsedDrafts)) throw new Error('Saved drafts data is not valid.');
-                const existingDrafts = parsedDrafts;
-                const nextDrafts = [draftData, ...existingDrafts.filter((draft: any) => draft.id !== draftData.id)].slice(0, 40);
-                if (typeof window !== 'undefined') {
-                    window.localStorage.setItem(draftKey, JSON.stringify(nextDrafts));
+                let publishAt: Date | null = null;
+                if (action === 'schedule') {
+                    if (!scheduleDate) throw new Error('Please pick a date to schedule.');
+                    const [hours, minutes] = scheduleTime.split(':').map(Number);
+                    publishAt = new Date(scheduleDate);
+                    publishAt.setHours(hours, minutes, 0, 0);
+                    if (publishAt.getTime() <= Date.now()) throw new Error('Pick a future date and time.');
+                    if (postData.postType === 'media' && !(postData.files || []).length) {
+                        throw new Error('Select media before scheduling this post.');
+                    }
+                    if (postData.postType === 'flash' && !(postData.mediaFiles || []).length) {
+                        throw new Error('Select media before scheduling this Flash.');
+                    }
+                    if (postData.postType === 'text' && !(postData.content || '').trim()) {
+                        throw new Error('Add some text before scheduling this post.');
+                    }
+                    if (postData.postType === 'poll' && (!(postData.question || '').trim() || (postData.options || []).length < 2)) {
+                        throw new Error('Add a poll question and at least two options before scheduling.');
+                    }
+                }
+
+                const result = await savePostDraft(user.uid, postData, {
+                    status: action === 'schedule' ? 'scheduled' : 'draft',
+                    publishAt,
+                });
+                if (result.cleanupFailures.length) {
+                    setError('Your draft was saved, but some replaced media could not be removed from storage.');
+                    setIsPublishing(false);
+                    return;
                 }
                 router.push('/squad?tab=drafts');
                 return;
             } catch (error: any) {
-                console.error('Could not save local draft:', error);
-                setError('We could not save the draft locally. Please try again.');
+                console.error('Could not save cloud draft:', error);
+                setError(error instanceof Error ? error.message : 'We could not save this draft. Please try again.');
                 setIsPublishing(false);
                 return;
             }
-        }
-
-        if (postData.postType === 'draft' && !postData.editedFile) {
-            setError("Render your edit before publishing. You can save the project as a draft for now.");
-            setIsPublishing(false);
-            return;
         }
 
         if ((postData.postType === 'media' || postData.postType === 'draft') && !(postData.content || postData.draftTitle || '').trim()) {
@@ -205,8 +225,8 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
             return;
         }
 
-        if (isScheduling && !scheduleDate) {
-            setError("Please pick a date to schedule.");
+        if (postData.postType === 'draft' && !postData.editedFile) {
+            setError("Render your edit before publishing.");
             setIsPublishing(false);
             return;
         }
@@ -256,25 +276,15 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                     videoQualities: {},
                     subtitleUrl: null,
                 });
+                await cleanupSavedDraft(user.uid);
                 router.push('/vibespace');
                 return;
             }
 
             if (postData.postType === 'flash') {
-                let publishAt;
-                let expiresAt;
-
-                if (isScheduling && scheduleDate) {
-                    const [hours, minutes] = scheduleTime.split(':');
-                    const finalDate = new Date(scheduleDate);
-                    finalDate.setHours(parseInt(hours), parseInt(minutes));
-                    publishAt = Timestamp.fromDate(finalDate);
-                    expiresAt = Timestamp.fromDate(new Date(finalDate.getTime() + 24 * 60 * 60 * 1000));
-                } else {
-                    const now = new Date();
-                    publishAt = Timestamp.fromDate(now);
-                    expiresAt = Timestamp.fromDate(new Date(now.getTime() + 24 * 60 * 60 * 1000));
-                }
+                const now = new Date();
+                const publishAt = Timestamp.fromDate(now);
+                const expiresAt = Timestamp.fromDate(new Date(now.getTime() + 24 * 60 * 60 * 1000));
                 
                 let finalMediaUrl: string | null = null;
 
@@ -309,6 +319,7 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                 };
 
                 await addDoc(collection(db, 'flashes'), flashData);
+                await cleanupSavedDraft(user.uid);
                 router.push('/vibespace');
                 return; 
             }
@@ -402,6 +413,7 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
             };
             
             await addDoc(collection(db, collectionName), dataToSave);
+            await cleanupSavedDraft(user.uid);
             
             if (postData.postType === 'live' && livekitRoomName) {
                 router.push(`/broadcast/${encodeURIComponent(livekitRoomName)}`);
@@ -417,15 +429,15 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
         }
     };
     
-    const shouldShowScheduling = postData.postType === 'flash';
+    const shouldShowScheduling = postData.postType !== 'live';
     const getButtonText = () => {
         if (isPublishing) return 'Publishing...';
         if (postData.postType === 'live') return 'Go Live';
-        if (postData.postType === 'draft') return postData.editedFile ? 'Publish Edited Post' : 'Render an edit first';
-        if (isScheduling && scheduleDate) {
-            if(postData.postType === 'flash') return 'Schedule Flash';
-            return 'Schedule Post';
+        if (isScheduling) {
+            if (!scheduleDate) return 'Pick a schedule date';
+            return postData.postType === 'flash' ? 'Schedule Flash' : 'Schedule Post';
         }
+        if (postData.postType === 'draft') return postData.editedFile ? 'Publish Edited Post' : 'Render an edit first';
         return 'Publish Now';
     }
 
@@ -438,8 +450,8 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
 
                 <p className="text-gray-400 mb-6 text-sm">
                     {postData.postType === 'draft'
-                        ? 'Save your editing plan locally, or publish the rendered media.'
-                        : "You're ready to publish now or schedule your post for later."}
+                        ? 'Save this editing project privately in your cloud drafts, or render and publish it.'
+                        : "Save a private cloud draft, publish now, or schedule it for manual publishing later."}
                 </p>
                  
                 {error && (
@@ -493,6 +505,9 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                                 
                             </motion.div>
                         )}
+                        <p className="mt-2 text-xs text-gray-400">
+                            Scheduled posts stay private and do not publish automatically. Open the item from Squad to edit it and publish manually.
+                        </p>
                     </div>
                 )}
 
@@ -502,23 +517,26 @@ export default function Step3({ onBack, postData }: { onBack: () => void; postDa
                     <ArrowLeft /> Back
                 </button>
                 <div className="flex flex-wrap justify-end gap-2">
-                    {postData.postType === 'draft' && (
-                        <button className="btn-glass" onClick={() => void handleSubmit('saveDraft')} disabled={isPublishing}>
+                    <button className="btn-glass" onClick={() => void handleSubmit('saveDraft')} disabled={isPublishing}>
                             Save Draft
-                        </button>
-                    )}
+                    </button>
                     <button
                         className={`btn-accent ${postData.postType === 'live' ? 'bg-red-600 hover:bg-red-700' : ''}`}
-                        onClick={() => void handleSubmit('publish')}
+                        onClick={() => void handleSubmit(isScheduling ? 'schedule' : 'publish')}
                         disabled={
                             isPublishing ||
-                            (postData.postType === 'draft' && !postData.editedFile) ||
+                            (postData.postType === 'draft' && !postData.editedFile && !isScheduling) ||
                             (postData.postType === 'live' && (!postData.content || !postData.thumbnailFile)) ||
                             (postData.postType === 'media' && !(postData.content || '').trim())
                         }
                     >
                         {getButtonText()} {postData.postType === 'live' ? <Radio /> :<CheckCircle />}
                     </button>
+                    {isScheduling && postData.draftId && (
+                        <button className="btn-glass" onClick={() => void handleSubmit('publish')} disabled={isPublishing}>
+                            Publish Now
+                        </button>
+                    )}
                 </div>
             </div>
         </motion.div>
