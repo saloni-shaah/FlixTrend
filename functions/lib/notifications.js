@@ -23,7 +23,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onCallCreated = exports.onNewDropPromptNotification = exports.onNewMessageNotification = exports.onNewFollowerNotification = exports.sendNotification = void 0;
+exports.onCallCreated = exports.notifyScheduledDropPrompts = exports.onNewDropPromptNotification = exports.onNewMessageNotification = exports.onNewFollowerNotification = exports.sendNotification = void 0;
 const admin = __importStar(require("firebase-admin"));
 const firestore_1 = require("firebase-admin/firestore");
 const firebase_functions_1 = require("firebase-functions");
@@ -229,16 +229,12 @@ exports.onNewMessageNotification = ASIA_SOUTH1.firestore
         rateLimitKey: `chat_${chatId}`,
     })));
 });
-exports.onNewDropPromptNotification = ASIA_SOUTH1.firestore
-    .document('dropPrompts/{promptId}')
-    .onCreate(async (snap, context) => {
-    const prompt = snap.data();
-    const promptId = context.params.promptId;
+async function sendDropPromptNotification(promptId, text) {
     await messaging.send({
         topic: 'drop_prompts',
         notification: {
             title: 'New Drop Challenge!',
-            body: prompt.text,
+            body: text,
         },
         data: {
             type: 'drop',
@@ -256,7 +252,79 @@ exports.onNewDropPromptNotification = ASIA_SOUTH1.firestore
             payload: { aps: { sound: 'default' } },
         },
     });
-    firebase_functions_1.logger.info(`Drop prompt notification sent via topic for prompt ${promptId}`);
+}
+exports.onNewDropPromptNotification = ASIA_SOUTH1.firestore
+    .document('dropPrompts/{promptId}')
+    .onCreate(async (snap, context) => {
+    const prompt = snap.data();
+    const scheduledFor = prompt.scheduledFor;
+    if (scheduledFor && scheduledFor.toMillis() > Date.now())
+        return;
+    await sendDropPromptNotification(context.params.promptId, prompt.text);
+    firebase_functions_1.logger.info(`Drop prompt notification sent via topic for prompt ${context.params.promptId}`);
+});
+exports.notifyScheduledDropPrompts = ASIA_SOUTH1.pubsub
+    .schedule('*/5 * * * *')
+    .timeZone('Asia/Kolkata')
+    .onRun(async () => {
+    const now = firestore_1.Timestamp.now();
+    const duePrompts = await db.collection('dropPrompts')
+        .where('scheduledFor', '<=', now)
+        .orderBy('scheduledFor', 'asc')
+        .limit(100)
+        .get();
+    for (const promptDoc of duePrompts.docs) {
+        const claimed = await db.runTransaction(async (transaction) => {
+            const freshDoc = await transaction.get(promptDoc.ref);
+            if (!freshDoc.exists)
+                return false;
+            const scheduledFor = freshDoc.get('scheduledFor');
+            const status = freshDoc.get('scheduleNotificationStatus');
+            const claimedAt = freshDoc.get('scheduleNotificationClaimedAt');
+            if (!scheduledFor || scheduledFor.toMillis() > Date.now() || status === 'sent')
+                return false;
+            if (status === 'sending' && claimedAt && Date.now() - claimedAt.toMillis() < 10 * 60 * 1000) {
+                return false;
+            }
+            if (status !== undefined && status !== 'pending' && status !== 'sending')
+                return false;
+            transaction.update(promptDoc.ref, {
+                scheduleNotificationStatus: 'sending',
+                scheduleNotificationClaimedAt: firestore_1.Timestamp.now(),
+            });
+            return true;
+        });
+        if (!claimed)
+            continue;
+        const promptText = promptDoc.get('text');
+        if (typeof promptText !== 'string' || !promptText.trim()) {
+            firebase_functions_1.logger.error(`Scheduled Drop prompt ${promptDoc.id} has invalid text.`);
+            await promptDoc.ref.update({
+                scheduledFor: firestore_1.FieldValue.delete(),
+                scheduleNotificationStatus: 'failed',
+                scheduleNotificationClaimedAt: firestore_1.FieldValue.delete(),
+            });
+            continue;
+        }
+        try {
+            await sendDropPromptNotification(promptDoc.id, promptText);
+        }
+        catch (error) {
+            firebase_functions_1.logger.error(`Could not send scheduled Drop prompt notification for ${promptDoc.id}:`, error);
+            await promptDoc.ref.update({
+                scheduleNotificationStatus: 'pending',
+                scheduleNotificationClaimedAt: firestore_1.FieldValue.delete(),
+            });
+            continue;
+        }
+        await promptDoc.ref.update({
+            scheduledFor: firestore_1.FieldValue.delete(),
+            scheduleNotificationStatus: 'sent',
+            scheduleNotificationClaimedAt: firestore_1.FieldValue.delete(),
+            notificationSentAt: firestore_1.FieldValue.serverTimestamp(),
+        });
+        firebase_functions_1.logger.info(`Scheduled Drop prompt notification sent for prompt ${promptDoc.id}`);
+    }
 });
 exports.onCallCreated = ASIA_SOUTH1.firestore
     .document('calls/{callId}')

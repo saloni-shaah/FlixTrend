@@ -73,7 +73,12 @@ function CreateDropPage() {
         const promptDocRef = doc(db, 'dropPrompts', promptId);
         const promptDoc = await getDoc(promptDocRef);
         if (promptDoc.exists()) {
-          setPrompt({ id: promptDoc.id, text: promptDoc.data().text });
+          const data = promptDoc.data();
+          const scheduledFor = data.scheduledFor?.toDate?.();
+          const expiresAt = data.expiresAt?.toDate?.();
+          if ((!scheduledFor || scheduledFor <= new Date()) && (!expiresAt || expiresAt > new Date())) {
+            setPrompt({ id: promptDoc.id, text: data.text });
+          }
         }
       }
       setLoading(false);

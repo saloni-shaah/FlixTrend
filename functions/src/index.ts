@@ -344,44 +344,6 @@ export const cleanupExpiredFlashes = v1.pubsub.schedule('every 2 hours').onRun(a
     return null;
 });
 
-export const selectNextPrompt = v1.pubsub.schedule('0 23 * * *').timeZone('Asia/Kolkata').onRun(async () => {
-    const now = admin.firestore.Timestamp.now();
-    const yesterday = new admin.firestore.Timestamp(now.seconds - 86400, now.nanoseconds);
-    const activeSnap = await db.collection('dropPrompts')
-        .where('expiresAt', '>', yesterday)
-        .orderBy('expiresAt', 'desc')
-        .limit(1)
-        .get();
-    if (activeSnap.empty) return;
-    const activePrompt = activeSnap.docs[0];
-    const pollSnap = await db.collection('drop_polls').where('promptId', '==', activePrompt.id).limit(1).get();
-    if (pollSnap.empty) return;
-    const pollDoc = pollSnap.docs[0];
-    const poll = pollDoc.data();
-    const votesSnap = await pollDoc.ref.collection('votes').get();
-    let winnerText: string = poll.options[0].text;
-    if (!votesSnap.empty) {
-        const voteCounts = new Map<number, number>();
-        votesSnap.forEach(v => {
-            const idx = v.data().optionIdx;
-            voteCounts.set(idx, (voteCounts.get(idx) || 0) + 1);
-        });
-        const winnerIdx = [...voteCounts.entries()].reduce((a, e) => (e[1] > a[1] ? e : a))[0];
-        winnerText = poll.options[winnerIdx].text;
-    }
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    await db.collection('dropPrompts').add({
-        text: winnerText,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        expiresAt: admin.firestore.Timestamp.fromDate(expiresAt),
-    });
-    await deleteSubcollection(pollDoc.ref.collection('votes'));
-    const batch = db.batch();
-    batch.delete(activePrompt.ref);
-    batch.delete(pollDoc.ref);
-    await batch.commit();
-});
-
 export const cleanupOldDrops = v1.pubsub.schedule('30 22 * * *').timeZone('Asia/Kolkata').onRun(async () => {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -410,9 +372,13 @@ export const cleanupStaleDocuments = v1.pubsub.schedule('30 23 * * *').timeZone(
     const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
     const timestamp = admin.firestore.Timestamp.fromDate(fortyEightHoursAgo);
     const oldPromptsSnap = await db.collection('dropPrompts').where('createdAt', '<=', timestamp).get();
-    if (!oldPromptsSnap.empty) {
+    const expiredPrompts = oldPromptsSnap.docs.filter((prompt) => {
+        const expiresAt = prompt.get('expiresAt') as admin.firestore.Timestamp | undefined;
+        return !expiresAt || expiresAt.toMillis() <= timestamp.toMillis();
+    });
+    if (expiredPrompts.length > 0) {
         const batch = db.batch();
-        oldPromptsSnap.docs.forEach(doc => batch.delete(doc.ref));
+        expiredPrompts.forEach(doc => batch.delete(doc.ref));
         await batch.commit();
     }
     const oldPollsSnap = await db.collection('drop_polls').where('createdAt', '<=', timestamp).get();

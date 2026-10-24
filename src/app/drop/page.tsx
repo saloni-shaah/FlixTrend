@@ -45,7 +45,12 @@ function CountdownTimer({ expiryDate }: { expiryDate: Date }) {
 }
 
 function DropPageContent() {
-  const [prompt, setPrompt] = useState<{ id: string; text: string; expiresAt: Date } | null>(null);
+  const [prompt, setPrompt] = useState<{
+    id: string;
+    text: string;
+    expiresAt: Date;
+    sourceLinks?: { title: string; url: string }[];
+  } | null>(null);
   const [drops, setDrops] = useState<any[]>([]);
   const [poll, setPoll] = useState<any | null>(null);
   const [userHasPosted, setUserHasPosted] = useState(false);
@@ -79,17 +84,24 @@ function DropPageContent() {
             collection(db, "dropPrompts"),
             where("expiresAt", ">", now),
             orderBy("expiresAt", "desc"),
-            limit(1)
+            limit(20)
         );
         const promptSnapshot = await getDocs(q);
+        const availablePrompts = promptSnapshot.docs.filter((candidate) => {
+            const scheduledFor = candidate.data().scheduledFor;
+            return !scheduledFor || scheduledFor.toDate() <= now;
+        });
+        const availablePrompt = availablePrompts.find((candidate) => candidate.data().isScheduled === true)
+            ?? availablePrompts[0];
 
-        if (!promptSnapshot.empty) {
-            const promptDoc = promptSnapshot.docs[0];
+        if (availablePrompt) {
+            const promptDoc = availablePrompt;
             const data = promptDoc.data();
             const currentPrompt = { 
                 id: promptDoc.id, 
                 text: data.text, 
-                expiresAt: data.expiresAt.toDate() 
+                expiresAt: data.expiresAt.toDate(),
+                sourceLinks: Array.isArray(data.sourceLinks) ? data.sourceLinks : [],
             };
             setPrompt(currentPrompt);
 
@@ -195,6 +207,19 @@ function DropPageContent() {
                 <h1 className="font-headline">Daily Drop</h1>
             </div>
             <p className="text-gray-500 text-xl">{prompt.text}</p>
+            {prompt.sourceLinks && prompt.sourceLinks.length > 0 && (
+              <p className="mt-3 text-xs text-gray-400">
+                Trend sources:{' '}
+                {prompt.sourceLinks.map((source, index) => (
+                  <React.Fragment key={source.url}>
+                    {index > 0 && ' · '}
+                    <a href={source.url} target="_blank" rel="noopener noreferrer" className="text-accent-cyan hover:underline">
+                      {source.title}
+                    </a>
+                  </React.Fragment>
+                ))}
+              </p>
+            )}
             <CountdownTimer expiryDate={prompt.expiresAt} />
         </div>
 

@@ -36,6 +36,7 @@ next-env.d.ts
 
 # Service account keys
 *.json
+!vercel.json
 
 .env
 .codex

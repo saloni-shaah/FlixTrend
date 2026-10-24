@@ -269,36 +269,105 @@ export const onNewMessageNotification = ASIA_SOUTH1.firestore
         );
     });
 
+async function sendDropPromptNotification(promptId: string, text: string): Promise<void> {
+    await messaging.send({
+        topic: 'drop_prompts',
+        notification: {
+            title: 'New Drop Challenge!',
+            body: text,
+        },
+        data: {
+            type: 'drop',
+            targetId: promptId,
+            click_action: 'FLIXTREND_NOTIFICATION_CLICK',
+        },
+        android: {
+            priority: 'high',
+            notification: {
+                channelId: 'flixtrend_general',
+                clickAction: 'FLIXTREND_NOTIFICATION_CLICK',
+            },
+        },
+        apns: {
+            payload: { aps: { sound: 'default' } },
+        },
+    });
+}
+
 export const onNewDropPromptNotification = ASIA_SOUTH1.firestore
     .document('dropPrompts/{promptId}')
     .onCreate(async (snap, context) => {
         const prompt = snap.data();
-        const promptId = context.params.promptId;
+        const scheduledFor = prompt.scheduledFor as Timestamp | undefined;
+        if (scheduledFor && scheduledFor.toMillis() > Date.now()) return;
 
-        await messaging.send({
-            topic: 'drop_prompts',
-            notification: {
-                title: 'New Drop Challenge!',
-                body: prompt.text,
-            },
-            data: {
-                type: 'drop',
-                targetId: promptId,
-                click_action: 'FLIXTREND_NOTIFICATION_CLICK',
-            },
-            android: {
-                priority: 'high',
-                notification: {
-                    channelId: 'flixtrend_general',
-                    clickAction: 'FLIXTREND_NOTIFICATION_CLICK',
-                },
-            },
-            apns: {
-                payload: { aps: { sound: 'default' } },
-            },
-        });
+        await sendDropPromptNotification(context.params.promptId, prompt.text);
+        logger.info(`Drop prompt notification sent via topic for prompt ${context.params.promptId}`);
+    });
 
-        logger.info(`Drop prompt notification sent via topic for prompt ${promptId}`);
+export const notifyScheduledDropPrompts = ASIA_SOUTH1.pubsub
+    .schedule('*/5 * * * *')
+    .timeZone('Asia/Kolkata')
+    .onRun(async () => {
+        const now = Timestamp.now();
+        const duePrompts = await db.collection('dropPrompts')
+            .where('scheduledFor', '<=', now)
+            .orderBy('scheduledFor', 'asc')
+            .limit(100)
+            .get();
+
+        for (const promptDoc of duePrompts.docs) {
+            const claimed = await db.runTransaction(async (transaction) => {
+                const freshDoc = await transaction.get(promptDoc.ref);
+                if (!freshDoc.exists) return false;
+
+                const scheduledFor = freshDoc.get('scheduledFor') as Timestamp | undefined;
+                const status = freshDoc.get('scheduleNotificationStatus');
+                const claimedAt = freshDoc.get('scheduleNotificationClaimedAt') as Timestamp | undefined;
+                if (!scheduledFor || scheduledFor.toMillis() > Date.now() || status === 'sent') return false;
+                if (status === 'sending' && claimedAt && Date.now() - claimedAt.toMillis() < 10 * 60 * 1000) {
+                    return false;
+                }
+                if (status !== undefined && status !== 'pending' && status !== 'sending') return false;
+
+                transaction.update(promptDoc.ref, {
+                    scheduleNotificationStatus: 'sending',
+                    scheduleNotificationClaimedAt: Timestamp.now(),
+                });
+                return true;
+            });
+            if (!claimed) continue;
+
+            const promptText = promptDoc.get('text');
+            if (typeof promptText !== 'string' || !promptText.trim()) {
+                logger.error(`Scheduled Drop prompt ${promptDoc.id} has invalid text.`);
+                await promptDoc.ref.update({
+                    scheduledFor: FieldValue.delete(),
+                    scheduleNotificationStatus: 'failed',
+                    scheduleNotificationClaimedAt: FieldValue.delete(),
+                });
+                continue;
+            }
+
+            try {
+                await sendDropPromptNotification(promptDoc.id, promptText);
+            } catch (error) {
+                logger.error(`Could not send scheduled Drop prompt notification for ${promptDoc.id}:`, error);
+                await promptDoc.ref.update({
+                    scheduleNotificationStatus: 'pending',
+                    scheduleNotificationClaimedAt: FieldValue.delete(),
+                });
+                continue;
+            }
+
+            await promptDoc.ref.update({
+                scheduledFor: FieldValue.delete(),
+                scheduleNotificationStatus: 'sent',
+                scheduleNotificationClaimedAt: FieldValue.delete(),
+                notificationSentAt: FieldValue.serverTimestamp(),
+            });
+            logger.info(`Scheduled Drop prompt notification sent for prompt ${promptDoc.id}`);
+        }
     });
 
 export const onCallCreated = ASIA_SOUTH1.firestore

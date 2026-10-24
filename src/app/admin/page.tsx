@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { doc, setDoc, getDoc, collection } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, Timestamp } from 'firebase/firestore';
 import { GoogleAuthProvider, signInWithPopup, onAuthStateChanged, User } from 'firebase/auth';
 import { db, auth } from '@/utils/firebaseClient';
 import { Button } from "@/components/ui/button";
 
 export default function Admin() {
   const [prompt, setPrompt] = useState('');
+  const [scheduledFor, setScheduledFor] = useState('');
   const [user, setUser] = useState<User | null>(null);
   const [isFounder, setIsFounder] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -52,16 +53,31 @@ export default function Admin() {
       alert("You do not have permission to save a prompt.");
       return;
     }
+    if (!prompt.trim()) {
+      alert('Enter a prompt before saving.');
+      return;
+    }
     setIsSaving(true);
     const promptDocRef = doc(collection(db, 'dropPrompts'));
     
     const now = new Date();
-    const expires = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours from now
+    const scheduledDate = scheduledFor ? new Date(scheduledFor) : now;
+    if (scheduledFor && (Number.isNaN(scheduledDate.getTime()) || scheduledDate <= now)) {
+      alert('Choose a future date and time for a scheduled prompt.');
+      setIsSaving(false);
+      return;
+    }
+    const expires = new Date(scheduledDate.getTime() + 24 * 60 * 60 * 1000);
 
     const promptData = { 
       text: prompt, 
       createdAt: now, 
-      expiresAt: expires 
+      expiresAt: expires,
+      ...(scheduledFor ? {
+        scheduledFor: Timestamp.fromDate(scheduledDate),
+        scheduleNotificationStatus: 'pending',
+        isScheduled: true,
+      } : {}),
     };
 
     try {
@@ -97,8 +113,17 @@ export default function Admin() {
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder="Enter the new prompt here..."
               />
+              <label className="flex flex-col gap-2">
+                <span>Schedule for later (optional, browser local time)</span>
+                <input
+                  type="datetime-local"
+                  value={scheduledFor}
+                  onChange={(event) => setScheduledFor(event.target.value)}
+                  className="input-glass"
+                />
+              </label>
               <Button onClick={handleSavePrompt} disabled={isSaving}>
-                {isSaving ? 'Saving...' : 'Save Prompt'}
+                {isSaving ? 'Saving...' : scheduledFor ? 'Schedule Prompt' : 'Publish Prompt Now'}
               </Button>
             </div>
           ) : (
