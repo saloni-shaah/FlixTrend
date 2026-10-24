@@ -26,7 +26,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateComment = exports.deleteComment = exports.updatePost = exports.deleteMessage = exports.deleteUserAccount = exports.checkEmail = exports.checkPhone = exports.checkUsername = exports.cleanupStaleDocuments = exports.cleanupOldDrops = exports.selectNextPrompt = exports.cleanupExpiredFlashes = exports.onUserDelete = exports.onChatDelete = exports.onPostDelete = exports.onPostCreate = exports.decrementLikes = exports.incrementLikes = exports.onUnfollow = exports.onFollow = exports.onDropCommentCreate = exports.onCommentCreate = void 0;
+exports.updateComment = exports.deleteComment = exports.updatePost = exports.deleteMessage = exports.deleteUserAccount = exports.revokeAllSessions = exports.checkEmail = exports.checkPhone = exports.checkUsername = exports.cleanupStaleDocuments = exports.cleanupOldDrops = exports.selectNextPrompt = exports.cleanupExpiredFlashes = exports.onUserDelete = exports.onChatDelete = exports.onPostDelete = exports.onPostCreate = exports.decrementLikes = exports.incrementLikes = exports.onUnfollow = exports.onFollow = exports.onDropCommentCreate = exports.onCommentCreate = void 0;
 const app_1 = require("firebase-admin/app");
 const firestore_1 = require("firebase-admin/firestore");
 const admin = __importStar(require("firebase-admin"));
@@ -470,6 +470,34 @@ exports.checkEmail = (0, https_1.onCall)({ enforceAppCheck: true }, async (reque
         if (error.code === 'auth/user-not-found')
             return { exists: false };
         throw new https_1.HttpsError('internal', 'An error occurred while checking the email.');
+    }
+});
+exports.revokeAllSessions = (0, https_1.onCall)(async (request) => {
+    if (!request.auth) {
+        throw new https_1.HttpsError('unauthenticated', 'You must be signed in to revoke sessions.');
+    }
+    const uid = request.auth.uid;
+    try {
+        await admin.auth().revokeRefreshTokens(uid);
+        await db.collection('users').doc(uid).set({
+            sessionEpoch: firestore_1.FieldValue.increment(1),
+        }, { merge: true });
+        const sessionsRef = db.collection('users').doc(uid).collection('activeSessions');
+        while (true) {
+            const sessions = await sessionsRef.limit(500).get();
+            if (sessions.empty)
+                break;
+            const batch = db.batch();
+            sessions.docs.forEach((session) => batch.delete(session.ref));
+            await batch.commit();
+            if (sessions.size < 500)
+                break;
+        }
+        return { success: true };
+    }
+    catch (error) {
+        firebase_functions_1.logger.error(`Failed to revoke sessions for user ${uid}:`, error);
+        throw new https_1.HttpsError('internal', 'Could not log out all devices. Please try again.');
     }
 });
 exports.deleteUserAccount = (0, https_1.onCall)(async (request) => {

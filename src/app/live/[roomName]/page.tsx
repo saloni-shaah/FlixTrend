@@ -38,6 +38,9 @@ export default function LiveStreamPage() {
         return;
     }
 
+    let cancelled = false;
+    let unsubscribePost: (() => void) | undefined;
+
     const fetchPost = async () => {
       try {
         const postsRef = collection(db, 'posts');
@@ -48,30 +51,32 @@ export default function LiveStreamPage() {
           throw new Error('This live stream does not exist or has ended.');
         }
 
+        if (cancelled) return;
+
         const postDoc = querySnapshot.docs[0];
         const postData = { id: postDoc.id, ...postDoc.data() };
         setPost(postData);
 
-        const unsub = onSnapshot(doc(db, "posts", postDoc.id), (doc) => {
-            if (doc.exists()) {
-                const updatedPost = doc.data();
-                if (updatedPost.liveStatus === 'ended') {
-                    router.push('/vibespace');
-                    // We could add a toast notification here to inform the user
-                }
+        unsubscribePost = onSnapshot(doc(db, "posts", postDoc.id), (postSnapshot) => {
+            if (!cancelled && postSnapshot.exists()) {
+                const updatedPost = postSnapshot.data();
+                if (updatedPost.liveStatus === 'ended') router.push('/vibespace');
             }
         });
-
-        return () => unsub();
-
       } catch (e: any) {
-        console.error(e);
-        setError(e.message);
+        if (!cancelled) {
+          console.error(e);
+          setError(e.message);
+        }
       } 
     };
 
     fetchPost();
 
+    return () => {
+      cancelled = true;
+      unsubscribePost?.();
+    };
   }, [roomName, user, router]);
 
   useEffect(() => {

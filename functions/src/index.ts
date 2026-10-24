@@ -466,6 +466,36 @@ export const checkEmail = onCall({ enforceAppCheck: true }, async (request) => {
     }
 });
 
+export const revokeAllSessions = onCall(async (request) => {
+    if (!request.auth) {
+        throw new HttpsError('unauthenticated', 'You must be signed in to revoke sessions.');
+    }
+
+    const uid = request.auth.uid;
+    try {
+        await admin.auth().revokeRefreshTokens(uid);
+        await db.collection('users').doc(uid).set({
+            sessionEpoch: FieldValue.increment(1),
+        }, { merge: true });
+
+        const sessionsRef = db.collection('users').doc(uid).collection('activeSessions');
+        while (true) {
+            const sessions = await sessionsRef.limit(500).get();
+            if (sessions.empty) break;
+
+            const batch = db.batch();
+            sessions.docs.forEach((session) => batch.delete(session.ref));
+            await batch.commit();
+            if (sessions.size < 500) break;
+        }
+
+        return { success: true };
+    } catch (error) {
+        logger.error(`Failed to revoke sessions for user ${uid}:`, error);
+        throw new HttpsError('internal', 'Could not log out all devices. Please try again.');
+    }
+});
+
 export const deleteUserAccount = onCall(async (request) => {
     const uid = request.auth?.uid;
     if (!uid) throw new HttpsError('unauthenticated', 'Authentication required.');

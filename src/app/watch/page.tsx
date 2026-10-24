@@ -1,6 +1,6 @@
 'use client';
 import 'regenerator-runtime/runtime';
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
   doc, getDoc, getFirestore, collection, query, orderBy, limit,
@@ -359,8 +359,6 @@ export default function WatchPage() {
   const [currentUserProfile, setCurrentUserProfile] = useState<any>(null);
   const [showAllComments, setShowAllComments] = useState(false);
 
-  const unsubRefs = useRef<Array<() => void>>([]);
-
   // Auth
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(async (user) => {
@@ -375,54 +373,89 @@ export default function WatchPage() {
   // Data
   useEffect(() => {
     if (!videoId) { setError("No video ID."); setLoading(false); return; }
-    unsubRefs.current.forEach((u) => u());
-    unsubRefs.current = [];
     setLoading(true);
+    setError(null);
+    setComments([]);
 
     const postRef = doc(db, "posts", videoId);
-    const postUnsub = onSnapshot(postRef, async (snap) => {
+    const postUnsub = onSnapshot(postRef, (snap) => {
       if (!snap.exists()) { setError("Video not found."); setLoading(false); return; }
       const data: any = { id: snap.id, ...snap.data() };
       setPost(data);
       setLoading(false);
+    });
 
-      if (data.userId) {
-        const authorUnsub = onSnapshot(doc(db, "users", data.userId), (aSnap) => {
-          if (aSnap.exists()) {
-            setAuthor(aSnap.data());
-            if (currentUser) {
-              getDoc(doc(db, "users", data.userId, "followers", currentUser.uid)).then((d) =>
-                setIsFollowing(d.exists())
-              );
-            }
-          }
-        });
-        unsubRefs.current.push(authorUnsub);
+    return postUnsub;
+  }, [videoId]);
+
+  useEffect(() => {
+    if (!videoId || post?.id !== videoId || !post.userId) {
+      setAuthor(null);
+      setIsFollowing(false);
+      return;
+    }
+
+    let active = true;
+    const authorUnsub = onSnapshot(doc(db, "users", post.userId), (authorSnap) => {
+      if (!active) return;
+      if (!authorSnap.exists()) {
+        setAuthor(null);
+        return;
       }
 
-      const cUnsub = onSnapshot(
-        query(collection(db, "posts", videoId, "comments"), orderBy("createdAt", "desc"), limit(5)),
-        (s) => setComments(s.docs.map((d) => ({ id: d.id, ...d.data() })))
-      );
-      unsubRefs.current.push(cUnsub);
-
-      const recSnap = await getDocs(
-        query(collection(db, "posts"), where("isVideo", "==", true), limit(20))
-      );
-      setRecommended(
-        recSnap.docs
-          .map((d) => ({ id: d.id, ...d.data() } as any))
-          .filter((p) => p.id !== videoId && getVideoUrl(p.mediaUrl))
-          .slice(0, 12)
-      );
+      setAuthor(authorSnap.data());
+      if (currentUser) {
+        getDoc(doc(db, "users", post.userId, "followers", currentUser.uid)).then((followerSnap) => {
+          if (active) setIsFollowing(followerSnap.exists());
+        });
+      } else {
+        setIsFollowing(false);
+      }
     });
-    unsubRefs.current.push(postUnsub);
 
     return () => {
-      unsubRefs.current.forEach((u) => u());
-      unsubRefs.current = [];
+      active = false;
+      authorUnsub();
     };
-  }, [videoId, currentUser?.uid]);
+  }, [videoId, post?.id, post?.userId, currentUser?.uid]);
+
+  useEffect(() => {
+    if (!videoId) {
+      setComments([]);
+      return;
+    }
+
+    return onSnapshot(
+      query(collection(db, "posts", videoId, "comments"), orderBy("createdAt", "desc"), limit(5)),
+      (snapshot) => setComments(snapshot.docs.map((comment) => ({ id: comment.id, ...comment.data() })))
+    );
+  }, [videoId]);
+
+  useEffect(() => {
+    if (!videoId) {
+      setRecommended([]);
+      return;
+    }
+
+    let active = true;
+    getDocs(query(collection(db, "posts"), where("isVideo", "==", true), limit(20)))
+      .then((recommendationSnapshot) => {
+        if (!active) return;
+        setRecommended(
+          recommendationSnapshot.docs
+            .map((recommendation) => ({ id: recommendation.id, ...recommendation.data() } as any))
+            .filter((recommendation) => recommendation.id !== videoId && getVideoUrl(recommendation.mediaUrl))
+            .slice(0, 12)
+        );
+      })
+      .catch((recommendationError) => {
+        if (active) console.error("Failed to load video recommendations:", recommendationError);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [videoId]);
 
   const handleFollow = async () => {
     if (!currentUser || !post?.userId) return;

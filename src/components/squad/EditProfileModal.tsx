@@ -8,6 +8,7 @@ import { getFirestore, doc, updateDoc } from "firebase/firestore";
 import { auth, app } from '@/utils/firebaseClient';
 import { updateProfile } from 'firebase/auth';
 import imageCompression from 'browser-image-compression';
+import { normalizeProfileInterests } from '@/lib/profileInterests';
 
 const db = getFirestore(app);
 const storage = getStorage(app);
@@ -43,16 +44,10 @@ export function EditProfileModal({ profile, onClose }: { profile: Profile; onClo
     
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [bannerFile, setBannerFile] = useState<File | null>(null);
-    const [avatarPreview, setAvatarPreview] = useState<string | null>(profile.avatar_url);
-    const [bannerPreview, setBannerPreview] = useState<string | null>(profile.banner_url);
+    const [avatarPreview, setAvatarPreview] = useState<string | null>(profile.avatar_url || null);
+    const [bannerPreview, setBannerPreview] = useState<string | null>(profile.banner_url || null);
     
-    const getInitialInterests = () => {
-        const { interests } = profile;
-        if (Array.isArray(interests)) return interests.filter(i => i && i.trim() !== '');
-        if (typeof interests === 'string') return interests.split(',').filter(i => i && i.trim() !== '');
-        return [];
-    };
-    const [interestChips, setInterestChips] = useState<string[]>(getInitialInterests());
+    const [interestChips, setInterestChips] = useState<string[]>(() => normalizeProfileInterests(profile.interests));
     const [interestInput, setInterestInput] = useState("");
 
     const [loading, setLoading] = useState(false);
@@ -70,7 +65,7 @@ export function EditProfileModal({ profile, onClose }: { profile: Profile; onClo
         formData.name !== (profile.name || "") ||
         formData.bio !== (profile.bio || "") ||
         formData.location !== (profile.location || "") ||
-        interestChips.join(',') !== (Array.isArray(profile.interests) ? profile.interests.join(',') : profile.interests || "") ||
+        interestChips.join(',') !== normalizeProfileInterests(profile.interests).join(',') ||
         avatarFile !== null ||
         bannerFile !== null
     , [formData, interestChips, avatarFile, bannerFile, profile]);
@@ -144,11 +139,11 @@ export function EditProfileModal({ profile, onClose }: { profile: Profile; onClo
         setUploadProgress({});
 
         try {
-            const dataToUpdate: Partial<Omit<Profile, 'interests'>> & { interests?: string } = {
+            const dataToUpdate: Partial<Omit<Profile, 'interests'>> & { interests: string[] } = {
                 name: formData.name,
                 bio: formData.bio,
                 location: formData.location,
-                interests: interestChips.join(','),
+                interests: normalizeProfileInterests(interestChips),
             };
 
             const uploadTasks: Promise<void>[] = [];
@@ -200,10 +195,9 @@ export function EditProfileModal({ profile, onClose }: { profile: Profile; onClo
                 return;
             }
             // 6. Potential Duplicate Interest Bug -> Fix
-            const newInterest = interestInput.trim();
-            const normalizedInput = newInterest.toLowerCase();
-            if (newInterest && !interestChips.map(c => c.toLowerCase()).includes(normalizedInput)) {
-                setInterestChips([...interestChips, newInterest]);
+            const normalizedInput = normalizeProfileInterests(interestInput)[0];
+            if (normalizedInput && !interestChips.includes(normalizedInput)) {
+                setInterestChips([...interestChips, normalizedInput]);
             }
             setInterestInput("");
         }

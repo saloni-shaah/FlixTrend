@@ -10,6 +10,7 @@ import BodyStyling from "./BodyStyling";
 import { FirebaseErrorDebugger } from "@/firebase/error-debugger";
 import { UserLikesProvider } from "@/context/UserLikesContext";
 import { NotificationRegistrar } from '@/components/NotificationRegistrar';
+import { SessionTracker } from '@/components/SessionTracker';
 
 // Dynamically import AppStateProvider with SSR disabled
 const AppStateProvider = dynamic(
@@ -32,6 +33,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
               <FirebaseErrorListener />
               <FirebaseErrorDebugger />
               <NotificationRegistrar />
+              <SessionTracker />
               <Toaster />
               <main className="pb-20 pt-6 px-4">{children}</main>
               <GlobalMusicPlayer />

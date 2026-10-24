@@ -6,8 +6,10 @@ import Link from 'next/link';
 import { signOut, sendEmailVerification } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { auth, db } from '@/utils/firebaseClient';
-import { doc, onSnapshot, updateDoc } from "firebase/firestore";
+import { deleteDoc, doc, onSnapshot, updateDoc } from "firebase/firestore";
 import { subscribeToPush, unsubscribeFromPush } from '@/utils/pushNotifications';
+import { DeviceSessions } from '@/components/settings/DeviceSessions';
+import { getDeviceSessionId } from '@/lib/deviceSessions';
 
 export default function SettingsPage() {
     const [profile, setProfile] = useState<any>(null);
@@ -150,6 +152,13 @@ export default function SettingsPage() {
     };
   
     const handleLogout = async () => {
+        if (firebaseUser) {
+            try {
+                await deleteDoc(doc(db, 'users', firebaseUser.uid, 'activeSessions', getDeviceSessionId()));
+            } catch (error) {
+                console.error('Could not remove this device from the session list:', error);
+            }
+        }
         await signOut(auth);
         router.push("/login");
     };
@@ -246,6 +255,7 @@ export default function SettingsPage() {
                             </button>
                         </div>
                     )}
+                    <DeviceSessions userId={firebaseUser.uid} />
                 <div className="flex flex-col gap-2 py-2">
                     <div className="flex items-center justify-between">
                         <span className="flex items-center gap-2"><Zap /> Push Notifications</span>

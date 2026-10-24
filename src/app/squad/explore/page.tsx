@@ -10,6 +10,7 @@ import { FollowButton } from '@/components/FollowButton';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Search, Sparkles } from 'lucide-react';
+import { normalizeProfileInterests } from '@/lib/profileInterests';
 
 const db = getFirestore(app);
 
@@ -31,7 +32,7 @@ export default function ExploreCreatorsPage() {
 
                 const me = currentUserSnap.data() as any;
                 const myFollowing: string[] = Array.isArray(me.following) ? me.following : [];
-                const myInterests: string[] = Array.isArray(me.interests) ? me.interests : [];
+                const myInterests = normalizeProfileInterests(me.interests);
                 const myFollowingSet = new Set(myFollowing);
 
                 const isColdStart = myFollowing.length === 0 && myInterests.length === 0;
@@ -77,7 +78,7 @@ export default function ExploreCreatorsPage() {
                         let score = 0;
                         const followersCount: number = user.followersCount || 0;
                         const followingCount: number = user.followingCount || 0;
-                        const userInterests: string[] = Array.isArray(user.interests) ? user.interests : [];
+                        const userInterests = normalizeProfileInterests(user.interests);
 
                         // Shared interests  (+12 each, capped)
                         const shared = userInterests.filter(i => myInterests.includes(i));

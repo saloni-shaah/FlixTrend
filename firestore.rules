@@ -45,11 +45,16 @@ service cloud.firestore {
 
       // General subcollections
       match /{subcollection}/{docId} {
-        allow read: if isSignedIn() && (subcollection != 'drafts' || isOwner(userId));
+        allow read: if isSignedIn() &&
+          (subcollection != 'drafts' && subcollection != 'activeSessions' || isOwner(userId));
         allow write: if isOwner(userId) ||
           (subcollection == 'followers' &&
            docId == request.auth.uid &&
            (request.method == 'create' || request.method == 'delete'));
+      }
+
+      match /activeSessions/{sessionId} {
+        allow read, write: if isOwner(userId);
       }
 
       match /drafts/{draftId} {

@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { VenetianMask } from 'lucide-react';
+import { normalizeProfileInterests } from '@/lib/profileInterests';
 
 // Helper function to determine the correct step in the signup flow
 function getIncompleteStep(profile: any): string {
@@ -78,14 +79,7 @@ export default function CompleteProfilePage() {
         const batch = writeBatch(db);
         const genderToSave = gender === 'other' ? customGender : gender;
 
-        const parsedInterests = [
-          ...new Set(
-            interests
-              .split(',')
-              .map((i) => i.trim().toLowerCase())
-              .filter(Boolean)
-          ),
-        ];
+        const parsedInterests = normalizeProfileInterests(interests);
 
         const userDocRef = doc(db, 'users', user.uid);
         batch.update(userDocRef, {
