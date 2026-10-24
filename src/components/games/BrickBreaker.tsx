@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RotateCcw, Trophy, Heart } from 'lucide-react';
+import { ScoreLeaderboard } from './ScoreLeaderboard';
 
 // --- GAME CONFIGURATION ---
 const BRICK_ROW_COUNT = 5;
@@ -291,6 +292,7 @@ export function BrickBreaker() {
              <button onClick={() => resetLevel(level)} className="btn-glass bg-accent-purple/20 text-accent-purple flex items-center gap-2 mt-2">
                 <RotateCcw size={16}/> Reset Game
             </button>
+            <ScoreLeaderboard gameId="brick-breaker" score={highScore} canPost={gameState === 'won' || gameState === 'lost'} />
         </motion.div>
     );
 }

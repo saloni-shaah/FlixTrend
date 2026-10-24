@@ -601,3 +601,4 @@ export * from './onUserUpdate';
 export * from './reconcileViews';
 export * from './disappearingMessages';
 export * from './SignalCalling';
+export * from './cleanupOnlineGameRooms';

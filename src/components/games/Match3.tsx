@@ -6,6 +6,7 @@ import {
   RotateCcw, Star, Gem, Trophy, Move, Zap, Heart, Target, Sparkles,
   Gift, Flame, Crown, Shuffle, Clock3, ChevronRight, WandSparkles
 } from "lucide-react";
+import { ScoreLeaderboard } from "./ScoreLeaderboard";
 
 const GRID_SIZE = 8;
 const COLOR_COUNT = 6;
@@ -505,6 +506,7 @@ export function Match3() {
           </div>
         </aside>
       </div>
+      <ScoreLeaderboard gameId="match3" score={highScore} canPost={gameState !== "playing"} />
     </motion.section>
   );
 }

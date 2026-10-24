@@ -615,4 +615,5 @@ __exportStar(require("./onUserUpdate"), exports);
 __exportStar(require("./reconcileViews"), exports);
 __exportStar(require("./disappearingMessages"), exports);
 __exportStar(require("./SignalCalling"), exports);
+__exportStar(require("./cleanupOnlineGameRooms"), exports);
 //# sourceMappingURL=index.js.map

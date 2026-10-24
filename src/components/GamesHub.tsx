@@ -12,18 +12,39 @@ import { CricketChallenge } from './games/CricketChallenge';
 import { Chess } from './games/Chess';
 import { SnakesAndLadders } from './games/SnakesAndLadders';
 import { Ludo } from './games/Ludo';
+import { NeonRunner } from './games/NeonRunner';
+import { Minesweeper } from './games/Minesweeper';
+import { Solitaire } from './games/Solitaire';
 
 const games = [
     {
+        id: 'neon-rush',
+        name: "Neon Rush",
+        description: "An endless, offline arcade sprint. Switch lanes, leap barriers, slide under signs, and collect coins as the city flies by.",
+        component: NeonRunner
+    },
+    {
+        id: 'minesweeper',
+        name: "Minesweeper",
+        description: "A polished logic classic with three difficulties, a first-click-safe board, flags, best times, and no internet required.",
+        component: Minesweeper
+    },
+    {
+        id: 'solitaire',
+        name: "Klondike Solitaire",
+        description: "The timeless 52-card challenge. Build four foundations, uncover hidden cards, recycle the stock, and undo a move.",
+        component: Solitaire
+    },
+    {
         id: 'chess',
         name: "Chess",
-        description: "A classic two-player chess match on one device. Play offline with legal moves, check, and checkmate.",
+        description: "Challenge the local chess engine, pass-and-play, or invite a friend to a live online match. Complete tournament rules included.",
         component: Chess
     },
     {
         id: 'snakes-and-ladders',
         name: "Snakes & Ladders",
-        description: "Roll the dice, climb ladders, dodge snakes, and race a friend to 100. Offline for two players.",
+        description: "Roll the dice, climb ladders, dodge snakes, and race a friend to 100. Play locally or battle online with an invite code.",
         component: SnakesAndLadders
     },
     {
@@ -35,7 +56,7 @@ const games = [
     {
         id: 'tic-tac-toe',
         name: "Tic-Tac-Toe",
-        description: "The classic offline and online game. Challenge a friend to a match.",
+        description: "Classic quick-fire pass-and-play or real-time online matches. Create a room and challenge a friend with a code.",
         component: TicTacToe
     },
     {
@@ -100,7 +121,7 @@ export function GamesHub() {
             </h2>
 
             <p className="text-center text-gray-400 mb-12 max-w-2xl">
-                Challenge a friend or play a quick game solo with these FlixTrend classics!
+                Play instantly offline, challenge someone on the same screen, or invite a friend to a live online match.
             </p>
 
             <div className="w-full space-y-12">

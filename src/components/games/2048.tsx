@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RotateCcw, Trophy } from 'lucide-react';
+import { ScoreLeaderboard } from './ScoreLeaderboard';
 
 const GRID_SIZE = 4;
 
@@ -266,6 +267,7 @@ export function Game2048() {
             <button onClick={resetGame} className="btn-glass bg-accent-purple/20 text-accent-purple flex items-center gap-2 mt-4">
                 <RotateCcw size={16}/> New Game
             </button>
+            <ScoreLeaderboard gameId="2048" score={highScore} canPost={gameOver || gameWon} />
         </motion.div>
     );
 }

@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RotateCcw, Trophy, Flame, Target, Zap, Check } from 'lucide-react';
 import { iplTeams, internationalTeams } from '@/lib/cricket-data';
+import { ScoreLeaderboard } from './ScoreLeaderboard';
 
 // ---------- CONFIG ----------
 const W = 360, H = 560, HOR = 150, BASE = 500, K = 2.2;
@@ -568,6 +569,7 @@ export function CricketChallenge() {
                     <button onClick={() => { setScreen('setup'); setSetupStep('tournament'); }} className="btn-glass bg-accent-purple/20 text-accent-purple flex items-center gap-2">
                         <RotateCcw size={16} /> Change Settings
                     </button>
+                    <ScoreLeaderboard gameId="cricket-challenge" score={best} canPost={hud.over} />
                 </>
             )}
         </motion.div>

@@ -5,6 +5,7 @@ import {
     RotateCcw, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Apple, Trophy,
     Star, Snowflake, Shield, Pause, Play, Flame,
 } from 'lucide-react';
+import { ScoreLeaderboard } from './ScoreLeaderboard';
 
 const GRID = 20;
 const PER_LEVEL = 5;
@@ -467,6 +468,7 @@ export function Snake() {
                     </button>
                 </div>
             </div>
+            <ScoreLeaderboard gameId="snake" score={best} canPost={s.status === 'over'} />
         </motion.div>
     );
 }

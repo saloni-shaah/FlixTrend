@@ -362,5 +362,100 @@ service cloud.firestore {
       allow delete: if false; // Keep call history for a while or cleanup via Function
     }
 
+    // ─────────────────────────────────────────────────────────────────────
+    // COMMUNITY GAMES
+    // ─────────────────────────────────────────────────────────────────────
+
+    match /online_game_rooms/{roomCode} {
+      allow get: if isSignedIn();
+      allow list: if false;
+
+      allow create: if isSignedIn() &&
+        roomCode.matches('^[A-HJ-NP-Z2-9]{6}$') &&
+        request.resource.data.keys().hasOnly([
+          'gameId', 'code', 'host', 'guest', 'state', 'turnUid',
+          'status', 'winnerUid', 'createdAt', 'updatedAt'
+        ]) &&
+        request.resource.data.gameId in ['chess', 'tic-tac-toe', 'snakes-and-ladders'] &&
+        request.resource.data.code == roomCode &&
+        request.resource.data.host.uid == request.auth.uid &&
+        request.resource.data.host.name is string &&
+        request.resource.data.host.name.size() <= 32 &&
+        request.resource.data.guest == null &&
+        request.resource.data.state is map &&
+        request.resource.data.turnUid == request.auth.uid &&
+        request.resource.data.status == 'waiting' &&
+        request.resource.data.winnerUid == null &&
+        request.resource.data.createdAt == request.time &&
+        request.resource.data.updatedAt == request.time;
+
+      allow update: if isSignedIn() && (
+        (
+          resource.data.status == 'waiting' &&
+          resource.data.guest == null &&
+          request.resource.data.guest.uid == request.auth.uid &&
+          request.auth.uid != resource.data.host.uid &&
+          request.resource.data.status == 'active' &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['guest', 'status', 'updatedAt']) &&
+          request.resource.data.guest.name is string &&
+          request.resource.data.guest.name.size() <= 32 &&
+          request.resource.data.updatedAt == request.time
+        ) ||
+        (
+          resource.data.status == 'active' &&
+          request.auth.uid == resource.data.turnUid &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'state', 'turnUid', 'status', 'winnerUid', 'updatedAt'
+          ]) &&
+          request.resource.data.state is map &&
+          request.resource.data.turnUid in [
+            resource.data.host.uid, resource.data.guest.uid
+          ] &&
+          request.resource.data.status in ['active', 'finished'] &&
+          (
+            request.resource.data.winnerUid == null ||
+            request.resource.data.winnerUid in [
+              resource.data.host.uid, resource.data.guest.uid
+            ]
+          ) &&
+          request.resource.data.updatedAt == request.time
+        ) ||
+        (
+          resource.data.status == 'active' &&
+          request.auth.uid in [resource.data.host.uid, resource.data.guest.uid] &&
+          request.resource.data.status == 'finished' &&
+          request.resource.data.winnerUid in [resource.data.host.uid, resource.data.guest.uid] &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'winnerUid', 'updatedAt']) &&
+          request.resource.data.updatedAt == request.time
+        )
+      );
+
+      allow delete: if false;
+    }
+
+    match /game_leaderboards/{gameId}/scores/{userId} {
+      allow get, list: if true;
+
+      allow create: if isOwner(userId) &&
+        request.resource.data.keys().hasOnly(['userId', 'username', 'score', 'updatedAt']) &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.username is string &&
+        request.resource.data.username.size() <= 32 &&
+        request.resource.data.score is int &&
+        request.resource.data.score >= 0 &&
+        request.resource.data.updatedAt == request.time;
+
+      allow update: if isOwner(userId) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['username', 'score', 'updatedAt']) &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.username is string &&
+        request.resource.data.username.size() <= 32 &&
+        request.resource.data.score is int &&
+        request.resource.data.score >= resource.data.score &&
+        request.resource.data.updatedAt == request.time;
+
+      allow delete: if false;
+    }
+
   }
 }

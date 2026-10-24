@@ -1,139 +1,122 @@
 "use client";
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { X, Circle, RotateCcw } from 'lucide-react';
 
-const lines = [
-    [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
-    [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
-    [0, 4, 8], [2, 4, 6], // diagonals
+import { useState } from "react";
+import { Circle, RotateCcw, X } from "lucide-react";
+import { OnlineMatchPanel, useOnlineMatch } from "./OnlineMatch";
+
+type Mark = "X" | "O" | null;
+type TicTacToeState = { squares: Mark[] };
+const EMPTY_STATE: TicTacToeState = { squares: Array<Mark>(9).fill(null) };
+const LINES = [
+  [0, 1, 2], [3, 4, 5], [6, 7, 8],
+  [0, 3, 6], [1, 4, 7], [2, 5, 8],
+  [0, 4, 8], [2, 4, 6],
 ];
 
-function calculateWinner(squares: ('X' | 'O' | null)[]) {
-    for (let i = 0; i < lines.length; i++) {
-        const [a, b, c] = lines[i];
-        if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
-            return { winner: squares[a], line: lines[i] };
-        }
+function winnerOf(squares: Mark[]) {
+  for (const line of LINES) {
+    const [a, b, c] = line;
+    if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
+      return { mark: squares[a] as Exclude<Mark, null>, line };
     }
-    return null;
-}
-
-
-function Square({ value, onSquareClick, isWinning }: { value: 'X' | 'O' | null, onSquareClick: () => void, isWinning: boolean }) {
-  return (
-    <button 
-        className={`w-20 h-20 md:w-24 md:h-24 bg-black/20 flex items-center justify-center transition-all duration-300 ${isWinning ? 'bg-brand-gold/30' : 'hover:bg-accent-cyan/10'}`}
-        onClick={onSquareClick}
-    >
-        {value === 'X' && <X className={`w-12 h-12 transition-colors ${isWinning ? 'text-white' : 'text-accent-pink'}`} />}
-        {value === 'O' && <Circle className={`w-12 h-12 transition-colors ${isWinning ? 'text-white' : 'text-accent-cyan'}`} />}
-    </button>
-  );
-}
-
-function Board({ squares, onPlay, xIsNext, winningLine }: { squares: ('X' | 'O' | null)[], onPlay: (i:number) => void, xIsNext: boolean, winningLine: number[] | null }) {
-    const winnerInfo = calculateWinner(squares);
-    const winner = winnerInfo?.winner;
-    
-    let status;
-    if (winner) {
-        status = 'Winner: ' + winner;
-    } else if (squares.every(Boolean)) {
-        status = 'Draw!';
-    } else {
-        status = `Next player: ${xIsNext ? 'X' : 'O'}`;
-    }
-
-    function handleClick(i: number) {
-        if (calculateWinner(squares) || squares[i]) {
-            return;
-        }
-        onPlay(i);
-    }
-    
-    return (
-        <div className="flex flex-col items-center gap-4">
-             <div className={`font-bold text-xl transition-colors ${winner ? 'text-brand-gold' : 'text-gray-300'}`}>{status}</div>
-            <div className="grid grid-cols-3 gap-1 bg-accent-cyan/20 p-1 rounded-lg relative">
-                {squares.map((square, i) => (
-                    <Square key={i} value={square} onSquareClick={() => handleClick(i)} isWinning={winningLine?.includes(i) || false}/>
-                ))}
-                 {winningLine && (
-                    <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100">
-                        <line 
-                            x1={getCoord(winningLine[0]).x} y1={getCoord(winningLine[0]).y}
-                            x2={getCoord(winningLine[2]).x} y2={getCoord(winningLine[2]).y}
-                            stroke="var(--brand-gold)" 
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                        />
-                    </svg>
-                )}
-            </div>
-        </div>
-    );
-}
-
-function getCoord(index: number) {
-    const col = index % 3;
-    const row = Math.floor(index / 3);
-    const x = col * 33.33 + 16.66;
-    const y = row * 33.33 + 16.66;
-    return { x, y };
-}
-
-
-function OfflineGame() {
-    const [history, setHistory] = useState([Array(9).fill(null)]);
-    const [currentMove, setCurrentMove] = useState(0);
-    const xIsNext = currentMove % 2 === 0;
-    const currentSquares = history[currentMove];
-    const winnerInfo = calculateWinner(currentSquares);
-
-    function handlePlay(nextSquares: ('X' | 'O' | null)[]) {
-        const nextHistory = [...history.slice(0, currentMove + 1), nextSquares];
-        setHistory(nextHistory);
-        setCurrentMove(nextHistory.length - 1);
-    }
-
-    function onSquareClick(i: number) {
-        const nextSquares = currentSquares.slice();
-        nextSquares[i] = xIsNext ? 'X' : 'O';
-        handlePlay(nextSquares);
-    }
-
-    const resetGame = () => {
-      setHistory([Array(9).fill(null)]);
-      setCurrentMove(0);
-    }
-    
-    return (
-        <div className="flex flex-col items-center gap-6">
-            <Board squares={currentSquares} onPlay={onSquareClick} xIsNext={xIsNext} winningLine={winnerInfo?.line || null}/>
-            <button onClick={resetGame} className="btn-glass bg-accent-purple/20 text-accent-purple flex items-center gap-2">
-                <RotateCcw size={16}/> Reset Game
-            </button>
-             {winnerInfo && (
-                <div className="text-center">
-                    <h3 className="text-2xl font-bold text-brand-gold animate-bounce">✨ Winner! ✨</h3>
-                    <p className="text-gray-300">Congratulations to Player {winnerInfo.winner}!</p>
-                </div>
-            )}
-        </div>
-    )
+  }
+  return null;
 }
 
 export function TicTacToe() {
-    return (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="w-full max-w-md glass-card p-8 flex flex-col items-center gap-6"
-          style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
-        >
-            <h2 className="text-3xl font-headline text-accent-pink">Tic-Tac-Toe</h2>
-            <OfflineGame />
-        </motion.div>
-    )
+  const [mode, setMode] = useState<"local" | "online">("local");
+  const [localSquares, setLocalSquares] = useState<Mark[]>(EMPTY_STATE.squares);
+  const [localMark, setLocalMark] = useState<"X" | "O">("X");
+  const online = useOnlineMatch<TicTacToeState>("tic-tac-toe", EMPTY_STATE);
+  const room = mode === "online" ? online.room : null;
+  const squares = room?.state.squares ?? localSquares;
+  const winner = winnerOf(squares);
+  const draw = !winner && squares.every(Boolean);
+  const localTurn = !room || room.turnUid === online.user?.uid;
+  const currentMark = room
+    ? room.turnUid === room.host.uid ? "X" : "O"
+    : localMark;
+  const gameOver = Boolean(winner || draw || room?.status === "finished");
+
+  const playSquare = async (index: number) => {
+    if (gameOver || squares[index] || !localTurn) return;
+    const next = squares.slice();
+    next[index] = currentMark;
+    if (room) {
+      const matchWinner = winnerOf(next);
+      const isDraw = !matchWinner && next.every(Boolean);
+      const opponentUid = online.user?.uid === room.host.uid ? room.guest?.uid : room.host.uid;
+      if (!opponentUid) return;
+      await online.play(
+        { squares: next },
+        opponentUid,
+        matchWinner ? online.user?.uid ?? null : null,
+        Boolean(matchWinner || isDraw),
+      );
+    } else {
+      setLocalSquares(next);
+      if (!winnerOf(next) && !next.every(Boolean)) setLocalMark(mark => mark === "X" ? "O" : "X");
+    }
+  };
+
+  const resetLocalGame = () => {
+    setLocalSquares(Array<Mark>(9).fill(null));
+    setLocalMark("X");
+  };
+
+  const status = room?.status === "waiting" ? "Waiting for an opponent to join your room…"
+    : room?.status === "finished" ? room.winnerUid
+      ? `${room.winnerUid === room.host.uid ? room.host.name : room.guest?.name} wins!`
+      : "It's a draw!"
+    : winner ? `${winner.mark} wins!`
+    : draw ? "It's a draw!"
+    : room ? room.turnUid === online.user?.uid ? "Your turn" : `${room.turnUid === room.host.uid ? room.host.name : room.guest?.name}'s turn`
+    : `Player ${localMark}'s turn`;
+
+  return (
+    <section className="glass-card mx-auto flex w-full max-w-xl flex-col items-center gap-5 p-4 sm:p-7">
+      <header className="w-full text-center">
+        <h2 className="text-3xl font-headline font-bold text-accent-pink">Tic-Tac-Toe</h2>
+        <p className="mt-1 text-sm text-gray-400">Quick rematches, now with real-time online duels.</p>
+      </header>
+
+      <div className="flex rounded-full border border-white/10 bg-black/25 p-1">
+        {(["local", "online"] as const).map(option => (
+          <button key={option} onClick={() => setMode(option)}
+            className={`rounded-full px-4 py-2 text-sm font-bold capitalize transition-colors ${mode === option ? "bg-accent-pink text-white" : "text-gray-400 hover:text-white"}`}>
+            {option === "local" ? "Pass & play" : "Online"}
+          </button>
+        ))}
+      </div>
+
+      {mode === "online" && <OnlineMatchPanel room={online.room} userId={online.user?.uid} busy={online.busy}
+        error={online.error} createRoom={async () => { await online.createRoom(); }}
+        joinRoom={online.joinRoom} leaveRoom={online.leaveRoom} resign={online.resign} />}
+
+      <p aria-live="polite" className={`text-center text-lg font-bold ${winner ? "text-amber-300" : "text-gray-200"}`}>
+        {mode === "online" && !room ? "Create a room or join a friend" : status}
+      </p>
+      <div className={`grid grid-cols-3 gap-2 rounded-xl border border-accent-cyan/20 bg-accent-cyan/10 p-2 ${mode === "online" && (!room || room.status !== "active") ? "opacity-40" : ""}`}>
+        {squares.map((mark, index) => {
+          const winning = winner?.line.includes(index) ?? false;
+          return (
+            <button key={index} type="button" aria-label={`Square ${index + 1}${mark ? `, ${mark}` : ""}`}
+              disabled={mode === "online" && (!room || room.status !== "active")}
+              onClick={() => void playSquare(index)}
+              className={`grid h-[clamp(4rem,18vw,7rem)] w-[clamp(4rem,18vw,7rem)] place-items-center rounded-lg bg-black/25 transition-colors hover:bg-accent-cyan/10 disabled:cursor-not-allowed ${winning ? "bg-amber-300/20" : ""}`}>
+              {mark === "X" && <X className={`h-10 w-10 sm:h-14 sm:w-14 ${winning ? "text-amber-200" : "text-accent-pink"}`} />}
+              {mark === "O" && <Circle className={`h-10 w-10 sm:h-14 sm:w-14 ${winning ? "text-amber-200" : "text-accent-cyan"}`} />}
+            </button>
+          );
+        })}
+      </div>
+
+      {mode === "local" && <button onClick={resetLocalGame} className="btn-glass flex items-center gap-2">
+        <RotateCcw size={16} /> New game
+      </button>}
+      {mode === "online" && room?.status === "finished" && <button onClick={online.leaveRoom} className="btn-glass flex items-center gap-2">
+        <RotateCcw size={16} /> Play again
+      </button>}
+    </section>
+  );
 }
