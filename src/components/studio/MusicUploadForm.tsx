@@ -95,7 +95,7 @@ export const MusicUploadForm = ({ onUploadSuccess }: { onUploadSuccess: () => vo
     setError('');
   }, []);
 
-  const { getRootProps: audioRootProps, getInputProps: audioInputProps, isDragActive: isAudioDragActive } = useDropzone({ onDrop: f => onDrop(f, 'audio'), accept: { 'audio/*': ['.mp3', '.wav', '.m4a', '.webm'] } });
+  const { getRootProps: audioRootProps, getInputProps: audioInputProps, isDragActive: isAudioDragActive } = useDropzone({ onDrop: f => onDrop(f, 'audio'), accept: { 'audio/*': ['.mp3', '.wav', '.m4a', '.webm'], 'audio/mp4': ['.mp4'], 'video/mp4': ['.mp4'] } });
   const { getRootProps: artRootProps, getInputProps: artInputProps, isDragActive: isArtDragActive } = useDropzone({ onDrop: f => onDrop(f, 'art'), accept: { 'image/*': ['.png', '.jpg', '.jpeg'] } });
   const { getRootProps: lyricsRootProps, getInputProps: lyricsInputProps, open: openLyricsDialog } = useDropzone({ onDrop: f => onDrop(f, 'lyrics'), accept: { 'text/vtt': ['.vtt'] }, noClick: true, noKeyboard: true });
 
@@ -191,7 +191,7 @@ export const MusicUploadForm = ({ onUploadSuccess }: { onUploadSuccess: () => vo
                     <input {...audioInputProps()} />
                     <div className="flex items-center justify-center text-gray-400">
                         <Music className="text-accent-cyan mr-3" size={24}/>
-                        {audioFile ? <p className='text-green-400 truncate'>{audioFile.name}</p> : <p className='font-semibold text-white/80'>Click or drag Audio File *</p>}
+                        {audioFile ? <p className='text-green-400 truncate'>{audioFile.name}</p> : <p className='font-semibold text-white/80'>Click or drag Audio File * (MP3, MP4, WAV, M4A, WEBM)</p>}
                     </div>
                 </div>
                  <div {...lyricsRootProps()} className={`bg-white/5 rounded-lg p-3 transition-colors hover:bg-white/10 ${loading ? 'opacity-50' : ''}`}>
